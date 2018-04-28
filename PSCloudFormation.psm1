@@ -1,6 +1,8 @@
 
 #region Module Init
 
+$ErrorActionPreference = 'Stop'
+
 $Script:yamlSupport = $false
 
 $Script:templateParameterValidators = @{
@@ -32,7 +34,7 @@ function New-Stack
     [CmdletBinding()]
     param
     (
-        [Parameter(Mandatory = $true)]
+        [Parameter(Mandatory = $true, ValueFromPipeline = $true)]
         [string]$StackName,
     
         [Parameter(Mandatory = $true)]
@@ -50,24 +52,93 @@ function New-Stack
     }
     Begin
     {
-        #This standard block of code loops through bound parameters...
-        #If no corresponding variable exists, one is created
-        #Get common parameters, pick out bound parameters not in that set
-        Function _temp { [cmdletbinding()] param() }
-        $BoundKeys = $PSBoundParameters.keys | Where-Object { (get-command _temp | Select-Object -ExpandProperty parameters).Keys -notcontains $_}
-        foreach ($param in $BoundKeys)
-        {
-            if (-not ( Get-Variable -name $param -scope 0 -ErrorAction SilentlyContinue ) )
-            {
-                New-Variable -Name $Param -Value $PSBoundParameters.$param
-                Write-Verbose "Adding variable for dynamic parameter '$param' with value '$($PSBoundParameters.$param)'"
-            }
-        }
+        $stackParameters = Get-CommandLineTemplateParameters -BoundParameters $PSBoundParameters
+        $stackParameters
+    }
+}
+
+function Update-Stack
+{
+    [CmdletBinding()]
+    param
+    (
+        [Parameter(Mandatory = $true, ParameterSetName = 'ByName', ValueFromPipeline = $true)]
+        [string]$StackName,
     
-        #Appropriate variables should now be defined and accessible
-        Get-Variable -scope 0
+        [Parameter(Mandatory = $true, ParameterSetName = 'ByObject', ValueFromPipeline = $true)]
+        [Amazon.CloudFormation.Model.Stack]$Stack,
+        
+        [Parameter(Mandatory = $true)]
+        [string]$TemplateLocation,
+
+        [ValidateSet('CAPABILITY_IAM', 'CAPABILITY_NAMED_IAM', '')]
+        [string]$Capabilities = '',
+    
+        [switch]$Wait,
+
+        [switch]$Rebuild
+    )
+
+    DynamicParam
+    {
+        New-TemplateDynamicParameters -TemplateLocation $TemplateLocation
+    }
+    Begin
+    {
+        $stackParameters = Get-CommandLineTemplateParameters -BoundParameters $PSBoundParameters
+        $stackParameters
+    }
+}
+
+function Remove-Stack
+{
+    [Parameter(Mandatory = $true, ParameterSetName = 'ByName', ValueFromPipeline = $true)]
+    [string]$StackName,
+
+    [Parameter(Mandatory = $true, ParameterSetName = 'ByObject', ValueFromPipeline = $true)]
+    [Amazon.CloudFormation.Model.Stack]$Stack,
+
+    [switch]$Wait
+}
+
+#region Dynamic Parameter magic for extracting template parameters
+
+function Get-CommandLineTemplateParameters
+{
+    param
+    (
+        [hashtable]$BoundParameters
+    )
+
+    $stackParameters = @()
+
+    #This standard block of code loops through bound parameters...
+    #If no corresponding variable exists, one is created
+    #Get common parameters, pick out bound parameters not in that set
+    function _temp { [cmdletbinding()] param() }
+
+    $commonParameters = (Get-Command _temp | Select-Object -ExpandProperty parameters).Keys
+
+    $BoundParameters.Keys | 
+        Where-Object { 
+
+        -not ($commonParameters -contains $_ -or (Get-Variable -Name $_ -Scope 1 -ErrorAction SilentlyContinue))
+    } |
+        ForEach-Object {
+
+        # Now we are iterating the names of template parameters found on the command line.
+
+        $stackParameters += $(
+
+            $param = New-Object Amazon.CloudFormation.Model.Parameter 
+            $param.ParameterKey = $_
+            $param.ParameterValue = $BoundParameters.$_ -join ','
+            $param            
+        )
     }
 
+    #Appropriate variables should now be defined and accessible
+    $stackParameters
 }
 
 function New-TemplateDynamicParameters
@@ -103,7 +174,7 @@ function New-TemplateDynamicParameters
             $paramDefinition.Add('Type', 'String')
             $paramDefinition.Add('ValidatePattern', $Script:templateParameterValidators[$awstype])
         }
-        elseif($awsType -imatch 'List\<(?<ResourceId>[A-Z0-9\:]+)\>' -and $Script:templateParameterValidators.ContainsKey($Matches.ResourceId))
+        elseif ($awsType -imatch 'List\<(?<ResourceId>[A-Z0-9\:]+)\>' -and $Script:templateParameterValidators.ContainsKey($Matches.ResourceId))
         {
             $paramDefinition.Add('Type', 'String[]')
             $paramDefinition.Add('ValidatePattern', $Script:templateParameterValidators[$Matches.ResourceId])
@@ -156,7 +227,6 @@ function New-TemplateDynamicParameters
     #return RuntimeDefinedParameterDictionary
     $Dictionary
 }
-
 
 function Get-TemplateParameters
 {
@@ -481,7 +551,7 @@ function New-DynamicParam
      
     #Create the dynamic parameter
     $Parameter = New-Object -TypeName System.Management.Automation.RuntimeDefinedParameter -ArgumentList @($Name, $Type, $AttributeCollection)
-        
+
     #Add the dynamic parameter to an existing dynamic parameter dictionary, or create the dictionary and add it
     if ($DPDictionary)
     {
@@ -494,5 +564,7 @@ function New-DynamicParam
         $Dictionary
     }
 }
+
+#endregion
 
 Export-ModuleMember -Function *
