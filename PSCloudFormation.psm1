@@ -1,4 +1,22 @@
 
+#region Module Init
+
+$Script:yamlSupport = $false
+
+if (Get-Module -ListAvailable | where {  $_.Name -ieq 'powershell-yaml' })
+{
+    Import-Module powershell-yaml
+    $script:yamlSupport = $true
+}
+else
+{
+    Write-Warning 'YAML support unavailable'
+    Write-Warning 'To enable, install powershell-yaml from the gallery'
+    Write-Warning 'Install-Module -Name powershell-yaml'
+}
+
+#endregion
+
 function New-Stack
 {
     [CmdletBinding()]
@@ -8,15 +26,7 @@ function New-Stack
         [string]$StackName,
     
         [Parameter(Mandatory=$true)]
-        [ValidateSet('Create', 'Update', 'Delete', 'Rebuild')]
-        [string]$Action,
-    
-        [Parameter(ParameterSetName = 'File')]
-        [string]
-        $TemplateFile,
-    
-        [Parameter(ParameterSetName = 'S3')]
-        [string]$TemplateUrl,
+        [string]$TemplateLocation,
 
         [ValidateSet('CAPABILITY_IAM', 'CAPABILITY_NAMED_IAM', '')]
         [string]$Capabilities = '',
@@ -24,8 +34,80 @@ function New-Stack
         [switch]$Wait
     )
 
+    DynamicParam
+    {
+        New-TemplateDynamicParameters -TemplateLocation $TemplateLocation
+    }
+    Begin
+    {
+        #This standard block of code loops through bound parameters...
+        #If no corresponding variable exists, one is created
+            #Get common parameters, pick out bound parameters not in that set
+            Function _temp { [cmdletbinding()] param() }
+            $BoundKeys = $PSBoundParameters.keys | Where-Object { (get-command _temp | select -ExpandProperty parameters).Keys -notcontains $_}
+            foreach($param in $BoundKeys)
+            {
+                if (-not ( Get-Variable -name $param -scope 0 -ErrorAction SilentlyContinue ) )
+                {
+                    New-Variable -Name $Param -Value $PSBoundParameters.$param
+                    Write-Verbose "Adding variable for dynamic parameter '$param' with value '$($PSBoundParameters.$param)'"
+                }
+            }
+    
+        #Appropriate variables should now be defined and accessible
+            Get-Variable -scope 0
+    }
 
 }
+
+function New-TemplateDynamicParameters
+{
+    param
+    (
+        [string]$TemplateLocation
+    )
+    
+    #Create the RuntimeDefinedParameterDictionary
+    $Dictionary = New-Object System.Management.Automation.RuntimeDefinedParameterDictionary
+
+    (Get-TemplateParameters -TemplateLocation $TemplateLocation).PSObject.Properties |
+    foreach {
+
+        $param = $_
+
+        $paramDefinition = @{
+            'Name' = $param.Name
+            'DPDictionary' = $Dictionary
+            'Type' = 'String'
+        }
+
+        if ($param.Value.PSObject.Properties['AllowedValues'])
+        {
+            $paramDefinition.Add('ValidateSet', $param.Value.AllowedValues);
+        }
+
+        if ($param.Value.PSObject.Properties['AllowedPattern'])
+        {
+            $paramDefinition.Add('ValidatePattern', $param.Value.AllowedPattern);
+        }
+
+        if ($param.Value.PSObject.Properties['Description'])
+        {
+            $paramDefinition.Add('HelpMessage', $param.Value.Description);
+        }
+
+        if (-not $param.Value.PSObject.Properties['Default'])
+        {
+            $paramDefinition.Add('Mandatory', $true);
+        }
+
+        New-DynamicParam @paramDefinition
+    }
+                  
+    #return RuntimeDefinedParameterDictionary
+    $Dictionary
+}
+
 
 function Get-TemplateParameters
 {
@@ -34,7 +116,71 @@ function Get-TemplateParameters
         [string]$TemplateLocation
     )
 
-    
+    $u = $null
+    $template = $null
+
+    if ([Uri]::TryCreate($TemplateLocation, 'Absolute', [ref]$u) -and $u.Scheme -ne 'file')
+    {
+        # Template is a URL
+        switch($u.Scheme)
+        {
+            {$_ -ieq 'http' -or $_ -ieq 'https'} {
+
+                $template = Invoke-WebRequest -Uri $u -UseBasicParsing -Method Get
+            }
+
+            's3' {
+
+                $tmpFile = "$([Guid]::NewGuid().Guid.ToString()).tmp"
+
+                try 
+                {
+                    Get-S3Object -BucketName $u.Authority -Key $u.LocalPath -File $tmpFile
+                    # Assert file length
+                    $template = Get-Content -Raw $tmpFile
+                }
+                finally 
+                {
+                    Remove-Item $tmpFile
+                }
+            }
+        }
+    }
+    else {
+        # Assert file length
+        $template = Get-Content -Raw -Path $TemplateLocation
+    }
+
+    # Check YAML/JSON
+    try 
+    {
+        $templateObject = $template | ConvertFrom-Json 
+
+        if ($templateObject.PSObject.Properties.Name -contains 'Parameters')
+        {
+            return $templateObject.Parameters
+        }
+        else
+        {
+            # No parameters
+            return
+        }
+    }
+    catch
+    {
+        if (-not $Script:yamlSupport)
+        {
+            throw "Template cannot be parsed as JSON and YAML support unavailable"
+        }
+    }
+
+    # Try YAML
+    $templateObject = $template | ConvertFrom-Yaml 
+
+    if ($templateObject.PSObject.Properties.Name -contains 'Parameters')
+    {
+        return $templateObject.Parameters
+    }
 }
 
 function New-DynamicParam {
@@ -73,6 +219,9 @@ function New-DynamicParam {
     
         .PARAMETER ValidateSet
             If specified, set the ValidateSet attribute of this dynamic parameter
+    
+        .PARAMETER ValidatePattern
+            If specified, set the ValidatePattern attribute of this dynamic parameter
     
         .PARAMETER Mandatory
             If specified, set the Mandatory attribute for this dynamic parameter
@@ -200,6 +349,9 @@ function New-DynamicParam {
         [string[]]
         $ValidateSet,
         
+        [string[]]
+        $ValidatePattern,
+        
         [switch]
         $Mandatory,
         
@@ -252,6 +404,13 @@ function New-DynamicParam {
             if($ValidateSet)
             {
                 $ParamOptions = New-Object System.Management.Automation.ValidateSetAttribute -ArgumentList $ValidateSet
+                $AttributeCollection.Add($ParamOptions)
+            }
+    
+        #param validation pattern if specified
+            if($ValidatePattern)
+            {
+                $ParamOptions = New-Object System.Management.Automation.ValidatePatternAttribute -ArgumentList $ValidatePattern
                 $AttributeCollection.Add($ParamOptions)
             }
     
