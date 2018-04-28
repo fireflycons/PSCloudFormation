@@ -3,7 +3,17 @@
 
 $Script:yamlSupport = $false
 
-if (Get-Module -ListAvailable | where {  $_.Name -ieq 'powershell-yaml' })
+$Script:templateParameterValidators = @{
+
+    'AWS::EC2::Image::Id'         = '^\s*ami-([a-z0-9]{8}|[a-z0-9]{17})\s*$'
+    'AWS::EC2::Instance::Id'      = '^\s*i-([a-z0-9]{8}|[a-z0-9]{17})\s*$'
+    'AWS::EC2::SecurityGroup::Id' = '^\s*sg-([a-z0-9]{8}|[a-z0-9]{17})\s*$'
+    'AWS::EC2::Subnet::Id'        = '^\s*subnet-([a-z0-9]{8}|[a-z0-9]{17})\s*$'
+    'AWS::EC2::Volume::Id'        = '^\s*vol-([a-z0-9]{8}|[a-z0-9]{17})\s*$'
+    'AWS::EC2::VPC::Id'           = '^\s*vpc-([a-z0-9]{8}|[a-z0-9]{17})\s*$'
+}
+
+if (Get-Module -ListAvailable | Where-Object {  $_.Name -ieq 'powershell-yaml' })
 {
     Import-Module powershell-yaml
     $script:yamlSupport = $true
@@ -22,10 +32,10 @@ function New-Stack
     [CmdletBinding()]
     param
     (
-        [Parameter(Mandatory=$true)]
+        [Parameter(Mandatory = $true)]
         [string]$StackName,
     
-        [Parameter(Mandatory=$true)]
+        [Parameter(Mandatory = $true)]
         [string]$TemplateLocation,
 
         [ValidateSet('CAPABILITY_IAM', 'CAPABILITY_NAMED_IAM', '')]
@@ -42,20 +52,20 @@ function New-Stack
     {
         #This standard block of code loops through bound parameters...
         #If no corresponding variable exists, one is created
-            #Get common parameters, pick out bound parameters not in that set
-            Function _temp { [cmdletbinding()] param() }
-            $BoundKeys = $PSBoundParameters.keys | Where-Object { (get-command _temp | select -ExpandProperty parameters).Keys -notcontains $_}
-            foreach($param in $BoundKeys)
+        #Get common parameters, pick out bound parameters not in that set
+        Function _temp { [cmdletbinding()] param() }
+        $BoundKeys = $PSBoundParameters.keys | Where-Object { (get-command _temp | Select-Object -ExpandProperty parameters).Keys -notcontains $_}
+        foreach ($param in $BoundKeys)
+        {
+            if (-not ( Get-Variable -name $param -scope 0 -ErrorAction SilentlyContinue ) )
             {
-                if (-not ( Get-Variable -name $param -scope 0 -ErrorAction SilentlyContinue ) )
-                {
-                    New-Variable -Name $Param -Value $PSBoundParameters.$param
-                    Write-Verbose "Adding variable for dynamic parameter '$param' with value '$($PSBoundParameters.$param)'"
-                }
+                New-Variable -Name $Param -Value $PSBoundParameters.$param
+                Write-Verbose "Adding variable for dynamic parameter '$param' with value '$($PSBoundParameters.$param)'"
             }
+        }
     
         #Appropriate variables should now be defined and accessible
-            Get-Variable -scope 0
+        Get-Variable -scope 0
     }
 
 }
@@ -71,24 +81,63 @@ function New-TemplateDynamicParameters
     $Dictionary = New-Object System.Management.Automation.RuntimeDefinedParameterDictionary
 
     (Get-TemplateParameters -TemplateLocation $TemplateLocation).PSObject.Properties |
-    foreach {
+        ForEach-Object {
 
         $param = $_
 
         $paramDefinition = @{
-            'Name' = $param.Name
+            'Name'         = $param.Name
             'DPDictionary' = $Dictionary
-            'Type' = 'String'
         }
 
-        if ($param.Value.PSObject.Properties['AllowedValues'])
+        if (-not $param.Value.PSObject.Properties['Type'])
         {
-            $paramDefinition.Add('ValidateSet', $param.Value.AllowedValues);
+            throw "Malformed parameter definition. Type is required"
         }
 
-        if ($param.Value.PSObject.Properties['AllowedPattern'])
+        $awsType = $param.Value.Type
+
+        # If it's one of the AWS special types that can equate to a regex
+        if ($Script:templateParameterValidators.ContainsKey($awsType))
         {
-            $paramDefinition.Add('ValidatePattern', $param.Value.AllowedPattern);
+            $paramDefinition.Add('Type', 'String')
+            $paramDefinition.Add('ValidatePattern', $Script:templateParameterValidators[$awstype])
+        }
+        elseif($awsType -imatch 'List\<(?<ResourceId>[A-Z0-9\:]+)\>' -and $Script:templateParameterValidators.ContainsKey($Matches.ResourceId))
+        {
+            $paramDefinition.Add('Type', 'String[]')
+            $paramDefinition.Add('ValidatePattern', $Script:templateParameterValidators[$Matches.ResourceId])
+        }
+        elseif ($awsType -ieq 'AWS::EC2::AvailabilityZone::Name')
+        {
+            $paramDefinition.Add('Type', 'String')
+            $paramDefinition.Add('ValidateSet', ((Get-EC2AvailabilityZone).ZoneName -join ','));
+        }
+        elseif ($awsType -ieq 'List<AWS::EC2::AvailabilityZone::Name>')
+        {
+            $paramDefinition.Add('Type', 'String[]')
+            $paramDefinition.Add('ValidateSet', ((Get-EC2AvailabilityZone).ZoneName -join ','));
+        }
+        else
+        {
+            if ($awsType -ieq 'Number')
+            {
+                $paramDefinition.Add('Type', 'Double')
+            }
+            else 
+            {
+                $paramDefinition.Add('Type', 'String')
+            }
+
+            if ($param.Value.PSObject.Properties['AllowedValues'])
+            {
+                $paramDefinition.Add('ValidateSet', $param.Value.AllowedValues);
+            }
+
+            if ($param.Value.PSObject.Properties['AllowedPattern'])
+            {
+                $paramDefinition.Add('ValidatePattern', $param.Value.AllowedPattern);
+            }
         }
 
         if ($param.Value.PSObject.Properties['Description'])
@@ -122,14 +171,16 @@ function Get-TemplateParameters
     if ([Uri]::TryCreate($TemplateLocation, 'Absolute', [ref]$u) -and $u.Scheme -ne 'file')
     {
         # Template is a URL
-        switch($u.Scheme)
+        switch ($u.Scheme)
         {
-            {$_ -ieq 'http' -or $_ -ieq 'https'} {
+            {$_ -ieq 'http' -or $_ -ieq 'https'}
+            {
 
                 $template = Invoke-WebRequest -Uri $u -UseBasicParsing -Method Get
             }
 
-            's3' {
+            's3'
+            {
 
                 $tmpFile = "$([Guid]::NewGuid().Guid.ToString()).tmp"
 
@@ -146,7 +197,8 @@ function Get-TemplateParameters
             }
         }
     }
-    else {
+    else
+    {
         # Assert file length
         $template = Get-Content -Raw -Path $TemplateLocation
     }
@@ -183,7 +235,8 @@ function Get-TemplateParameters
     }
 }
 
-function New-DynamicParam {
+function New-DynamicParam
+{
     <#
         .SYNOPSIS
             Helper function to simplify creating dynamic parameters
@@ -207,6 +260,10 @@ function New-DynamicParam {
                 Added a little comment based help
     
             Credit to BM for alias and type parameters and their handling
+
+            Original version of this function with notes above from https://github.com/RamblingCookieMonster/PowerShell
+            
+                Added ValidatePattern argument
     
         .PARAMETER Name
             Name of the dynamic parameter
@@ -356,7 +413,7 @@ function New-DynamicParam {
         $Mandatory,
         
         [string]
-        $ParameterSetName="__AllParameterSets",
+        $ParameterSetName = "__AllParameterSets",
         
         [int]
         $Position,
@@ -367,74 +424,75 @@ function New-DynamicParam {
         [string]
         $HelpMessage,
     
-        [validatescript({
-            if(-not ( $_ -is [System.Management.Automation.RuntimeDefinedParameterDictionary] -or -not $_) )
-            {
-                Throw "DPDictionary must be a System.Management.Automation.RuntimeDefinedParameterDictionary object, or not exist"
-            }
-            $True
-        })]
+        [validatescript( {
+                if (-not ( $_ -is [System.Management.Automation.RuntimeDefinedParameterDictionary] -or -not $_) )
+                {
+                    Throw "DPDictionary must be a System.Management.Automation.RuntimeDefinedParameterDictionary object, or not exist"
+                }
+                $True
+            })]
         $DPDictionary = $false
      
     )
-        #Create attribute object, add attributes, add to collection   
-            $ParamAttr = New-Object System.Management.Automation.ParameterAttribute
-            $ParamAttr.ParameterSetName = $ParameterSetName
-            if($mandatory)
-            {
-                $ParamAttr.Mandatory = $True
-            }
-            if($Position -ne $null)
-            {
-                $ParamAttr.Position=$Position
-            }
-            if($ValueFromPipelineByPropertyName)
-            {
-                $ParamAttr.ValueFromPipelineByPropertyName = $True
-            }
-            if($HelpMessage)
-            {
-                $ParamAttr.HelpMessage = $HelpMessage
-            }
-     
-            $AttributeCollection = New-Object 'Collections.ObjectModel.Collection[System.Attribute]'
-            $AttributeCollection.Add($ParamAttr)
-        
-        #param validation set if specified
-            if($ValidateSet)
-            {
-                $ParamOptions = New-Object System.Management.Automation.ValidateSetAttribute -ArgumentList $ValidateSet
-                $AttributeCollection.Add($ParamOptions)
-            }
-    
-        #param validation pattern if specified
-            if($ValidatePattern)
-            {
-                $ParamOptions = New-Object System.Management.Automation.ValidatePatternAttribute -ArgumentList $ValidatePattern
-                $AttributeCollection.Add($ParamOptions)
-            }
-    
-        #Aliases if specified
-            if($Alias.count -gt 0) {
-                $ParamAlias = New-Object System.Management.Automation.AliasAttribute -ArgumentList $Alias
-                $AttributeCollection.Add($ParamAlias)
-            }
-    
-     
-        #Create the dynamic parameter
-            $Parameter = New-Object -TypeName System.Management.Automation.RuntimeDefinedParameter -ArgumentList @($Name, $Type, $AttributeCollection)
-        
-        #Add the dynamic parameter to an existing dynamic parameter dictionary, or create the dictionary and add it
-            if($DPDictionary)
-            {
-                $DPDictionary.Add($Name, $Parameter)
-            }
-            else
-            {
-                $Dictionary = New-Object System.Management.Automation.RuntimeDefinedParameterDictionary
-                $Dictionary.Add($Name, $Parameter)
-                $Dictionary
-            }
+    #Create attribute object, add attributes, add to collection   
+    $ParamAttr = New-Object System.Management.Automation.ParameterAttribute
+    $ParamAttr.ParameterSetName = $ParameterSetName
+    if ($mandatory)
+    {
+        $ParamAttr.Mandatory = $True
     }
+    if ($Position -ne $null)
+    {
+        $ParamAttr.Position = $Position
+    }
+    if ($ValueFromPipelineByPropertyName)
+    {
+        $ParamAttr.ValueFromPipelineByPropertyName = $True
+    }
+    if ($HelpMessage)
+    {
+        $ParamAttr.HelpMessage = $HelpMessage
+    }
+     
+    $AttributeCollection = New-Object 'Collections.ObjectModel.Collection[System.Attribute]'
+    $AttributeCollection.Add($ParamAttr)
+        
+    #param validation set if specified
+    if ($ValidateSet)
+    {
+        $ParamOptions = New-Object System.Management.Automation.ValidateSetAttribute -ArgumentList $ValidateSet
+        $AttributeCollection.Add($ParamOptions)
+    }
+    
+    #param validation pattern if specified
+    if ($ValidatePattern)
+    {
+        $ParamOptions = New-Object System.Management.Automation.ValidatePatternAttribute -ArgumentList $ValidatePattern
+        $AttributeCollection.Add($ParamOptions)
+    }
+    
+    #Aliases if specified
+    if ($Alias.count -gt 0)
+    {
+        $ParamAlias = New-Object System.Management.Automation.AliasAttribute -ArgumentList $Alias
+        $AttributeCollection.Add($ParamAlias)
+    }
+    
+     
+    #Create the dynamic parameter
+    $Parameter = New-Object -TypeName System.Management.Automation.RuntimeDefinedParameter -ArgumentList @($Name, $Type, $AttributeCollection)
+        
+    #Add the dynamic parameter to an existing dynamic parameter dictionary, or create the dictionary and add it
+    if ($DPDictionary)
+    {
+        $DPDictionary.Add($Name, $Parameter)
+    }
+    else
+    {
+        $Dictionary = New-Object System.Management.Automation.RuntimeDefinedParameterDictionary
+        $Dictionary.Add($Name, $Parameter)
+        $Dictionary
+    }
+}
 
 Export-ModuleMember -Function *
