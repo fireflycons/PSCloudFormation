@@ -50,10 +50,88 @@ function New-Stack
     {
         New-TemplateDynamicParameters -TemplateLocation $TemplateLocation
     }
-    Begin
+
+    begin
     {
         $stackParameters = Get-CommandLineTemplateParameters -BoundParameters $PSBoundParameters
-        $stackParameters
+
+    }
+
+    process 
+    {
+        $arns = $stackName | 
+        ForEach-Object {
+
+            $stackArgs = @{
+
+                'StackName' = $StackName
+            }
+
+            $template = Resolve-TemplateLocation -TemplateLocation $TemplateLocation
+
+            if ($template -is [Uri])
+            {
+                $stackArgs.Add('TemplateURL', $template)
+            }
+            else 
+            {
+                $stackArgs.Add('TemplateBody', (Get-Content -Path $template -Raw))
+            }
+
+            if (-not [string]::IsNullOrEmpty($Capabilities))
+            {
+                $stackArgs.Add('Capabilities', @($Capabilities))
+            }
+             
+            if (($stackParameters | Measure-Object).Count -gt 0)
+            {
+                $stackArgs.Add('Parameter', $stackParameters)
+            }
+
+            New-CFNStack @stackArgs
+        }
+    }
+
+    end 
+    {
+        if ($Wait)
+        {
+            Write-Host "Waiting for creation to complete"
+            $endStates = @('CREATE_COMPLETE', 'UPDATE_COMPLETE', 'ROLLBACK_IN_PROGRESS', 'UPDATE_ROLLBACK_IN_PROGRESS')
+
+            while ($arns.Length -gt 0)
+            {
+                Start-Sleep -Seconds 5
+
+                foreach ($arn in $arns)
+                {
+                    $stack = Get-CFNStack -StackName $arn
+
+                    if ($endStates -icontains $stack.StackStatus)
+                    {
+                        $arns = $arns | Where-Object { $_ -ine $arn }
+
+                        if ($stack.StackStatus -like '*ROLLBACK*')
+                        {
+                            Write-Host -ForegroundColor Red "Create/Update failed: $arn"
+                            Write-Host -ForegroundColor Red "$($stack.StackStatusReason)"
+                            Write-Host -ForegroundColor Red (Get-StackFailureEvents -StackName $StackName | Sort-Object -Descending Timestamp | Out-String)
+                        }
+                        else 
+                        {
+                            # Emit completed stack ARN
+                            Write-Host "Create complete: $arn"
+                            $arn    
+                        }
+                    }
+                }
+            }
+        }
+        else 
+        {
+            # Emit all ARNs
+            $arns
+        }
     }
 }
 
@@ -83,23 +161,240 @@ function Update-Stack
     {
         New-TemplateDynamicParameters -TemplateLocation $TemplateLocation
     }
-    Begin
+    
+    begin
     {
         $stackParameters = Get-CommandLineTemplateParameters -BoundParameters $PSBoundParameters
-        $stackParameters
+
+        $iterator = $(
+
+            switch ($PSCmdlet.ParameterSetName)
+            {
+                'ByName' { $StackName }
+                'ByObject' { $Stack }
+            }
+        )
+    }
+
+    process 
+    {
+
     }
 }
 
 function Remove-Stack
 {
-    [Parameter(Mandatory = $true, ParameterSetName = 'ByName', ValueFromPipeline = $true)]
-    [string]$StackName,
+<#
+    .SYNOPSIS
+        Delete one or more stacks.
 
-    [Parameter(Mandatory = $true, ParameterSetName = 'ByObject', ValueFromPipeline = $true)]
-    [Amazon.CloudFormation.Model.Stack]$Stack,
+    .DESCRIPTION
+        Delete one or more stacks.
 
-    [switch]$Wait
+        Deletion of multiple stacks can be either sequential or parallel.
+        If deleting a gruop of stacks where there are dependencies between them
+        use the -Sequential switch and list the stacks in dependency order.
+
+    .PARAMETER StackName
+        Either stack names or the object returned by Get-CFNStack, New-CFNStack, Update-CFNStack 
+        and other functions in this module when run with -Wait.
+    
+    .PARAMETER Wait
+        If set and -Seuqential is not set (so deleting in perallel), wait for all stacks to be deleted before returning.
+
+    .PARAMETER Sequential
+        If set, delete stacks in the order they are specified on the command line or received from the pipeline,
+        waiting for each stack to delete successfully before proceeding to the next one.
+
+    .EXAMPLE
+
+        Remove-Stack -StackName MyStack
+
+        Deletes a single stack.
+
+    .EXAMPLE
+
+        'DependentStack', 'BaseStack' | Remove-Stack -Sequential
+
+        Deletes 'DependentStack', waits for completion, then deletes 'BaseStack'.
+        
+    .EXAMPLE
+
+        'Stack1', 'Stack2' | Remove-Stack -Wait
+
+        Sets both stacks deleting in parallel, then waits for them both to complete.
+        
+    .EXAMPLE
+
+        'Stack1', 'Stack2' | Remove-Stack
+
+        Sets both stacks deleting in parallel, and returns immediately. 
+        See the CloudFormation console to monitor progress.
+        
+    .EXAMPLE
+
+        Get-CFNStack | Remove-Stack
+
+        You would NOT want to do this, just like you wouldn't do rm -rf / ! It is for illustration only.
+        Sets ALL stacks in the region deleting simultaneously, which would probably trash some stacks
+        and then others would fail due to dependent resources.
+#>
+    [CmdletBinding()]
+    param
+    (
+        [Parameter(Mandatory = $true, ValueFromPipeline = $true, ValueFromPipelineByPropertyName = $true, Position = 0)]
+        [string[]]$StackName,
+
+        [switch]$Wait,
+
+        [switch]$Sequential
+    )
+
+    begin
+    {
+        $endStates = @('DELETE_COMPLETE', 'DELETE_FAILED')
+    }
+
+    process
+    {
+        $arns = $StackName |
+        ForEach-Object {
+
+            $arn = (Get-CFNStack -StackName $_).StackId
+
+            Remove-CFNStack -StackName $arn -Force
+
+            if ($Sequential -or ($Wait -and ($StackName | Measure-Object).Count -eq 1))
+            {
+                # Wait for this delete to complete before starting the next
+                Write-Host "Waiting for delete: $arn"
+                $stack = Wait-CFNStack -StackName $arn -Timeout ([TimeSpan]::FromMinutes(60).TotalSeconds) -Status $endStates
+
+                if ($stack.StackStatus -like 'DELETE_FAILED')
+                {
+                    Write-Host -ForegroundColor Red "Delete failed: $arn"
+                    Write-Host -ForegroundColor Red (Get-StackFailureEvents -StackName $arn | Sort-Object -Descending Timestamp | Out-String)
+
+                    # Have to give up now as chained stack almost certainly is used by this one
+                    throw $stack.StackStatusReason
+                }
+            }
+            else 
+            {
+                $arn
+            }
+        }
+    }
+
+    end
+    {
+        if ($Wait -and ($arns | Measure-Object).Count -gt 0)
+        {
+            Write-Host "Waiting for delete:`n$($arns -join "`n")"
+            
+            while ($arns.Length -gt 0)
+            {
+                Start-Sleep -Seconds 5
+
+                foreach ($arn in $arns)
+                {
+                    $stack = Get-CFNStack -StackName $arn
+
+                    if ($endStates -icontains $stack.StackStatus)
+                    {
+                        $arns = $arns | Where-Object { $_ -ine $arn }
+
+                        if ($stack.StackStatus -like 'DELETE_FAILED')
+                        {
+                            Write-Host -ForegroundColor Red "Delete failed: $arn"
+                            Write-Host -ForegroundColor Red "$($stack.StackStatusReason)"
+                            Write-Host -ForegroundColor Red (Get-StackFailureEvents -StackName $StackName | Sort-Object -Descending Timestamp | Out-String)
+                        }
+                        else 
+                        {
+                            Write-Host "Delete complete: $arn"
+                        }
+                    }
+                }
+            }
+        }
+    }
 }
+
+
+# Helper Functions
+
+function Get-StackFailureEvents
+{
+    param(
+        [string]$StackName
+    )
+
+    Get-CFNStackEvent -StackName $StackName |
+    Where-Object {
+        $_.ResourceStatus -ilike '*FAILED*' -or $_.ResourceStatus -ilike '*ROLLBACK*'
+    }
+
+    Get-CFNStackResourceList -StackName $StackName |
+    Where-Object {
+        $_.ResourceType -ieq 'AWS::CloudFormation::Stack'
+    } |
+    ForEach-Object {
+
+        if ($_ -and $_.PhysicalResourceId)
+        {
+            Get-StackFailureEvents -StackName $_.PhysicalResourceId
+        }
+    }
+}
+
+
+function Resolve-TemplateLocation
+{
+    param 
+    (
+        [string]$TemplateLocation
+    )
+
+    $u = $null
+
+    if ([Uri]::TryCreate($TemplateLocation, 'Absolute', [ref]$u))
+    {
+        switch ($u.Scheme)
+        {
+            's3' {
+
+                # Convert to full URL
+                if (-not (Test-Path -Path Variable:\StoredAWSRegion))
+                {
+                    throw "Cannot determine region. Please use Initialize-AWSDefaults or Set-DefaultAWSRegion"
+                }
+
+                return [Uri]("https://s3-{0}.amazonaws.com/{1}{2}" -f $StoredAWSRegion, $u.Authority, $u.PathAndQuery)
+            }
+
+            'file' {
+
+                return $TemplateLocation
+            }
+
+            { $_ -ieq 'http' -or $_ -ieq 'https' } {
+
+                return $u
+            }
+
+            default {
+
+                throw "Unsupported URI: $($u.ToString())"
+            }
+        }
+    }
+    else 
+    {
+        return $TemplateLocation    
+    }
+}
+
 
 #region Dynamic Parameter magic for extracting template parameters
 
