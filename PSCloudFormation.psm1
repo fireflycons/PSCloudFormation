@@ -1,10 +1,10 @@
-
 #region Module Init
 
 $ErrorActionPreference = 'Stop'
 
-$Script:yamlSupport = $false
-
+# Hashtable of AWS custom parameter types vs. regexes to validate them
+# Supporting 8 and 17 character identifiers
+# AWS::EC2::AvailabilityZone::Name is handled separately by querying AWSPowerShell for AZs valid for the region we are executing in.
 $Script:templateParameterValidators = @{
 
     'AWS::EC2::Image::Id'         = '^\s*ami-([a-z0-9]{8}|[a-z0-9]{17})\s*$'
@@ -15,6 +15,21 @@ $Script:templateParameterValidators = @{
     'AWS::EC2::VPC::Id'           = '^\s*vpc-([a-z0-9]{8}|[a-z0-9]{17})\s*$'
 }
 
+# Check for and load AWSPowerShell
+if (-not (Get-Module -ListAvailable | Where-Object {  $_.Name -ieq 'powershell-yaml' }))
+{
+    Write-Warning 'AWSPowerShell module not found on this system'
+    Write-Warning 'Please install from the gallery'
+    Write-Warning 'Install-Module -Name AWSPowerShell'
+    throw 'AWSPowerShell not installed'
+}
+
+if (-not (Get-Module -Name AWSPowerShell -ErrorAction SilentlyContinue))
+{
+    Import-Module AWSPowerShell
+}
+
+# Check for YAML support
 if (Get-Module -ListAvailable | Where-Object {  $_.Name -ieq 'powershell-yaml' })
 {
     Import-Module powershell-yaml
@@ -25,6 +40,7 @@ else
     Write-Warning 'YAML support unavailable'
     Write-Warning 'To enable, install powershell-yaml from the gallery'
     Write-Warning 'Install-Module -Name powershell-yaml'
+    $Script:yamlSupport = $false
 }
 
 #endregion
@@ -106,32 +122,7 @@ function New-Stack
             throw "Stack already exists: $StackName"
         }
 
-        $stackArgs = @{
-
-            'StackName' = $StackName
-        }
-
-        $template = New-TemplateResolver -TemplateLocation $TemplateLocation
-
-        if ($template.IsFile)
-        {
-            $stackArgs.Add('TemplateBody', $template.ReadTemplate())
-        }
-        else 
-        {
-            $stackArgs.Add('TemplateURL', $template.Url)
-        }
-
-        if (-not [string]::IsNullOrEmpty($Capabilities))
-        {
-            $stackArgs.Add('Capabilities', @($Capabilities))
-        }
-         
-        if (($stackParameters | Measure-Object).Count -gt 0)
-        {
-            $stackArgs.Add('Parameter', $stackParameters)
-        }
-
+        $stackArgs = New-StackOperationArguments -StackName $StackName -TemplateLocation $TemplateLocation -Capabilities $Capabilities -StackParameters $stackParameters
         $arn = New-CFNStack @stackArgs
 
         if ($Wait)
@@ -145,7 +136,6 @@ function New-Stack
                 Write-Host -ForegroundColor Red "Create failed: $arn"
                 Write-Host -ForegroundColor Red (Get-StackFailureEvents -StackName $arn | Sort-Object -Descending Timestamp | Out-String)
 
-                # Have to give up now as chained stack almost certainly is used by this one
                 throw $stack.StackStatusReason
             }
         }
@@ -157,15 +147,58 @@ function New-Stack
 
 function Update-Stack
 {
+    <#
+    .SYNOPSIS
+        Updates a stack.
+
+    .DESCRIPTION
+        Updates a stack via creation and application of a changeset.
+
+
+        DYNAMIC PARAMETERS
+            Once the -TemplateLocation argument has been suppied on the command line
+            the function reads the template and creates additional command line parameters
+            for each of the entries found in the "Parameters" section of the template.
+            These parameters are named as per each parameter in the template and defaults
+            and validation rules created for them as defined by the template.
+
+            Thus, if a template parameter has AllowedPattern and AllowedValues properties,
+            the resultant function argument will permit TAB completion of the AllowedValues,
+            assert that you have entered one of these, and for AllowedPattern, the function
+            argument will assert the regular expression.
+
+            Template parameters with no default will become mandatory parameters to this function.
+            If you do not supply them, you will be prompted for them and the help text for the 
+            parameter will be taken from the Description property of the parameter.
+
+    .PARAMETER StackName
+        Name for the new stack.
+
+    .PARAMETER TemplateLocation
+        Location of the template. 
+        This may be
+        - Path to a local file
+        - s3:// URL pointing to template in a bucket
+        - https:// URL pointing to template in a bucket
+        
+    .PARAMETER Capabilities
+        If the stack requires IAM capabilities, TAB auctocompletes between the capability types.
+    
+    .PARAMETER Wait
+        If set, wait for stack update to complete before returning.
+
+    .PARAMETER Rebuild
+        If set, update the stack by deleting then recreating it.
+
+    .OUTPUTS
+        [string] ARN of the new stack
+    #>    
     [CmdletBinding()]
     param
     (
-        [Parameter(Mandatory = $true, ParameterSetName = 'ByName', ValueFromPipeline = $true)]
+        [Parameter(Mandatory = $true, ValueFromPipeline = $true, ValueFromPipelineByPropertyName = $true, Position = 0)]
         [string]$StackName,
-    
-        [Parameter(Mandatory = $true, ParameterSetName = 'ByObject', ValueFromPipeline = $true)]
-        [Amazon.CloudFormation.Model.Stack]$Stack,
-        
+
         [Parameter(Mandatory = $true)]
         [string]$TemplateLocation,
 
@@ -185,20 +218,90 @@ function Update-Stack
     begin
     {
         $stackParameters = Get-CommandLineStackParameters -BoundParameters $PSBoundParameters
-
-        $iterator = $(
-
-            switch ($PSCmdlet.ParameterSetName)
-            {
-                'ByName' { $StackName }
-                'ByObject' { $Stack }
-            }
-        )
     }
 
-    process 
+    end 
     {
+        if ($Rebuild)
+        {
+            # Pass all Update-Stack parameters except 'Rebuild' to New-Stack
+            # Clone the bound parameters, excluding Rebuild argument
+            $createParameters = @{}
+            $PSBoundParameters.Keys |
+            Where-Object { $_ -ine 'Rebuild'} |
+            ForEach-Object {
 
+                $createParameters.Add($_, $PSBoundParameters[$_])
+            }
+
+            Remove-Stack -StackName $StackName -Wait
+            New-Stack @createParameters
+
+            return
+        }
+        
+        $changesetName = '{0}-{1}' -f [IO.Path]::GetFileNameWithoutExtension($MyInvocation.MyCommand.Module.Name), [int](([datetime]::UtcNow)-(get-date "1/1/1970")).TotalSeconds
+
+        Write-Host "Creating change set $changesetName"
+
+        $stackArgs = New-StackOperationArguments -StackName $StackName -TemplateLocation $TemplateLocation -Capabilities $Capabilities -StackParameters $stackParameters
+        $csArn = New-CFNChangeSet -ChangeSetName $changesetName @stackArgs
+        $cs = Get-CFNChangeSet -ChangeSetName $csArn
+
+        while (('CREATE_COMPLETE', 'FAILED') -inotcontains $cs.Status)
+        {
+            Start-Sleep -Seconds 1
+            $cs = Get-CFNChangeSet -ChangeSetName $csArn
+        }
+
+        if ($cs.Status -ieq 'FAILED')
+        {
+            throw "Changeset $changesetName failed to create"
+        }
+
+        Write-Host ($cs.Changes.ResourceChange | Select-Object Action, LogicalResourceId, PhysicalResourceId, ResourceType | Format-Table | Out-String)
+
+        $choice = $host.ui.PromptForChoice(
+            'Begin the stack update now?',
+            $null,
+            @(
+                New-Object System.Management.Automation.Host.ChoiceDescription ('&Yes', "Start rebuild now." )
+                New-Object System.Management.Automation.Host.ChoiceDescription ('&No', 'Abort operation.')
+            ),
+            0
+        )
+        
+        if ($choice -ne 0)
+        {
+            throw "Aborted."
+        }
+        
+        Write-Host "Updating stack $StackName"
+        $arn = (Get-CFNStack -StackName $StackName).StackId
+        Start-CFNChangeSet -StackName $StackName -ChangeSetName $changesetName
+
+        if ($Wait)
+        {
+            Write-Host "Waiting for update to complete"
+
+            $stack = Wait-CFNStack -StackName $arn -Timeout ([TimeSpan]::FromMinutes(60).TotalSeconds) -Status @('UPDATE_COMPLETE', 'UPDATE_ROLLBACK_IN_PROGRESS')
+
+            if ($stack.StackStatus -like '*ROLLBACK*')
+            {
+                Write-Host -ForegroundColor Red "Update failed: $arn"
+                Write-Host -ForegroundColor Red (Get-StackFailureEvents -StackName $arn | Sort-Object -Descending Timestamp | Out-String)
+
+                throw $stack.StackStatusReason
+            }
+
+            # Emit ARN
+            $arn
+        }
+        else
+        {
+            # Emit ARN
+            $arn
+        }
     }
 }
 
@@ -350,6 +453,45 @@ function Remove-Stack
 
 
 # Helper Functions
+
+function New-StackOperationArguments
+{
+    param
+    (
+        [string]$StackName,
+        [string]$TemplateLocation,
+        [string]$Capabilities,
+        [object]$StackParameters
+    )
+
+    $stackArgs = @{
+
+        'StackName' = $StackName
+    }
+
+    $template = New-TemplateResolver -TemplateLocation $TemplateLocation
+
+    if ($template.IsFile)
+    {
+        $stackArgs.Add('TemplateBody', $template.ReadTemplate())
+    }
+    else 
+    {
+        $stackArgs.Add('TemplateURL', $template.Url)
+    }
+
+    if (-not [string]::IsNullOrEmpty($Capabilities))
+    {
+        $stackArgs.Add('Capabilities', @($Capabilities))
+    }
+        
+    if (($stackParameters | Measure-Object).Count -gt 0)
+    {
+        $stackArgs.Add('Parameter', $stackParameters)
+    }
+
+    $stackArgs
+}
 
 function Test-StackExists
 {
@@ -519,7 +661,7 @@ function New-TemplateResolver
 
             'file' {
 
-                $resovler.Path = Resolve-Path $TemplateLocation
+                $resolver.Path = $TemplateLocation
                 $resolver.IsFile = $true
             }
 
@@ -712,6 +854,17 @@ function New-TemplateDynamicParameters
 
 function Get-TemplateParameters
 {
+    <#
+        .SYNOPSIS
+            Extract template parameter blok as a PowerShell object graph.
+
+        .PARAMETER TemplateResolver
+            A resolver object returned by New-TemplateResolver.
+
+        .OUTPUTS
+            [object] Parameter block deserialised from JSON or YAML, 
+                     or nothing if template has no parameters.
+    #>
     param
     (
         [object]$TemplateResolver
@@ -738,7 +891,7 @@ function Get-TemplateParameters
     {
         if (-not $Script:yamlSupport)
         {
-            throw "Template cannot be parsed as JSON and YAML support unavailable"
+            throw "Template cannot be parsed as JSON parse failed and YAML support unavailable"
         }
     }
 
@@ -777,8 +930,7 @@ function New-DynamicParam
     
             Credit to BM for alias and type parameters and their handling
 
-            Original version of this function with notes above from https://github.com/RamblingCookieMonster/PowerShell
-            
+            Cresit to https://github.com/RamblingCookieMonster/PowerShell for this implementation
                 Added ValidatePattern argument
     
         .PARAMETER Name
