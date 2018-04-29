@@ -31,6 +31,49 @@ else
 
 function New-Stack
 {
+    <#
+    .SYNOPSIS
+        Creates a stack.
+
+    .DESCRIPTION
+        Creates a stack.
+
+        DYNAMIC PARAMETERS
+            Once the -TemplateLocation argument has been suppied on the command line
+            the function reads the template and creates additional command line parameters
+            for each of the entries found in the "Parameters" section of the template.
+            These parameters are named as per each parameter in the template and defaults
+            and validation rules created for them as defined by the template.
+
+            Thus, if a template parameter has AllowedPattern and AllowedValues properties,
+            the resultant function argument will permit TAB completion of the AllowedValues,
+            assert that you have entered one of these, and for AllowedPattern, the function
+            argument will assert the regular expression.
+
+            Template parameters with no default will become mandatory parameters to this function.
+            If you do not supply them, you will be prompted for them and the help text for the 
+            parameter will be taken from the Description property of the parameter.
+
+    .PARAMETER StackName
+        Name for the new stack.
+
+    .PARAMETER TemplateLocation
+        Location of the template. 
+        This may be
+        - Path to a local file
+        - s3:// URL pointing to template in a bucket
+        - https:// URL pointing to template in a bucket
+        
+    .PARAMETER Capabilities
+        If the stack requires IAM capabilities, TAB auctocompletes between the capability types.
+    
+    .PARAMETER Wait
+        If set, wait for stack creation to complete before returning.
+
+    .OUTPUTS
+        [string] ARN of the new stack
+    #>    
+
     [CmdletBinding()]
     param
     (
@@ -53,85 +96,62 @@ function New-Stack
 
     begin
     {
-        $stackParameters = Get-CommandLineTemplateParameters -BoundParameters $PSBoundParameters
-
-    }
-
-    process 
-    {
-        $arns = $stackName | 
-        ForEach-Object {
-
-            $stackArgs = @{
-
-                'StackName' = $StackName
-            }
-
-            $template = Resolve-TemplateLocation -TemplateLocation $TemplateLocation
-
-            if ($template -is [Uri])
-            {
-                $stackArgs.Add('TemplateURL', $template)
-            }
-            else 
-            {
-                $stackArgs.Add('TemplateBody', (Get-Content -Path $template -Raw))
-            }
-
-            if (-not [string]::IsNullOrEmpty($Capabilities))
-            {
-                $stackArgs.Add('Capabilities', @($Capabilities))
-            }
-             
-            if (($stackParameters | Measure-Object).Count -gt 0)
-            {
-                $stackArgs.Add('Parameter', $stackParameters)
-            }
-
-            New-CFNStack @stackArgs
-        }
+        $stackParameters = Get-CommandLineStackParameters -BoundParameters $PSBoundParameters
     }
 
     end 
     {
-        if ($Wait)
+        if (Test-StackExists -StackName $StackName)
         {
-            Write-Host "Waiting for creation to complete"
-            $endStates = @('CREATE_COMPLETE', 'UPDATE_COMPLETE', 'ROLLBACK_IN_PROGRESS', 'UPDATE_ROLLBACK_IN_PROGRESS')
+            throw "Stack already exists: $StackName"
+        }
 
-            while ($arns.Length -gt 0)
-            {
-                Start-Sleep -Seconds 5
+        $stackArgs = @{
 
-                foreach ($arn in $arns)
-                {
-                    $stack = Get-CFNStack -StackName $arn
+            'StackName' = $StackName
+        }
 
-                    if ($endStates -icontains $stack.StackStatus)
-                    {
-                        $arns = $arns | Where-Object { $_ -ine $arn }
+        $template = New-TemplateResolver -TemplateLocation $TemplateLocation
 
-                        if ($stack.StackStatus -like '*ROLLBACK*')
-                        {
-                            Write-Host -ForegroundColor Red "Create/Update failed: $arn"
-                            Write-Host -ForegroundColor Red "$($stack.StackStatusReason)"
-                            Write-Host -ForegroundColor Red (Get-StackFailureEvents -StackName $StackName | Sort-Object -Descending Timestamp | Out-String)
-                        }
-                        else 
-                        {
-                            # Emit completed stack ARN
-                            Write-Host "Create complete: $arn"
-                            $arn    
-                        }
-                    }
-                }
-            }
+        if ($template.IsFile)
+        {
+            $stackArgs.Add('TemplateBody', $template.ReadTemplate())
         }
         else 
         {
-            # Emit all ARNs
-            $arns
+            $stackArgs.Add('TemplateURL', $template.Url)
         }
+
+        if (-not [string]::IsNullOrEmpty($Capabilities))
+        {
+            $stackArgs.Add('Capabilities', @($Capabilities))
+        }
+         
+        if (($stackParameters | Measure-Object).Count -gt 0)
+        {
+            $stackArgs.Add('Parameter', $stackParameters)
+        }
+
+        $arn = New-CFNStack @stackArgs
+
+        if ($Wait)
+        {
+            Write-Host "Waiting for creation to complete"
+
+            $stack = Wait-CFNStack -StackName $arn -Timeout ([TimeSpan]::FromMinutes(60).TotalSeconds) -Status @('CREATE_COMPLETE', 'ROLLBACK_IN_PROGRESS')
+
+            if ($stack.StackStatus -like '*ROLLBACK*')
+            {
+                Write-Host -ForegroundColor Red "Create failed: $arn"
+                Write-Host -ForegroundColor Red (Get-StackFailureEvents -StackName $arn | Sort-Object -Descending Timestamp | Out-String)
+
+                # Have to give up now as chained stack almost certainly is used by this one
+                throw $stack.StackStatusReason
+            }
+        }
+
+        # Emit ARN
+        $arn
     }
 }
 
@@ -164,7 +184,7 @@ function Update-Stack
     
     begin
     {
-        $stackParameters = Get-CommandLineTemplateParameters -BoundParameters $PSBoundParameters
+        $stackParameters = Get-CommandLineStackParameters -BoundParameters $PSBoundParameters
 
         $iterator = $(
 
@@ -184,7 +204,7 @@ function Update-Stack
 
 function Remove-Stack
 {
-<#
+    <#
     .SYNOPSIS
         Delete one or more stacks.
 
@@ -200,7 +220,7 @@ function Remove-Stack
         and other functions in this module when run with -Wait.
     
     .PARAMETER Wait
-        If set and -Seuqential is not set (so deleting in perallel), wait for all stacks to be deleted before returning.
+        If set and -Sequential is not set (so deleting in parallel), wait for all stacks to be deleted before returning.
 
     .PARAMETER Sequential
         If set, delete stacks in the order they are specified on the command line or received from the pipeline,
@@ -238,7 +258,7 @@ function Remove-Stack
         You would NOT want to do this, just like you wouldn't do rm -rf / ! It is for illustration only.
         Sets ALL stacks in the region deleting simultaneously, which would probably trash some stacks
         and then others would fail due to dependent resources.
-#>
+    #>
     [CmdletBinding()]
     param
     (
@@ -260,28 +280,35 @@ function Remove-Stack
         $arns = $StackName |
         ForEach-Object {
 
-            $arn = (Get-CFNStack -StackName $_).StackId
-
-            Remove-CFNStack -StackName $arn -Force
-
-            if ($Sequential -or ($Wait -and ($StackName | Measure-Object).Count -eq 1))
+            if (Test-StackExists -StackName $_)
             {
-                # Wait for this delete to complete before starting the next
-                Write-Host "Waiting for delete: $arn"
-                $stack = Wait-CFNStack -StackName $arn -Timeout ([TimeSpan]::FromMinutes(60).TotalSeconds) -Status $endStates
+                $arn = (Get-CFNStack -StackName $_).StackId
 
-                if ($stack.StackStatus -like 'DELETE_FAILED')
+                Remove-CFNStack -StackName $arn -Force
+
+                if ($Sequential -or ($Wait -and ($StackName | Measure-Object).Count -eq 1))
                 {
-                    Write-Host -ForegroundColor Red "Delete failed: $arn"
-                    Write-Host -ForegroundColor Red (Get-StackFailureEvents -StackName $arn | Sort-Object -Descending Timestamp | Out-String)
+                    # Wait for this delete to complete before starting the next
+                    Write-Host "Waiting for delete: $arn"
+                    $stack = Wait-CFNStack -StackName $arn -Timeout ([TimeSpan]::FromMinutes(60).TotalSeconds) -Status $endStates
 
-                    # Have to give up now as chained stack almost certainly is used by this one
-                    throw $stack.StackStatusReason
+                    if ($stack.StackStatus -like 'DELETE_FAILED')
+                    {
+                        Write-Host -ForegroundColor Red "Delete failed: $arn"
+                        Write-Host -ForegroundColor Red (Get-StackFailureEvents -StackName $arn | Sort-Object -Descending Timestamp | Out-String)
+
+                        # Have to give up now as chained stack almost certainly is used by this one
+                        throw $stack.StackStatusReason
+                    }
+                }
+                else 
+                {
+                    $arn
                 }
             }
             else 
             {
-                $arn
+                Write-Warning "Stack does not exist: $StackName"    
             }
         }
     }
@@ -324,9 +351,55 @@ function Remove-Stack
 
 # Helper Functions
 
+function Test-StackExists
+{
+    <#
+    .SYNOPSIS
+        Tests whether a stack exists.
+
+    .PARAMETER StackName
+        Stack to test
+
+    .OUTPUTS 
+        [bool] true if stack exists; else false
+    #>
+    param
+    (
+        [string]$StackName
+    )
+
+    try 
+    {
+        Get-CFNStack -StackName $StackName
+        $true    
+    }
+    catch 
+    {
+        $false    
+    }
+}
+
 function Get-StackFailureEvents
 {
-    param(
+    <#
+    .SYNOPSIS
+        Gets failure event list from a briken stack
+
+    .DESCRIPTION 
+        Gets failure events for a failed stack and also attempts
+        to get the events for any nested stack. This depends on
+        the functionbeing able to get to the nested stack resource
+        before AWS removes it.
+
+    .PARAMETER StackName 
+        Name of failed stack
+
+    .OUTPUTS
+        [Amazon.CloudFormation.Model.StackEvent[]]
+        Array of stack failure events.
+    #>
+    param
+    (
         [string]$StackName
     )
 
@@ -348,13 +421,79 @@ function Get-StackFailureEvents
     }
 }
 
-
-function Resolve-TemplateLocation
+function New-TemplateResolver
 {
+    <#
+    .SYNOPSIS
+        Resolve template location from path/url given on command lines
+
+    .DESCRIPTION
+        Returns an object that has methods for retrieving the template body
+        and the size of the template file such that it can be checked for size limitations
+
+    .PARAMETER TemplateLocation
+        Location of the template. May be either
+        - Path to local file
+        - S3 URI (which is converted to HTTPS URI for the current region)
+        - HTTP(S) Uri
+
+    .OUTPUTS
+        Custom Object.
+    #>
+
     param 
     (
         [string]$TemplateLocation
     )
+
+    $resolver = New-Object PSObject -Property @{
+
+        'IsFile' = $null
+        'BucketName' = $null
+        'Key' = $null
+        'Path' = $null
+        'Url' = $null
+    } |
+    Add-Member -PassThru -Name ReadTemplate -MemberType ScriptMethod -Value {
+
+        # Reads the template contents from either S3 or file system as approriate.
+        if ($this.Path)
+        {
+            Get-Content -Raw -Path $this.Path
+        }
+        elseif ($this.BucketName -and $this.Key)
+        {
+            $tmpFile = "$([Guid]::NewGuid().ToString()).tmp"
+
+            try {
+                Read-S3Object -BucketName $this.BucketName -Key $this.Key -File $tmpFile | Out-Null
+                Get-Content -Raw -Path $tmpFile                
+            }
+            finally {
+                Remove-Item -Path $tmpFile
+            }
+        }
+        else 
+        {
+            throw "Template location undefined"    
+        }
+    } |
+    Add-Member -PassThru -Name Length -MemberType ScriptMethod -Value {
+
+        # Gets the file szie of the template
+        if ($this.Path)
+        {
+            (Get-ItemProperty -Name Length -Path $this.Path).Length
+        }
+        elseif ($this.BucketName -and $this.Key)
+        {
+            (Get-S3Object -BucketName $this.BucketName -Key $this.Key).Size
+        }
+        else 
+        {
+            throw "Template location undefined"    
+        }
+    }
 
     $u = $null
 
@@ -364,23 +503,32 @@ function Resolve-TemplateLocation
         {
             's3' {
 
+                $r = Get-DefaultAWSRegion
+
                 # Convert to full URL
-                if (-not (Test-Path -Path Variable:\StoredAWSRegion))
+                if (-not $r)
                 {
                     throw "Cannot determine region. Please use Initialize-AWSDefaults or Set-DefaultAWSRegion"
                 }
 
-                return [Uri]("https://s3-{0}.amazonaws.com/{1}{2}" -f $StoredAWSRegion, $u.Authority, $u.PathAndQuery)
+                $resolver.Url = [Uri]("https://s3-{0}.amazonaws.com/{1}{2}" -f $r.Region, $u.Authority, $u.LocalPath)
+                $resolver.BucketName = $u.Authority
+                $resolver.Key = $u.LocalPath
+                $resolver.IsFile = $false
             }
 
             'file' {
 
-                return $TemplateLocation
+                $resovler.Path = Resolve-Path $TemplateLocation
+                $resolver.IsFile = $true
             }
 
             { $_ -ieq 'http' -or $_ -ieq 'https' } {
 
-                return $u
+                $resolver.Url = $u
+                $resolver.BucketName = $u.Segments[1].Trim('/');
+                $resolver.Key = $u.Segments[2..($u.Segments.Length-1)] -join ''
+                $resolver.IsFile = $false
             }
 
             default {
@@ -391,15 +539,33 @@ function Resolve-TemplateLocation
     }
     else 
     {
-        return $TemplateLocation    
+        $resolver.Path = $TemplateLocation   
+        $resolver.IsFile = $true 
     }
+    
+    $resolver
 }
 
 
 #region Dynamic Parameter magic for extracting template parameters
-
-function Get-CommandLineTemplateParameters
+function Get-CommandLineStackParameters
 {
+    <#
+    .SYNOPSIS
+        Returns stack parameter objects from the calling function's command line
+
+    .DESCRIPTION
+        Discovers the parameters of the calling object that are dynamic and
+        creates an array of stack parameter objects from them
+
+    .PARAMETER BoundParameters
+        The value of $PSBoundParameters of the calling function
+
+    .OUTPUTS
+        [Amazon.CloudFormation.Model.Parameter[]]
+        Array of any parameters found.
+
+    #>    
     param
     (
         [hashtable]$BoundParameters
@@ -438,6 +604,27 @@ function Get-CommandLineTemplateParameters
 
 function New-TemplateDynamicParameters
 {
+    <#
+    .SYNOPSIS
+        Create PowerShell dynamic parameters from template parameters.
+
+    .DESCRIPTION 
+        Loads/downloads the template and parses the template body to extract arguments.
+        Turns these parameters into PowerShell dynamic parameters for the
+        New-PSCfnStack and Update-PSCfnStack CmdLets, also applying any
+        constraints indicated by AllowedPattern or AllowedValues, and
+        creating regex contraints to validate AWS types like AWS::EC2::Image::Id
+
+    .PARAMETER TemplateLocation
+        Location of the template. May be either
+        - Path to local file
+        - S3 URI (which is converted to HTTPS URI for the current region)
+        - HTTP(S) Uri
+        
+    .OUTPUTS
+        [System.Management.Automation.RuntimeDefinedParameterDictionary]
+        New dynamic parameters to apply to caller.
+    #>    
     param
     (
         [string]$TemplateLocation
@@ -446,7 +633,7 @@ function New-TemplateDynamicParameters
     #Create the RuntimeDefinedParameterDictionary
     $Dictionary = New-Object System.Management.Automation.RuntimeDefinedParameterDictionary
 
-    (Get-TemplateParameters -TemplateLocation $TemplateLocation).PSObject.Properties |
+    (Get-TemplateParameters -TemplateResolver (New-TemplateResolver -TemplateLocation $TemplateLocation)).PSObject.Properties |
         ForEach-Object {
 
         $param = $_
@@ -527,46 +714,10 @@ function Get-TemplateParameters
 {
     param
     (
-        [string]$TemplateLocation
+        [object]$TemplateResolver
     )
 
-    $u = $null
-    $template = $null
-
-    if ([Uri]::TryCreate($TemplateLocation, 'Absolute', [ref]$u) -and $u.Scheme -ne 'file')
-    {
-        # Template is a URL
-        switch ($u.Scheme)
-        {
-            {$_ -ieq 'http' -or $_ -ieq 'https'}
-            {
-
-                $template = Invoke-WebRequest -Uri $u -UseBasicParsing -Method Get
-            }
-
-            's3'
-            {
-
-                $tmpFile = "$([Guid]::NewGuid().Guid.ToString()).tmp"
-
-                try 
-                {
-                    Get-S3Object -BucketName $u.Authority -Key $u.LocalPath -File $tmpFile
-                    # Assert file length
-                    $template = Get-Content -Raw $tmpFile
-                }
-                finally 
-                {
-                    Remove-Item $tmpFile
-                }
-            }
-        }
-    }
-    else
-    {
-        # Assert file length
-        $template = Get-Content -Raw -Path $TemplateLocation
-    }
+    $template = $TemplateResolver.ReadTemplate()
 
     # Check YAML/JSON
     try 
