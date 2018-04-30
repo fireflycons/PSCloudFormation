@@ -16,17 +16,17 @@ $Script:templateParameterValidators = @{
 }
 
 # Common Credential and Region Parameters and their types
-$Script:commonCredentialArguments = @(
+$Script:commonCredentialArguments = @{
 
-    @{ AccessKey = [string] }
-    @{ Credential = [Amazon.Runtime.AWSCredentials] }
-    @{ ProfileLocation = [string] }
-    @{ ProfileName = [string] }
-    @{ NetworkCredential = [System.Management.Automation.PSCredential] }
-    @{ SecretKey = [string]}
-    @{ SessionToken = [string]}
-    @{ Region = [string] }
-)
+    AccessKey         = [string] 
+    Credential        = [Amazon.Runtime.AWSCredentials] 
+    ProfileLocation   = [string] 
+    ProfileName       = [string] 
+    NetworkCredential = [System.Management.Automation.PSCredential] 
+    SecretKey         = [string]
+    SessionToken      = [string]
+    Region            = [string] 
+}
 
 
 # Check for and load AWSPowerShell
@@ -826,11 +826,10 @@ function New-CredentialDynamicParameters
         [System.Management.Automation.RuntimeDefinedParameterDictionary]$Dictionary
     )
 
-    $Script:commonCredentialArguments |
+    $Script:commonCredentialArguments.Keys |
         ForEach-Object {
 
-        $paramName = $_.Keys | Select-Object -First 1
-        New-DynamicParam -Name $paramName -Type $_[$paramName] -DPDictionary $Dictionary
+        New-DynamicParam -Name $_ -Type $Script:commonCredentialArguments[$_] -DPDictionary $Dictionary
     }
 
     $Dictionary
