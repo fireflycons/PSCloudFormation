@@ -248,8 +248,8 @@ function Update-Stack
             # Clone the bound parameters, excluding Rebuild argument
             $createParameters = @{}
             $PSBoundParameters.Keys |
-            Where-Object { $_ -ine 'Rebuild'} |
-            ForEach-Object {
+                Where-Object { $_ -ine 'Rebuild'} |
+                ForEach-Object {
 
                 $createParameters.Add($_, $PSBoundParameters[$_])
             }
@@ -260,7 +260,7 @@ function Update-Stack
             return
         }
         
-        $changesetName = '{0}-{1}' -f [IO.Path]::GetFileNameWithoutExtension($MyInvocation.MyCommand.Module.Name), [int](([datetime]::UtcNow)-(get-date "1/1/1970")).TotalSeconds
+        $changesetName = '{0}-{1}' -f [IO.Path]::GetFileNameWithoutExtension($MyInvocation.MyCommand.Module.Name), [int](([datetime]::UtcNow) - (get-date "1/1/1970")).TotalSeconds
 
         Write-Host "Creating change set $changesetName"
 
@@ -409,7 +409,7 @@ function Remove-Stack
     process
     {
         $arns = $StackName |
-        ForEach-Object {
+            ForEach-Object {
 
             if (Test-StackExists -StackName $_)
             {
@@ -504,7 +504,7 @@ function Get-CommonCredentialParameters
 
     $credentialArgs = @{}
     $PSBoundParameters.Keys |
-    ForEach-Object {
+        ForEach-Object {
 
         $credentialArgs.Add($_, $PSBoundParameters[$_])
     }
@@ -604,15 +604,15 @@ function Get-StackFailureEvents
     )
 
     Get-CFNStackEvent -StackName $StackName |
-    Where-Object {
+        Where-Object {
         $_.ResourceStatus -ilike '*FAILED*' -or $_.ResourceStatus -ilike '*ROLLBACK*'
     }
 
     Get-CFNStackResourceList -StackName $StackName |
-    Where-Object {
+        Where-Object {
         $_.ResourceType -ieq 'AWS::CloudFormation::Stack'
     } |
-    ForEach-Object {
+        ForEach-Object {
 
         if ($_ -and $_.PhysicalResourceId)
         {
@@ -648,13 +648,13 @@ function New-TemplateResolver
 
     $resolver = New-Object PSObject -Property @{
 
-        'IsFile' = $null
+        'IsFile'     = $null
         'BucketName' = $null
-        'Key' = $null
-        'Path' = $null
-        'Url' = $null
+        'Key'        = $null
+        'Path'       = $null
+        'Url'        = $null
     } |
-    Add-Member -PassThru -Name ReadTemplate -MemberType ScriptMethod -Value {
+        Add-Member -PassThru -Name ReadTemplate -MemberType ScriptMethod -Value {
 
         # Reads the template contents from either S3 or file system as approriate.
         if ($this.Path)
@@ -665,11 +665,13 @@ function New-TemplateResolver
         {
             $tmpFile = "$([Guid]::NewGuid().ToString()).tmp"
 
-            try {
+            try
+            {
                 Read-S3Object -BucketName $this.BucketName -Key $this.Key -File $tmpFile | Out-Null
                 Get-Content -Raw -Path $tmpFile                
             }
-            finally {
+            finally
+            {
                 Remove-Item -Path $tmpFile
             }
         }
@@ -678,7 +680,7 @@ function New-TemplateResolver
             throw "Template location undefined"    
         }
     } |
-    Add-Member -PassThru -Name Length -MemberType ScriptMethod -Value {
+        Add-Member -PassThru -Name Length -MemberType ScriptMethod -Value {
 
         # Gets the file szie of the template
         if ($this.Path)
@@ -701,7 +703,8 @@ function New-TemplateResolver
     {
         switch ($u.Scheme)
         {
-            's3' {
+            's3'
+            {
 
                 $r = Get-DefaultAWSRegion
 
@@ -717,21 +720,24 @@ function New-TemplateResolver
                 $resolver.IsFile = $false
             }
 
-            'file' {
+            'file'
+            {
 
                 $resolver.Path = $TemplateLocation
                 $resolver.IsFile = $true
             }
 
-            { $_ -ieq 'http' -or $_ -ieq 'https' } {
+            { $_ -ieq 'http' -or $_ -ieq 'https' }
+            {
 
                 $resolver.Url = $u
                 $resolver.BucketName = $u.Segments[1].Trim('/');
-                $resolver.Key = $u.Segments[2..($u.Segments.Length-1)] -join ''
+                $resolver.Key = $u.Segments[2..($u.Segments.Length - 1)] -join ''
                 $resolver.IsFile = $false
             }
 
-            default {
+            default
+            {
 
                 throw "Unsupported URI: $($u.ToString())"
             }
@@ -821,7 +827,7 @@ function New-CredentialDynamicParameters
     )
 
     $Script:commonCredentialArguments |
-    ForEach-Object {
+        ForEach-Object {
 
         $paramName = $_.Keys | Select-Object -First 1
         New-DynamicParam -Name $paramName -Type $_[$paramName] -DPDictionary $Dictionary
