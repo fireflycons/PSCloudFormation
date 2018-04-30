@@ -15,6 +15,20 @@ $Script:templateParameterValidators = @{
     'AWS::EC2::VPC::Id'           = '^\s*vpc-([a-z0-9]{8}|[a-z0-9]{17})\s*$'
 }
 
+# Common Credential and Region Parameters and their types
+$Script:commonCredentialArguments = @(
+
+    @{ AccessKey = [string] }
+    @{ Credential = [Amazon.Runtime.AWSCredentials] }
+    @{ ProfileLocation = [string] }
+    @{ ProfileName = [string] }
+    @{ NetworkCredential = [System.Management.Automation.PSCredential] }
+    @{ SecretKey = [string]}
+    @{ SessionToken = [string]}
+    @{ Region = [string] }
+)
+
+
 # Check for and load AWSPowerShell
 if (-not (Get-Module -ListAvailable | Where-Object {  $_.Name -ieq 'powershell-yaml' }))
 {
@@ -107,7 +121,10 @@ function New-Stack
 
     DynamicParam
     {
-        New-TemplateDynamicParameters -TemplateLocation $TemplateLocation
+        #Create the RuntimeDefinedParameterDictionary
+        $Dictionary = New-Object System.Management.Automation.RuntimeDefinedParameterDictionary
+
+        New-TemplateDynamicParameters -TemplateLocation $TemplateLocation -Dictionary $Dictionary
     }
 
     begin
@@ -212,7 +229,10 @@ function Update-Stack
 
     DynamicParam
     {
-        New-TemplateDynamicParameters -TemplateLocation $TemplateLocation
+        #Create the RuntimeDefinedParameterDictionary
+        $Dictionary = New-Object System.Management.Automation.RuntimeDefinedParameterDictionary
+
+        New-TemplateDynamicParameters -TemplateLocation $TemplateLocation -Dictionary $Dictionary
     }
     
     begin
@@ -373,6 +393,14 @@ function Remove-Stack
         [switch]$Sequential
     )
 
+    DynamicParam
+    {
+        #Create the RuntimeDefinedParameterDictionary
+        $Dictionary = New-Object System.Management.Automation.RuntimeDefinedParameterDictionary
+
+        New-CredentialDynamicParameters -Dictionary $Dictionary
+    }
+    
     begin
     {
         $endStates = @('DELETE_COMPLETE', 'DELETE_FAILED')
@@ -453,6 +481,36 @@ function Remove-Stack
 
 
 # Helper Functions
+
+function Get-CommonCredentialParameters
+{
+    <#
+        .SYNOPSIS
+            Get a credential from supplied credential arguments
+
+    #>
+
+    param
+    (
+        [string]$AccessKey,
+        [Amazon.Runtime.AWSCredentials]$Credential,
+        [string]$ProfileLocation,
+        [string]$ProfileName,
+        [System.Management.Automation.PSCredential]$NetworkCredential,
+        [string]$SecretKey,
+        [string]$SessionToken,
+        [string]$Region
+    )
+
+    $credentialArgs = @{}
+    $PSBoundParameters.Keys |
+    ForEach-Object {
+
+        $credentialArgs.Add($_, $PSBoundParameters[$_])
+    }
+
+    $credentialArgs
+}
 
 function New-StackOperationArguments
 {
@@ -744,6 +802,34 @@ function Get-CommandLineStackParameters
     $stackParameters
 }
 
+function New-CredentialDynamicParameters
+{
+    <#
+        .SYNOPSIS
+            Add the common credential and region parameters as dynamic parameters
+
+        .PARAMETER Dictionary
+            RuntimeDefinedParameterDictionary to add CF template parameters to.
+
+        .OUTPUTS
+            [System.Management.Automation.RuntimeDefinedParameterDictionary]
+            The dictionary that was passed in with new dynamic parameters to apply to caller added.
+    #>    
+    param
+    (
+        [System.Management.Automation.RuntimeDefinedParameterDictionary]$Dictionary
+    )
+
+    $Script:commonCredentialArguments |
+    ForEach-Object {
+
+        $paramName = $_.Keys | Select-Object -First 1
+        New-DynamicParam -Name $paramName -Type $_[$paramName] -DPDictionary $Dictionary
+    }
+
+    $Dictionary
+}
+
 function New-TemplateDynamicParameters
 {
     <#
@@ -762,19 +848,20 @@ function New-TemplateDynamicParameters
         - Path to local file
         - S3 URI (which is converted to HTTPS URI for the current region)
         - HTTP(S) Uri
-        
+    
+    .PARAMETER Dictionary
+        RuntimeDefinedParameterDictionary to add CF template parameters to.
+
     .OUTPUTS
         [System.Management.Automation.RuntimeDefinedParameterDictionary]
-        New dynamic parameters to apply to caller.
+        The dictionary that was passed in with new dynamic parameters to apply to caller added.
     #>    
     param
     (
-        [string]$TemplateLocation
+        [string]$TemplateLocation,
+        [System.Management.Automation.RuntimeDefinedParameterDictionary]$Dictionary
     )
     
-    #Create the RuntimeDefinedParameterDictionary
-    $Dictionary = New-Object System.Management.Automation.RuntimeDefinedParameterDictionary
-
     (Get-TemplateParameters -TemplateResolver (New-TemplateResolver -TemplateLocation $TemplateLocation)).PSObject.Properties |
         ForEach-Object {
 
