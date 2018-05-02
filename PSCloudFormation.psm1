@@ -7,12 +7,13 @@ $ErrorActionPreference = 'Stop'
 # AWS::EC2::AvailabilityZone::Name is handled separately by querying AWSPowerShell for AZs valid for the region we are executing in.
 $Script:templateParameterValidators = @{
 
-    'AWS::EC2::Image::Id'         = '^\s*ami-([a-z0-9]{8}|[a-z0-9]{17})\s*$'
-    'AWS::EC2::Instance::Id'      = '^\s*i-([a-z0-9]{8}|[a-z0-9]{17})\s*$'
-    'AWS::EC2::SecurityGroup::Id' = '^\s*sg-([a-z0-9]{8}|[a-z0-9]{17})\s*$'
-    'AWS::EC2::Subnet::Id'        = '^\s*subnet-([a-z0-9]{8}|[a-z0-9]{17})\s*$'
-    'AWS::EC2::Volume::Id'        = '^\s*vol-([a-z0-9]{8}|[a-z0-9]{17})\s*$'
-    'AWS::EC2::VPC::Id'           = '^\s*vpc-([a-z0-9]{8}|[a-z0-9]{17})\s*$'
+    'AWS::EC2::Image::Id'              = '^\s*ami-([a-z0-9]{8}|[a-z0-9]{17})\s*$'
+    'AWS::EC2::Instance::Id'           = '^\s*i-([a-z0-9]{8}|[a-z0-9]{17})\s*$'
+    'AWS::EC2::SecurityGroup::Id'      = '^\s*sg-([a-z0-9]{8}|[a-z0-9]{17})\s*$'
+    'AWS::EC2::Subnet::Id'             = '^\s*subnet-([a-z0-9]{8}|[a-z0-9]{17})\s*$'
+    'AWS::EC2::Volume::Id'             = '^\s*vol-([a-z0-9]{8}|[a-z0-9]{17})\s*$'
+    'AWS::EC2::VPC::Id'                = '^\s*vpc-([a-z0-9]{8}|[a-z0-9]{17})\s*$'
+    'AWS::EC2::AvailabilityZone::Name' = '^\s*[a-z]{2}-[a-z]+-\d[a-z]\s*$'
 }
 
 # Common Credential and Region Parameters and their types
@@ -26,21 +27,6 @@ $Script:commonCredentialArguments = @{
     SecretKey         = [string]
     SessionToken      = [string]
     Region            = [string] 
-}
-
-
-# Check for and load AWSPowerShell
-if (-not (Get-Module -ListAvailable | Where-Object {  $_.Name -ieq 'powershell-yaml' }))
-{
-    Write-Warning 'AWSPowerShell module not found on this system'
-    Write-Warning 'Please install from the gallery'
-    Write-Warning 'Install-Module -Name AWSPowerShell'
-    throw 'AWSPowerShell not installed'
-}
-
-if (-not (Get-Module -Name AWSPowerShell -ErrorAction SilentlyContinue))
-{
-    Import-Module AWSPowerShell
 }
 
 # Check for YAML support
@@ -58,6 +44,8 @@ else
 }
 
 #endregion
+
+#region Public Functions
 
 function New-Stack
 {
@@ -113,8 +101,8 @@ function New-Stack
         [Parameter(Mandatory = $true)]
         [string]$TemplateLocation,
 
-        [ValidateSet('CAPABILITY_IAM', 'CAPABILITY_NAMED_IAM', '')]
-        [string]$Capabilities = '',
+        [ValidateSet('CAPABILITY_IAM', 'CAPABILITY_NAMED_IAM')]
+        [string]$Capabilities,
     
         [switch]$Wait
     )
@@ -122,36 +110,37 @@ function New-Stack
     DynamicParam
     {
         #Create the RuntimeDefinedParameterDictionary
-        $Dictionary = New-Object System.Management.Automation.RuntimeDefinedParameterDictionary
-
-        New-TemplateDynamicParameters -TemplateLocation $TemplateLocation -Dictionary $Dictionary
+        New-Object System.Management.Automation.RuntimeDefinedParameterDictionary |
+        New-CredentialDynamicParameters |
+        New-TemplateDynamicParameters -TemplateLocation $TemplateLocation
     }
 
     begin
     {
-        $stackParameters = Get-CommandLineStackParameters -BoundParameters $PSBoundParameters
+        $stackParameters = Get-CommandLineStackParameters -CallerBoundParameters $PSBoundParameters
+        $credentialArguments = Get-CommonCredentialParameters -CallerBoundParameters $PSBoundParameters
     }
 
     end 
     {
-        if (Test-StackExists -StackName $StackName)
+        if (Test-StackExists -StackName $StackName -CredentialArguments $credentialArguments)
         {
             throw "Stack already exists: $StackName"
         }
 
         $stackArgs = New-StackOperationArguments -StackName $StackName -TemplateLocation $TemplateLocation -Capabilities $Capabilities -StackParameters $stackParameters
-        $arn = New-CFNStack @stackArgs
+        $arn = New-CFNStack @stackArgs @credentialArguments
 
         if ($Wait)
         {
             Write-Host "Waiting for creation to complete"
 
-            $stack = Wait-CFNStack -StackName $arn -Timeout ([TimeSpan]::FromMinutes(60).TotalSeconds) -Status @('CREATE_COMPLETE', 'ROLLBACK_IN_PROGRESS')
+            $stack = Wait-CFNStack -StackName $arn -Timeout ([TimeSpan]::FromMinutes(60).TotalSeconds) -Status @('CREATE_COMPLETE', 'ROLLBACK_IN_PROGRESS') @credentialArguments
 
             if ($stack.StackStatus -like '*ROLLBACK*')
             {
                 Write-Host -ForegroundColor Red "Create failed: $arn"
-                Write-Host -ForegroundColor Red (Get-StackFailureEvents -StackName $arn | Sort-Object -Descending Timestamp | Out-String)
+                Write-Host -ForegroundColor Red (Get-StackFailureEvents -StackName $arn -CredentialArguments $credentialArguments | Sort-Object -Descending Timestamp | Out-String)
 
                 throw $stack.StackStatusReason
             }
@@ -219,8 +208,8 @@ function Update-Stack
         [Parameter(Mandatory = $true)]
         [string]$TemplateLocation,
 
-        [ValidateSet('CAPABILITY_IAM', 'CAPABILITY_NAMED_IAM', '')]
-        [string]$Capabilities = '',
+        [ValidateSet('CAPABILITY_IAM', 'CAPABILITY_NAMED_IAM')]
+        [string]$Capabilities,
     
         [switch]$Wait,
 
@@ -230,14 +219,15 @@ function Update-Stack
     DynamicParam
     {
         #Create the RuntimeDefinedParameterDictionary
-        $Dictionary = New-Object System.Management.Automation.RuntimeDefinedParameterDictionary
-
-        New-TemplateDynamicParameters -TemplateLocation $TemplateLocation -Dictionary $Dictionary
+        New-Object System.Management.Automation.RuntimeDefinedParameterDictionary |
+        New-CredentialDynamicParameters |
+        New-TemplateDynamicParameters -TemplateLocation $TemplateLocation
     }
     
     begin
     {
-        $stackParameters = Get-CommandLineStackParameters -BoundParameters $PSBoundParameters
+        $stackParameters = Get-CommandLineStackParameters -CallerBoundParameters $PSBoundParameters
+        $credentialArguments = Get-CommonCredentialParameters -CallerBoundParameters $PSBoundParameters
     }
 
     end 
@@ -245,7 +235,7 @@ function Update-Stack
         if ($Rebuild)
         {
             # Pass all Update-Stack parameters except 'Rebuild' to New-Stack
-            # Clone the bound parameters, excluding Rebuild argument
+            # This will include any common credential and template parameters
             $createParameters = @{}
             $PSBoundParameters.Keys |
                 Where-Object { $_ -ine 'Rebuild'} |
@@ -254,9 +244,8 @@ function Update-Stack
                 $createParameters.Add($_, $PSBoundParameters[$_])
             }
 
-            Remove-Stack -StackName $StackName -Wait
+            Remove-Stack -StackName $StackName -Wait @credentialArguments
             New-Stack @createParameters
-
             return
         }
         
@@ -265,13 +254,13 @@ function Update-Stack
         Write-Host "Creating change set $changesetName"
 
         $stackArgs = New-StackOperationArguments -StackName $StackName -TemplateLocation $TemplateLocation -Capabilities $Capabilities -StackParameters $stackParameters
-        $csArn = New-CFNChangeSet -ChangeSetName $changesetName @stackArgs
-        $cs = Get-CFNChangeSet -ChangeSetName $csArn
+        $csArn = New-CFNChangeSet -ChangeSetName $changesetName @stackArgs @credentialArguments
+        $cs = Get-CFNChangeSet -ChangeSetName $csArn @credentialArguments
 
         while (('CREATE_COMPLETE', 'FAILED') -inotcontains $cs.Status)
         {
             Start-Sleep -Seconds 1
-            $cs = Get-CFNChangeSet -ChangeSetName $csArn
+            $cs = Get-CFNChangeSet -ChangeSetName $csArn @credentialArguments
         }
 
         if ($cs.Status -ieq 'FAILED')
@@ -297,19 +286,19 @@ function Update-Stack
         }
         
         Write-Host "Updating stack $StackName"
-        $arn = (Get-CFNStack -StackName $StackName).StackId
-        Start-CFNChangeSet -StackName $StackName -ChangeSetName $changesetName
+        $arn = (Get-CFNStack -StackName $StackName @credentialArguments).StackId
+        Start-CFNChangeSet -StackName $StackName -ChangeSetName $changesetName @credentialArguments
 
         if ($Wait)
         {
             Write-Host "Waiting for update to complete"
 
-            $stack = Wait-CFNStack -StackName $arn -Timeout ([TimeSpan]::FromMinutes(60).TotalSeconds) -Status @('UPDATE_COMPLETE', 'UPDATE_ROLLBACK_IN_PROGRESS')
+            $stack = Wait-CFNStack -StackName $arn -Timeout ([TimeSpan]::FromMinutes(60).TotalSeconds) -Status @('UPDATE_COMPLETE', 'UPDATE_ROLLBACK_IN_PROGRESS') @credentialArguments
 
             if ($stack.StackStatus -like '*ROLLBACK*')
             {
                 Write-Host -ForegroundColor Red "Update failed: $arn"
-                Write-Host -ForegroundColor Red (Get-StackFailureEvents -StackName $arn | Sort-Object -Descending Timestamp | Out-String)
+                Write-Host -ForegroundColor Red (Get-StackFailureEvents -StackName $arn -CredentialArguments $credentialArguments | Sort-Object -Descending Timestamp | Out-String)
 
                 throw $stack.StackStatusReason
             }
@@ -396,14 +385,14 @@ function Remove-Stack
     DynamicParam
     {
         #Create the RuntimeDefinedParameterDictionary
-        $Dictionary = New-Object System.Management.Automation.RuntimeDefinedParameterDictionary
-
-        New-CredentialDynamicParameters -Dictionary $Dictionary
+        New-Object System.Management.Automation.RuntimeDefinedParameterDictionary |
+            New-CredentialDynamicParameters
     }
     
     begin
     {
         $endStates = @('DELETE_COMPLETE', 'DELETE_FAILED')
+        $credentialArguments = Get-CommonCredentialParameters -CallerBoundParameters $PSBoundParameters
     }
 
     process
@@ -411,9 +400,9 @@ function Remove-Stack
         $arns = $StackName |
             ForEach-Object {
 
-            if (Test-StackExists -StackName $_)
+            if (Test-StackExists -StackName $_ -CredentialArguments $credentialArguments)
             {
-                $arn = (Get-CFNStack -StackName $_).StackId
+                $arn = (Get-CFNStack -StackName $_ @credentialArguments).StackId
 
                 Remove-CFNStack -StackName $arn -Force
 
@@ -421,12 +410,12 @@ function Remove-Stack
                 {
                     # Wait for this delete to complete before starting the next
                     Write-Host "Waiting for delete: $arn"
-                    $stack = Wait-CFNStack -StackName $arn -Timeout ([TimeSpan]::FromMinutes(60).TotalSeconds) -Status $endStates
+                    $stack = Wait-CFNStack -StackName $arn -Timeout ([TimeSpan]::FromMinutes(60).TotalSeconds) -Status $endStates @credentialArguments
 
                     if ($stack.StackStatus -like 'DELETE_FAILED')
                     {
                         Write-Host -ForegroundColor Red "Delete failed: $arn"
-                        Write-Host -ForegroundColor Red (Get-StackFailureEvents -StackName $arn | Sort-Object -Descending Timestamp | Out-String)
+                        Write-Host -ForegroundColor Red (Get-StackFailureEvents -StackName $arn -CredentialArguments $credentialArguments | Sort-Object -Descending Timestamp | Out-String)
 
                         # Have to give up now as chained stack almost certainly is used by this one
                         throw $stack.StackStatusReason
@@ -456,7 +445,7 @@ function Remove-Stack
 
                 foreach ($arn in $arns)
                 {
-                    $stack = Get-CFNStack -StackName $arn
+                    $stack = Get-CFNStack -StackName $arn @credentialArguments
 
                     if ($endStates -icontains $stack.StackStatus)
                     {
@@ -466,7 +455,7 @@ function Remove-Stack
                         {
                             Write-Host -ForegroundColor Red "Delete failed: $arn"
                             Write-Host -ForegroundColor Red "$($stack.StackStatusReason)"
-                            Write-Host -ForegroundColor Red (Get-StackFailureEvents -StackName $StackName | Sort-Object -Descending Timestamp | Out-String)
+                            Write-Host -ForegroundColor Red (Get-StackFailureEvents -StackName $StackName -CredentialArguments $credentialArguments | Sort-Object -Descending Timestamp | Out-String)
                         }
                         else 
                         {
@@ -479,41 +468,36 @@ function Remove-Stack
     }
 }
 
+#endregion
 
-# Helper Functions
-
-function Get-CommonCredentialParameters
-{
-    <#
-        .SYNOPSIS
-            Get a credential from supplied credential arguments
-
-    #>
-
-    param
-    (
-        [string]$AccessKey,
-        [Amazon.Runtime.AWSCredentials]$Credential,
-        [string]$ProfileLocation,
-        [string]$ProfileName,
-        [System.Management.Automation.PSCredential]$NetworkCredential,
-        [string]$SecretKey,
-        [string]$SessionToken,
-        [string]$Region
-    )
-
-    $credentialArgs = @{}
-    $PSBoundParameters.Keys |
-        ForEach-Object {
-
-        $credentialArgs.Add($_, $PSBoundParameters[$_])
-    }
-
-    $credentialArgs
-}
+#region Helper Functions
 
 function New-StackOperationArguments
 {
+    <#
+    .SYNOPSIS
+        Create an argument hash of parameters needs by New-CFNStack and Update-CFNStack
+
+    .PARAMETER StackName
+        Name of stack to create/update
+
+    .PARAMETER TemplateLocation
+        May be one of
+        - Local file. File is read and used to build a -TemplateBody argument
+        - S3 URI (which is converted to HTTPS URI for the current region) and builds -TemplateURL argument
+          Note that this only works if a default region is set in the shell and 
+          you don't try to point to a different region with -Region
+        - https URL. URL is used as-is to build -TemplateURL argument
+
+    .PARAMETER Capabilities
+        IAM Capability for -Capability argument
+
+    .PARAMETER StackParameters
+        Array of template parameters for -Parameter argument
+
+    .OUTPUTS
+        [hashtable] Argument hash to splat New-CFNStack/Update-CFNStack
+    #>
     param
     (
         [string]$StackName,
@@ -560,17 +544,21 @@ function Test-StackExists
     .PARAMETER StackName
         Stack to test
 
+    .PARAMETER CredentialArguments
+        Any common creadential arguments given to caller
+
     .OUTPUTS 
         [bool] true if stack exists; else false
     #>
     param
     (
-        [string]$StackName
+        [string]$StackName,
+        [hashtable]$CredentialArguments
     )
 
     try 
     {
-        Get-CFNStack -StackName $StackName
+        Get-CFNStack -StackName $StackName @CredentialArguments
         $true    
     }
     catch 
@@ -600,15 +588,16 @@ function Get-StackFailureEvents
     #>
     param
     (
-        [string]$StackName
+        [string]$StackName,
+        [hashtable]$CredentialArguments
     )
 
-    Get-CFNStackEvent -StackName $StackName |
+    Get-CFNStackEvent -StackName $StackName @CredentialArguments |
         Where-Object {
         $_.ResourceStatus -ilike '*FAILED*' -or $_.ResourceStatus -ilike '*ROLLBACK*'
     }
 
-    Get-CFNStackResourceList -StackName $StackName |
+    Get-CFNStackResourceList -StackName $StackName @CredentialArguments |
         Where-Object {
         $_.ResourceType -ieq 'AWS::CloudFormation::Stack'
     } |
@@ -616,7 +605,7 @@ function Get-StackFailureEvents
 
         if ($_ -and $_.PhysicalResourceId)
         {
-            Get-StackFailureEvents -StackName $_.PhysicalResourceId
+            Get-StackFailureEvents -StackName $_.PhysicalResourceId -CredentialArguments $CredentialArguments
         }
     }
 }
@@ -635,6 +624,8 @@ function New-TemplateResolver
         Location of the template. May be either
         - Path to local file
         - S3 URI (which is converted to HTTPS URI for the current region)
+          Note that this only works if a default region is set in the shell and 
+          you don't try to point to a different region with -Region
         - HTTP(S) Uri
 
     .OUTPUTS
@@ -752,8 +743,39 @@ function New-TemplateResolver
     $resolver
 }
 
+#endregion
 
 #region Dynamic Parameter magic for extracting template parameters
+
+function Get-CommonCredentialParameters
+{
+    <#
+        .SYNOPSIS
+            Gets AWS Commmon Credential and Region parameters
+
+        .PARAMETER CallerBoundParameters
+            Value of $PSBoundParameters from the calling function
+
+        .OUTPUTS
+            [hashtable] Extracted Commmon Credential parameters for splatting AWSPowerShell calls
+    #>
+
+    param
+    (
+        [hashtable]$CallerBoundParameters
+    )
+
+    $credentialArgs = @{}
+    $CallerBoundParameters.Keys |
+        Where-Object { $Script:commonCredentialArguments.Keys -contains $_} |
+        ForEach-Object {
+
+        $credentialArgs.Add($_, $CallerBoundParameters[$_])
+    }
+
+    $credentialArgs
+}
+
 function Get-CommandLineStackParameters
 {
     <#
@@ -764,8 +786,8 @@ function Get-CommandLineStackParameters
         Discovers the parameters of the calling object that are dynamic and
         creates an array of stack parameter objects from them
 
-    .PARAMETER BoundParameters
-        The value of $PSBoundParameters of the calling function
+    .PARAMETER CallerBoundParameters
+        Value of $PSBoundParameters from the calling function
 
     .OUTPUTS
         [Amazon.CloudFormation.Model.Parameter[]]
@@ -774,22 +796,21 @@ function Get-CommandLineStackParameters
     #>    
     param
     (
-        [hashtable]$BoundParameters
+        [hashtable]$CallerBoundParameters
     )
 
     $stackParameters = @()
 
-    #This standard block of code loops through bound parameters...
-    #If no corresponding variable exists, one is created
-    #Get common parameters, pick out bound parameters not in that set
+    # Create a dummy function for the purpose of dicovering
+    # the PowerShell common parameters so they can be filtered out.
     function _temp { [cmdletbinding()] param() }
 
     $commonParameters = (Get-Command _temp | Select-Object -ExpandProperty parameters).Keys
 
-    $BoundParameters.Keys | 
+    $CallerBoundParameters.Keys | 
         Where-Object { 
 
-        -not ($commonParameters -contains $_ -or (Get-Variable -Name $_ -Scope 1 -ErrorAction SilentlyContinue))
+        -not ($commonParameters -contains $_ -or $Script:commonCredentialArguments.Keys -contains $_ -or (Get-Variable -Name $_ -Scope 1 -ErrorAction SilentlyContinue))
     } |
         ForEach-Object {
 
@@ -799,12 +820,11 @@ function Get-CommandLineStackParameters
 
             $param = New-Object Amazon.CloudFormation.Model.Parameter 
             $param.ParameterKey = $_
-            $param.ParameterValue = $BoundParameters.$_ -join ','
+            $param.ParameterValue = $CallerBoundParameters.$_ -join ','
             $param            
         )
     }
 
-    #Appropriate variables should now be defined and accessible
     $stackParameters
 }
 
@@ -821,18 +841,42 @@ function New-CredentialDynamicParameters
             [System.Management.Automation.RuntimeDefinedParameterDictionary]
             The dictionary that was passed in with new dynamic parameters to apply to caller added.
     #>    
+    [CmdletBinding()]
     param
     (
+        [Parameter(ValueFromPipeline = $true)]
         [System.Management.Automation.RuntimeDefinedParameterDictionary]$Dictionary
     )
 
-    $Script:commonCredentialArguments.Keys |
-        ForEach-Object {
+    end
+    {
+        $Script:commonCredentialArguments.Keys |
+            ForEach-Object {
 
-        New-DynamicParam -Name $_ -Type $Script:commonCredentialArguments[$_] -DPDictionary $Dictionary
+            $validateSet = @{}
+
+            if ($_ -ieq 'Region')
+            {
+                try
+                {
+                    $regions = Get-AWSRegion | Select-Object -ExpandProperty Region
+
+                    if ($regions)
+                    {
+                        $validateSet.Add('ValidateSet', $regions)
+                    }
+                }
+                catch
+                {
+                    # do nothing
+                }
+            }
+
+            New-DynamicParam -Name $_ -Type $Script:commonCredentialArguments[$_] -DPDictionary $Dictionary @validateSet
+        }
+
+        $Dictionary
     }
-
-    $Dictionary
 }
 
 function New-TemplateDynamicParameters
@@ -844,7 +888,7 @@ function New-TemplateDynamicParameters
     .DESCRIPTION 
         Loads/downloads the template and parses the template body to extract arguments.
         Turns these parameters into PowerShell dynamic parameters for the
-        New-PSCfnStack and Update-PSCfnStack CmdLets, also applying any
+        New-PSCFNStack and Update-PSCCFNtack CmdLets, also applying any
         constraints indicated by AllowedPattern or AllowedValues, and
         creating regex contraints to validate AWS types like AWS::EC2::Image::Id
 
@@ -861,101 +905,101 @@ function New-TemplateDynamicParameters
         [System.Management.Automation.RuntimeDefinedParameterDictionary]
         The dictionary that was passed in with new dynamic parameters to apply to caller added.
     #>    
+    [CmdletBinding()]
     param
     (
-        [string]$TemplateLocation,
-        [System.Management.Automation.RuntimeDefinedParameterDictionary]$Dictionary
+        [Parameter(ValueFromPipeline = $true)]
+        [System.Management.Automation.RuntimeDefinedParameterDictionary]$Dictionary,
+        [string]$TemplateLocation
     )
     
-    (Get-TemplateParameters -TemplateResolver (New-TemplateResolver -TemplateLocation $TemplateLocation)).PSObject.Properties |
-        ForEach-Object {
+    end
+    {
+        (Get-TemplateParameters -TemplateResolver (New-TemplateResolver -TemplateLocation $TemplateLocation)).PSObject.Properties |
+            ForEach-Object {
 
-        $param = $_
+            $param = $_
 
-        $paramDefinition = @{
-            'Name'         = $param.Name
-            'DPDictionary' = $Dictionary
-        }
-
-        if (-not $param.Value.PSObject.Properties['Type'])
-        {
-            throw "Malformed parameter definition. Type is required"
-        }
-
-        $awsType = $param.Value.Type
-
-        # If it's one of the AWS special types that can equate to a regex
-        if ($Script:templateParameterValidators.ContainsKey($awsType))
-        {
-            $paramDefinition.Add('Type', 'String')
-            $paramDefinition.Add('ValidatePattern', $Script:templateParameterValidators[$awstype])
-        }
-        elseif ($awsType -imatch 'List\<(?<ResourceId>[A-Z0-9\:]+)\>' -and $Script:templateParameterValidators.ContainsKey($Matches.ResourceId))
-        {
-            $paramDefinition.Add('Type', 'String[]')
-            $paramDefinition.Add('ValidatePattern', $Script:templateParameterValidators[$Matches.ResourceId])
-        }
-        elseif ($awsType -ieq 'AWS::EC2::AvailabilityZone::Name')
-        {
-            $paramDefinition.Add('Type', 'String')
-            $paramDefinition.Add('ValidateSet', ((Get-EC2AvailabilityZone).ZoneName -join ','));
-        }
-        elseif ($awsType -ieq 'List<AWS::EC2::AvailabilityZone::Name>')
-        {
-            $paramDefinition.Add('Type', 'String[]')
-            $paramDefinition.Add('ValidateSet', ((Get-EC2AvailabilityZone).ZoneName -join ','));
-        }
-        else
-        {
-            if ($awsType -ieq 'Number')
-            {
-                $paramDefinition.Add('Type', 'Double')
+            $paramDefinition = @{
+                'Name'         = $param.Name
+                'DPDictionary' = $Dictionary
             }
-            else 
+
+            if (-not $param.Value.PSObject.Properties['Type'])
             {
+                # All template parameters require a Type property
+                throw "Malformed parameter definition. Type is required"
+            }
+
+            $awsType = $param.Value.Type
+
+            if ($Script:templateParameterValidators.ContainsKey($awsType))
+            {
+                # One of the defined AWS special parameter types
                 $paramDefinition.Add('Type', 'String')
+                $paramDefinition.Add('ValidatePattern', $Script:templateParameterValidators[$awstype])
             }
-
-            if ($param.Value.PSObject.Properties['AllowedValues'])
+            elseif ($awsType -imatch 'List\<(?<ResourceId>[A-Z0-9\:]+)\>' -and $Script:templateParameterValidators.ContainsKey($Matches.ResourceId))
             {
-                $paramDefinition.Add('ValidateSet', $param.Value.AllowedValues);
+                # List of one of the defined AWS special parameter types
+                $paramDefinition.Add('Type', 'String[]')
+                $paramDefinition.Add('ValidatePattern', $Script:templateParameterValidators[$Matches.ResourceId])
             }
-
-            if ($param.Value.PSObject.Properties['AllowedPattern'])
+            else
             {
-                $paramDefinition.Add('ValidatePattern', $param.Value.AllowedPattern);
+                # Basic types with optional AllowedValues/AllowedPattern
+                if ($awsType -ieq 'Number')
+                {
+                    $paramDefinition.Add('Type', 'Double')
+                }
+                else 
+                {
+                    $paramDefinition.Add('Type', 'String')
+                }
+
+                if ($param.Value.PSObject.Properties['AllowedValues'])
+                {
+                    $paramDefinition.Add('ValidateSet', $param.Value.AllowedValues);
+                }
+
+                if ($param.Value.PSObject.Properties['AllowedPattern'])
+                {
+                    $paramDefinition.Add('ValidatePattern', $param.Value.AllowedPattern);
+                }
             }
-        }
 
-        if ($param.Value.PSObject.Properties['Description'])
-        {
-            $paramDefinition.Add('HelpMessage', $param.Value.Description);
-        }
+            if ($param.Value.PSObject.Properties['Description'])
+            {
+                # Description becomes help test if the parameter is mandatory
+                $paramDefinition.Add('HelpMessage', $param.Value.Description);
+            }
 
-        if (-not $param.Value.PSObject.Properties['Default'])
-        {
-            $paramDefinition.Add('Mandatory', $true);
-        }
+            if (-not $param.Value.PSObject.Properties['Default'])
+            {
+                # If no default in the template, parameter is mandatory
+                $paramDefinition.Add('Mandatory', $true);
+            }
 
-        New-DynamicParam @paramDefinition
-    }
+            New-DynamicParam @paramDefinition
+        }
                   
-    #return RuntimeDefinedParameterDictionary
-    $Dictionary
+        #return RuntimeDefinedParameterDictionary
+        $Dictionary
+    }
 }
 
 function Get-TemplateParameters
 {
     <#
-        .SYNOPSIS
-            Extract template parameter blok as a PowerShell object graph.
+    .SYNOPSIS
+        Extract template parameter block as a PowerShell object graph.
 
-        .PARAMETER TemplateResolver
-            A resolver object returned by New-TemplateResolver.
+    .PARAMETER TemplateResolver
+        A resolver object returned by New-TemplateResolver.
 
-        .OUTPUTS
-            [object] Parameter block deserialised from JSON or YAML, 
-                     or nothing if template has no parameters.
+    .OUTPUTS
+        [object] Parameter block deserialised from JSON or YAML, 
+                    or nothing if template has no parameters.
     #>
     param
     (
@@ -983,7 +1027,7 @@ function Get-TemplateParameters
     {
         if (-not $Script:yamlSupport)
         {
-            throw "Template cannot be parsed as JSON parse failed and YAML support unavailable"
+            throw "Template cannot be parsed as JSON and YAML support unavailable"
         }
     }
 
