@@ -111,8 +111,8 @@ function New-Stack
     {
         #Create the RuntimeDefinedParameterDictionary
         New-Object System.Management.Automation.RuntimeDefinedParameterDictionary |
-        New-CredentialDynamicParameters |
-        New-TemplateDynamicParameters -TemplateLocation $TemplateLocation
+            New-CredentialDynamicParameters |
+            New-TemplateDynamicParameters -TemplateLocation $TemplateLocation -EnforceMandatory
     }
 
     begin
@@ -151,15 +151,14 @@ function New-Stack
     }
 }
 
-function Update-Stack
+function Reset-Stack
 {
     <#
-    .SYNOPSIS
-        Updates a stack.
+    .SYNOPSIS  
+        Delete and recreate an existing stack
 
     .DESCRIPTION
-        Updates a stack via creation and application of a changeset.
-
+        Completely replace an existing stack
 
         DYNAMIC PARAMETERS
             Once the -TemplateLocation argument has been suppied on the command line
@@ -178,7 +177,7 @@ function Update-Stack
             parameter will be taken from the Description property of the parameter.
 
     .PARAMETER StackName
-        Name for the new stack.
+        Name of the stack to replace.
 
     .PARAMETER TemplateLocation
         Location of the template. 
@@ -193,8 +192,94 @@ function Update-Stack
     .PARAMETER Wait
         If set, wait for stack update to complete before returning.
 
-    .PARAMETER Rebuild
-        If set, update the stack by deleting then recreating it.
+    .OUTPUTS
+        [string] ARN of the new stack
+    #>
+    [CmdletBinding()]
+    param
+    (
+        [Parameter(Mandatory = $true, ValueFromPipeline = $true, ValueFromPipelineByPropertyName = $true, Position = 0)]
+        [string]$StackName,
+
+        [Parameter(Mandatory = $true)]
+        [string]$TemplateLocation,
+
+        [ValidateSet('CAPABILITY_IAM', 'CAPABILITY_NAMED_IAM')]
+        [string]$Capabilities,
+    
+        [switch]$Wait
+    )
+
+    DynamicParam
+    {
+        #Create the RuntimeDefinedParameterDictionary
+        New-Object System.Management.Automation.RuntimeDefinedParameterDictionary |
+            New-CredentialDynamicParameters |
+            New-TemplateDynamicParameters -TemplateLocation $TemplateLocation -EnforceMandatory
+    }
+    
+    begin
+    {
+        $stackParameters = Get-CommandLineStackParameters -CallerBoundParameters $PSBoundParameters
+        $credentialArguments = Get-CommonCredentialParameters -CallerBoundParameters $PSBoundParameters
+    }
+
+    end 
+    {
+        # Pass all Update-Stack parameters except 'Rebuild' to New-Stack
+        # This will include any common credential and template parameters
+        $createParameters = @{}
+        $PSBoundParameters.Keys |
+            Where-Object { $_ -ine 'Rebuild'} |
+            ForEach-Object {
+
+            $createParameters.Add($_, $PSBoundParameters[$_])
+        }
+
+        Remove-Stack -StackName $StackName -Wait @credentialArguments
+        New-Stack @createParameters
+    }
+}
+
+function Update-Stack
+{
+    <#
+    .SYNOPSIS
+        Updates a stack.
+
+    .DESCRIPTION
+        Updates a stack via creation and application of a changeset.
+
+        DYNAMIC PARAMETERS
+            Once the -TemplateLocation argument has been suppied on the command line
+            the function reads the template and creates additional command line parameters
+            for each of the entries found in the "Parameters" section of the template.
+            These parameters are named as per each parameter in the template and defaults
+            and validation rules created for them as defined by the template.
+
+            Thus, if a template parameter has AllowedPattern and AllowedValues properties,
+            the resultant function argument will permit TAB completion of the AllowedValues,
+            assert that you have entered one of these, and for AllowedPattern, the function
+            argument will assert the regular expression.
+
+            Template parameters with no default that are not specified on the command line
+            will be passed to the stack as Use Previous Value.
+
+    .PARAMETER StackName
+        Name for the new stack.
+
+    .PARAMETER TemplateLocation
+        Location of the template. 
+        This may be
+        - Path to a local file
+        - s3:// URL pointing to template in a bucket
+        - https:// URL pointing to template in a bucket
+        
+    .PARAMETER Capabilities
+        If the stack requires IAM capabilities, TAB auctocompletes between the capability types.
+    
+    .PARAMETER Wait
+        If set, wait for stack update to complete before returning.
 
     .OUTPUTS
         [string] ARN of the new stack
@@ -211,44 +296,50 @@ function Update-Stack
         [ValidateSet('CAPABILITY_IAM', 'CAPABILITY_NAMED_IAM')]
         [string]$Capabilities,
     
-        [switch]$Wait,
-
-        [switch]$Rebuild
+        [switch]$Wait
     )
 
     DynamicParam
     {
         #Create the RuntimeDefinedParameterDictionary
         New-Object System.Management.Automation.RuntimeDefinedParameterDictionary |
-        New-CredentialDynamicParameters |
-        New-TemplateDynamicParameters -TemplateLocation $TemplateLocation
+            New-CredentialDynamicParameters |
+            New-TemplateDynamicParameters -TemplateLocation $TemplateLocation
     }
     
     begin
     {
-        $stackParameters = Get-CommandLineStackParameters -CallerBoundParameters $PSBoundParameters
+        $stackParameters = [Array](Get-CommandLineStackParameters -CallerBoundParameters $PSBoundParameters)
         $credentialArguments = Get-CommonCredentialParameters -CallerBoundParameters $PSBoundParameters
     }
 
     end 
     {
-        if ($Rebuild)
+        try
         {
-            # Pass all Update-Stack parameters except 'Rebuild' to New-Stack
-            # This will include any common credential and template parameters
-            $createParameters = @{}
-            $PSBoundParameters.Keys |
-                Where-Object { $_ -ine 'Rebuild'} |
-                ForEach-Object {
-
-                $createParameters.Add($_, $PSBoundParameters[$_])
-            }
-
-            Remove-Stack -StackName $StackName -Wait @credentialArguments
-            New-Stack @createParameters
-            return
+            $stack = Get-CFNStack -StackName $StackName @credentialArguments
         }
-        
+        catch
+        {
+            throw "Stack $StackName does not exist"
+        }
+
+        # Add any parameters not present on command line
+        # as Use Previous Value
+        $stack.Parameters |
+        ForEach-Object {
+
+            if ($stackParameters.ParameterKey -inotcontains $_.ParameterKey)
+            {
+                $stackParameters += $(
+                    $p = New-Object Amazon.CloudFormation.Model.Parameter
+                    $p.ParameterKey = $_.ParameterKey
+                    $p.UsePreviousValue = $true
+                    $p
+                )
+            }
+        }
+
         $changesetName = '{0}-{1}' -f [IO.Path]::GetFileNameWithoutExtension($MyInvocation.MyCommand.Module.Name), [int](([datetime]::UtcNow) - (get-date "1/1/1970")).TotalSeconds
 
         Write-Host "Creating change set $changesetName"
@@ -892,14 +983,18 @@ function New-TemplateDynamicParameters
         constraints indicated by AllowedPattern or AllowedValues, and
         creating regex contraints to validate AWS types like AWS::EC2::Image::Id
 
+    .PARAMETER Dictionary
+        RuntimeDefinedParameterDictionary to add CF template parameters to.
+
     .PARAMETER TemplateLocation
         Location of the template. May be either
         - Path to local file
         - S3 URI (which is converted to HTTPS URI for the current region)
         - HTTP(S) Uri
-    
-    .PARAMETER Dictionary
-        RuntimeDefinedParameterDictionary to add CF template parameters to.
+
+    .PARAMETER EnforceMandatory
+        This will be set for New-Stack, as parameters with no defaults must be given a value
+        For Update-Stack, it is not set as we will tell the stack to use previous values for any missing parameters
 
     .OUTPUTS
         [System.Management.Automation.RuntimeDefinedParameterDictionary]
@@ -910,7 +1005,8 @@ function New-TemplateDynamicParameters
     (
         [Parameter(ValueFromPipeline = $true)]
         [System.Management.Automation.RuntimeDefinedParameterDictionary]$Dictionary,
-        [string]$TemplateLocation
+        [string]$TemplateLocation,
+        [switch]$EnforceMandatory
     )
     
     end
@@ -974,7 +1070,7 @@ function New-TemplateDynamicParameters
                 $paramDefinition.Add('HelpMessage', $param.Value.Description);
             }
 
-            if (-not $param.Value.PSObject.Properties['Default'])
+            if ($EnforceMandatory -and -not $param.Value.PSObject.Properties['Default'])
             {
                 # If no default in the template, parameter is mandatory
                 $paramDefinition.Add('Mandatory', $true);
