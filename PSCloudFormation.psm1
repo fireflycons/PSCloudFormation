@@ -309,7 +309,7 @@ function Update-Stack
     
     begin
     {
-        $stackParameters = [Array](Get-CommandLineStackParameters -CallerBoundParameters $PSBoundParameters)
+        $stackParameters = Get-CommandLineStackParameters -CallerBoundParameters $PSBoundParameters
         $credentialArguments = Get-CommonCredentialParameters -CallerBoundParameters $PSBoundParameters
     }
 
@@ -890,15 +890,13 @@ function Get-CommandLineStackParameters
         [hashtable]$CallerBoundParameters
     )
 
-    $stackParameters = @()
-
     # Create a dummy function for the purpose of dicovering
     # the PowerShell common parameters so they can be filtered out.
     function _temp { [cmdletbinding()] param() }
 
     $commonParameters = (Get-Command _temp | Select-Object -ExpandProperty parameters).Keys
 
-    $CallerBoundParameters.Keys | 
+    $stackParameters = $CallerBoundParameters.Keys | 
         Where-Object { 
 
         -not ($commonParameters -contains $_ -or $Script:commonCredentialArguments.Keys -contains $_ -or (Get-Variable -Name $_ -Scope 1 -ErrorAction SilentlyContinue))
@@ -907,16 +905,31 @@ function Get-CommandLineStackParameters
 
         # Now we are iterating the names of template parameters found on the command line.
 
-        $stackParameters += $(
-
-            $param = New-Object Amazon.CloudFormation.Model.Parameter 
-            $param.ParameterKey = $_
-            $param.ParameterValue = $CallerBoundParameters.$_ -join ','
-            $param            
-        )
+        $param = New-Object Amazon.CloudFormation.Model.Parameter 
+        $param.ParameterKey = $_
+        $param.ParameterValue = $CallerBoundParameters.$_ -join ','
+        $param            
     }
 
-    $stackParameters
+    # We want this to return an array - always
+    switch(($stackParameters | Measure-Object).Count)
+    {
+        0 { 
+            # Stupid, stupid
+            # https://stackoverflow.com/questions/18476634/powershell-doesnt-return-an-empty-array-as-an-array
+            $a = @()
+            return ,$a
+        }
+
+        1 { 
+            return @($stackParameters)
+        }
+
+        default {
+            return $stackParameters
+        }
+    }
+    
 }
 
 function New-CredentialDynamicParameters
