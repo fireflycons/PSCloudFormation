@@ -922,7 +922,10 @@ function Get-CommandLineStackParameters
         }
 
         1 { 
-            return @($stackParameters)
+            # Stupid, stupid
+            # https://stackoverflow.com/questions/18476634/powershell-doesnt-return-an-empty-array-as-an-array
+            $a = @($stackParameters)
+            return ,$a
         }
 
         default {
