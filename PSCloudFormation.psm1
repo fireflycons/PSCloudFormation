@@ -139,8 +139,8 @@ function New-Stack
 
             if ($stack.StackStatus -like '*ROLLBACK*')
             {
-                Write-Host -ForegroundColor Red "Create failed: $arn"
-                Write-Host -ForegroundColor Red (Get-StackFailureEvents -StackName $arn -CredentialArguments $credentialArguments | Sort-Object -Descending Timestamp | Out-String)
+                Write-Host -ForegroundColor Red -BackgroundColor Black "Create failed: $arn"
+                Write-Host -ForegroundColor Red -BackgroundColor Black (Get-StackFailureEvents -StackName $arn -CredentialArguments $credentialArguments | Sort-Object -Descending Timestamp | Out-String)
 
                 throw $stack.StackStatusReason
             }
@@ -356,7 +356,8 @@ function Update-Stack
 
         if ($cs.Status -ieq 'FAILED')
         {
-            throw "Changeset $changesetName failed to create"
+            Write-Host -ForegroundColor Red -BackgroundColor Black "Changeset $changesetName failed to create: $($cs.StatusReason)"
+            throw "Changeset failed to create"
         }
 
         Write-Host ($cs.Changes.ResourceChange | Select-Object Action, LogicalResourceId, PhysicalResourceId, ResourceType | Format-Table | Out-String)
@@ -377,6 +378,8 @@ function Update-Stack
         }
         
         Write-Host "Updating stack $StackName"
+        $updateStart = [DateTime]::Now
+
         $arn = (Get-CFNStack -StackName $StackName @credentialArguments).StackId
         Start-CFNChangeSet -StackName $StackName -ChangeSetName $changesetName @credentialArguments
 
@@ -388,8 +391,13 @@ function Update-Stack
 
             if ($stack.StackStatus -like '*ROLLBACK*')
             {
-                Write-Host -ForegroundColor Red "Update failed: $arn"
-                Write-Host -ForegroundColor Red (Get-StackFailureEvents -StackName $arn -CredentialArguments $credentialArguments | Sort-Object -Descending Timestamp | Out-String)
+                Write-Host -ForegroundColor Red -BackgroundColor Black "Update failed: $arn"
+                Write-Host -ForegroundColor Red -BackgroundColor Black (
+                    Get-StackFailureEvents -StackName $arn -CredentialArguments $credentialArguments | 
+                    Where-Object { $_.Timestamp -ge $updateStart } |
+                    Sort-Object -Descending Timestamp | 
+                    Out-String
+                    )
 
                 throw $stack.StackStatusReason
             }
@@ -484,6 +492,7 @@ function Remove-Stack
     {
         $endStates = @('DELETE_COMPLETE', 'DELETE_FAILED')
         $credentialArguments = Get-CommonCredentialParameters -CallerBoundParameters $PSBoundParameters
+        $deleteBegin = [DateTime]::Now
     }
 
     process
@@ -505,8 +514,8 @@ function Remove-Stack
 
                     if ($stack.StackStatus -like 'DELETE_FAILED')
                     {
-                        Write-Host -ForegroundColor Red "Delete failed: $arn"
-                        Write-Host -ForegroundColor Red (Get-StackFailureEvents -StackName $arn -CredentialArguments $credentialArguments | Sort-Object -Descending Timestamp | Out-String)
+                        Write-Host -ForegroundColor Red -BackgroundColor Black "Delete failed: $arn"
+                        Write-Host -ForegroundColor Red -BackgroundColor Black (Get-StackFailureEvents -StackName $arn -CredentialArguments $credentialArguments | Sort-Object -Descending Timestamp | Out-String)
 
                         # Have to give up now as chained stack almost certainly is used by this one
                         throw $stack.StackStatusReason
@@ -544,9 +553,14 @@ function Remove-Stack
 
                         if ($stack.StackStatus -like 'DELETE_FAILED')
                         {
-                            Write-Host -ForegroundColor Red "Delete failed: $arn"
-                            Write-Host -ForegroundColor Red "$($stack.StackStatusReason)"
-                            Write-Host -ForegroundColor Red (Get-StackFailureEvents -StackName $StackName -CredentialArguments $credentialArguments | Sort-Object -Descending Timestamp | Out-String)
+                            Write-Host -ForegroundColor Red -BackgroundColor Black "Delete failed: $arn"
+                            Write-Host -ForegroundColor Red -BackgroundColor Black "$($stack.StackStatusReason)"
+                            Write-Host -ForegroundColor Red -BackgroundColor Black (
+                                Get-StackFailureEvents -StackName $StackName -CredentialArguments $credentialArguments | 
+                                Where-Object { $_.Timestamp -ge $deleteBegin } |
+                                Sort-Object -Descending Timestamp | 
+                                Out-String
+                                )
                         }
                         else 
                         {
