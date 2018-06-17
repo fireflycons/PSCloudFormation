@@ -647,38 +647,38 @@ function Get-StackOutputs
                 $stack.Outputs |
                     ForEach-Object {
 
-                        if ($AsParameterBlock)
+                    if ($AsParameterBlock)
+                    {
+                        $param = @{
+                            Type    = Get-ParameterTypeFromStringValue -Value $_.OutputValue
+                            Default = $_.OutputValue
+                        }
+
+                        if (-not [string]::IsNullOrEmpty($_.Description))
+                        {
+                            $param.Add('Description', $_.Description)
+                        }
+
+                        $outputs.Add($_.OutputKey, $param)
+                    }
+                    elseif ($AsCrossStackReferences) 
+                    {
+                        if (-not [string]::IsNullOrEmpty($_.ExportName))
                         {
                             $param = @{
-                                Type = Get-ParameterTypeFromStringValue -Value $_.OutputValue
-                                Default = $_.OutputValue
-                            }
-
-                            if (-not [string]::IsNullOrEmpty($_.Description))
-                            {
-                                $param.Add('Description', $_.Description)
+                                'Fn::ImportValue' = @{
+                                    'Fn::Sub' = $_.ExportName.Replace($stack.StackName, '${StackName}')
+                                }
                             }
 
                             $outputs.Add($_.OutputKey, $param)
                         }
-                        elseif ($AsCrossStackReferences) 
-                        {
-                            if (-not [string]::IsNullOrEmpty($_.ExportName))
-                            {
-                                $param = @{
-                                    'Fn::ImportValue' = @{
-                                        'Fn::Sub' = $_.ExportName.Replace($stack.StackName, '${StackName}')
-                                    }
-                                }
-
-                                $outputs.Add($_.OutputKey, $param)
-                            }
-                        }
-                        else
-                        {
-                            $outputs.Add($_.OutputKey, $_.OutputValue)
-                        }
                     }
+                    else
+                    {
+                        $outputs.Add($_.OutputKey, $_.OutputValue)
+                    }
+                }
     
                 if ($outputs.Count -gt 0)
                 {
@@ -1223,13 +1223,23 @@ function New-TemplateDynamicParameters
             else
             {
                 # Basic types with optional AllowedValues/AllowedPattern
-                if ($awsType -ieq 'Number')
+                switch ($awsType) 
                 {
-                    $paramDefinition.Add('Type', 'Double')
-                }
-                else 
-                {
-                    $paramDefinition.Add('Type', 'String')
+                    'Number' {  
+                        $paramDefinition.Add('Type', 'Double') 
+                    }
+
+                    'List<Number>' {  
+                        $paramDefinition.Add('Type', 'Double[]') 
+                    }
+
+                    'CommaDelimitedList' {  
+                        $paramDefinition.Add('Type', 'String[]') 
+                    }
+
+                    Default {
+                        $paramDefinition.Add('Type', 'String')
+                    }
                 }
 
                 if ($param.Value.PSObject.Properties['AllowedValues'])
