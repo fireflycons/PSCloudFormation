@@ -115,7 +115,7 @@ If we wanted to create a new stack from this, we could do
 New-PSCFNStack -StackName MyVpc -TemplateLocation vpc.json -Wait -VpcCidr 10.0.0.0/16 -DnsSupport true
 ```
 
-- Once we have given the `-TemplateLocation` argument and it points to an  existing file, we can just use regular powershell tab completion to discover the remaining arguments including `Wait`, the common credential arguments and the `VpcCidr` parameter read from the template
+- Once we have given the `-TemplateLocation` argument and it points to an  existing file, we can just use regular powershell tab completion to discover the remaining arguments including `Wait`, the common credential arguments and the parameters read from the template
 - The value you supply for `VpcCidr` will be asserted against the AllowedPattern regex _before_ the stack creation is initiated.
 - The value for `DnsSupport` can be tab-completed between allowed values `false` and `true`
 
