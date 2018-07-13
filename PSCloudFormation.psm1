@@ -19,14 +19,14 @@ $Script:templateParameterValidators = @{
 # Common Credential and Region Parameters and their types
 $Script:commonCredentialArguments = @{
 
-    AccessKey         = [string] 
-    Credential        = [Amazon.Runtime.AWSCredentials] 
-    ProfileLocation   = [string] 
-    ProfileName       = [string] 
-    NetworkCredential = [System.Management.Automation.PSCredential] 
+    AccessKey         = [string]
+    Credential        = [Amazon.Runtime.AWSCredentials]
+    ProfileLocation   = [string]
+    ProfileName       = [string]
+    NetworkCredential = [System.Management.Automation.PSCredential]
     SecretKey         = [string]
     SessionToken      = [string]
-    Region            = [string] 
+    Region            = [string]
 }
 
 # Check for YAML support
@@ -69,41 +69,41 @@ function New-Stack
             argument will assert the regular expression.
 
             Template parameters with no default will become mandatory parameters to this function.
-            If you do not supply them, you will be prompted for them and the help text for the 
+            If you do not supply them, you will be prompted for them and the help text for the
             parameter will be taken from the Description property of the parameter.
 
     .PARAMETER StackName
         Name for the new stack.
 
     .PARAMETER TemplateLocation
-        Location of the template. 
+        Location of the template.
         This may be
         - Path to a local file
         - s3:// URL pointing to template in a bucket
         - https:// URL pointing to template in a bucket
-        
+
     .PARAMETER Capabilities
         If the stack requires IAM capabilities, TAB auctocompletes between the capability types.
-    
+
     .PARAMETER Wait
         If set, wait for stack creation to complete before returning.
 
     .OUTPUTS
         [string] ARN of the new stack
-    #>    
+    #>
 
     [CmdletBinding()]
     param
     (
         [Parameter(Mandatory = $true, ValueFromPipeline = $true)]
         [string]$StackName,
-    
+
         [Parameter(Mandatory = $true)]
         [string]$TemplateLocation,
 
         [ValidateSet('CAPABILITY_IAM', 'CAPABILITY_NAMED_IAM')]
         [string]$Capabilities,
-    
+
         [switch]$Wait
     )
 
@@ -121,7 +121,7 @@ function New-Stack
         $credentialArguments = Get-CommonCredentialParameters -CallerBoundParameters $PSBoundParameters
     }
 
-    end 
+    end
     {
         if (Test-StackExists -StackName $StackName -CredentialArguments $credentialArguments)
         {
@@ -154,7 +154,7 @@ function New-Stack
 function Reset-Stack
 {
     <#
-    .SYNOPSIS  
+    .SYNOPSIS
         Delete and recreate an existing stack
 
     .DESCRIPTION
@@ -173,22 +173,22 @@ function Reset-Stack
             argument will assert the regular expression.
 
             Template parameters with no default will become mandatory parameters to this function.
-            If you do not supply them, you will be prompted for them and the help text for the 
+            If you do not supply them, you will be prompted for them and the help text for the
             parameter will be taken from the Description property of the parameter.
 
     .PARAMETER StackName
         Name of the stack to replace.
 
     .PARAMETER TemplateLocation
-        Location of the template. 
+        Location of the template.
         This may be
         - Path to a local file
         - s3:// URL pointing to template in a bucket
         - https:// URL pointing to template in a bucket
-        
+
     .PARAMETER Capabilities
         If the stack requires IAM capabilities, TAB auctocompletes between the capability types.
-    
+
     .PARAMETER Wait
         If set, wait for stack update to complete before returning.
 
@@ -206,7 +206,7 @@ function Reset-Stack
 
         [ValidateSet('CAPABILITY_IAM', 'CAPABILITY_NAMED_IAM')]
         [string]$Capabilities,
-    
+
         [switch]$Wait
     )
 
@@ -217,14 +217,14 @@ function Reset-Stack
             New-CredentialDynamicParameters |
             New-TemplateDynamicParameters -TemplateLocation $TemplateLocation -EnforceMandatory
     }
-    
+
     begin
     {
         $stackParameters = Get-CommandLineStackParameters -CallerBoundParameters $PSBoundParameters
         $credentialArguments = Get-CommonCredentialParameters -CallerBoundParameters $PSBoundParameters
     }
 
-    end 
+    end
     {
         # Pass all Update-Stack parameters except 'Rebuild' to New-Stack
         # This will include any common credential and template parameters
@@ -269,21 +269,21 @@ function Update-Stack
         Name for the new stack.
 
     .PARAMETER TemplateLocation
-        Location of the template. 
+        Location of the template.
         This may be
         - Path to a local file
         - s3:// URL pointing to template in a bucket
         - https:// URL pointing to template in a bucket
-        
+
     .PARAMETER Capabilities
         If the stack requires IAM capabilities, TAB auctocompletes between the capability types.
-    
+
     .PARAMETER Wait
         If set, wait for stack update to complete before returning.
 
     .OUTPUTS
         [string] ARN of the new stack
-    #>    
+    #>
     [CmdletBinding()]
     param
     (
@@ -295,7 +295,7 @@ function Update-Stack
 
         [ValidateSet('CAPABILITY_IAM', 'CAPABILITY_NAMED_IAM')]
         [string]$Capabilities,
-    
+
         [switch]$Wait
     )
 
@@ -306,14 +306,14 @@ function Update-Stack
             New-CredentialDynamicParameters |
             New-TemplateDynamicParameters -TemplateLocation $TemplateLocation
     }
-    
+
     begin
     {
         $stackParameters = Get-CommandLineStackParameters -CallerBoundParameters $PSBoundParameters
         $credentialArguments = Get-CommonCredentialParameters -CallerBoundParameters $PSBoundParameters
     }
 
-    end 
+    end
     {
         try
         {
@@ -371,12 +371,12 @@ function Update-Stack
             ),
             0
         )
-        
+
         if ($choice -ne 0)
         {
             throw "Aborted."
         }
-        
+
         Write-Host "Updating stack $StackName"
         $updateStart = [DateTime]::Now
 
@@ -393,9 +393,9 @@ function Update-Stack
             {
                 Write-Host -ForegroundColor Red -BackgroundColor Black "Update failed: $arn"
                 Write-Host -ForegroundColor Red -BackgroundColor Black (
-                    Get-StackFailureEvents -StackName $arn -CredentialArguments $credentialArguments | 
+                    Get-StackFailureEvents -StackName $arn -CredentialArguments $credentialArguments |
                         Where-Object { $_.Timestamp -ge $updateStart } |
-                        Sort-Object -Descending Timestamp | 
+                        Sort-Object -Descending Timestamp |
                         Out-String
                 )
 
@@ -427,9 +427,9 @@ function Remove-Stack
         use the -Sequential switch and list the stacks in dependency order.
 
     .PARAMETER StackName
-        Either stack names or the object returned by Get-CFNStack, New-CFNStack, Update-CFNStack 
+        Either stack names or the object returned by Get-CFNStack, New-CFNStack, Update-CFNStack
         and other functions in this module when run with -Wait.
-    
+
     .PARAMETER Wait
         If set and -Sequential is not set (so deleting in parallel), wait for all stacks to be deleted before returning.
 
@@ -448,20 +448,20 @@ function Remove-Stack
         'DependentStack', 'BaseStack' | Remove-Stack -Sequential
 
         Deletes 'DependentStack', waits for completion, then deletes 'BaseStack'.
-        
+
     .EXAMPLE
 
         'Stack1', 'Stack2' | Remove-Stack -Wait
 
         Sets both stacks deleting in parallel, then waits for them both to complete.
-        
+
     .EXAMPLE
 
         'Stack1', 'Stack2' | Remove-Stack
 
-        Sets both stacks deleting in parallel, and returns immediately. 
+        Sets both stacks deleting in parallel, and returns immediately.
         See the CloudFormation console to monitor progress.
-        
+
     .EXAMPLE
 
         Get-CFNStack | Remove-Stack
@@ -487,7 +487,7 @@ function Remove-Stack
         New-Object System.Management.Automation.RuntimeDefinedParameterDictionary |
             New-CredentialDynamicParameters
     }
-    
+
     begin
     {
         $endStates = @('DELETE_COMPLETE', 'DELETE_FAILED')
@@ -521,14 +521,14 @@ function Remove-Stack
                         throw $stack.StackStatusReason
                     }
                 }
-                else 
+                else
                 {
                     $arn
                 }
             }
-            else 
+            else
             {
-                Write-Warning "Stack does not exist: $StackName"    
+                Write-Warning "Stack does not exist: $StackName"
             }
         }
     }
@@ -538,7 +538,7 @@ function Remove-Stack
         if ($Wait -and ($arns | Measure-Object).Count -gt 0)
         {
             Write-Host "Waiting for delete:`n$($arns -join "`n")"
-            
+
             while ($arns.Length -gt 0)
             {
                 Start-Sleep -Seconds 5
@@ -556,13 +556,13 @@ function Remove-Stack
                             Write-Host -ForegroundColor Red -BackgroundColor Black "Delete failed: $arn"
                             Write-Host -ForegroundColor Red -BackgroundColor Black "$($stack.StackStatusReason)"
                             Write-Host -ForegroundColor Red -BackgroundColor Black (
-                                Get-StackFailureEvents -StackName $StackName -CredentialArguments $credentialArguments | 
+                                Get-StackFailureEvents -StackName $StackName -CredentialArguments $credentialArguments |
                                     Where-Object { $_.Timestamp -ge $deleteBegin } |
-                                    Sort-Object -Descending Timestamp | 
+                                    Sort-Object -Descending Timestamp |
                                     Out-String
                             )
                         }
-                        else 
+                        else
                         {
                             Write-Host "Delete complete: $arn"
                         }
@@ -588,7 +588,7 @@ function Get-StackOutputs
 
     .PARAMETER StackName
         One or more stacks to process. One object is produced for each stack
-        
+
     .PARAMETER AsMappingBlock
         If set (default), returned object is formatted as a CloudFomration mapping block.
         Converting the output to JSON or YAML renders text that can be pasted within a Mappings declararion.
@@ -598,10 +598,10 @@ function Get-StackOutputs
         Converting the output to JSON or YAML renders text that can be pasted within a Parameters declararion.
 
     .PARAMETER AsCrossStackReferences
-        If set, returned object is formatted as a set of Fn::ImportValue statements, with any text matching the 
+        If set, returned object is formatted as a set of Fn::ImportValue statements, with any text matching the
         stack name within the output's ExportName being replaced with placeholder '${StackName}'.
-        
-        Whilst the result converted to JSON or YAML is not much use as it is, the individual elements can 
+
+        Whilst the result converted to JSON or YAML is not much use as it is, the individual elements can
         be copied and pasted in where an Fn::ImportValue for that parameter would be used.
 
     .OUTPUTS
@@ -629,7 +629,7 @@ function Get-StackOutputs
         New-Object System.Management.Automation.RuntimeDefinedParameterDictionary |
             New-CredentialDynamicParameters
     }
-    
+
     begin
     {
         $credentialArguments = Get-CommonCredentialParameters -CallerBoundParameters $PSBoundParameters
@@ -661,7 +661,7 @@ function Get-StackOutputs
 
                         $outputs.Add($_.OutputKey, $param)
                     }
-                    elseif ($AsCrossStackReferences) 
+                    elseif ($AsCrossStackReferences)
                     {
                         if (-not [string]::IsNullOrEmpty($_.ExportName))
                         {
@@ -679,7 +679,7 @@ function Get-StackOutputs
                         $outputs.Add($_.OutputKey, $_.OutputValue)
                     }
                 }
-    
+
                 if ($outputs.Count -gt 0)
                 {
                     # Emit outputs as object
@@ -707,7 +707,7 @@ function New-StackOperationArguments
         May be one of
         - Local file. File is read and used to build a -TemplateBody argument
         - S3 URI (which is converted to HTTPS URI for the current region) and builds -TemplateURL argument
-          Note that this only works if a default region is set in the shell and 
+          Note that this only works if a default region is set in the shell and
           you don't try to point to a different region with -Region
         - https URL. URL is used as-is to build -TemplateURL argument
 
@@ -739,7 +739,7 @@ function New-StackOperationArguments
     {
         $stackArgs.Add('TemplateBody', $template.ReadTemplate())
     }
-    else 
+    else
     {
         $stackArgs.Add('TemplateURL', $template.Url)
     }
@@ -748,7 +748,7 @@ function New-StackOperationArguments
     {
         $stackArgs.Add('Capabilities', @($Capabilities))
     }
-        
+
     if (($stackParameters | Measure-Object).Count -gt 0)
     {
         $stackArgs.Add('Parameter', $stackParameters)
@@ -769,7 +769,7 @@ function Test-StackExists
     .PARAMETER CredentialArguments
         Any common creadential arguments given to caller
 
-    .OUTPUTS 
+    .OUTPUTS
         [bool] true if stack exists; else false
     #>
     param
@@ -778,14 +778,14 @@ function Test-StackExists
         [hashtable]$CredentialArguments
     )
 
-    try 
+    try
     {
         Get-CFNStack -StackName $StackName @CredentialArguments
-        $true    
+        $true
     }
-    catch 
+    catch
     {
-        $false    
+        $false
     }
 }
 
@@ -795,13 +795,13 @@ function Get-StackFailureEvents
     .SYNOPSIS
         Gets failure event list from a briken stack
 
-    .DESCRIPTION 
+    .DESCRIPTION
         Gets failure events for a failed stack and also attempts
         to get the events for any nested stack. This depends on
         the functionbeing able to get to the nested stack resource
         before AWS removes it.
 
-    .PARAMETER StackName 
+    .PARAMETER StackName
         Name of failed stack
 
     .OUTPUTS
@@ -846,7 +846,7 @@ function New-TemplateResolver
         Location of the template. May be either
         - Path to local file
         - S3 URI (which is converted to HTTPS URI for the current region)
-          Note that this only works if a default region is set in the shell and 
+          Note that this only works if a default region is set in the shell and
           you don't try to point to a different region with -Region
         - HTTP(S) Uri
 
@@ -854,7 +854,7 @@ function New-TemplateResolver
         Custom Object.
     #>
 
-    param 
+    param
     (
         [string]$TemplateLocation
     )
@@ -881,16 +881,16 @@ function New-TemplateResolver
             try
             {
                 Read-S3Object -BucketName $this.BucketName -Key $this.Key -File $tmpFile | Out-Null
-                Get-Content -Raw -Path $tmpFile                
+                Get-Content -Raw -Path $tmpFile
             }
             finally
             {
                 Remove-Item -Path $tmpFile
             }
         }
-        else 
+        else
         {
-            throw "Template location undefined"    
+            throw "Template location undefined"
         }
     } |
         Add-Member -PassThru -Name Length -MemberType ScriptMethod -Value {
@@ -904,9 +904,9 @@ function New-TemplateResolver
         {
             (Get-S3Object -BucketName $this.BucketName -Key $this.Key).Size
         }
-        else 
+        else
         {
-            throw "Template location undefined"    
+            throw "Template location undefined"
         }
     }
 
@@ -956,12 +956,12 @@ function New-TemplateResolver
             }
         }
     }
-    else 
+    else
     {
-        $resolver.Path = $TemplateLocation   
-        $resolver.IsFile = $true 
+        $resolver.Path = $TemplateLocation
+        $resolver.IsFile = $true
     }
-    
+
     $resolver
 }
 
@@ -1044,7 +1044,7 @@ function Get-CommandLineStackParameters
         [Amazon.CloudFormation.Model.Parameter[]]
         Array of any parameters found.
 
-    #>    
+    #>
     param
     (
         [hashtable]$CallerBoundParameters
@@ -1056,8 +1056,8 @@ function Get-CommandLineStackParameters
 
     $commonParameters = (Get-Command _temp | Select-Object -ExpandProperty parameters).Keys
 
-    $stackParameters = $CallerBoundParameters.Keys | 
-        Where-Object { 
+    $stackParameters = $CallerBoundParameters.Keys |
+        Where-Object {
 
         -not ($commonParameters -contains $_ -or $Script:commonCredentialArguments.Keys -contains $_ -or (Get-Variable -Name $_ -Scope 1 -ErrorAction SilentlyContinue))
     } |
@@ -1065,17 +1065,17 @@ function Get-CommandLineStackParameters
 
         # Now we are iterating the names of template parameters found on the command line.
 
-        $param = New-Object Amazon.CloudFormation.Model.Parameter 
+        $param = New-Object Amazon.CloudFormation.Model.Parameter
         $param.ParameterKey = $_
         $param.ParameterValue = $CallerBoundParameters.$_ -join ','
-        $param            
+        $param
     }
 
     # We want this to return an array - always
     switch (($stackParameters | Measure-Object).Count)
     {
         0
-        { 
+        {
             # Stupid, stupid
             # https://stackoverflow.com/questions/18476634/powershell-doesnt-return-an-empty-array-as-an-array
             $a = @()
@@ -1083,7 +1083,7 @@ function Get-CommandLineStackParameters
         }
 
         1
-        { 
+        {
             # Stupid, stupid
             # https://stackoverflow.com/questions/18476634/powershell-doesnt-return-an-empty-array-as-an-array
             $a = @($stackParameters)
@@ -1095,7 +1095,7 @@ function Get-CommandLineStackParameters
             return $stackParameters
         }
     }
-    
+
 }
 
 function New-CredentialDynamicParameters
@@ -1110,7 +1110,7 @@ function New-CredentialDynamicParameters
         .OUTPUTS
             [System.Management.Automation.RuntimeDefinedParameterDictionary]
             The dictionary that was passed in with new dynamic parameters to apply to caller added.
-    #>    
+    #>
     [CmdletBinding()]
     param
     (
@@ -1155,7 +1155,7 @@ function New-TemplateDynamicParameters
     .SYNOPSIS
         Create PowerShell dynamic parameters from template parameters.
 
-    .DESCRIPTION 
+    .DESCRIPTION
         Loads/downloads the template and parses the template body to extract arguments.
         Turns these parameters into PowerShell dynamic parameters for the
         New-PSCFNStack and Update-PSCCFNtack CmdLets, also applying any
@@ -1178,7 +1178,7 @@ function New-TemplateDynamicParameters
     .OUTPUTS
         [System.Management.Automation.RuntimeDefinedParameterDictionary]
         The dictionary that was passed in with new dynamic parameters to apply to caller added.
-    #>    
+    #>
     [CmdletBinding()]
     param
     (
@@ -1187,7 +1187,7 @@ function New-TemplateDynamicParameters
         [string]$TemplateLocation,
         [switch]$EnforceMandatory
     )
-    
+
     end
     {
         (Get-TemplateParameters -TemplateResolver (New-TemplateResolver -TemplateLocation $TemplateLocation)).PSObject.Properties |
@@ -1223,18 +1223,18 @@ function New-TemplateDynamicParameters
             else
             {
                 # Basic types with optional AllowedValues/AllowedPattern
-                switch ($awsType) 
+                switch ($awsType)
                 {
-                    'Number' {  
-                        $paramDefinition.Add('Type', 'Double') 
+                    'Number' {
+                        $paramDefinition.Add('Type', 'Double')
                     }
 
-                    'List<Number>' {  
-                        $paramDefinition.Add('Type', 'Double[]') 
+                    'List<Number>' {
+                        $paramDefinition.Add('Type', 'Double[]')
                     }
 
-                    'CommaDelimitedList' {  
-                        $paramDefinition.Add('Type', 'String[]') 
+                    'CommaDelimitedList' {
+                        $paramDefinition.Add('Type', 'String[]')
                     }
 
                     Default {
@@ -1267,7 +1267,7 @@ function New-TemplateDynamicParameters
 
             New-DynamicParam @paramDefinition
         }
-                  
+
         #return RuntimeDefinedParameterDictionary
         $Dictionary
     }
@@ -1283,7 +1283,7 @@ function Get-TemplateParameters
         A resolver object returned by New-TemplateResolver.
 
     .OUTPUTS
-        [object] Parameter block deserialised from JSON or YAML, 
+        [object] Parameter block deserialised from JSON or YAML,
                     or nothing if template has no parameters.
     #>
     param
@@ -1294,9 +1294,9 @@ function Get-TemplateParameters
     $template = $TemplateResolver.ReadTemplate()
 
     # Check YAML/JSON
-    try 
+    try
     {
-        $templateObject = $template | ConvertFrom-Json 
+        $templateObject = $template | ConvertFrom-Json
 
         if ($templateObject.PSObject.Properties.Name -contains 'Parameters')
         {
@@ -1317,7 +1317,7 @@ function Get-TemplateParameters
     }
 
     # Try YAML
-    $templateObject = $template | ConvertFrom-Yaml 
+    $templateObject = $template | ConvertFrom-Yaml
 
     if ($templateObject.PSObject.Properties.Name -contains 'Parameters')
     {
@@ -1330,68 +1330,68 @@ function New-DynamicParam
     <#
         .SYNOPSIS
             Helper function to simplify creating dynamic parameters
-        
+
         .DESCRIPTION
             Helper function to simplify creating dynamic parameters
-    
+
             Example use cases:
                 Include parameters only if your environment dictates it
                 Include parameters depending on the value of a user-specified parameter
                 Provide tab completion and intellisense for parameters, depending on the environment
-    
+
             Please keep in mind that all dynamic parameters you create will not have corresponding variables created.
                One of the examples illustrates a generic method for populating appropriate variables from dynamic parameters
                Alternatively, manually reference $PSBoundParameters for the dynamic parameter value
-    
+
         .NOTES
             Credit to http://jrich523.wordpress.com/2013/05/30/powershell-simple-way-to-add-dynamic-parameters-to-advanced-function/
                 Added logic to make option set optional
                 Added logic to add RuntimeDefinedParameter to existing DPDictionary
                 Added a little comment based help
-    
+
             Credit to BM for alias and type parameters and their handling
 
             Cresit to https://github.com/RamblingCookieMonster/PowerShell for this implementation
                 Added ValidatePattern argument
-    
+
         .PARAMETER Name
             Name of the dynamic parameter
-    
+
         .PARAMETER Type
             Type for the dynamic parameter.  Default is string
-    
+
         .PARAMETER Alias
             If specified, one or more aliases to assign to the dynamic parameter
-    
+
         .PARAMETER ValidateSet
             If specified, set the ValidateSet attribute of this dynamic parameter
-    
+
         .PARAMETER ValidatePattern
             If specified, set the ValidatePattern attribute of this dynamic parameter
-    
+
         .PARAMETER Mandatory
             If specified, set the Mandatory attribute for this dynamic parameter
-    
+
         .PARAMETER ParameterSetName
             If specified, set the ParameterSet attribute for this dynamic parameter
-    
+
         .PARAMETER Position
             If specified, set the Position attribute for this dynamic parameter
-    
+
         .PARAMETER ValueFromPipelineByPropertyName
             If specified, set the ValueFromPipelineByPropertyName attribute for this dynamic parameter
-    
+
         .PARAMETER HelpMessage
             If specified, set the HelpMessage for this dynamic parameter
-        
+
         .PARAMETER DPDictionary
             If specified, add resulting RuntimeDefinedParameter to an existing RuntimeDefinedParameterDictionary (appropriate for multiple dynamic parameters)
             If not specified, create and return a RuntimeDefinedParameterDictionary (appropriate for a single dynamic parameter)
-    
+
             See final example for illustration
-    
+
         .EXAMPLE
-            
+
             function Show-Free
             {
                 [CmdletBinding()]
@@ -1409,18 +1409,18 @@ function New-DynamicParam
                     "{0:N2}% free on {1}" -f ($vol.Capacity / $vol.FreeSpace),$drive
                 }
             } #Show-Free
-    
+
             Show-Free -Drive <tab>
-    
+
         # This example illustrates the use of New-DynamicParam to create a single dynamic parameter
         # The Drive parameter ValidateSet populates with all available volumes on the computer for handy tab completion / intellisense
-    
+
         .EXAMPLE
-    
+
         # I found many cases where I needed to add more than one dynamic parameter
         # The DPDictionary parameter lets you specify an existing dictionary
         # The block of code in the Begin block loops through bound parameters and defines variables if they don't exist
-    
+
             Function Test-DynPar{
                 [cmdletbinding()]
                 param(
@@ -1430,9 +1430,9 @@ function New-DynamicParam
                 {
                     #Create the RuntimeDefinedParameterDictionary
                     $Dictionary = New-Object System.Management.Automation.RuntimeDefinedParameterDictionary
-            
+
                     New-DynamicParam -Name AlwaysParam -ValidateSet @( gwmi win32_volume | %{$_.driveletter} | sort ) -DPDictionary $Dictionary
-    
+
                     #Add dynamic parameters to $dictionary
                     if($x -eq 1)
                     {
@@ -1446,7 +1446,7 @@ function New-DynamicParam
                         New-DynamicParam -Name OtherParam2 -DPDictionary $Dictionary
                         New-DynamicParam -Name OtherParam3 -DPDictionary $Dictionary -Type DateTime
                     }
-            
+
                     #return RuntimeDefinedParameterDictionary
                     $Dictionary
                 }
@@ -1465,54 +1465,54 @@ function New-DynamicParam
                                 Write-Verbose "Adding variable for dynamic parameter '$param' with value '$($PSBoundParameters.$param)'"
                             }
                         }
-    
+
                     #Appropriate variables should now be defined and accessible
                         Get-Variable -scope 0
                 }
             }
-    
+
         # This example illustrates the creation of many dynamic parameters using New-DynamicParam
             # You must create a RuntimeDefinedParameterDictionary object ($dictionary here)
             # To each New-DynamicParam call, add the -DPDictionary parameter pointing to this RuntimeDefinedParameterDictionary
             # At the end of the DynamicParam block, return the RuntimeDefinedParameterDictionary
             # Initialize all bound parameters using the provided block or similar code
-    
+
         .FUNCTIONALITY
             PowerShell Language
-    
+
     #>
     param(
-        
+
         [string]
         $Name,
-        
+
         [System.Type]
         $Type = [string],
-    
+
         [string[]]
         $Alias = @(),
-    
+
         [string[]]
         $ValidateSet,
-        
+
         [string[]]
         $ValidatePattern,
-        
+
         [switch]
         $Mandatory,
-        
+
         [string]
         $ParameterSetName = "__AllParameterSets",
-        
+
         [int]
         $Position,
-        
+
         [switch]
         $ValueFromPipelineByPropertyName,
-        
+
         [string]
         $HelpMessage,
-    
+
         [validatescript( {
                 if (-not ( $_ -is [System.Management.Automation.RuntimeDefinedParameterDictionary] -or -not $_) )
                 {
@@ -1521,9 +1521,9 @@ function New-DynamicParam
                 $True
             })]
         $DPDictionary = $false
-     
+
     )
-    #Create attribute object, add attributes, add to collection   
+    #Create attribute object, add attributes, add to collection
     $ParamAttr = New-Object System.Management.Automation.ParameterAttribute
     $ParamAttr.ParameterSetName = $ParameterSetName
     if ($mandatory)
@@ -1542,32 +1542,32 @@ function New-DynamicParam
     {
         $ParamAttr.HelpMessage = $HelpMessage
     }
-     
+
     $AttributeCollection = New-Object 'Collections.ObjectModel.Collection[System.Attribute]'
     $AttributeCollection.Add($ParamAttr)
-        
+
     #param validation set if specified
     if ($ValidateSet)
     {
         $ParamOptions = New-Object System.Management.Automation.ValidateSetAttribute -ArgumentList $ValidateSet
         $AttributeCollection.Add($ParamOptions)
     }
-    
+
     #param validation pattern if specified
     if ($ValidatePattern)
     {
         $ParamOptions = New-Object System.Management.Automation.ValidatePatternAttribute -ArgumentList $ValidatePattern
         $AttributeCollection.Add($ParamOptions)
     }
-    
+
     #Aliases if specified
     if ($Alias.count -gt 0)
     {
         $ParamAlias = New-Object System.Management.Automation.AliasAttribute -ArgumentList $Alias
         $AttributeCollection.Add($ParamAlias)
     }
-    
-     
+
+
     #Create the dynamic parameter
     $Parameter = New-Object -TypeName System.Management.Automation.RuntimeDefinedParameter -ArgumentList @($Name, $Type, $AttributeCollection)
 
