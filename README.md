@@ -38,44 +38,44 @@ The name or the unique stack ID that is associated with the stack, which are not
 
 For the `Remove-PSCFNStack` cmdlet, multiple stack names can be provided and they will all be deleted. This cmdlet has an additional switch parameter `-Sequential` which if set will delete the stacks in the order they are presented, otherwise they are all set to delete simultaneously.
 
-Required - True
-Position - Named
-Accept pipeline input - ByValue
+- Required - True
+- Position - Named
+- Accept pipeline input - ByValue
 
 #### -Wait
 Wait for the operation to complete before returning. If this switch is set, the cmdlet will not return until the operataion completes, else it returns immediately.
 
-Required - False
-Position - Named
-Accept pipeline input - False
+- Required - False
+- Position - Named
+- Accept pipeline input - False
+
 
 ### Parameters common to all except Remove-PSCFNStack
 
 In addition to the above, the following parameters are available to cmdlets that create or modify stacks
 
-### -TemplateLocation
+#### -TemplateLocation
 Location of the template.
 This may be
 - Path to a local file
 - s3:// URL pointing to template in a bucket. Only works if your shell has a default region set (e.g. `Set-DefaultAWSRegion`)
 - https:// URL pointing to template in a bucket
 
-Required - True
-Position - Named
-Accept pipeline input - False
+- Required - True
+- Position - Named
+- Accept pipeline input - False
 
-
-### -Capabilites
+#### -Capabilites
 
 Use this if your stack is creating IAM resources. Tab completion switches between CAPABILITY_IAM and CAPABILITY_NAMED_IAM
 
-Required - False
-Position - Named
-Accept pipeline input - False
+- Required - False
+- Position - Named
+- Accept pipeline input - False
 
 ### Dynamic template parameter arguments
 
-As mentioned above, once the CloudFormation template location is known, it is parsed in the background and everything in the `Parameters` block of the template is extracted and turned into cmdlet arguments. Consider the following stack definitio, saved as vpc.json
+As mentioned above, once the CloudFormation template location is known, it is parsed in the background and everything in the `Parameters` block of the template is extracted and turned into cmdlet arguments. Consider the following stack definition, saved as vpc.json
 
 ```json
 {
@@ -112,10 +112,11 @@ As mentioned above, once the CloudFormation template location is known, it is pa
 
 If we wanted to create a new stack from this, we could do
 ```powershell
-New-PSCFNStack -StackName MyVpc -TemplateLocation vpc.json -Wait -VpcCidr "10.0.0.0/16"
+New-PSCFNStack -StackName MyVpc -TemplateLocation vpc.json -Wait -VpcCidr 10.0.0.0/16 -DnsSupport true
 ```
 
 - Once we have given the `-TemplateLocation` argument and it points to an  existing file, we can just use regular powershell tab completion to discover the remaining arguments including `Wait`, the common credential arguments and the `VpcCidr` parameter read from the template
 - The value you supply for `VpcCidr` will be asserted against the AllowedPattern regex _before_ the stack creation is initiated.
+- The value for `DnsSupport` can be tab-completed between allowed values `false` and `true`
 
-![New-PSCFNStack](images/New-PSCFNStack.gif?raw=true "Optional Title")
+![New-PSCFNStack](images/New-PSCFNStack.gif?raw=true "New-PSCFNStack in action")
