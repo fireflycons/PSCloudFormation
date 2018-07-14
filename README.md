@@ -17,7 +17,13 @@ With the cmdlets in this module, as soon as you tell them where the CloudFormati
 
 On top of all this, there's a few other goodies such as a dump of stack failure events to the console when there's errors in a stack update
 
-## Stack Modification Cmdlets
+## Module Cmdlets
+
+All the cmdlets support the standard AWSPowerShell [Common Credential and Region Parameters](https://docs.aws.amazon.com/powershell/latest/reference/items/pstoolsref-commonparams.html) with the exception of `-EndpointUrl`
+
+For full syntax and some examples, use `Get-Help` on the module's cmdlets.
+
+### Stack Modification Cmdlets
 
 This module provides the following stack modification cmdlets
 
@@ -26,7 +32,13 @@ This module provides the following stack modification cmdlets
 - `Remove-PSCFNStack` - Delete one or more existing stacks
 - `Reset-PSCFNStack` - Delete, then redeploy an existing stack
 
-All the cmdlets support the standard AWSPowerShell Common Credential and Region Parameters with the exception of `-EndpointUrl`
+### Other Cmdlets
+
+- `Get-PSCFNStackOutputs` This cmdlet, given an existing stack reads the `Outputs` of that stack and returns a PowerShell object that can be used as-is, or if converted to JSON or YAML, produces a template fragment that can be passed into other templates. These fragments can be exported either as a Parameters or Mappings block, or as a bunch of "Fn::Import" blocks that can be pasted where needed in a new template.
+
+### Template Support
+
+By default, only JSON templates are supported. YAML support is enabled by installing powershell-yaml from the [PowerShell Gallery](https://www.powershellgallery.com/packages/powershell-yaml)
 
 ### Parameters common to all cmdlets
 
@@ -89,10 +101,7 @@ As mentioned above, once the CloudFormation template location is known, it is pa
         "DnsSupport": {
             "Description": "Enable DNS Support",
             "Type": "String",
-            "AllowedValues": [
-                "true",
-                "false"
-            ],
+            "AllowedValues": [ "true", "false" ],
             "Default": "false"
         }
     },
@@ -100,9 +109,7 @@ As mentioned above, once the CloudFormation template location is known, it is pa
         "Vpc": {
             "Type": "AWS::EC2::VPC",
             "Properties": {
-                "CidrBlock": {
-                    "Ref": "VpcCidr"
-                },
+                "CidrBlock": { "Ref": "VpcCidr" },
                 "EnableDnsSupport": { "Ref": "DnsSupport" }
             }
         }
