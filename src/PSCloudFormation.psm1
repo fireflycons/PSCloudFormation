@@ -47,7 +47,7 @@ else
 
 #region Public Functions
 
-function New-Stack
+function New-PSCFNStack
 {
     <#
     .SYNOPSIS
@@ -57,20 +57,21 @@ function New-Stack
         Creates a stack.
 
         DYNAMIC PARAMETERS
-            Once the -TemplateLocation argument has been suppied on the command line
-            the function reads the template and creates additional command line parameters
-            for each of the entries found in the "Parameters" section of the template.
-            These parameters are named as per each parameter in the template and defaults
-            and validation rules created for them as defined by the template.
 
-            Thus, if a template parameter has AllowedPattern and AllowedValues properties,
-            the resultant function argument will permit TAB completion of the AllowedValues,
-            assert that you have entered one of these, and for AllowedPattern, the function
-            argument will assert the regular expression.
+        Once the -TemplateLocation argument has been suppied on the command line
+        the function reads the template and creates additional command line parameters
+        for each of the entries found in the "Parameters" section of the template.
+        These parameters are named as per each parameter in the template and defaults
+        and validation rules created for them as defined by the template.
 
-            Template parameters with no default will become mandatory parameters to this function.
-            If you do not supply them, you will be prompted for them and the help text for the
-            parameter will be taken from the Description property of the parameter.
+        Thus, if a template parameter has AllowedPattern and AllowedValues properties,
+        the resultant function argument will permit TAB completion of the AllowedValues,
+        assert that you have entered one of these, and for AllowedPattern, the function
+        argument will assert the regular expression.
+
+        Template parameters with no default will become mandatory parameters to this function.
+        If you do not supply them, you will be prompted for them and the help text for the
+        parameter will be taken from the Description property of the parameter.
 
     .PARAMETER StackName
         Name for the new stack.
@@ -88,8 +89,36 @@ function New-Stack
     .PARAMETER Wait
         If set, wait for stack creation to complete before returning.
 
+    .INPUTS
+        System.String
+            You can pipe the new stack name to this function
+
     .OUTPUTS
-        [string] ARN of the new stack
+        System.String
+            ARN of the new stack
+
+    .NOTES
+        This cmdlet genenerates additional dynamic command line parameters for all parameters found in the Parameters block of the supplied CloudFormation template
+
+    .EXAMPLE
+
+        New-PSCFNStack -StackName MyStack -TemplateLocation .\mystack.json -Capabilities CAPABILITY_IAM -Wait -VpcCidr 10.0.0.0/16
+
+        Creates a new stack from a local template file and waits for it to complete.
+        This template would have 'VpcCidr' defined within its parameter block
+
+    .EXAMPLE
+
+        New-PSCFNStack -StackName MyStack -TemplateLocation https://s3-eu-west-1.amazonaws.com/mybucket/mystack.json -Capabilities CAPABILITY_IAM -Wait -VpcCidr 10.0.0.0/16
+
+        As per the first example, but with the template located in S3.
+
+    .EXAMPLE
+
+        New-PSCFNStack -StackName MyStack -TemplateLocation s3://mybucket/mystack.json -Capabilities CAPABILITY_IAM -Wait -VpcCidr 10.0.0.0/16
+
+        As per the first example, but using an S3 URL.
+        Caveat to this mechanism is that you must have a default region set in the curent shell. The bucket is assumed to be in this region and the stack will also be built in this region.
     #>
 
     [CmdletBinding()]
@@ -151,7 +180,7 @@ function New-Stack
     }
 }
 
-function Reset-Stack
+function Reset-PSCFNStack
 {
     <#
     .SYNOPSIS
@@ -161,20 +190,21 @@ function Reset-Stack
         Completely replace an existing stack
 
         DYNAMIC PARAMETERS
-            Once the -TemplateLocation argument has been suppied on the command line
-            the function reads the template and creates additional command line parameters
-            for each of the entries found in the "Parameters" section of the template.
-            These parameters are named as per each parameter in the template and defaults
-            and validation rules created for them as defined by the template.
 
-            Thus, if a template parameter has AllowedPattern and AllowedValues properties,
-            the resultant function argument will permit TAB completion of the AllowedValues,
-            assert that you have entered one of these, and for AllowedPattern, the function
-            argument will assert the regular expression.
+        Once the -TemplateLocation argument has been suppied on the command line
+        the function reads the template and creates additional command line parameters
+        for each of the entries found in the "Parameters" section of the template.
+        These parameters are named as per each parameter in the template and defaults
+        and validation rules created for them as defined by the template.
 
-            Template parameters with no default will become mandatory parameters to this function.
-            If you do not supply them, you will be prompted for them and the help text for the
-            parameter will be taken from the Description property of the parameter.
+        Thus, if a template parameter has AllowedPattern and AllowedValues properties,
+        the resultant function argument will permit TAB completion of the AllowedValues,
+        assert that you have entered one of these, and for AllowedPattern, the function
+        argument will assert the regular expression.
+
+        Template parameters with no default will become mandatory parameters to this function.
+        If you do not supply them, you will be prompted for them and the help text for the
+        parameter will be taken from the Description property of the parameter.
 
     .PARAMETER StackName
         Name of the stack to replace.
@@ -192,8 +222,36 @@ function Reset-Stack
     .PARAMETER Wait
         If set, wait for stack update to complete before returning.
 
+    .INPUTS
+        System.String
+            You can pipe the name or ARN of the stack you are replacing to this function
+
     .OUTPUTS
-        [string] ARN of the new stack
+        System.String
+            ARN of the new stack
+
+    .NOTES
+        This cmdlet genenerates additional dynamic command line parameters for all parameters found in the Parameters block of the supplied CloudFormation template
+
+    .EXAMPLE
+
+        Reset-PSCFNStack -StackName MyStack -TemplateLocation .\mystack.json -Capabilities CAPABILITY_IAM -Wait -VpcCidr 10.1.0.0/16
+
+        First deletes any existing stack of the same name or ARN, then creates a new stack from a local template file and waits for it to complete.
+        This template would have 'VpcCidr' defined within its parameter block
+
+    .EXAMPLE
+
+        Reset-PSCFNStack -StackName MyStack -TemplateLocation https://s3-eu-west-1.amazonaws.com/mybucket/mystack.json -Capabilities CAPABILITY_IAM -Wait -VpcCidr 10.1.0.0/16
+
+        As per the first example, but with the template located in S3.
+
+    .EXAMPLE
+
+        Reset-PSCFNStack -StackName MyStack -TemplateLocation s3://mybucket/mystack.json -Capabilities CAPABILITY_IAM -Wait -VpcCidr 10.1.0.0/16
+
+        As per the first example, but using an S3 URL.
+        Caveat to this mechanism is that you must have a default region set in the curent shell. The bucket is assumed to be in this region and the stack will also be built in this region.
     #>
     [CmdletBinding()]
     param
@@ -226,7 +284,7 @@ function Reset-Stack
 
     end
     {
-        # Pass all Update-Stack parameters except 'Rebuild' to New-Stack
+        # Pass all Update-PSCFNStack parameters except 'Rebuild' to New-PSCFNStack
         # This will include any common credential and template parameters
         $createParameters = @{}
         $PSBoundParameters.Keys |
@@ -236,12 +294,12 @@ function Reset-Stack
             $createParameters.Add($_, $PSBoundParameters[$_])
         }
 
-        Remove-Stack -StackName $StackName -Wait @credentialArguments
-        New-Stack @createParameters
+        Remove-PSCFNStack -StackName $StackName -Wait @credentialArguments
+        New-PSCFNStack @createParameters
     }
 }
 
-function Update-Stack
+function Update-PSCFNStack
 {
     <#
     .SYNOPSIS
@@ -251,19 +309,20 @@ function Update-Stack
         Updates a stack via creation and application of a changeset.
 
         DYNAMIC PARAMETERS
-            Once the -TemplateLocation argument has been suppied on the command line
-            the function reads the template and creates additional command line parameters
-            for each of the entries found in the "Parameters" section of the template.
-            These parameters are named as per each parameter in the template and defaults
-            and validation rules created for them as defined by the template.
 
-            Thus, if a template parameter has AllowedPattern and AllowedValues properties,
-            the resultant function argument will permit TAB completion of the AllowedValues,
-            assert that you have entered one of these, and for AllowedPattern, the function
-            argument will assert the regular expression.
+        Once the -TemplateLocation argument has been suppied on the command line
+        the function reads the template and creates additional command line parameters
+        for each of the entries found in the "Parameters" section of the template.
+        These parameters are named as per each parameter in the template and defaults
+        and validation rules created for them as defined by the template.
 
-            Template parameters with no default that are not specified on the command line
-            will be passed to the stack as Use Previous Value.
+        Thus, if a template parameter has AllowedPattern and AllowedValues properties,
+        the resultant function argument will permit TAB completion of the AllowedValues,
+        assert that you have entered one of these, and for AllowedPattern, the function
+        argument will assert the regular expression.
+
+        Template parameters with no default that are not specified on the command line
+        will be passed to the stack as Use Previous Value.
 
     .PARAMETER StackName
         Name for the new stack.
@@ -284,9 +343,45 @@ function Update-Stack
     .PARAMETER Force
         If set, do not ask for confirmation of the changeset before proceeding.
 
+    .INPUTS
+        System.String
+            You can pipe the stack name or ARN to this function
+
     .OUTPUTS
-        [string] ARN of the new stack
+        System.String
+            ARN of the stack
+
+    .EXAMPLE
+
+        Update-PSCFNStack -StackName MyStack -TemplateLocation .\mystack.json -Capabilities CAPABILITY_IAM -Wait -VpcCidr 10.1.0.0/16
+
+        Updates an existing stack of the same name or ARN from a local template file and waits for it to complete.
+        This template would have 'VpcCidr' defined within its parameter block
+        A changeset is created and displayed, and you are asked for confirmation befre proceeding.
+
+    .EXAMPLE
+
+        Update-PSCFNStack -StackName MyStack -TemplateLocation https://s3-eu-west-1.amazonaws.com/mybucket/mystack.json -Capabilities CAPABILITY_IAM -Wait -VpcCidr 10.1.0.0/16
+
+        As per the first example, but with the template located in S3.
+
+    .EXAMPLE
+
+        Update-PSCFNStack -StackName MyStack -TemplateLocation s3://mybucket/mystack.json -Capabilities CAPABILITY_IAM -Wait -VpcCidr 10.1.0.0/16
+
+        As per the first example, but using an S3 URL.
+        Caveat to this mechanism is that you must have a default region set in the curent shell. The bucket is assumed to be in this region and the stack will also be built in this region.
+
+    .EXAMPLE
+
+        Update-PSCFNStack -StackName MyStack -TemplateLocation .\mystack.json -Capabilities CAPABILITY_IAM -Wait -VpcCidr 10.1.0.0/16 -Force
+
+        As per the first example, but it begins the update without you being asked to confirm the change
+
+    .NOTES
+        This cmdlet genenerates additional dynamic command line parameters for all parameters found in the Parameters block of the supplied CloudFormation template
     #>
+
     [CmdletBinding()]
     param
     (
@@ -421,7 +516,7 @@ function Update-Stack
     }
 }
 
-function Remove-Stack
+function Remove-PSCFNStack
 {
     <#
     .SYNOPSIS
@@ -445,34 +540,41 @@ function Remove-Stack
         If set, delete stacks in the order they are specified on the command line or received from the pipeline,
         waiting for each stack to delete successfully before proceeding to the next one.
 
+    .INPUTS
+        System.String[]
+            You can pipe the names or ARNs of the stacks to delete to this function
+
+    .OUTPUTS
+        None
+
     .EXAMPLE
 
-        Remove-Stack -StackName MyStack
+        Remove-PSCFNStack -StackName MyStack
 
         Deletes a single stack.
 
     .EXAMPLE
 
-        'DependentStack', 'BaseStack' | Remove-Stack -Sequential
+        'DependentStack', 'BaseStack' | Remove-PSCFNStack -Sequential
 
         Deletes 'DependentStack', waits for completion, then deletes 'BaseStack'.
 
     .EXAMPLE
 
-        'Stack1', 'Stack2' | Remove-Stack -Wait
+        'Stack1', 'Stack2' | Remove-PSCFNStack -Wait
 
         Sets both stacks deleting in parallel, then waits for them both to complete.
 
     .EXAMPLE
 
-        'Stack1', 'Stack2' | Remove-Stack
+        'Stack1', 'Stack2' | Remove-PSCFNStack
 
         Sets both stacks deleting in parallel, and returns immediately.
         See the CloudFormation console to monitor progress.
 
     .EXAMPLE
 
-        Get-CFNStack | Remove-Stack
+        Get-CFNStack | Remove-PSCFNStack
 
         You would NOT want to do this, just like you wouldn't do rm -rf / ! It is for illustration only.
         Sets ALL stacks in the region deleting simultaneously, which would probably trash some stacks
@@ -581,7 +683,7 @@ function Remove-Stack
     }
 }
 
-function Get-StackOutputs
+function Get-PSCFNStackOutputs
 {
     <#
     .SYNOPSIS
@@ -612,8 +714,32 @@ function Get-StackOutputs
         Whilst the result converted to JSON or YAML is not much use as it is, the individual elements can
         be copied and pasted in where an Fn::ImportValue for that parameter would be used.
 
+    .INPUTS
+        System.String[]
+            You can pipe stack names or ARNs to this function
+
     .OUTPUTS
-        An object dependent on the setting of the above switches.
+        PSObject
+            An object dependent on the setting of the above switches. Pipe the output to ConvertTo-Json or ConvertTo-Yaml
+
+    .EXAMPLE
+
+       Get-PSCFNStackOutputs -StackName MyStack -AsMappingBlock
+
+       When converted to JSON or YAML, can be pasted into the Mapping declaration of another template
+
+    .EXAMPLE
+
+       Get-PSCFNStackOutputs -StackName MyStack -AsParameterBlock
+
+       When converted to JSON or YAML, can be pasted into the Parameters declaration of another template
+
+    .EXAMPLE
+
+       Get-PSCFNStackOutputs -StackName MyStack -AsParameterBlock
+
+       When converted to JSON, provides a collection of Fn::Import stanzas that can be individually pasted into a new template
+       YAML is currently not supported for this command
     #>
     [CmdletBinding(DefaultParameterSetName = 'Mappings')]
     param
@@ -1150,7 +1276,7 @@ function New-CredentialDynamicParameters
                 }
             }
 
-            New-DynamicParam -Name $_ -Type $Script:commonCredentialArguments[$_] -DPDictionary $Dictionary @validateSet
+            New-DynamicParam -Name $_ -Type $Script:commonCredentialArguments[$_] -DPDictionary $Dictionary @validateSet -HelpMessage 'a help message'
         }
 
         $Dictionary
@@ -1180,8 +1306,8 @@ function New-TemplateDynamicParameters
         - HTTP(S) Uri
 
     .PARAMETER EnforceMandatory
-        This will be set for New-Stack, as parameters with no defaults must be given a value
-        For Update-Stack, it is not set as we will tell the stack to use previous values for any missing parameters
+        This will be set for New-PSCFNStack, as parameters with no defaults must be given a value
+        For Update-PSCFNStack, it is not set as we will tell the stack to use previous values for any missing parameters
 
     .OUTPUTS
         [System.Management.Automation.RuntimeDefinedParameterDictionary]

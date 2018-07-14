@@ -70,11 +70,11 @@
 
     # Functions to export from this module, for best performance, do not use wildcards and do not delete the entry, use an empty array if there are no functions to export.
     FunctionsToExport    = @(
-        'New-Stack', 
-        'Update-Stack', 
-        'Remove-Stack', 
-        'Reset-Stack',
-        'Get-StackOutputs'
+        'New-PSCFNStack', 
+        'Update-PSCFNStack', 
+        'Remove-PSCFNStack', 
+        'Reset-PSCFNStack',
+        'Get-PSCFNStackOutputs'
     )
 
     # Cmdlets to export from this module, for best performance, do not use wildcards and do not delete the entry, use an empty array if there are no cmdlets to export.
@@ -124,9 +124,6 @@
 
     # HelpInfo URI of this module
     # HelpInfoURI = ''
-
-    # Default prefix for commands exported from this module. Override the default prefix using Import-Module -Prefix.
-    DefaultCommandPrefix = 'PSCFN'
 
 }
 
