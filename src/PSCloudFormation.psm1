@@ -281,6 +281,9 @@ function Update-Stack
     .PARAMETER Wait
         If set, wait for stack update to complete before returning.
 
+    .PARAMETER Force
+        If set, do not ask for confirmation of the changeset before proceeding.
+
     .OUTPUTS
         [string] ARN of the new stack
     #>
@@ -296,7 +299,9 @@ function Update-Stack
         [ValidateSet('CAPABILITY_IAM', 'CAPABILITY_NAMED_IAM')]
         [string]$Capabilities,
 
-        [switch]$Wait
+        [switch]$Wait,
+
+        [switch]$Force
     )
 
     DynamicParam
@@ -362,19 +367,22 @@ function Update-Stack
 
         Write-Host ($cs.Changes.ResourceChange | Select-Object Action, LogicalResourceId, PhysicalResourceId, ResourceType | Format-Table | Out-String)
 
-        $choice = $host.ui.PromptForChoice(
-            'Begin the stack update now?',
-            $null,
-            @(
-                New-Object System.Management.Automation.Host.ChoiceDescription ('&Yes', "Start rebuild now." )
-                New-Object System.Management.Automation.Host.ChoiceDescription ('&No', 'Abort operation.')
-            ),
-            0
-        )
-
-        if ($choice -ne 0)
+        if (-not $Force)
         {
-            throw "Aborted."
+            $choice = $host.ui.PromptForChoice(
+                'Begin the stack update now?',
+                $null,
+                @(
+                    New-Object System.Management.Automation.Host.ChoiceDescription ('&Yes', "Start rebuild now." )
+                    New-Object System.Management.Automation.Host.ChoiceDescription ('&No', 'Abort operation.')
+                ),
+                0
+            )
+
+            if ($choice -ne 0)
+            {
+                throw "Aborted."
+            }
         }
 
         Write-Host "Updating stack $StackName"
