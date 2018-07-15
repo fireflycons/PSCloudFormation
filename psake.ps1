@@ -37,6 +37,45 @@ Task Init {
     "Build System Details:"
     Get-Item ENV:BH*
     "`n"
+
+    if ($script:IsWindows)
+    {
+        "Checking for NuGet"
+        $psgDir = Join-Path ${env:LOCALAPPDATA} "Microsoft\Windows\PowerShell\PowerShellGet"
+
+        $nugetPath = $(
+
+            $nuget = Get-Command nuget.exe -ErrorAction SilentlyContinue
+
+            if ($nuget)
+            {
+                $nuget.Path
+            }
+            else
+            {
+                if (Test-Path -Path (Join-Path $psgDir 'nuget.exe'))
+                {
+                    Join-Path $psgDir 'nuget.exe'
+                }
+            }
+        )
+
+        if ($nugetPath)
+        {
+            "NuGet.exe found at '$nugetPath"
+        }
+        else
+        {
+
+            if (-not (Test-Path -Path $psgDir -PathType Container))
+            {
+                New-Item -Path $psgDir -ItemType Directory | Out-Null
+            }
+
+            "Installing NuGet to '$psgDir'"
+            Invoke-WebRequest -Uri https://nuget.org/nuget.exe -OutFile (Join-Path $psgDir 'nuget.exe')
+        }
+    }
 }
 
 Task Test -Depends Init  {
@@ -47,7 +86,7 @@ Task Test -Depends Init  {
     $pesterParameters = @{
         Path         = "$ProjectRoot\Tests"
         PassThru     = $true
-        OutputFormat = "NUnitXml" 
+        OutputFormat = "NUnitXml"
         OutputFile   = "$ProjectRoot\$TestFile"
     }
     if (-Not $IsWindows) { $pesterParameters["ExcludeTag"] = "WindowsOnly" }
@@ -81,7 +120,7 @@ Task Build -Depends Test {
     # Bump the module version if we didn't already
     Try
     {
-        [version]$GalleryVersion = Get-NextPSGalleryVersion -Name $env:BHProjectName -ErrorAction Stop
+        [version]$GalleryVersion = Get-NextNugetPackageVersion -Name $env:BHProjectName -ErrorAction Stop
         [version]$GithubVersion = Get-MetaData -Path $env:BHPSModuleManifest -PropertyName ModuleVersion -ErrorAction Stop
         if($GalleryVersion -ge $GithubVersion) {
             Update-Metadata -Path $env:BHPSModuleManifest -PropertyName ModuleVersion -Value $GalleryVersion -ErrorAction stop
@@ -97,7 +136,7 @@ Task Deploy -Depends Build {
     $lines
 
     # Gate deployment
-    if(
+    if(#$true
         $ENV:BHBuildSystem -ne 'Unknown' -and
         $ENV:BHBranchName -eq "master" -and
         $ENV:BHCommitMessage -match '!deploy'
