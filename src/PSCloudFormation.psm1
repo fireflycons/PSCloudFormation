@@ -733,7 +733,8 @@ function Get-PSCFNStackOutputs
 
     .PARAMETER AsCrossStackReferences
         If set, returned object is formatted as a set of Fn::ImportValue statements, with any text matching the
-        stack name within the output's ExportName being replaced with placeholder '${StackName}'.
+        stack name within the output's ExportName being replaced with a placeholder generated from the stack name with the word 'Stack' appended.
+        Make this a parameter to your new stack.
 
         Whilst the result converted to JSON is not much use as it is, the individual elements can
         be copied and pasted in where an Fn::ImportValue for that parameter would be used.
@@ -764,8 +765,7 @@ function Get-PSCFNStackOutputs
 
        Get-PSCFNStackOutputs -StackName MyStack -AsCrossStackReferences
 
-       When converted to JSON, provides a collection of Fn::Import stanzas that can be individually pasted into a new template
-       YAML is currently not supported for this operation.
+       When converted to JSON or YAML, provides a collection of Fn::Import stanzas that can be individually pasted into a new template
     #>
     [CmdletBinding(DefaultParameterSetName = 'Mappings')]
     param
@@ -802,6 +802,13 @@ function Get-PSCFNStackOutputs
 
             if (Test-StackExists -StackName $_ -CredentialArguments $credentialArguments)
             {
+                $ti = New-Object System.Globalization.CultureInfo ("en-US")
+
+                $stackParam = ($_.Split(('_', '-')) |
+                Foreach-Object {
+                    $ti.TextInfo.ToTitleCase($_)
+                }) -join [string]::Empty
+
                 $outputs = @{}
                 $stack = Get-CFNStack -StackName $_ @credentialArguments
                 $stack.Outputs |
@@ -827,7 +834,7 @@ function Get-PSCFNStackOutputs
                         {
                             $param = @{
                                 'Fn::ImportValue' = @{
-                                    'Fn::Sub' = $_.ExportName.Replace($stack.StackName, '${StackName}')
+                                    'Fn::Sub' = $_.ExportName.Replace($stack.StackName, "`${$($stackparam)Stack}")
                                 }
                             }
 
