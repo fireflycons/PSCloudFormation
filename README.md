@@ -4,14 +4,14 @@
 
 It is two things really
 
-1. A wrapper for the stack cmdlets of AWSPowerShell 
-2. An exercise in using PowerShell's dynamic cmdlet parameters
+1. A wrapper for the stack modification cmdlets of AWSPowerShell. 
+2. An exercise in using PowerShell's dynamic cmdlet parameters.
 
 I found that deploying stacks from the command line, whether via aws-cli or AWSPowerShell was extremely tedious, especially for stacks that have loads of parameters, both remembering all the parameters and having the continuously type them in, or edit looong command lines in the command line history, along with frequent typos
 
 So I thought to myself, I wonder how easy it would be to utilise the dynamic parameters feature of PowerShell to discover the parameters in a CloudFormation template and present these as arguments to some new stack manipulation cmdlets - and you got it - yes we can!
 
-PowerShell builds a dynamic parameter set as soon as you give it an argument from which to work. An example you may be familiar with is the `Get-Content` cmdlet. As soon as you specify the argument for `-Path` it determines whether that path is a file system path (as oopsed to registry, environment etc.) and provides `-Raw` argument to read the file in its entirety rather than line-by-line.
+PowerShell builds a dynamic parameter set as soon as you give it an argument from which to work. An example you may be familiar with is the `Get-Content` cmdlet. As soon as you specify the argument for `-Path` it determines whether that path is a file system path (as oposed to registry, environment etc.) and then provides `-Raw` argument to read the file in its entirety rather than line-by-line.
 
 With the cmdlets in this module, as soon as you tell them where the CloudFormation template is, they parse the template and extract all the parameters within and provide them as additional argments to the cmdlet, along with knowledge of whether they are required (no default), are constrained (AllowedValues, AllowedPattern), or typed (Number, AWS::EC2::Subnet::Id etc.) and perform pre-validation before submitting the stack update.
 
@@ -27,65 +27,20 @@ For full syntax and some examples, use `Get-Help` on the module's cmdlets.
 
 This module provides the following stack modification cmdlets
 
-- `New-PSCFNStack` - Create a new stack
-- `Update-PSCFNStack` - Update an existing stack
-- `Remove-PSCFNStack` - Delete one or more existing stacks
-- `Reset-PSCFNStack` - Delete, then redeploy an existing stack
+- `New-PSCFNStack` - ([Documentation](docs/New-PSCFNStack.md)) Create a new stack.
+- `Update-PSCFNStack` - ([Documentation](docs/Update-PSCFNStack.md)) Update an existing stack.
+- `Remove-PSCFNStack` - ([Documentation](docs/Remove-PSCFNStack.md)) Delete one or more existing stacks.
+- `Reset-PSCFNStack` - ([Documentation](docs/Reset-PSCFNStack.md)) Delete, then redeploy an existing stack.
 
 ### Other Cmdlets
 
-- `Get-PSCFNStackOutputs` This cmdlet, given an existing stack reads the `Outputs` of that stack and returns a PowerShell object that can be used as-is, or if converted to JSON or YAML, produces a template fragment that can be passed into other templates. These fragments can be exported either as a Parameters or Mappings block, or as a bunch of "Fn::Import" blocks that can be pasted where needed in a new template.
+- `Get-PSCFNStackOutputs` ([Documentation](docs/Get-PSCFNStackOutputs.md)) Retrieves the outputs of a stack in various useful formats for use in creation of new stack templates that will use or import these values.
 
 ### Template Support
 
 By default, only JSON templates are supported. YAML support is enabled by installing powershell-yaml from the [PowerShell Gallery](https://www.powershellgallery.com/packages/powershell-yaml)
 
-### Parameters common to all cmdlets
-
-#### -StackName
-The name or the unique stack ID that is associated with the stack, which are not always interchangeable:
-
- - Running stacks: You can specify either the stack's name or its unique stack ID.
- - Deleted stacks: You must specify the unique stack ID.
-
-For the `Remove-PSCFNStack` cmdlet, multiple stack names can be provided and they will all be deleted. This cmdlet has an additional switch parameter `-Sequential` which if set will delete the stacks in the order they are presented, otherwise they are all set to delete simultaneously.
-
-- Required - True
-- Position - Named
-- Accept pipeline input - ByValue
-
-#### -Wait
-Wait for the operation to complete before returning. If this switch is set, the cmdlet will not return until the operataion completes, else it returns immediately.
-
-- Required - False
-- Position - Named
-- Accept pipeline input - False
-
-
-### Parameters common to all except Remove-PSCFNStack
-
-In addition to the above, the following parameters are available to cmdlets that create or modify stacks
-
-#### -TemplateLocation
-Location of the template.
-This may be
-- Path to a local file
-- s3:// URL pointing to template in a bucket. Only works if your shell has a default region set (e.g. `Set-DefaultAWSRegion`)
-- https:// URL pointing to template in a bucket
-
-- Required - True
-- Position - Named
-- Accept pipeline input - False
-
-#### -Capabilites
-
-Use this if your stack is creating IAM resources. Tab completion switches between CAPABILITY_IAM and CAPABILITY_NAMED_IAM
-
-- Required - False
-- Position - Named
-- Accept pipeline input - False
-
-### Dynamic template parameter arguments
+### Dynamic Template Parameter Arguments
 
 As mentioned above, once the CloudFormation template location is known, it is parsed in the background and everything in the `Parameters` block of the template is extracted and turned into cmdlet arguments. Consider the following stack definition, saved as vpc.json
 
@@ -127,3 +82,22 @@ New-PSCFNStack -StackName MyVpc -TemplateLocation vpc.json -Wait -VpcCidr 10.0.0
 - The value for `DnsSupport` can be tab-completed between allowed values `false` and `true`
 
 ![New-PSCFNStack](images/New-PSCFNStack.gif?raw=true "New-PSCFNStack in action")
+
+Were you to omit a required stack parameter, you will be prompted for it and the help text for the parameter is extracted from its description in the template file:
+
+```powershell
+New-PSCFNStack -StackName MyVpc -TemplateLocation .\vpc.json
+```
+
+```
+cmdlet New-PSCFNStack at command pipeline position 1
+Supply values for the following parameters:
+(Type !? for Help.)
+VpcCidr: !?
+CIDR block for VPC
+VpcCidr:
+```
+
+#### Update-PSCFNStack and Dynamic Argumments
+
+When using ```Update-PSCFNStack ``` you only need to supply values on the command line for stack parameters you wish to change. All remaining stack paramaeters will assume their previous values.
