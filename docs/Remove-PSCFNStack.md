@@ -116,7 +116,8 @@ Accept wildcard characters: False
 ```
 
 ### -AccessKey
-a help message
+The AWS access key for the user account.
+This can be a temporary access key if the corresponding session token is supplied to the -SessionToken parameter.
 
 ```yaml
 Type: String
@@ -131,7 +132,7 @@ Accept wildcard characters: False
 ```
 
 ### -Credential
-a help message
+An AWSCredentials object instance containing access and secret key information, and optionally a token for session-based credentials.
 
 ```yaml
 Type: AWSCredentials
@@ -146,7 +147,9 @@ Accept wildcard characters: False
 ```
 
 ### -NetworkCredential
-a help message
+'Used with SAML-based authentication when ProfileName references a SAML role profile.
+Contains the network credentials to be supplied during authentication with the configured identity provider's endpoint.
+This parameter is not required if the user's default network identity can or should be used during authentication.
 
 ```yaml
 Type: PSCredential
@@ -161,7 +164,7 @@ Accept wildcard characters: False
 ```
 
 ### -ProfileLocation
-a help message
+Used to specify the name and location of the ini-format credential file (shared with the AWS CLI and other AWS SDKs)
 
 ```yaml
 Type: String
@@ -176,7 +179,9 @@ Accept wildcard characters: False
 ```
 
 ### -ProfileName
-a help message
+The user-defined name of an AWS credentials or SAML-based role profile containing credential information.
+The profile is expected to be found in the secure credential file shared with the AWS SDK for .NET and AWS Toolkit for Visual Studio.
+You can also specify the name of a profile stored in the .ini-format credential file used with the AWS CLI and other AWS SDKs.
 
 ```yaml
 Type: String
@@ -191,7 +196,8 @@ Accept wildcard characters: False
 ```
 
 ### -Region
-a help message
+The system name of the AWS region in which the operation should be invoked.
+For example, us-east-1, eu-west-1 etc.
 
 ```yaml
 Type: String
@@ -206,7 +212,8 @@ Accept wildcard characters: False
 ```
 
 ### -SecretKey
-a help message
+The AWS secret key for the user account.
+This can be a temporary secret key if the corresponding session token is supplied to the -SessionToken parameter.
 
 ```yaml
 Type: String
@@ -221,7 +228,7 @@ Accept wildcard characters: False
 ```
 
 ### -SessionToken
-a help message
+The session token if the access and secret keys are temporary session-based credentials.
 
 ```yaml
 Type: String
@@ -236,7 +243,8 @@ Accept wildcard characters: False
 ```
 
 ### CommonParameters
-This cmdlet supports the common parameters: -Debug, -ErrorAction, -ErrorVariable, -InformationAction, -InformationVariable, -OutVariable, -OutBuffer, -PipelineVariable, -Verbose, -WarningAction, and -WarningVariable. For more information, see about_CommonParameters (http://go.microsoft.com/fwlink/?LinkID=113216).
+This cmdlet supports the common parameters: -Debug, -ErrorAction, -ErrorVariable, -InformationAction, -InformationVariable, -OutVariable, -OutBuffer, -PipelineVariable, -Verbose, -WarningAction, and -WarningVariable.
+For more information, see about_CommonParameters (http://go.microsoft.com/fwlink/?LinkID=113216).
 
 ## INPUTS
 

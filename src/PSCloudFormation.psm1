@@ -19,14 +19,38 @@ $Script:templateParameterValidators = @{
 # Common Credential and Region Parameters and their types
 $Script:commonCredentialArguments = @{
 
-    AccessKey         = [string]
-    Credential        = [Amazon.Runtime.AWSCredentials]
-    ProfileLocation   = [string]
-    ProfileName       = [string]
-    NetworkCredential = [System.Management.Automation.PSCredential]
-    SecretKey         = [string]
-    SessionToken      = [string]
-    Region            = [string]
+    AccessKey         = @{
+        Type        = [string]
+        Description = 'The AWS access key for the user account. This can be a temporary access key if the corresponding session token is supplied to the -SessionToken parameter.'
+    }
+    Credential        = @{
+        Type        = [Amazon.Runtime.AWSCredentials]
+        Description = 'An AWSCredentials object instance containing access and secret key information, and optionally a token for session-based credentials.'
+    }
+    ProfileLocation   = @{
+        Type        = [string]
+        Description = 'Used to specify the name and location of the ini-format credential file (shared with the AWS CLI and other AWS SDKs)'
+    }
+    ProfileName       = @{
+        Type        = [string]
+        Description = 'The user-defined name of an AWS credentials or SAML-based role profile containing credential information. The profile is expected to be found in the secure credential file shared with the AWS SDK for .NET and AWS Toolkit for Visual Studio. You can also specify the name of a profile stored in the .ini-format credential file used with the AWS CLI and other AWS SDKs.'
+    }
+    NetworkCredential = @{
+        Type        = [System.Management.Automation.PSCredential]
+        Description = "'Used with SAML-based authentication when ProfileName references a SAML role profile. Contains the network credentials to be supplied during authentication with the configured identity provider's endpoint. This parameter is not required if the user's default network identity can or should be used during authentication."
+    }
+    SecretKey         = @{
+        Type        = [string]
+        Description = 'The AWS secret key for the user account. This can be a temporary secret key if the corresponding session token is supplied to the -SessionToken parameter.'
+    }
+    SessionToken      = @{
+        Type        = [string]
+        Description = 'The session token if the access and secret keys are temporary session-based credentials.'
+    }
+    Region            = @{
+        Type        = [string]
+        Description = 'The system name of the AWS region in which the operation should be invoked. For example, us-east-1, eu-west-1 etc.'
+    }
 }
 
 # Check for YAML support
@@ -711,8 +735,10 @@ function Get-PSCFNStackOutputs
         If set, returned object is formatted as a set of Fn::ImportValue statements, with any text matching the
         stack name within the output's ExportName being replaced with placeholder '${StackName}'.
 
-        Whilst the result converted to JSON or YAML is not much use as it is, the individual elements can
+        Whilst the result converted to JSON is not much use as it is, the individual elements can
         be copied and pasted in where an Fn::ImportValue for that parameter would be used.
+
+        YAML is not currently supported for this operation.
 
     .INPUTS
         System.String[]
@@ -736,10 +762,10 @@ function Get-PSCFNStackOutputs
 
     .EXAMPLE
 
-       Get-PSCFNStackOutputs -StackName MyStack -AsParameterBlock
+       Get-PSCFNStackOutputs -StackName MyStack -AsCrossStackReferences
 
        When converted to JSON, provides a collection of Fn::Import stanzas that can be individually pasted into a new template
-       YAML is currently not supported for this command
+       YAML is currently not supported for this operation.
     #>
     [CmdletBinding(DefaultParameterSetName = 'Mappings')]
     param
@@ -1276,7 +1302,7 @@ function New-CredentialDynamicParameters
                 }
             }
 
-            New-DynamicParam -Name $_ -Type $Script:commonCredentialArguments[$_] -DPDictionary $Dictionary @validateSet -HelpMessage 'a help message'
+            New-DynamicParam -Name $_ -Type $Script:commonCredentialArguments[$_]['Type'] -DPDictionary $Dictionary @validateSet -HelpMessage $Script:commonCredentialArguments[$_]['Description']
         }
 
         $Dictionary
@@ -1359,19 +1385,23 @@ function New-TemplateDynamicParameters
                 # Basic types with optional AllowedValues/AllowedPattern
                 switch ($awsType)
                 {
-                    'Number' {
+                    'Number'
+                    {
                         $paramDefinition.Add('Type', 'Double')
                     }
 
-                    'List<Number>' {
+                    'List<Number>'
+                    {
                         $paramDefinition.Add('Type', 'Double[]')
                     }
 
-                    'CommaDelimitedList' {
+                    'CommaDelimitedList'
+                    {
                         $paramDefinition.Add('Type', 'String[]')
                     }
 
-                    Default {
+                    Default
+                    {
                         $paramDefinition.Add('Type', 'String')
                     }
                 }
