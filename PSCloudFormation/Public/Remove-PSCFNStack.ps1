@@ -27,7 +27,8 @@ function Remove-PSCFNStack
             You can pipe the names or ARNs of the stacks to delete to this function
 
     .OUTPUTS
-        None
+        System.String[]
+            ARN(s) of deleted stack(s) else nothing if the stack did not exist.
 
     .EXAMPLE
 
@@ -157,10 +158,15 @@ function Remove-PSCFNStack
                         else
                         {
                             Write-Host "Delete complete: $arn"
+                            $arn
                         }
                     }
                 }
             }
+        }
+        else
+        {
+            $arns
         }
     }
 }
