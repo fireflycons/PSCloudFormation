@@ -7,35 +7,35 @@ Get-Module -Name $ModuleName | Remove-Module
 # Find the Manifest file
 $ManifestFile = "$(Split-path (Split-Path -Parent -Path $MyInvocation.MyCommand.Definition))\$ModuleName\$ModuleName.psd1"
 
-$TestStackArn = 'arn:aws:cloudformation:eu-west-1:000000000000:stack/pester/00000000-0000-0000-0000-000000000000'
+$global:TestStackArn = 'arn:aws:cloudformation:eu-west-1:000000000000:stack/pester/00000000-0000-0000-0000-000000000000'
 
 # Import the module and store the information about the module
 $ModuleInformation = Import-Module -Name $ManifestFile -PassThru
 
-Describe "$ModuleName Module - Testing Manifest File (.psd1)"{
-    Context 'Manifest'{
-        It 'Should contain RootModule'{
+Describe "$ModuleName Module - Testing Manifest File (.psd1)" {
+    Context 'Manifest' {
+        It 'Should contain RootModule' {
             $ModuleInformation.RootModule | Should not BeNullOrEmpty
         }
-        It 'Should contain Author'{
+        It 'Should contain Author' {
             $ModuleInformation.Author | Should not BeNullOrEmpty
         }
-        It 'Should contain Company Name'{
+        It 'Should contain Company Name' {
             $ModuleInformation.CompanyName | Should not BeNullOrEmpty
         }
-        It 'Should contain Description'{
+        It 'Should contain Description' {
             $ModuleInformation.Description | Should not BeNullOrEmpty
         }
-        It 'Should contain Copyright'{
+        It 'Should contain Copyright' {
             $ModuleInformation.Copyright | Should not BeNullOrEmpty
         }
-        It 'Should contain License'{
+        It 'Should contain License' {
             $ModuleInformation.LicenseURI | Should not BeNullOrEmpty
         }
-        It 'Should contain a Project Link'{
+        It 'Should contain a Project Link' {
             $ModuleInformation.ProjectURI | Should not BeNullOrEmpty
         }
-        It 'Should contain Tags (For the PSGallery)'{
+        It 'Should contain Tags (For the PSGallery)' {
             $ModuleInformation.Tags.count | Should not BeNullOrEmpty
         }
     }
@@ -44,16 +44,16 @@ Describe "$ModuleName Module - Testing Manifest File (.psd1)"{
 InModuleScope 'PSCloudFormation' {
     Describe 'PSCloudFormation' {
 
-        Context 'Testing New-PSCFNStack' {
+        Context 'New-PSCFNStack' {
 
             Mock -CommandName Get-CFNStack -MockWith {
 
-                return $false
+                throw New-Object System.InvalidOperationException ('Stack does not exist')
             }
 
             Mock -CommandName New-CFNStack -MockWith {
 
-                return $TestStackArn
+                return $global:TestStackArn
             }
 
             Mock -CommandName Wait-CFNStack -MockWith {
@@ -62,11 +62,125 @@ InModuleScope 'PSCloudFormation' {
                     StackStatus = 'CREATE_COMPLETE'
                 }
             }
+
+            It 'Should create stack and return ARN with valid command line arguments' {
+
+                New-PSCFNStack -StackName pester -TemplateLocation "$PSScriptRoot\test-stack.json" -Wait -VpcCidr 10.0.0.0/16 | Should Be $TestStackArn
+            }
+
+            It 'Should fail with invalid CIDR' {
+
+                { New-PSCFNStack -StackName pester -TemplateLocation "$PSScriptRoot\test-stack.json" -Wait -VpcCidr 999.0.0.0/16 } | Should Throw
+            }
+
+            Assert-MockCalled Get-CFNStack -Times 1
+            Assert-MockCalled New-CFNStack -Times 1
+            Assert-MockCalled Wait-CFNStack -Times 1
         }
 
-        It 'should create stack with valid command line arguments' {
+        Context 'Update-PSCFNStack' {
 
-            New-PSCFNStack -StackName pester -TemplateLocation "$PSScriptRoot\test-stack.json" -Wait -VpcCidr 10.0.0.0/16 | Should -Be $TestStackArn
+            Mock -CommandName Get-CFNStack -ParameterFilter { $StackName -eq 'DoesNotExist' } -MockWith {
+
+                throw New-Object System.InvalidOperationException ('Stack does not exist')
+            }
+
+            Mock -CommandName Get-CFNStack -ParameterFilter { $StackName -eq 'pester' } -MockWith {
+
+                return @{
+                    StackParameters = @(
+                        New-Object Amazon.CloudFormation.Model.Parameter |
+                            ForEach-Object {
+                            $_.ParameterKey = 'VpcCidr'
+                            $_.ParameterValue = '10.0.0.0/16'
+                            $_.UsePreviousValue = $true
+                            $_
+                        }
+                    )
+                    StackId         = $global:TestStackArn
+                }
+            }
+
+            Mock -CommandName New-CFNChangeSet -MockWith {
+
+                return 'arn:aws:cloudformation:us-east-1:000000000000:changeSet/SampleChangeSet/1a2345b6-0000-00a0-a123-00abc0abc000'
+            }
+
+            Mock -CommandName Get-CFNChangeSet -MockWith {
+
+                return @{
+                    Status  = 'CREATE_COMPLETE'
+                    Changes = @{
+                        ResourceChange = @(
+                            New-Object PSObject -Property @{
+                                Action             = 'Modify'
+                                LogicalResourceId  = 'Vpc'
+                                PhysicalResourceId = 'vpc-00000000'
+                                ResourceType       = 'AWS::EC2::VPC'
+                            }
+                        )
+                    }
+                }
+            }
+
+            Mock -CommandName Start-CFNChangeSet -MockWith {}
+
+            Mock -CommandName Wait-CFNStack -MockWith {
+
+                return @{
+                    StackStatus = 'UPDATE_COMPLETE'
+                }
+            }
+
+            It 'Should fail when stack does not exist' {
+
+                { Update-PSCFNStack -StackName DoesNotExist -TemplateLocation "$PSScriptRoot\test-stack.json" -Wait -VpcCidr 10.0.0.0/16 } | Should Throw
+            }
+
+            It 'Should update when stack exists' {
+
+                Update-PSCFNStack -StackName pester -TemplateLocation "$PSScriptRoot\test-stack.json" -Wait -VpcCidr 10.1.0.0/16 -Force
+            }
+
+            Assert-MockCalled Get-CFNStack -Times 1
+            Assert-MockCalled New-CFNChangeSet -Times 1
+            Assert-MockCalled Get-CFNChangeSet -Times 1
+            Assert-MockCalled Start-CFNChangeSet -Times 1
+            Assert-MockCalled Wait-CFNStack -Times 1
+        }
+
+        Context 'Remove-PSCFNStack' {
+
+            Mock -CommandName Get-CFNStack -ParameterFilter { $StackName -eq 'DoesNotExist' } -MockWith {
+
+                throw New-Object System.InvalidOperationException ('Stack does not exist')
+            }
+
+            Mock -CommandName Get-CFNStack -ParameterFilter { $StackName -eq 'pester' } -MockWith {
+
+                return @{
+                    StackId         = $global:TestStackArn
+                }
+            }
+
+            Mock -CommandName Remove-CFNStack {}
+
+            Mock -CommandName Wait-CFNStack -MockWith {
+
+                return @{
+                    StackStatus = 'DELETE_COMPLETE'
+                }
+            }
+
+            It 'Should return nothing if stack does not exist' {
+
+                Remove-PSCFNStack -StackName DoesNotExist | Should BeNullOrEmpty
+            }
+
+            It 'Should return ARN if stack exists' {
+
+                Remove-PSCFNStack -StackName pester | Should Be $global:TestStackArn
+            }
         }
     }
 }
