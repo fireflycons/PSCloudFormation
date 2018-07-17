@@ -2,7 +2,7 @@ function New-StackOperationArguments
 {
     <#
     .SYNOPSIS
-        Create an argument hash of parameters needs by New-CFNStack and Update-CFNStack
+        Create an argument hash of parameters needed by New-CFNStack and Update-CFNStack
 
     .PARAMETER StackName
         Name of stack to create/update
@@ -26,8 +26,12 @@ function New-StackOperationArguments
     #>
     param
     (
+        [Parameter(Mandatory = $true)]
         [string]$StackName,
+
+        [Parameter(Mandatory = $true)]
         [string]$TemplateLocation,
+
         [string]$Capabilities,
         [object]$StackParameters
     )

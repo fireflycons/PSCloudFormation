@@ -42,7 +42,7 @@ Describe "$ModuleName Module - Testing Manifest File (.psd1)" {
 }
 
 InModuleScope 'PSCloudFormation' {
-    Describe 'PSCloudFormation' {
+    Describe 'PSCloudFormation - Public Interface' {
 
         Context 'New-PSCFNStack' {
 

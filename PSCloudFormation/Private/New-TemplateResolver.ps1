@@ -95,7 +95,7 @@ function New-TemplateResolver
 
                 $resolver.Url = [Uri]("https://s3-{0}.amazonaws.com/{1}{2}" -f $r.Region, $u.Authority, $u.LocalPath)
                 $resolver.BucketName = $u.Authority
-                $resolver.Key = $u.LocalPath
+                $resolver.Key = $u.LocalPath.TrimStart('/')
                 $resolver.IsFile = $false
             }
 

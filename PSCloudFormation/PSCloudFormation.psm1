@@ -7,13 +7,13 @@ $ErrorActionPreference = 'Stop'
 # AWS::EC2::AvailabilityZone::Name is handled separately by querying AWSPowerShell for AZs valid for the region we are executing in.
 $Script:templateParameterValidators = @{
 
-    'AWS::EC2::Image::Id'              = '^\s*ami-([a-z0-9]{8}|[a-z0-9]{17})\s*$'
-    'AWS::EC2::Instance::Id'           = '^\s*i-([a-z0-9]{8}|[a-z0-9]{17})\s*$'
-    'AWS::EC2::SecurityGroup::Id'      = '^\s*sg-([a-z0-9]{8}|[a-z0-9]{17})\s*$'
-    'AWS::EC2::Subnet::Id'             = '^\s*subnet-([a-z0-9]{8}|[a-z0-9]{17})\s*$'
-    'AWS::EC2::Volume::Id'             = '^\s*vol-([a-z0-9]{8}|[a-z0-9]{17})\s*$'
-    'AWS::EC2::VPC::Id'                = '^\s*vpc-([a-z0-9]{8}|[a-z0-9]{17})\s*$'
-    'AWS::EC2::AvailabilityZone::Name' = '^\s*[a-z]{2}-[a-z]+-\d[a-z]\s*$'
+    'AWS::EC2::Image::Id'              = '^\s*ami-([a-f0-9]{8}|[a-f0-9]{17})\s*$'
+    'AWS::EC2::Instance::Id'           = '^\s*i-([a-f0-9]{8}|[a-f0-9]{17})\s*$'
+    'AWS::EC2::SecurityGroup::Id'      = '^\s*sg-([a-f0-9]{8}|[a-f0-9]{17})\s*$'
+    'AWS::EC2::Subnet::Id'             = '^\s*subnet-([a-f0-9]{8}|[a-f0-9]{17})\s*$'
+    'AWS::EC2::Volume::Id'             = '^\s*vol-([a-f0-9]{8}|[a-f0-9]{17})\s*$'
+    'AWS::EC2::VPC::Id'                = '^\s*vpc-([a-f0-9]{8}|[a-f0-9]{17})\s*$'
+    'AWS::EC2::AvailabilityZone::Name' = '^\s*[a-f]{2}-[a-f]+-\d[a-f]\s*$'
 }
 
 # Common Credential and Region Parameters and their types
