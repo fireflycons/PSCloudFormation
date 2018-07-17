@@ -7,7 +7,7 @@ Get-Module -Name $ModuleName | Remove-Module
 # Find the Manifest file
 $ManifestFile = "$(Split-path (Split-Path -Parent -Path $MyInvocation.MyCommand.Definition))\$ModuleName\$ModuleName.psd1"
 
-$global:TestStackArn = 'arn:aws:cloudformation:eu-west-1:000000000000:stack/pester/00000000-0000-0000-0000-000000000000'
+$global:TestStackArn = 'arn:aws:cloudformation:us-east-1:000000000000:stack/pester/00000000-0000-0000-0000-000000000000'
 
 # Import the module and store the information about the module
 $ModuleInformation = Import-Module -Name $ManifestFile -PassThru
@@ -159,7 +159,7 @@ InModuleScope 'PSCloudFormation' {
             Mock -CommandName Get-CFNStack -ParameterFilter { $StackName -eq 'pester' } -MockWith {
 
                 return @{
-                    StackId         = $global:TestStackArn
+                    StackId = $global:TestStackArn
                 }
             }
 
