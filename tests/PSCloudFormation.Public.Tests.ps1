@@ -64,8 +64,14 @@ InModuleScope 'PSCloudFormation' {
                 }
             }
 
-            It 'Throws if required stack parameter -VpcCidr not given on command line' {
+            It 'Detects when a parameter required by the template (-VpcCidr) not given on command line' {
 
+                # Normally, the UI will prompt for the requirte parameter,
+                # and the user can get the parameter's decription via the usual mandatory parameter help mechanism.
+                # However to test that the dynamic parameter is generated and required, we need to set it up to throw rather than prompt.
+                # We can then test the exeption type and properties to validate the correct argument is required.
+                # https://github.com/PowerShell/PowerShell/issues/2408#issuecomment-251140889
+                # http://nivot.org/blog/post/2010/05/03/PowerShell20DeveloperEssentials1InitializingARunspaceWithAModule
                 $ex = Invoke-Command -NoNewScope {
                     try
                     {
