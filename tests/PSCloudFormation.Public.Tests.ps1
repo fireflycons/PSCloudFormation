@@ -80,7 +80,7 @@ InModuleScope 'PSCloudFormation' {
                         $rs = [System.Management.Automation.Runspaces.RunspaceFactory]::CreateRunspace($iss)
                         $rs.Open()
                         $ri = New-Object System.Management.Automation.RunSpaceInvoke($rs)
-                        $ri.Invoke('New-PSCFNStack -StackName teststack -TemplateLocation "D:\Dev\CodeCommit\IE\PSCloudFormation\tests\test-stack.json"')
+                        $ri.Invoke("New-PSCFNStack -StackName teststack -TemplateLocation '$PSScriptRoot\test-stack.json'")
                     }
                     catch
                     {
