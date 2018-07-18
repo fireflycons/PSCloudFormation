@@ -123,54 +123,157 @@ InModuleScope 'PSCloudFormation' {
 
         Context 'AWS Parameter Type detection' {
 
+            # Parameter type detection is used in formatting output of Get-StackOutputs -AsParameterBlock
+
+            function Get-RandomHexString
+            {
+                param
+                (
+                    [int]$Length
+                )
+
+                $sb = New-Object System.Text.StringBuilder
+
+                for ($i = 0; $i -lt $Length; ++$i)
+                {
+                    $sb.AppendFormat('{0:x}', (Get-Random -Minimum 0 -Maximum 15)) | Out-Null
+                }
+
+                $sb.ToString()
+            }
+
             @(
                 @{
                     Prefix = 'i'
-                    Name = 'instance id'
-                    Type = 'AWS::EC2::Instance::Id'
+                    Name   = 'instance ids'
+                    Type   = 'AWS::EC2::Instance::Id'
                 },
                 @{
                     Prefix = 'sg'
-                    Name = 'security group id'
-                    Type = 'AWS::EC2::SecurityGroup::Id'
+                    Name   = 'security group ids'
+                    Type   = 'AWS::EC2::SecurityGroup::Id'
                 },
                 @{
                     Prefix = 'ami'
-                    Name = 'image id'
-                    Type = 'AWS::EC2::Image::Id'
+                    Name   = 'image ids'
+                    Type   = 'AWS::EC2::Image::Id'
                 },
                 @{
                     Prefix = 'subnet'
-                    Name = 'subnet id'
-                    Type = 'AWS::EC2::Subnet::Id'
+                    Name   = 'subnet ids'
+                    Type   = 'AWS::EC2::Subnet::Id'
                 },
                 @{
                     Prefix = 'vol'
-                    Name = 'volumne id'
-                    Type = 'AWS::EC2::Volume::Id'
+                    Name   = 'volume ids'
+                    Type   = 'AWS::EC2::Volume::Id'
                 },
                 @{
                     Prefix = 'vpc'
-                    Name = 'VPC id'
-                    Type = 'AWS::EC2::VPC::Id'
+                    Name   = 'VPC ids'
+                    Type   = 'AWS::EC2::VPC::Id'
                 }
             ) |
-            ForEach-Object {
+                ForEach-Object {
 
+                # Do 10 random values for each
                 It "Recognises 8 digit $($_.Name)" {
 
-                    Get-ParameterTypeFromStringValue -Value "$($_.Prefix)-1234acbd" | Should Be $_.Type
+                    $p = $_.Prefix
+                    $t = $_.Type
+
+                    0..9 | ForEach-Object {
+                        Get-ParameterTypeFromStringValue -Value "$p-$(Get-RandomHexString -Length 8)" | Should Be $t
+                    }
                 }
 
                 It "Recognises 17 digit $($_.Name)" {
 
-                    Get-ParameterTypeFromStringValue -Value "$($_.Prefix)-1234acbd901234567" | Should Be $_.Type
+                    $p = $_.Prefix
+                    $t = $_.Type
+
+                    0..9 | ForEach-Object {
+                        Get-ParameterTypeFromStringValue -Value "$p-$(Get-RandomHexString -Length 17)" | Should Be $t
+                    }
                 }
 
-                It "Thinks an invalid $($_.Name) is a string" {
+                It "Treats invalid $($_.Name) as strings" {
 
                     Get-ParameterTypeFromStringValue -Value "$($_.Prefix)-1234acbd90123456" | Should Be 'String'
                     Get-ParameterTypeFromStringValue -Value "$($_.Prefix)-1234zacbd91234567" | Should Be 'String'
+                }
+
+            }
+
+            It 'Recognises known AZs' {
+
+                # This test will take a long time, as AZ info is lazy-loaded due to the time it takes to retrieve.
+
+                # At time of writing
+                $knownAzs = @(
+                    'ap-northeast-1a'
+                    'ap-northeast-1c'
+                    'ap-northeast-1d'
+                    'ap-northeast-2a'
+                    'ap-northeast-2c'
+                    'ap-south-1a'
+                    'ap-south-1b'
+                    'ap-southeast-1a'
+                    'ap-southeast-1b'
+                    'ap-southeast-1c'
+                    'ap-southeast-2a'
+                    'ap-southeast-2b'
+                    'ap-southeast-2c'
+                    'ca-central-1a'
+                    'ca-central-1b'
+                    'eu-central-1a'
+                    'eu-central-1b'
+                    'eu-central-1c'
+                    'eu-west-1a'
+                    'eu-west-1b'
+                    'eu-west-1c'
+                    'eu-west-2a'
+                    'eu-west-2b'
+                    'eu-west-2c'
+                    'eu-west-3a'
+                    'eu-west-3b'
+                    'eu-west-3c'
+                    'sa-east-1a'
+                    'sa-east-1c'
+                    'us-east-1a'
+                    'us-east-1b'
+                    'us-east-1c'
+                    'us-east-1d'
+                    'us-east-1e'
+                    'us-east-1f'
+                    'us-east-2a'
+                    'us-east-2b'
+                    'us-east-2c'
+                    'us-west-1a'
+                    'us-west-1b'
+                    'us-west-2a'
+                    'us-west-2b'
+                    'us-west-2c'
+                )
+
+                $knownAzs |
+                    ForEach-Object {
+
+                    Get-ParameterTypeFromStringValue -Value $_ | Should Be 'AWS::EC2::AvailabilityZone::Name'
+                }
+            }
+
+            It 'Treats invalid AZs as strings' {
+
+                @(
+                    'ap-northeast-1y'
+                    'ap-northeast-1z'
+                    'ap-northwest-1a'
+                    'ap-northwest-1b'
+                ) |
+                ForEach-Object {
+
+                    Get-ParameterTypeFromStringValue -Value $_ | Should Be 'String'
                 }
             }
         }

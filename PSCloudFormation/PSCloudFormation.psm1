@@ -2,18 +2,40 @@
 
 $ErrorActionPreference = 'Stop'
 
+# Check for YAML support
+if (Get-Module -ListAvailable | Where-Object {  $_.Name -ieq 'powershell-yaml' })
+{
+    Import-Module powershell-yaml
+    $script:yamlSupport = $true
+}
+else
+{
+    Write-Warning 'YAML support unavailable'
+    Write-Warning 'To enable, install powershell-yaml from the gallery'
+    Write-Warning 'Install-Module -Name powershell-yaml'
+    $Script:yamlSupport = $false
+}
+
+# Init region and AZ hash. AZ's are lazy-loaded when needed as this is time consuming
+$script:RegionInfo = @{}
+
+Get-EC2Region |
+ForEach-Object {
+    $script:RegionInfo.Add($_.RegionName, $null)
+}
+
+
 # Hashtable of AWS custom parameter types vs. regexes to validate them
 # Supporting 8 and 17 character identifiers
-# AWS::EC2::AvailabilityZone::Name is handled separately by querying AWSPowerShell for AZs valid for the region we are executing in.
 $Script:templateParameterValidators = @{
 
-    'AWS::EC2::Image::Id'              = '^\s*ami-([a-f0-9]{8}|[a-f0-9]{17})\s*$'
-    'AWS::EC2::Instance::Id'           = '^\s*i-([a-f0-9]{8}|[a-f0-9]{17})\s*$'
-    'AWS::EC2::SecurityGroup::Id'      = '^\s*sg-([a-f0-9]{8}|[a-f0-9]{17})\s*$'
-    'AWS::EC2::Subnet::Id'             = '^\s*subnet-([a-f0-9]{8}|[a-f0-9]{17})\s*$'
-    'AWS::EC2::Volume::Id'             = '^\s*vol-([a-f0-9]{8}|[a-f0-9]{17})\s*$'
-    'AWS::EC2::VPC::Id'                = '^\s*vpc-([a-f0-9]{8}|[a-f0-9]{17})\s*$'
-    'AWS::EC2::AvailabilityZone::Name' = '^\s*[a-f]{2}-[a-f]+-\d[a-f]\s*$'
+    'AWS::EC2::Image::Id'              = '^ami-([a-f0-9]{8}|[a-f0-9]{17})$'
+    'AWS::EC2::Instance::Id'           = '^i-([a-f0-9]{8}|[a-f0-9]{17})$'
+    'AWS::EC2::SecurityGroup::Id'      = '^sg-([a-f0-9]{8}|[a-f0-9]{17})$'
+    'AWS::EC2::Subnet::Id'             = '^subnet-([a-f0-9]{8}|[a-f0-9]{17})$'
+    'AWS::EC2::Volume::Id'             = '^vol-([a-f0-9]{8}|[a-f0-9]{17})$'
+    'AWS::EC2::VPC::Id'                = '^vpc-([a-f0-9]{8}|[a-f0-9]{17})$'
+    'AWS::EC2::AvailabilityZone::Name' = "^$(($script:RegionInfo.Keys | ForEach-Object {"($_)"}) -join '|' )[a-z]`$"
 }
 
 # Common Credential and Region Parameters and their types
@@ -51,20 +73,6 @@ $Script:commonCredentialArguments = @{
         Type        = [string]
         Description = 'The system name of the AWS region in which the operation should be invoked. For example, us-east-1, eu-west-1 etc.'
     }
-}
-
-# Check for YAML support
-if (Get-Module -ListAvailable | Where-Object {  $_.Name -ieq 'powershell-yaml' })
-{
-    Import-Module powershell-yaml
-    $script:yamlSupport = $true
-}
-else
-{
-    Write-Warning 'YAML support unavailable'
-    Write-Warning 'To enable, install powershell-yaml from the gallery'
-    Write-Warning 'Install-Module -Name powershell-yaml'
-    $Script:yamlSupport = $false
 }
 
 #endregion

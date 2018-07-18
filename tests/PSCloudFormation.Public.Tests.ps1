@@ -5,7 +5,7 @@ $ModuleName = 'PSCloudFormation'
 Get-Module -Name $ModuleName | Remove-Module
 
 # Find the Manifest file
-$ManifestFile = "$(Split-path (Split-Path -Parent -Path $MyInvocation.MyCommand.Definition))\$ModuleName\$ModuleName.psd1"
+$global:ManifestFile = "$(Split-path (Split-Path -Parent -Path $MyInvocation.MyCommand.Definition))\$ModuleName\$ModuleName.psd1"
 
 $global:TestStackArn = 'arn:aws:cloudformation:us-east-1:000000000000:stack/pester/00000000-0000-0000-0000-000000000000'
 
@@ -41,6 +41,7 @@ Describe "$ModuleName Module - Testing Manifest File (.psd1)" {
     }
 }
 
+# https://github.com/PowerShell/PowerShell/issues/2408#issuecomment-251140889
 InModuleScope 'PSCloudFormation' {
     Describe 'PSCloudFormation - Public Interface' {
 
@@ -61,6 +62,38 @@ InModuleScope 'PSCloudFormation' {
                 return @{
                     StackStatus = 'CREATE_COMPLETE'
                 }
+            }
+
+            It 'Throws if required stack parameter -VpcCidr not given on command line' {
+
+                $ex = Invoke-Command -NoNewScope {
+                    try
+                    {
+                        $iss = [System.Management.Automation.Runspaces.InitialSessionState]::CreateDefault()
+                        $iss.ImportPSModule($global:ManifestFile)
+                        $rs = [System.Management.Automation.Runspaces.RunspaceFactory]::CreateRunspace($iss)
+                        $rs.Open()
+                        $ri = New-Object System.Management.Automation.RunSpaceInvoke($rs)
+                        $ri.Invoke('New-PSCFNStack -StackName teststack -TemplateLocation "D:\Dev\CodeCommit\IE\PSCloudFormation\tests\test-stack.json"')
+                    }
+                    catch
+                    {
+                        $_.Exception.InnerException
+                    }
+                    finally
+                    {
+                        ($ri, $rs) |
+                            ForEach-Object {
+                            if ($_)
+                            {
+                                $_.Dispose()
+                            }
+                        }
+                    }
+                }
+
+                $ex | SHould BeOfType System.Management.Automation.ParameterBindingException
+                $ex.ParameterName.Trim() | SHould Be 'VpcCidr'
             }
 
             It 'Should create stack and return ARN with valid command line arguments' {

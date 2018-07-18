@@ -19,7 +19,30 @@ function Get-ParameterTypeFromStringValue
     {
         if ($Value -match $Script:templateParameterValidators[$type])
         {
-            return $type
+            if ($type -ne 'AWS::EC2::AvailabilityZone::Name')
+            {
+                # All other types are exact match
+                return $type
+            }
+
+            # Check it is a known AZ
+            foreach($region in $script:RegionInfo.Keys)
+            {
+                if ($Value -like "$($region)*")
+                {
+                    if ($null -eq $script:RegionInfo[$region])
+                    {
+                        # Load AZs for region
+                        $script:RegionInfo[$region] = (Get-EC2AvailabilityZone -Region $region).ZoneName
+                    }
+
+                    if ($script:RegionInfo[$region] -contains $Value)
+                    {
+                        # Value is a known AZ
+                        return $type
+                    }
+                }
+            }
         }
     }
 
