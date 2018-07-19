@@ -209,7 +209,7 @@ InModuleScope 'PSCloudFormation' {
 
                 # This test will take a long time, as AZ info is lazy-loaded due to the time it takes to retrieve.
 
-                # At time of writing
+                # At time of writing...
                 $knownAzs = @(
                     'ap-northeast-1a'
                     'ap-northeast-1c'

@@ -23,27 +23,15 @@ function New-CredentialDynamicParameters
         $Script:commonCredentialArguments.Keys |
             ForEach-Object {
 
-            $validateSet = @{}
+                $validateSet = @{}
 
-            if ($_ -ieq 'Region')
-            {
-                try
+                if ($_ -ieq 'Region')
                 {
-                    $regions = Get-AWSRegion | Select-Object -ExpandProperty Region
+                    $validateSet.Add('ValidateSet', $script:RegionInfo.Keys)
+                }
 
-                    if ($regions)
-                    {
-                        $validateSet.Add('ValidateSet', $regions)
-                    }
-                }
-                catch
-                {
-                    # do nothing
-                }
+                New-DynamicParam -Name $_ -Type $Script:commonCredentialArguments[$_]['Type'] -DPDictionary $Dictionary @validateSet -HelpMessage $Script:commonCredentialArguments[$_]['Description']
             }
-
-            New-DynamicParam -Name $_ -Type $Script:commonCredentialArguments[$_]['Type'] -DPDictionary $Dictionary @validateSet -HelpMessage $Script:commonCredentialArguments[$_]['Description']
-        }
 
         $Dictionary
     }

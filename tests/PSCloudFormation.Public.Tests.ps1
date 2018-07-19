@@ -107,14 +107,25 @@ InModuleScope 'PSCloudFormation' {
                 New-PSCFNStack -StackName pester -TemplateLocation "$PSScriptRoot\test-stack.json" -Wait -VpcCidr 10.0.0.0/16 | Should Be $TestStackArn
             }
 
-            It 'Should fail with invalid CIDR' {
+            It 'Should throw with invalid CIDR' {
 
                 { New-PSCFNStack -StackName pester -TemplateLocation "$PSScriptRoot\test-stack.json" -Wait -VpcCidr 999.0.0.0/16 } | Should Throw
             }
 
-            Assert-MockCalled Get-CFNStack -Times 1
-            Assert-MockCalled New-CFNStack -Times 1
-            Assert-MockCalled Wait-CFNStack -Times 1
+            It 'Should throw with invalid region parameter' {
+
+                { New-PSCFNStack -StackName pester -TemplateLocation "$PSScriptRoot\test-stack.json" -VpcCidr 10.0.0.0/16 -Region eu-west-9 } | Should Throw
+            }
+
+            It 'Should not throw with valid region parameter' {
+
+                Get-EC2Region |
+                    ForEach-Object {
+
+                    Write-Host -ForegroundColor DarkGreen "      [?] Testing region $($_.RegionName)"
+                    { New-PSCFNStack -StackName pester -TemplateLocation "$PSScriptRoot\test-stack.json" -VpcCidr 10.0.0.0/16 -Region $_.RegionName } | Should Not Throw
+                }
+            }
         }
 
         Context 'Update-PSCFNStack' {
@@ -181,11 +192,20 @@ InModuleScope 'PSCloudFormation' {
                 Update-PSCFNStack -StackName pester -TemplateLocation "$PSScriptRoot\test-stack.json" -Wait -VpcCidr 10.1.0.0/16 -Force
             }
 
-            Assert-MockCalled Get-CFNStack -Times 1
-            Assert-MockCalled New-CFNChangeSet -Times 1
-            Assert-MockCalled Get-CFNChangeSet -Times 1
-            Assert-MockCalled Start-CFNChangeSet -Times 1
-            Assert-MockCalled Wait-CFNStack -Times 1
+            It 'Should throw with invalid region parameter' {
+
+                { Update-PSCFNStack -StackName pester -TemplateLocation "$PSScriptRoot\test-stack.json" -Wait -VpcCidr 10.1.0.0/16 -Region eu-west-9 } | Should Throw
+            }
+
+            It 'Should not throw with valid region parameter' {
+
+                Get-EC2Region |
+                    ForEach-Object {
+                    Write-Host -ForegroundColor DarkGreen "      [?] Testing region $($_.RegionName)"
+
+                    { Update-PSCFNStack -StackName pester -TemplateLocation "$PSScriptRoot\test-stack.json" -Wait -VpcCidr 10.1.0.0/16 -Region $_.RegionName -Force } | Should Not Throw
+                }
+            }
         }
 
         Context 'Remove-PSCFNStack' {
@@ -219,6 +239,21 @@ InModuleScope 'PSCloudFormation' {
             It 'Should return ARN if stack exists' {
 
                 Remove-PSCFNStack -StackName pester | Should Be $global:TestStackArn
+            }
+
+            It 'Should throw with invalid region parameter' {
+
+                { Remove-PSCFNStack -StackName pester -Region eu-west-9 } | Should Throw
+            }
+
+            It 'Should not throw with valid region parameter' {
+
+                Get-EC2Region |
+                    ForEach-Object {
+
+                    Write-Host -ForegroundColor DarkGreen "      [?] Testing region $($_.RegionName)"
+                    { Remove-PSCFNStack -StackName pester -Region $_.RegionName } | Should Not Throw
+                }
             }
         }
     }

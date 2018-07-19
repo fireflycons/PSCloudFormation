@@ -19,6 +19,8 @@ else
 # Init region and AZ hash. AZ's are lazy-loaded when needed as this is time consuming
 $script:RegionInfo = @{}
 
+# Get-EC2Region asks an AWS service for current regions so is always up to date.
+# OTOH Get-AWSRegion is client-side and depends on the version of AWSPowerShell installed.
 Get-EC2Region |
 ForEach-Object {
     $script:RegionInfo.Add($_.RegionName, $null)
