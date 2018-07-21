@@ -21,5 +21,14 @@
                 "EnableDnsSupport": { "Ref": "DnsSupport" }
             }
         }
+    },
+    "Outputs": {
+        "VpcId": {
+            "Description": "ID of the new VPC",
+            "Value": { "Ref": "Vpc"},
+            "Export": {
+                "Name": { "Fn::Sub": "${AWS::StackName}-VpcId" }
+            }
+        }
     }
 }

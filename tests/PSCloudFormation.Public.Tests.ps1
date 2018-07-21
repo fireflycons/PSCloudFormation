@@ -112,6 +112,11 @@ InModuleScope 'PSCloudFormation' {
                 { New-PSCFNStack -StackName pester -TemplateLocation "$PSScriptRoot\test-stack.json" -Wait -VpcCidr 999.0.0.0/16 } | Should Throw
             }
 
+            It 'Should throw with a value that is not in AllowedValues' {
+
+                { New-PSCFNStack -StackName pester -TemplateLocation "$PSScriptRoot\test-stack.json" -Wait -VpcCidr 10.0.0.0/16 -DnsSupport BreakMe } | Should Throw
+            }
+
             It 'Should throw with invalid region parameter' {
 
                 { New-PSCFNStack -StackName pester -TemplateLocation "$PSScriptRoot\test-stack.json" -VpcCidr 10.0.0.0/16 -Region eu-west-9 } | Should Throw
@@ -254,6 +259,31 @@ InModuleScope 'PSCloudFormation' {
                     Write-Host -ForegroundColor DarkGreen "      [?] Testing region $($_.RegionName)"
                     { Remove-PSCFNStack -StackName pester -Region $_.RegionName } | Should Not Throw
                 }
+            }
+        }
+
+        Context 'Get-PSCFNStackOutputs' {
+
+            Mock -CommandName Get-CFNStack -MockWith {
+
+                return @{
+                    StackId = $global:TestStackArn
+                    Outputs = @(
+                        @{
+                            Description = "ID of the new VPC"
+                            ExportName  = "test-stack-VpcId"
+                            OutputKey   = "VpcId"
+                            OutputValue = "vpc-a2e2bfc4"
+                        }
+                    )
+                }
+            }
+
+            It 'Gets stack outputs as a parameter block' {
+
+                $result = Get-PSCFNStackOutputs -StackName test-stack -AsParameterBlock
+
+                $result
             }
         }
     }
