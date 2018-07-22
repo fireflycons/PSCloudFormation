@@ -267,13 +267,14 @@ InModuleScope 'PSCloudFormation' {
             Mock -CommandName Get-CFNStack -MockWith {
 
                 return @{
-                    StackId = $global:TestStackArn
-                    Outputs = @(
+                    StackId   = $global:TestStackArn
+                    StackName = 'test-stack'
+                    Outputs   = @(
                         @{
                             Description = "ID of the new VPC"
                             ExportName  = "test-stack-VpcId"
                             OutputKey   = "VpcId"
-                            OutputValue = "vpc-a2e2bfc4"
+                            OutputValue = "vpc-00000000"
                         }
                     )
                 }
@@ -283,7 +284,23 @@ InModuleScope 'PSCloudFormation' {
 
                 $result = Get-PSCFNStackOutputs -StackName test-stack -AsParameterBlock
 
-                $result
+                $result.VpcId.Description | Should Be "ID of the new VPC"
+                $result.VpcId.Default | Should Be "vpc-00000000"
+                $result.VpcId.Type | Should Be 'AWS::EC2::VPC::Id'
+            }
+
+            It 'Gets stack outputs as a mapping block' {
+
+                $result = Get-PSCFNStackOutputs -StackName test-stack -AsMappingBlock
+
+                $result.VpcId | Should Be "vpc-00000000"
+            }
+
+            It 'Gets stack outputs as a cross-stack reference' {
+
+                $result = Get-PSCFNStackOutputs -StackName test-stack -AsCrossStackReferences
+
+                $result.VpcId.'Fn::ImportValue'.'Fn::Sub' | Should Be '${TestStackStack}-VpcId'
             }
         }
     }
