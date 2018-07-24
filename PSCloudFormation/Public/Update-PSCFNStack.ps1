@@ -24,7 +24,7 @@ function Update-PSCFNStack
         will be passed to the stack as Use Previous Value.
 
     .PARAMETER StackName
-        Name for the new stack.
+        Name of the stack to update.
 
     .PARAMETER TemplateLocation
         Location of the template.

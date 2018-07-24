@@ -62,8 +62,7 @@ When converted to JSON or YAML, can be pasted into the Parameters declaration of
 Get-PSCFNStackOutputs -StackName MyStack -AsCrossStackReferences
 ```
 
-When converted to JSON, provides a collection of Fn::Import stanzas that can be individually pasted into a new template
-YAML is currently not supported for this operation.
+When converted to JSON or YAML, provides a collection of Fn::Import stanzas that can be individually pasted into a new template
 
 ## PARAMETERS
 
@@ -117,7 +116,8 @@ Accept wildcard characters: False
 
 ### -AsCrossStackReferences
 If set, returned object is formatted as a set of Fn::ImportValue statements, with any text matching the
-stack name within the output's ExportName being replaced with placeholder '${StackName}'.
+stack name within the output's ExportName being replaced with a placeholder generated from the stack name with the word 'Stack' appended.
+Make this a parameter to your new stack.
 
 Whilst the result converted to JSON is not much use as it is, the individual elements can
 be copied and pasted in where an Fn::ImportValue for that parameter would be used.
@@ -264,8 +264,7 @@ Accept wildcard characters: False
 ```
 
 ### CommonParameters
-This cmdlet supports the common parameters: -Debug, -ErrorAction, -ErrorVariable, -InformationAction, -InformationVariable, -OutVariable, -OutBuffer, -PipelineVariable, -Verbose, -WarningAction, and -WarningVariable.
-For more information, see about_CommonParameters (http://go.microsoft.com/fwlink/?LinkID=113216).
+This cmdlet supports the common parameters: -Debug, -ErrorAction, -ErrorVariable, -InformationAction, -InformationVariable, -OutVariable, -OutBuffer, -PipelineVariable, -Verbose, -WarningAction, and -WarningVariable. For more information, see about_CommonParameters (http://go.microsoft.com/fwlink/?LinkID=113216).
 
 ## INPUTS
 

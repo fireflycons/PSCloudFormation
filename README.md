@@ -27,14 +27,14 @@ For full syntax and some examples, use `Get-Help` on the module's cmdlets.
 
 This module provides the following stack modification cmdlets
 
-- `New-PSCFNStack` - ([Documentation](docs/New-PSCFNStack.md)) Create a new stack.
-- `Update-PSCFNStack` - ([Documentation](docs/Update-PSCFNStack.md)) Update an existing stack.
-- `Remove-PSCFNStack` - ([Documentation](docs/Remove-PSCFNStack.md)) Delete one or more existing stacks.
-- `Reset-PSCFNStack` - ([Documentation](docs/Reset-PSCFNStack.md)) Delete, then redeploy an existing stack.
+- `New-PSCFNStack` - ([Documentation](docs/en-US/New-PSCFNStack.md)) Create a new stack.
+- `Update-PSCFNStack` - ([Documentation](docs/en-US/Update-PSCFNStack.md)) Update an existing stack.
+- `Remove-PSCFNStack` - ([Documentation](docs/en-US/Remove-PSCFNStack.md)) Delete one or more existing stacks.
+- `Reset-PSCFNStack` - ([Documentation](docs/en-US/Reset-PSCFNStack.md)) Delete, then redeploy an existing stack.
 
 ### Other Cmdlets
 
-- `Get-PSCFNStackOutputs` ([Documentation](docs/Get-PSCFNStackOutputs.md)) Retrieves the outputs of a stack in various useful formats for use in creation of new stack templates that will use or import these values.
+- `Get-PSCFNStackOutputs` ([Documentation](docs/en-US/Get-PSCFNStackOutputs.md)) Retrieves the outputs of a stack in various useful formats for use in creation of new stack templates that will use or import these values.
 
 ### Template Support
 

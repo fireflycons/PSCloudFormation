@@ -5,20 +5,20 @@ online version:
 schema: 2.0.0
 ---
 
-# New-PSCFNStack
+# Reset-PSCFNStack
 
 ## SYNOPSIS
-Creates a stack.
+Delete and recreate an existing stack
 
 ## SYNTAX
 
 ```
-New-PSCFNStack [-StackName] <String> [-TemplateLocation] <String> [[-Capabilities] <String>] [-Wait]
+Reset-PSCFNStack [-StackName] <String> -TemplateLocation <String> [-Capabilities <String>] [-Wait]
  [<CommonParameters>]
 ```
 
 ## DESCRIPTION
-Creates a stack.
+Completely replace an existing stack
 
 DYNAMIC PARAMETERS
 
@@ -41,22 +41,22 @@ parameter will be taken from the Description property of the parameter.
 
 ### EXAMPLE 1
 ```
-New-PSCFNStack -StackName MyStack -TemplateLocation .\mystack.json -Capabilities CAPABILITY_IAM -Wait -VpcCidr 10.0.0.0/16
+Reset-PSCFNStack -StackName MyStack -TemplateLocation .\mystack.json -Capabilities CAPABILITY_IAM -Wait -VpcCidr 10.1.0.0/16
 ```
 
-Creates a new stack from a local template file and waits for it to complete.
+First deletes any existing stack of the same name or ARN, then creates a new stack from a local template file and waits for it to complete.
 This template would have 'VpcCidr' defined within its parameter block
 
 ### EXAMPLE 2
 ```
-New-PSCFNStack -StackName MyStack -TemplateLocation https://s3-eu-west-1.amazonaws.com/mybucket/mystack.json -Capabilities CAPABILITY_IAM -Wait -VpcCidr 10.0.0.0/16
+Reset-PSCFNStack -StackName MyStack -TemplateLocation https://s3-eu-west-1.amazonaws.com/mybucket/mystack.json -Capabilities CAPABILITY_IAM -Wait -VpcCidr 10.1.0.0/16
 ```
 
 As per the first example, but with the template located in S3.
 
 ### EXAMPLE 3
 ```
-New-PSCFNStack -StackName MyStack -TemplateLocation s3://mybucket/mystack.json -Capabilities CAPABILITY_IAM -Wait -VpcCidr 10.0.0.0/16
+Reset-PSCFNStack -StackName MyStack -TemplateLocation s3://mybucket/mystack.json -Capabilities CAPABILITY_IAM -Wait -VpcCidr 10.1.0.0/16
 ```
 
 As per the first example, but using an S3 URL.
@@ -66,7 +66,7 @@ The bucket is assumed to be in this region and the stack will also be built in t
 ## PARAMETERS
 
 ### -StackName
-Name for the new stack.
+Name of the stack to replace.
 
 ```yaml
 Type: String
@@ -76,7 +76,7 @@ Aliases:
 Required: True
 Position: 1
 Default value: None
-Accept pipeline input: True (ByValue)
+Accept pipeline input: True (ByPropertyName, ByValue)
 Accept wildcard characters: False
 ```
 
@@ -93,7 +93,7 @@ Parameter Sets: (All)
 Aliases:
 
 Required: True
-Position: 2
+Position: Named
 Default value: None
 Accept pipeline input: False
 Accept wildcard characters: False
@@ -108,14 +108,14 @@ Parameter Sets: (All)
 Aliases:
 
 Required: False
-Position: 3
+Position: Named
 Default value: None
 Accept pipeline input: False
 Accept wildcard characters: False
 ```
 
 ### -Wait
-If set, wait for stack creation to complete before returning.
+If set, wait for stack update to complete before returning.
 
 ```yaml
 Type: SwitchParameter
@@ -130,13 +130,12 @@ Accept wildcard characters: False
 ```
 
 ### CommonParameters
-This cmdlet supports the common parameters: -Debug, -ErrorAction, -ErrorVariable, -InformationAction, -InformationVariable, -OutVariable, -OutBuffer, -PipelineVariable, -Verbose, -WarningAction, and -WarningVariable.
-For more information, see about_CommonParameters (http://go.microsoft.com/fwlink/?LinkID=113216).
+This cmdlet supports the common parameters: -Debug, -ErrorAction, -ErrorVariable, -InformationAction, -InformationVariable, -OutVariable, -OutBuffer, -PipelineVariable, -Verbose, -WarningAction, and -WarningVariable. For more information, see about_CommonParameters (http://go.microsoft.com/fwlink/?LinkID=113216).
 
 ## INPUTS
 
 ### System.String
-    You can pipe the new stack name to this function
+    You can pipe the name or ARN of the stack you are replacing to this function
 
 ## OUTPUTS
 
