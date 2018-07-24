@@ -8,9 +8,9 @@ try
     # Grab nuget bits, install modules, set build variables, start build.
     Get-PackageProvider -Name NuGet -ForceBootstrap | Out-Null
 
-    Install-Module Psake, PSDeploy, BuildHelpers -force -AllowClobber -Scope CurrentUser
+    Install-Module Psake, PSDeploy, BuildHelpers, platyPS -force -AllowClobber -Scope CurrentUser
     Install-Module Pester -MinimumVersion 4.1 -Force -AllowClobber -SkipPublisherCheck -Scope CurrentUser
-    Import-Module Psake, BuildHelpers
+    Import-Module Psake, BuildHelpers, platyPS
 
     Set-BuildEnvironment -ErrorAction SilentlyContinue
 
