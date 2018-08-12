@@ -17,6 +17,7 @@ try
         Install-Module AWSPowerShell
     }
 
+    Write-Host "AWSPowershell v $((Get-Module -Name AWSPowerShell).Version.ToString())"
     Set-BuildEnvironment -ErrorAction SilentlyContinue
 
     Invoke-psake -buildFile $ENV:BHProjectPath\psake.ps1 -taskList $Task -nologo
