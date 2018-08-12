@@ -19,11 +19,34 @@ else
 # Init region and AZ hash. AZ's are lazy-loaded when needed as this is time consuming
 $script:RegionInfo = @{}
 
-# Get-EC2Region asks an AWS service for current regions so is always up to date.
-# OTOH Get-AWSRegion is client-side and depends on the version of AWSPowerShell installed.
-Get-EC2Region |
-ForEach-Object {
-    $script:RegionInfo.Add($_.RegionName, $null)
+# Appveyor builds. There is no AWS environment defined so Get-EC2Region will fail
+# Since the module is loaded and we need this data before there is a pester context, mock it manually
+if (Get-PSCallStack | Where-Object { $_.Command -ieq 'Invoke-Pester' })
+{
+    $script:RegionInfo.Add('ap-northeast-1', $null)
+    $script:RegionInfo.Add('ap-northeast-2', $null)
+    $script:RegionInfo.Add('ap-south-1', $null)
+    $script:RegionInfo.Add('ap-southeast-1', $null)
+    $script:RegionInfo.Add('ap-southeast-2', $null)
+    $script:RegionInfo.Add('ca-central-1', $null)
+    $script:RegionInfo.Add('eu-central-1', $null)
+    $script:RegionInfo.Add('eu-west-1', $null)
+    $script:RegionInfo.Add('eu-west-2', $null)
+    $script:RegionInfo.Add('eu-west-3', $null)
+    $script:RegionInfo.Add('sa-east-1', $null)
+    $script:RegionInfo.Add('us-east-1', $null)
+    $script:RegionInfo.Add('us-east-2', $null)
+    $script:RegionInfo.Add('us-west-1', $null)
+    $script:RegionInfo.Add('us-west-2', $null)
+}
+else
+{
+    # Get-EC2Region asks an AWS service for current regions so is always up to date.
+    # OTOH Get-AWSRegion is client-side and depends on the version of AWSPowerShell installed.
+    Get-EC2Region |
+    ForEach-Object {
+        $script:RegionInfo.Add($_.RegionName, $null)
+    }
 }
 
 
