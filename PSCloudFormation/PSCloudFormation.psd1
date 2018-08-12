@@ -117,7 +117,6 @@
     } # End of PrivateData hashtable
 
     # HelpInfo URI of this module
-    # HelpInfoURI = ''
-
+    HelpInfoURI = 'https://github.com/fireflycons/PSCloudFormation'
 }
 
