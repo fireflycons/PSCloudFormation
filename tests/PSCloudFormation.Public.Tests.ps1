@@ -64,42 +64,47 @@ InModuleScope 'PSCloudFormation' {
                 }
             }
 
-            It 'Detects when a parameter required by the template (-VpcCidr) not given on command line' {
+            if (${env:BHBuildSystem} -ne 'AppVeyor')
+            {
+                # This doesn't seem to work in an AppVeyor environment
 
-                # Normally, the UI will prompt for the requirte parameter,
-                # and the user can get the parameter's decription via the usual mandatory parameter help mechanism.
-                # However to test that the dynamic parameter is generated and required, we need to set it up to throw rather than prompt.
-                # We can then test the exeption type and properties to validate the correct argument is required.
-                # https://github.com/PowerShell/PowerShell/issues/2408#issuecomment-251140889
-                # http://nivot.org/blog/post/2010/05/03/PowerShell20DeveloperEssentials1InitializingARunspaceWithAModule
-                $ex = Invoke-Command -NoNewScope {
-                    try
-                    {
-                        $iss = [System.Management.Automation.Runspaces.InitialSessionState]::CreateDefault()
-                        $iss.ImportPSModule($global:ManifestFile)
-                        $rs = [System.Management.Automation.Runspaces.RunspaceFactory]::CreateRunspace($iss)
-                        $rs.Open()
-                        $ri = New-Object System.Management.Automation.RunSpaceInvoke($rs)
-                        $ri.Invoke("New-PSCFNStack -StackName teststack -TemplateLocation '$PSScriptRoot\test-stack.json'")
-                    }
-                    catch
-                    {
-                        $_.Exception.InnerException
-                    }
-                    finally
-                    {
-                        ($ri, $rs) |
-                            ForEach-Object {
-                            if ($_)
-                            {
-                                $_.Dispose()
+                It 'Detects when a parameter required by the template (-VpcCidr) not given on command line' {
+
+                    # Normally, the UI will prompt for the requirte parameter,
+                    # and the user can get the parameter's decription via the usual mandatory parameter help mechanism.
+                    # However to test that the dynamic parameter is generated and required, we need to set it up to throw rather than prompt.
+                    # We can then test the exeption type and properties to validate the correct argument is required.
+                    # https://github.com/PowerShell/PowerShell/issues/2408#issuecomment-251140889
+                    # http://nivot.org/blog/post/2010/05/03/PowerShell20DeveloperEssentials1InitializingARunspaceWithAModule
+                    $ex = Invoke-Command -NoNewScope {
+                        try
+                        {
+                            $iss = [System.Management.Automation.Runspaces.InitialSessionState]::CreateDefault()
+                            $iss.ImportPSModule($global:ManifestFile)
+                            $rs = [System.Management.Automation.Runspaces.RunspaceFactory]::CreateRunspace($iss)
+                            $rs.Open()
+                            $ri = New-Object System.Management.Automation.RunSpaceInvoke($rs)
+                            $ri.Invoke("New-PSCFNStack -StackName teststack -TemplateLocation '$PSScriptRoot\test-stack.json'")
+                        }
+                        catch
+                        {
+                            $_.Exception.InnerException
+                        }
+                        finally
+                        {
+                            ($ri, $rs) |
+                                ForEach-Object {
+                                if ($_)
+                                {
+                                    $_.Dispose()
+                                }
                             }
                         }
                     }
-                }
 
-                $ex | SHould BeOfType System.Management.Automation.ParameterBindingException
-                $ex.ParameterName.Trim() | SHould Be 'VpcCidr'
+                    $ex | SHould BeOfType System.Management.Automation.ParameterBindingException
+                    $ex.ParameterName.Trim() | SHould Be 'VpcCidr'
+                }
             }
 
             It 'Should create stack and return ARN with valid command line arguments' {
@@ -124,11 +129,27 @@ InModuleScope 'PSCloudFormation' {
 
             It 'Should not throw with valid region parameter' {
 
-                Get-EC2Region |
+                @(
+                    'ap-northeast-1'
+                    'ap-northeast-2'
+                    'ap-south-1'
+                    'ap-southeast-1'
+                    'ap-southeast-2'
+                    'ca-central-1'
+                    'eu-central-1'
+                    'eu-west-1'
+                    'eu-west-2'
+                    'eu-west-3'
+                    'sa-east-1'
+                    'us-east-1'
+                    'us-east-2'
+                    'us-west-1'
+                    'us-west-2'
+                ) |
                     ForEach-Object {
 
-                    Write-Host -ForegroundColor DarkGreen "      [?] Testing region $($_.RegionName)"
-                    { New-PSCFNStack -StackName pester -TemplateLocation "$PSScriptRoot\test-stack.json" -VpcCidr 10.0.0.0/16 -Region $_.RegionName } | Should Not Throw
+                    Write-Host -ForegroundColor DarkGreen "      [?] - Testing region $($_)"
+                    { New-PSCFNStack -StackName pester -TemplateLocation "$PSScriptRoot\test-stack.json" -VpcCidr 10.0.0.0/16 -Region $_ } | Should Not Throw
                 }
             }
         }
@@ -204,11 +225,27 @@ InModuleScope 'PSCloudFormation' {
 
             It 'Should not throw with valid region parameter' {
 
-                Get-EC2Region |
+                @(
+                    'ap-northeast-1'
+                    'ap-northeast-2'
+                    'ap-south-1'
+                    'ap-southeast-1'
+                    'ap-southeast-2'
+                    'ca-central-1'
+                    'eu-central-1'
+                    'eu-west-1'
+                    'eu-west-2'
+                    'eu-west-3'
+                    'sa-east-1'
+                    'us-east-1'
+                    'us-east-2'
+                    'us-west-1'
+                    'us-west-2'
+                ) |
                     ForEach-Object {
-                    Write-Host -ForegroundColor DarkGreen "      [?] Testing region $($_.RegionName)"
+                    Write-Host -ForegroundColor DarkGreen "      [?] - Testing region $($_)"
 
-                    { Update-PSCFNStack -StackName pester -TemplateLocation "$PSScriptRoot\test-stack.json" -Wait -VpcCidr 10.1.0.0/16 -Region $_.RegionName -Force } | Should Not Throw
+                    { Update-PSCFNStack -StackName pester -TemplateLocation "$PSScriptRoot\test-stack.json" -Wait -VpcCidr 10.1.0.0/16 -Region $_ -Force } | Should Not Throw
                 }
             }
         }
@@ -253,11 +290,27 @@ InModuleScope 'PSCloudFormation' {
 
             It 'Should not throw with valid region parameter' {
 
-                Get-EC2Region |
+                @(
+                    'ap-northeast-1'
+                    'ap-northeast-2'
+                    'ap-south-1'
+                    'ap-southeast-1'
+                    'ap-southeast-2'
+                    'ca-central-1'
+                    'eu-central-1'
+                    'eu-west-1'
+                    'eu-west-2'
+                    'eu-west-3'
+                    'sa-east-1'
+                    'us-east-1'
+                    'us-east-2'
+                    'us-west-1'
+                    'us-west-2'
+                ) |
                     ForEach-Object {
 
-                    Write-Host -ForegroundColor DarkGreen "      [?] Testing region $($_.RegionName)"
-                    { Remove-PSCFNStack -StackName pester -Region $_.RegionName } | Should Not Throw
+                    Write-Host -ForegroundColor DarkGreen "      [?] - Testing region $($_)"
+                    { Remove-PSCFNStack -StackName pester -Region $_ } | Should Not Throw
                 }
             }
         }
