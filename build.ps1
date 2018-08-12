@@ -12,13 +12,13 @@ try
     Install-Module Pester -MinimumVersion 4.1 -Force -AllowClobber -SkipPublisherCheck -Scope CurrentUser
     Import-Module Psake, BuildHelpers, platyPS
 
-    if (-not (Get-Module -Name AWSPowerShell -ErrorAction SilentlyContinue))
-    {
-        Install-Module AWSPowerShell
-    }
-
-    Write-Host "AWSPowershell v $((Get-Module -Name AWSPowerShell).Version.ToString())"
     Set-BuildEnvironment -ErrorAction SilentlyContinue
+
+    if (${env:BHBuildSystem} -ne 'Unknown')
+    {
+        Install-Module AWSPowerShell -Force -AllowClobber -SkipPublisherCheck -Scope CurrentUser
+        Write-Host "AWSPowershell v $((Get-Module -Name AWSPowerShell).Version.ToString())"
+    }
 
     Invoke-psake -buildFile $ENV:BHProjectPath\psake.ps1 -taskList $Task -nologo
     exit ( [int]( -not $psake.build_success ) )
