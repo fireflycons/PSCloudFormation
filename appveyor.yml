@@ -17,5 +17,4 @@ build: false
 
 #Kick off the CI/CD pipeline
 test_script:
-  - ps: Import-Module AWSPowershell
   - ps: . .\build.ps1 -Task Deploy
