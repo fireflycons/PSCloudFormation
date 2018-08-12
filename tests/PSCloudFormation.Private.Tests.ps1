@@ -10,6 +10,23 @@ $ManifestFile = "$(Split-path (Split-Path -Parent -Path $MyInvocation.MyCommand.
 Import-Module -Name $ManifestFile
 
 $global:templatePath = Join-Path $PSScriptRoot test-stack.json
+$global:azs = @(
+    New-Object PSObject -Property @{ Region = 'ap-south-1'; ZoneName = @('ap-south-1a', 'ap-south-1b') }
+    New-Object PSObject -Property @{ Region = 'eu-west-3'; ZoneName = @('eu-west-3a', 'eu-west-3b', 'eu-west-3c') }
+    New-Object PSObject -Property @{ Region = 'eu-west-2'; ZoneName = @('eu-west-2a', 'eu-west-2b', 'eu-west-2c') }
+    New-Object PSObject -Property @{ Region = 'eu-west-1'; ZoneName = @('eu-west-1a', 'eu-west-1b', 'eu-west-1c') }
+    New-Object PSObject -Property @{ Region = 'ap-northeast-2'; ZoneName = @('ap-northeast-2a', 'ap-northeast-2c') }
+    New-Object PSObject -Property @{ Region = 'ap-northeast-1'; ZoneName = @('ap-northeast-1a', 'ap-northeast-1c', 'ap-northeast-1d') }
+    New-Object PSObject -Property @{ Region = 'sa-east-1'; ZoneName = @('sa-east-1a', 'sa-east-1c') }
+    New-Object PSObject -Property @{ Region = 'ca-central-1'; ZoneName = @('ca-central-1a', 'ca-central-1b') }
+    New-Object PSObject -Property @{ Region = 'ap-southeast-1'; ZoneName = @('ap-southeast-1a', 'ap-southeast-1b', 'ap-southeast-1c') }
+    New-Object PSObject -Property @{ Region = 'ap-southeast-2'; ZoneName = @('ap-southeast-2a', 'ap-southeast-2b', 'ap-southeast-2c') }
+    New-Object PSObject -Property @{ Region = 'eu-central-1'; ZoneName = @('eu-central-1a', 'eu-central-1b', 'eu-central-1c') }
+    New-Object PSObject -Property @{ Region = 'us-east-1'; ZoneName = @('us-east-1a', 'us-east-1b', 'us-east-1c', 'us-east-1d', 'us-east-1e', 'us-east-1f') }
+    New-Object PSObject -Property @{ Region = 'us-east-2'; ZoneName = @('us-east-2a', 'us-east-2b', 'us-east-2c') }
+    New-Object PSObject -Property @{ Region = 'us-west-1'; ZoneName = @('us-west-1a', 'us-west-1b') }
+    New-Object PSObject -Property @{ Region = 'us-west-2'; ZoneName = @('us-west-2a', 'us-west-2b', 'us-west-2c') }
+)
 
 InModuleScope 'PSCloudFormation' {
 
@@ -124,6 +141,11 @@ InModuleScope 'PSCloudFormation' {
         Context 'AWS Parameter Type detection' {
 
             # Parameter type detection is used in formatting output of Get-StackOutputs -AsParameterBlock
+
+            Mock -CommandName Get-EC2AvailabilityZone -MockWith {
+
+                $global:azs | Where-Object { $_.Region -eq $Region }
+            }
 
             function Get-RandomHexString
             {
@@ -271,7 +293,7 @@ InModuleScope 'PSCloudFormation' {
                     'ap-northwest-1a'
                     'ap-northwest-1b'
                 ) |
-                ForEach-Object {
+                    ForEach-Object {
 
                     Get-ParameterTypeFromStringValue -Value $_ | Should Be 'String'
                 }
