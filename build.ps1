@@ -17,7 +17,6 @@ try
     if (${env:BHBuildSystem} -ne 'Unknown')
     {
         Install-Module AWSPowerShell -Force -AllowClobber -SkipPublisherCheck -Scope CurrentUser
-        Write-Host "AWSPowershell v $((Get-Module -Name AWSPowerShell).Version.ToString())"
     }
 
     Invoke-psake -buildFile $ENV:BHProjectPath\psake.ps1 -taskList $Task -nologo
