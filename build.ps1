@@ -20,6 +20,8 @@ try
         Install-Module AWSPowerShell -Force -AllowClobber -SkipPublisherCheck -Scope CurrentUser
     }
 
+    Write-Host (Get-ChildItem -Recurse | Out-String)
+
     Invoke-psake -buildFile $ENV:BHProjectPath\psake.ps1 -taskList $Task -nologo
     exit ( [int]( -not $psake.build_success ) )
 }
