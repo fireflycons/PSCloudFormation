@@ -1,3 +1,5 @@
+[![Build status](https://ci.appveyor.com/api/projects/status/fgt7d0icj7emc6hl/branch/master?svg=true)](https://ci.appveyor.com/project/fireflycons/pscloudformation/branch/master)
+
 # PSCloudFormation
 
 ## What is it?
