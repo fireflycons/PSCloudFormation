@@ -30,7 +30,7 @@ function Get-CommandLineStackParameters
     $stackParameters = $CallerBoundParameters.Keys |
         Where-Object {
 
-        -not ($commonParameters -contains $_ -or $Script:commonCredentialArguments.Keys -contains $_ -or (Get-Variable -Name $_ -Scope 1 -ErrorAction SilentlyContinue))
+        -not ($commonParameters -contains $_ -or $Script:CommonCredentialArguments.Keys -contains $_ -or (Get-Variable -Name $_ -Scope 1 -ErrorAction SilentlyContinue))
     } |
         ForEach-Object {
 

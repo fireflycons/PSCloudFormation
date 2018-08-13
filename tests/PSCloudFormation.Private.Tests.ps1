@@ -32,6 +32,27 @@ InModuleScope 'PSCloudFormation' {
 
     Describe 'PSCloudFormation - Private' {
 
+        Mock -CommandName Get-EC2Region -MockWith {
+
+            @(
+                New-Object PSObject -Property @{ RegionName = "ap-south-1" }
+                New-Object PSObject -Property @{ RegionName = "eu-west-3" }
+                New-Object PSObject -Property @{ RegionName = "eu-west-2" }
+                New-Object PSObject -Property @{ RegionName = "eu-west-1" }
+                New-Object PSObject -Property @{ RegionName = "ap-northeast-2" }
+                New-Object PSObject -Property @{ RegionName = "ap-northeast-1" }
+                New-Object PSObject -Property @{ RegionName = "sa-east-1" }
+                New-Object PSObject -Property @{ RegionName = "ca-central-1" }
+                New-Object PSObject -Property @{ RegionName = "ap-southeast-1" }
+                New-Object PSObject -Property @{ RegionName = "ap-southeast-2" }
+                New-Object PSObject -Property @{ RegionName = "eu-central-1" }
+                New-Object PSObject -Property @{ RegionName = "us-east-1" }
+                New-Object PSObject -Property @{ RegionName = "us-east-2" }
+                New-Object PSObject -Property @{ RegionName = "us-west-1" }
+                New-Object PSObject -Property @{ RegionName = "us-west-2" }
+            )
+        }
+
         $templateContentHash = (Get-Content -Raw -Path $global:templatePath).GetHashCode()
 
         Context 'New-TemplateResolver' {

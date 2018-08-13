@@ -20,17 +20,19 @@ function New-CredentialDynamicParameters
 
     end
     {
-        $Script:commonCredentialArguments.Keys |
+        Initialize-RegionInfo
+
+        $Script:CommonCredentialArguments.Keys |
             ForEach-Object {
 
                 $validateSet = @{}
 
                 if ($_ -ieq 'Region')
                 {
-                    $validateSet.Add('ValidateSet', $script:RegionInfo.Keys)
+                    $validateSet.Add('ValidateSet', $Script:RegionInfo.Keys)
                 }
 
-                New-DynamicParam -Name $_ -Type $Script:commonCredentialArguments[$_]['Type'] -DPDictionary $Dictionary @validateSet -HelpMessage $Script:commonCredentialArguments[$_]['Description']
+                New-DynamicParam -Name $_ -Type $Script:CommonCredentialArguments[$_]['Type'] -DPDictionary $Dictionary @validateSet -HelpMessage $Script:CommonCredentialArguments[$_]['Description']
             }
 
         $Dictionary

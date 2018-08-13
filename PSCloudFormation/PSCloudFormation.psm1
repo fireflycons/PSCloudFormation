@@ -17,54 +17,11 @@ else
 }
 
 # Init region and AZ hash. AZ's are lazy-loaded when needed as this is time consuming
-$script:RegionInfo = @{}
-
-# Appveyor builds. There is no AWS environment defined so Get-EC2Region will fail
-# Since the module is loaded and we need this data before there is a pester context, mock it manually
-if (Get-PSCallStack | Where-Object { $_.Command -ieq 'Invoke-Pester' })
-{
-    $script:RegionInfo.Add('ap-northeast-1', $null)
-    $script:RegionInfo.Add('ap-northeast-2', $null)
-    $script:RegionInfo.Add('ap-south-1', $null)
-    $script:RegionInfo.Add('ap-southeast-1', $null)
-    $script:RegionInfo.Add('ap-southeast-2', $null)
-    $script:RegionInfo.Add('ca-central-1', $null)
-    $script:RegionInfo.Add('eu-central-1', $null)
-    $script:RegionInfo.Add('eu-west-1', $null)
-    $script:RegionInfo.Add('eu-west-2', $null)
-    $script:RegionInfo.Add('eu-west-3', $null)
-    $script:RegionInfo.Add('sa-east-1', $null)
-    $script:RegionInfo.Add('us-east-1', $null)
-    $script:RegionInfo.Add('us-east-2', $null)
-    $script:RegionInfo.Add('us-west-1', $null)
-    $script:RegionInfo.Add('us-west-2', $null)
-}
-else
-{
-    # Get-EC2Region asks an AWS service for current regions so is always up to date.
-    # OTOH Get-AWSRegion is client-side and depends on the version of AWSPowerShell installed.
-    Get-EC2Region |
-    ForEach-Object {
-        $script:RegionInfo.Add($_.RegionName, $null)
-    }
-}
-
-
-# Hashtable of AWS custom parameter types vs. regexes to validate them
-# Supporting 8 and 17 character identifiers
-$Script:templateParameterValidators = @{
-
-    'AWS::EC2::Image::Id'              = '^ami-([a-f0-9]{8}|[a-f0-9]{17})$'
-    'AWS::EC2::Instance::Id'           = '^i-([a-f0-9]{8}|[a-f0-9]{17})$'
-    'AWS::EC2::SecurityGroup::Id'      = '^sg-([a-f0-9]{8}|[a-f0-9]{17})$'
-    'AWS::EC2::Subnet::Id'             = '^subnet-([a-f0-9]{8}|[a-f0-9]{17})$'
-    'AWS::EC2::Volume::Id'             = '^vol-([a-f0-9]{8}|[a-f0-9]{17})$'
-    'AWS::EC2::VPC::Id'                = '^vpc-([a-f0-9]{8}|[a-f0-9]{17})$'
-    'AWS::EC2::AvailabilityZone::Name' = "^$(($script:RegionInfo.Keys | ForEach-Object {"($_)"}) -join '|' )[a-z]`$"
-}
+$Script:RegionInfo = $null
+$Script:TemplateParameterValidators = $null
 
 # Common Credential and Region Parameters and their types
-$Script:commonCredentialArguments = @{
+$Script:CommonCredentialArguments = @{
 
     AccessKey         = @{
         Type        = [string]

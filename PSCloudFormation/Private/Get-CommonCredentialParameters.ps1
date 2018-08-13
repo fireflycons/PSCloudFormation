@@ -18,7 +18,7 @@ function Get-CommonCredentialParameters
 
     $credentialArgs = @{}
     $CallerBoundParameters.Keys |
-        Where-Object { $Script:commonCredentialArguments.Keys -contains $_} |
+        Where-Object { $Script:CommonCredentialArguments.Keys -contains $_} |
         ForEach-Object {
 
         $credentialArgs.Add($_, $CallerBoundParameters[$_])

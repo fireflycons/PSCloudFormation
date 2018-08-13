@@ -39,6 +39,8 @@ function New-TemplateDynamicParameters
 
     end
     {
+        Initialize-RegionInfo
+
         (Get-TemplateParameters -TemplateResolver (New-TemplateResolver -TemplateLocation $TemplateLocation)).PSObject.Properties |
             ForEach-Object {
 
@@ -57,17 +59,17 @@ function New-TemplateDynamicParameters
 
             $awsType = $param.Value.Type
 
-            if ($Script:templateParameterValidators.ContainsKey($awsType))
+            if ($Script:TemplateParameterValidators.ContainsKey($awsType))
             {
                 # One of the defined AWS special parameter types
                 $paramDefinition.Add('Type', 'String')
-                $paramDefinition.Add('ValidatePattern', $Script:templateParameterValidators[$awstype])
+                $paramDefinition.Add('ValidatePattern', $Script:TemplateParameterValidators[$awstype])
             }
-            elseif ($awsType -imatch 'List\<(?<ResourceId>[A-Z0-9\:]+)\>' -and $Script:templateParameterValidators.ContainsKey($Matches.ResourceId))
+            elseif ($awsType -imatch 'List\<(?<ResourceId>[A-Z0-9\:]+)\>' -and $Script:TemplateParameterValidators.ContainsKey($Matches.ResourceId))
             {
                 # List of one of the defined AWS special parameter types
                 $paramDefinition.Add('Type', 'String[]')
-                $paramDefinition.Add('ValidatePattern', $Script:templateParameterValidators[$Matches.ResourceId])
+                $paramDefinition.Add('ValidatePattern', $Script:TemplateParameterValidators[$Matches.ResourceId])
             }
             else
             {

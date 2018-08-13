@@ -15,9 +15,11 @@ function Get-ParameterTypeFromStringValue
         [string]$Value
     )
 
-    foreach ($type in $Script:templateParameterValidators.Keys)
+    Initialize-RegionInfo
+
+    foreach ($type in $Script:TemplateParameterValidators.Keys)
     {
-        if ($Value -match $Script:templateParameterValidators[$type])
+        if ($Value -match $Script:TemplateParameterValidators[$type])
         {
             if ($type -ne 'AWS::EC2::AvailabilityZone::Name')
             {
@@ -26,17 +28,17 @@ function Get-ParameterTypeFromStringValue
             }
 
             # Check it is a known AZ
-            foreach($region in $script:RegionInfo.Keys)
+            foreach($region in $Script:RegionInfo.Keys)
             {
                 if ($Value -like "$($region)*")
                 {
-                    if ($null -eq $script:RegionInfo[$region])
+                    if ($null -eq $Script:RegionInfo[$region])
                     {
                         # Load AZs for region
-                        $script:RegionInfo[$region] = (Get-EC2AvailabilityZone -Region $region).ZoneName
+                        $Script:RegionInfo[$region] = (Get-EC2AvailabilityZone -Region $region).ZoneName
                     }
 
-                    if ($script:RegionInfo[$region] -contains $Value)
+                    if ($Script:RegionInfo[$region] -contains $Value)
                     {
                         # Value is a known AZ
                         return $type
