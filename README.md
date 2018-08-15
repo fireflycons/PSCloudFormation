@@ -9,19 +9,19 @@ It is two things really
 1. A wrapper for the stack modification cmdlets of AWSPowerShell. 
 2. An exercise in using PowerShell's dynamic cmdlet parameters.
 
-I found that deploying stacks from the command line, whether via aws-cli or AWSPowerShell was extremely tedious, especially for stacks that have loads of parameters, both remembering all the parameters and having the continuously type them in, or edit looong command lines in the command line history, along with frequent typos
+I found that deploying stacks from the command line, whether via aws-cli or AWSPowerShell was extremely tedious, especially for stacks that have loads of parameters, both remembering all the parameters and having the continuously type them in, or edit _looong_ command lines in the command line history, along with frequent typos
 
 So I thought to myself, I wonder how easy it would be to utilise the dynamic parameters feature of PowerShell to discover the parameters in a CloudFormation template and present these as arguments to some new stack manipulation cmdlets - and you got it - yes we can!
 
-PowerShell builds a dynamic parameter set as soon as you give it an argument from which to work. An example you may be familiar with is the `Get-Content` cmdlet. As soon as you specify the argument for `-Path` it determines whether that path is a file system path (as oposed to registry, environment etc.) and then provides `-Raw` argument to read the file in its entirety rather than line-by-line.
+PowerShell builds a dynamic parameter set as soon as you give it an argument from which to work. An example you may be familiar with is the `Get-Content` cmdlet. As soon as you specify the argument for `-Path` it determines whether that path is a file system path (as opposed to registry, environment etc.) and then provides `-Raw` argument to read the file in its entirety rather than line-by-line.
 
-With the cmdlets in this module, as soon as you tell them where the CloudFormation template is, they parse the template and extract all the parameters within and provide them as additional argments to the cmdlet, along with knowledge of whether they are required (no default), are constrained (AllowedValues, AllowedPattern), or typed (Number, AWS::EC2::Subnet::Id etc.) and perform pre-validation before submitting the stack update.
+With the cmdlets in this module, as soon as you tell them where the CloudFormation template is, they parse the template and extract all the parameters within and provide them as additional argments to the cmdlet, along with knowledge of whether they are required (no default), are constrained (AllowedValues, AllowedPattern), or typed (Number, `AWS::EC2::Subnet::Id` etc.) and perform pre-validation before submitting the stack update.
 
-On top of all this, there's a few other goodies such as a dump of stack failure events to the console when there's errors in a stack update
+Additionally stack creation and update provide a dump of stack failure events to the console if errors occur.
 
 ## Module Cmdlets
 
-All the cmdlets support the standard AWSPowerShell [Common Credential and Region Parameters](https://docs.aws.amazon.com/powershell/latest/reference/items/pstoolsref-commonparams.html) with the exception of `-EndpointUrl`
+All the cmdlets support the standard AWSPowerShell [Common Credential and Region Parameters](https://docs.aws.amazon.com/powershell/latest/reference/items/pstoolsref-commonparams.html) with the exception of `EndpointUrl`
 
 For full syntax and some examples, use `Get-Help` on the module's cmdlets.
 
@@ -40,7 +40,9 @@ This module provides the following stack modification cmdlets
 
 ### Template Support
 
-By default, only JSON templates are supported. YAML support is enabled by installing powershell-yaml from the [PowerShell Gallery](https://www.powershellgallery.com/packages/powershell-yaml)
+By default, only JSON templates are supported. 
+
+YAML support is enabled by installing `powershell-yaml` from the [PowerShell Gallery](https://www.powershellgallery.com/packages/powershell-yaml)
 
 ### Dynamic Template Parameter Arguments
 
@@ -103,3 +105,9 @@ VpcCidr:
 #### Update-PSCFNStack and Dynamic Argumments
 
 When using ```Update-PSCFNStack ``` you only need to supply values on the command line for stack parameters you wish to change. All remaining stack paramaeters will assume their previous values.
+
+# Notes
+
+Thanks to
+
+* [ramblingcookiemonster](http://ramblingcookiemonster.github.io/) for New-DynamicParam and build stuff.
