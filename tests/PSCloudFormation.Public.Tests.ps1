@@ -128,49 +128,52 @@ InModuleScope 'PSCloudFormation' {
                 }
             }
 
-            It 'Should create stack and return ARN with valid command line arguments' {
+            foreach ($ext in @('json', 'yaml'))
+            {
+                It "Should create stack and return ARN with valid command line arguments ($($ext.ToUpper()))" {
 
-                New-PSCFNStack -StackName pester -TemplateLocation "$PSScriptRoot\test-stack.json" -Wait -VpcCidr 10.0.0.0/16 | Should Be $TestStackArn
-            }
+                    New-PSCFNStack -StackName pester -TemplateLocation "$PSScriptRoot\test-stack.$($ext)" -Wait -VpcCidr 10.0.0.0/16 | Should Be $TestStackArn
+                }
 
-            It 'Should throw with invalid CIDR' {
+                It "Should throw with invalid CIDR ($($ext.ToUpper()))" {
 
-                { New-PSCFNStack -StackName pester -TemplateLocation "$PSScriptRoot\test-stack.json" -Wait -VpcCidr 999.0.0.0/16 } | Should Throw
-            }
+                    { New-PSCFNStack -StackName pester -TemplateLocation "$PSScriptRoot\test-stack.$($ext)" -Wait -VpcCidr 999.0.0.0/16 } | Should Throw
+                }
 
-            It 'Should throw with a value that is not in AllowedValues' {
+                It "Should throw with a value that is not in AllowedValues ($($ext.ToUpper()))" {
 
-                { New-PSCFNStack -StackName pester -TemplateLocation "$PSScriptRoot\test-stack.json" -Wait -VpcCidr 10.0.0.0/16 -DnsSupport BreakMe } | Should Throw
-            }
+                    { New-PSCFNStack -StackName pester -TemplateLocation "$PSScriptRoot\test-stack.$($ext)" -Wait -VpcCidr 10.0.0.0/16 -DnsSupport BreakMe } | Should Throw
+                }
 
-            It 'Should throw with invalid region parameter' {
+                It "Should throw with invalid region parameter ($($ext.ToUpper()))" {
 
-                { New-PSCFNStack -StackName pester -TemplateLocation "$PSScriptRoot\test-stack.json" -VpcCidr 10.0.0.0/16 -Region eu-west-9 } | Should Throw
-            }
+                    { New-PSCFNStack -StackName pester -TemplateLocation "$PSScriptRoot\test-stack.$($ext)" -VpcCidr 10.0.0.0/16 -Region eu-west-9 } | Should Throw
+                }
 
-            It 'Should not throw with valid region parameter' {
+                It "Should not throw with valid region parameter ($($ext.ToUpper()))" {
 
-                @(
-                    'ap-northeast-1'
-                    'ap-northeast-2'
-                    'ap-south-1'
-                    'ap-southeast-1'
-                    'ap-southeast-2'
-                    'ca-central-1'
-                    'eu-central-1'
-                    'eu-west-1'
-                    'eu-west-2'
-                    'eu-west-3'
-                    'sa-east-1'
-                    'us-east-1'
-                    'us-east-2'
-                    'us-west-1'
-                    'us-west-2'
-                ) |
-                    ForEach-Object {
+                    @(
+                        'ap-northeast-1'
+                        'ap-northeast-2'
+                        'ap-south-1'
+                        'ap-southeast-1'
+                        'ap-southeast-2'
+                        'ca-central-1'
+                        'eu-central-1'
+                        'eu-west-1'
+                        'eu-west-2'
+                        'eu-west-3'
+                        'sa-east-1'
+                        'us-east-1'
+                        'us-east-2'
+                        'us-west-1'
+                        'us-west-2'
+                    ) |
+                        ForEach-Object {
 
-                    Write-Host -ForegroundColor DarkGreen "      [?] - Testing region $($_)"
-                    { New-PSCFNStack -StackName pester -TemplateLocation "$PSScriptRoot\test-stack.json" -VpcCidr 10.0.0.0/16 -Region $_ } | Should Not Throw
+                        Write-Host -ForegroundColor DarkGreen "      [?] - Testing region $($_)"
+                        { New-PSCFNStack -StackName pester -TemplateLocation "$PSScriptRoot\test-stack.$($ext)" -VpcCidr 10.0.0.0/16 -Region $_ } | Should Not Throw
+                    }
                 }
             }
         }
@@ -229,44 +232,47 @@ InModuleScope 'PSCloudFormation' {
                 }
             }
 
-            It 'Should fail when stack does not exist' {
+            foreach ($ext in @('json', 'yaml'))
+            {
+                It "Should fail when stack does not exist ($($ext.ToUpper()))" {
 
-                { Update-PSCFNStack -StackName DoesNotExist -TemplateLocation "$PSScriptRoot\test-stack.json" -Wait -VpcCidr 10.0.0.0/16 } | Should Throw
-            }
+                    { Update-PSCFNStack -StackName DoesNotExist -TemplateLocation "$PSScriptRoot\test-stack.$($ext)" -Wait -VpcCidr 10.0.0.0/16 } | Should Throw
+                }
 
-            It 'Should update when stack exists' {
+                It "Should update when stack exists ($($ext.ToUpper()))" {
 
-                Update-PSCFNStack -StackName pester -TemplateLocation "$PSScriptRoot\test-stack.json" -Wait -VpcCidr 10.1.0.0/16 -Force
-            }
+                    Update-PSCFNStack -StackName pester -TemplateLocation "$PSScriptRoot\test-stack.$($ext)" -Wait -VpcCidr 10.1.0.0/16 -Force
+                }
 
-            It 'Should throw with invalid region parameter' {
+                It "Should throw with invalid region parameter ($($ext.ToUpper()))" {
 
-                { Update-PSCFNStack -StackName pester -TemplateLocation "$PSScriptRoot\test-stack.json" -Wait -VpcCidr 10.1.0.0/16 -Region eu-west-9 } | Should Throw
-            }
+                    { Update-PSCFNStack -StackName pester -TemplateLocation "$PSScriptRoot\test-stack.$($ext)" -Wait -VpcCidr 10.1.0.0/16 -Region eu-west-9 } | Should Throw
+                }
 
-            It 'Should not throw with valid region parameter' {
+                It "Should not throw with valid region parameter ($($ext.ToUpper()))" {
 
-                @(
-                    'ap-northeast-1'
-                    'ap-northeast-2'
-                    'ap-south-1'
-                    'ap-southeast-1'
-                    'ap-southeast-2'
-                    'ca-central-1'
-                    'eu-central-1'
-                    'eu-west-1'
-                    'eu-west-2'
-                    'eu-west-3'
-                    'sa-east-1'
-                    'us-east-1'
-                    'us-east-2'
-                    'us-west-1'
-                    'us-west-2'
-                ) |
-                    ForEach-Object {
-                    Write-Host -ForegroundColor DarkGreen "      [?] - Testing region $($_)"
+                    @(
+                        'ap-northeast-1'
+                        'ap-northeast-2'
+                        'ap-south-1'
+                        'ap-southeast-1'
+                        'ap-southeast-2'
+                        'ca-central-1'
+                        'eu-central-1'
+                        'eu-west-1'
+                        'eu-west-2'
+                        'eu-west-3'
+                        'sa-east-1'
+                        'us-east-1'
+                        'us-east-2'
+                        'us-west-1'
+                        'us-west-2'
+                    ) |
+                        ForEach-Object {
+                        Write-Host -ForegroundColor DarkGreen "      [?] - Testing region $($_)"
 
-                    { Update-PSCFNStack -StackName pester -TemplateLocation "$PSScriptRoot\test-stack.json" -Wait -VpcCidr 10.1.0.0/16 -Region $_ -Force } | Should Not Throw
+                        { Update-PSCFNStack -StackName pester -TemplateLocation "$PSScriptRoot\test-stack.$($ext)" -Wait -VpcCidr 10.1.0.0/16 -Region $_ -Force } | Should Not Throw
+                    }
                 }
             }
         }

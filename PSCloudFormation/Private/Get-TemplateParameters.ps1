@@ -41,8 +41,8 @@ function Get-TemplateParameters
         }
     }
 
-    # Try YAML
-    $templateObject = $template | ConvertFrom-Yaml
+    # Try YAML - convert it through JSON and back to ensure the final object looks the same as one converted directly from JSON
+    $templateObject = $template | ConvertFrom-Yaml | ConvertTo-Json | ConvertFrom-Json
 
     if ($templateObject.PSObject.Properties.Name -contains 'Parameters')
     {
