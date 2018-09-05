@@ -2,6 +2,12 @@
 
 # PSCloudFormation
 
+## How to Install
+
+The module is published on the PowerShell Gallery and can be installed by following the instructions there
+
+https://www.powershellgallery.com/packages/PSCloudFormation
+
 ## What is it?
 
 It is two things really
