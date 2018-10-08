@@ -8,11 +8,15 @@ The module is published on the PowerShell Gallery and can be installed by follow
 
 https://www.powershellgallery.com/packages/PSCloudFormation
 
-## What is it?
+## What it isn't
+
+It isn't intended as a replacement for the raw API `New-CFNStack` etc. You should continue to use those in automation scripts.
+
+## What it is
 
 It is two things really
 
-1. A wrapper for the stack modification cmdlets of AWSPowerShell. 
+1. A wrapper for the stack modification cmdlets of AWSPowerShell to make it easier to work with CloudFormation stacks from the command line, e.g. when developing a new stack.
 2. An exercise in using PowerShell's dynamic cmdlet parameters.
 
 I found that deploying stacks from the command line, whether via aws-cli or AWSPowerShell was extremely tedious, especially for stacks that have loads of parameters, both remembering all the parameters and having the continuously type them in, or edit _looong_ command lines in the command line history, along with frequent typos
