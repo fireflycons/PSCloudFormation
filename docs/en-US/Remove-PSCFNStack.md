@@ -248,13 +248,11 @@ This cmdlet supports the common parameters: -Debug, -ErrorAction, -ErrorVariable
 ## INPUTS
 
 ### System.String[]
-    You can pipe the names or ARNs of the stacks to delete to this function
-
+### You can pipe the names or ARNs of the stacks to delete to this function
 ## OUTPUTS
 
 ### System.String[]
-    ARN(s) of deleted stack(s) else nothing if the stack did not exist.
-
+### ARN(s) of deleted stack(s) else nothing if the stack did not exist.
 ## NOTES
 
 ## RELATED LINKS

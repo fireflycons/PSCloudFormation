@@ -264,18 +264,15 @@ Accept wildcard characters: False
 ```
 
 ### CommonParameters
-This cmdlet supports the common parameters: -Debug, -ErrorAction, -ErrorVariable, -InformationAction, -InformationVariable, -OutVariable, -OutBuffer, -PipelineVariable, -Verbose, -WarningAction, and -WarningVariable. For more information, see about_CommonParameters (http://go.microsoft.com/fwlink/?LinkID=113216).
+This cmdlet supports the common parameters: -Debug, -ErrorAction, -ErrorVariable, -InformationAction, -InformationVariable, -OutVariable, -OutBuffer, -PipelineVariable, -Verbose, -WarningAction, and -WarningVariable.
+For more information, see about_CommonParameters (http://go.microsoft.com/fwlink/?LinkID=113216).
 
 ## INPUTS
 
-### System.String[]
-    You can pipe stack names or ARNs to this function
-
+### [System.String[]] - You can pipe stack names or ARNs to this function
 ## OUTPUTS
 
-### PSObject
-    An object dependent on the setting of the above switches. Pipe the output to ConvertTo-Json or ConvertTo-Yaml
-
+### [PSObject] - An object dependent on the setting of the above switches. Pipe the output to ConvertTo-Json or ConvertTo-Yaml
 ## NOTES
 
 ## RELATED LINKS
