@@ -20,6 +20,12 @@ function New-TemplateDynamicParameters
         - S3 URI (which is converted to HTTPS URI for the current region)
         - HTTP(S) Uri
 
+    .PARAMETER UsePreviousTemplate
+        Reuse the existing template that is associated with the stack that you are updating. Conditional: You must specify only TemplateLocationL, or set the UsePreviousTemplate to true.
+
+    .PARAMETER StackName
+        Used if -UsePreviousTemplate is true
+
     .PARAMETER EnforceMandatory
         This will be set for New-PSCFNStack, as parameters with no defaults must be given a value
         For Update-PSCFNStack, it is not set as we will tell the stack to use previous values for any missing parameters
@@ -34,14 +40,34 @@ function New-TemplateDynamicParameters
         [Parameter(ValueFromPipeline = $true)]
         [System.Management.Automation.RuntimeDefinedParameterDictionary]$Dictionary,
         [string]$TemplateLocation,
+        [bool]$UsePreviousTemplate,
+        [string]$StackName,
         [switch]$EnforceMandatory
     )
+
+    begin
+    {
+        # Assert only one of TemplateLocation or UsePreviousTemplate is passed
+        if (-not ($PSBoundParameters.ContainsKey('TemplateLocation') -xor $PSBoundParameters.ContainsKey('UsePreviousTemplate')))
+        {
+            throw 'Must specify either TemplateLocation or UsePreviousTemplate, bot not both or neither.'
+        }
+
+        $templateArguments = @{}
+        $PSBoundParameters.GetEnumerator() |
+        Where-Object {
+            ('TemplateLocation', 'StackName') -icontains $_.Key
+        } |
+        ForEach-Object {
+            $templateArguments.Add($_.Key, $_.Value)
+        }
+    }
 
     end
     {
         Initialize-RegionInfo
 
-        (Get-TemplateParameters -TemplateResolver (New-TemplateResolver -TemplateLocation $TemplateLocation)).PSObject.Properties |
+        (Get-TemplateParameters -TemplateResolver (New-TemplateResolver @templateArguments)).PSObject.Properties |
             ForEach-Object {
 
             $param = $_

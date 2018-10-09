@@ -8,6 +8,7 @@ Get-Module -Name $ModuleName | Remove-Module
 $global:ManifestFile = "$(Split-path (Split-Path -Parent -Path $MyInvocation.MyCommand.Definition))\$ModuleName\$ModuleName.psd1"
 
 $global:TestStackArn = 'arn:aws:cloudformation:us-east-1:000000000000:stack/pester/00000000-0000-0000-0000-000000000000'
+$global:TestStackFilePathWithoutExtension = Join-Path $PSScriptRoot test-stack
 
 # Import the module and store the information about the module
 $ModuleInformation = Import-Module -Name $ManifestFile -PassThru
@@ -105,7 +106,7 @@ InModuleScope 'PSCloudFormation' {
                             $rs = [System.Management.Automation.Runspaces.RunspaceFactory]::CreateRunspace($iss)
                             $rs.Open()
                             $ri = New-Object System.Management.Automation.RunSpaceInvoke($rs)
-                            $ri.Invoke("New-PSCFNStack -StackName teststack -TemplateLocation '$PSScriptRoot\test-stack.json'")
+                            $ri.Invoke("New-PSCFNStack -StackName teststack -TemplateLocation '$($global:TestStackFilePathWithoutExtension).json'")
                         }
                         catch
                         {
@@ -132,22 +133,22 @@ InModuleScope 'PSCloudFormation' {
             {
                 It "Should create stack and return ARN with valid command line arguments ($($ext.ToUpper()))" {
 
-                    New-PSCFNStack -StackName pester -TemplateLocation "$PSScriptRoot\test-stack.$($ext)" -Wait -VpcCidr 10.0.0.0/16 | Should Be $TestStackArn
+                    New-PSCFNStack -StackName pester -TemplateLocation "$($global:TestStackFilePathWithoutExtension).$($ext)" -Wait -VpcCidr 10.0.0.0/16 | Should Be $TestStackArn
                 }
 
                 It "Should throw with invalid CIDR ($($ext.ToUpper()))" {
 
-                    { New-PSCFNStack -StackName pester -TemplateLocation "$PSScriptRoot\test-stack.$($ext)" -Wait -VpcCidr 999.0.0.0/16 } | Should Throw
+                    { New-PSCFNStack -StackName pester -TemplateLocation "$($global:TestStackFilePathWithoutExtension).$($ext)" -Wait -VpcCidr 999.0.0.0/16 } | Should Throw
                 }
 
                 It "Should throw with a value that is not in AllowedValues ($($ext.ToUpper()))" {
 
-                    { New-PSCFNStack -StackName pester -TemplateLocation "$PSScriptRoot\test-stack.$($ext)" -Wait -VpcCidr 10.0.0.0/16 -DnsSupport BreakMe } | Should Throw
+                    { New-PSCFNStack -StackName pester -TemplateLocation "$($global:TestStackFilePathWithoutExtension).$($ext)" -Wait -VpcCidr 10.0.0.0/16 -DnsSupport BreakMe } | Should Throw
                 }
 
                 It "Should throw with invalid region parameter ($($ext.ToUpper()))" {
 
-                    { New-PSCFNStack -StackName pester -TemplateLocation "$PSScriptRoot\test-stack.$($ext)" -VpcCidr 10.0.0.0/16 -Region eu-west-9 } | Should Throw
+                    { New-PSCFNStack -StackName pester -TemplateLocation "$($global:TestStackFilePathWithoutExtension).$($ext)" -VpcCidr 10.0.0.0/16 -Region eu-west-9 } | Should Throw
                 }
 
                 It "Should not throw with valid region parameter ($($ext.ToUpper()))" {
@@ -172,7 +173,7 @@ InModuleScope 'PSCloudFormation' {
                         ForEach-Object {
 
                         Write-Host -ForegroundColor DarkGreen "      [?] - Testing region $($_)"
-                        { New-PSCFNStack -StackName pester -TemplateLocation "$PSScriptRoot\test-stack.$($ext)" -VpcCidr 10.0.0.0/16 -Region $_ } | Should Not Throw
+                        { New-PSCFNStack -StackName pester -TemplateLocation "$($global:TestStackFilePathWithoutExtension).$($ext)" -VpcCidr 10.0.0.0/16 -Region $_ } | Should Not Throw
                     }
                 }
             }
@@ -203,6 +204,11 @@ InModuleScope 'PSCloudFormation' {
 
             Mock -CommandName New-CFNChangeSet -MockWith {
 
+                if (-not $TemplateURL -and -not $TemplateBody -and -not $UsePreviousTemplate)
+                {
+                    throw 'New-CFNChangeSet : Either Template URL or Template Body must be specified.'
+                }
+
                 return 'arn:aws:cloudformation:us-east-1:000000000000:changeSet/SampleChangeSet/1a2345b6-0000-00a0-a123-00abc0abc000'
             }
 
@@ -232,21 +238,26 @@ InModuleScope 'PSCloudFormation' {
                 }
             }
 
+            Mock -CommandName Get-CFNTemplate -MockWith {
+
+                Get-Content -Raw "$($global:TestStackFilePathWithoutExtension).json"
+            }
+
             foreach ($ext in @('json', 'yaml'))
             {
                 It "Should fail when stack does not exist ($($ext.ToUpper()))" {
 
-                    { Update-PSCFNStack -StackName DoesNotExist -TemplateLocation "$PSScriptRoot\test-stack.$($ext)" -Wait -VpcCidr 10.0.0.0/16 } | Should Throw
+                    { Update-PSCFNStack -StackName DoesNotExist -TemplateLocation "$($global:TestStackFilePathWithoutExtension).$($ext)" -Wait -VpcCidr 10.0.0.0/16 } | Should Throw
                 }
 
                 It "Should update when stack exists ($($ext.ToUpper()))" {
 
-                    Update-PSCFNStack -StackName pester -TemplateLocation "$PSScriptRoot\test-stack.$($ext)" -Wait -VpcCidr 10.1.0.0/16 -Force
+                    Update-PSCFNStack -StackName pester -TemplateLocation "$($global:TestStackFilePathWithoutExtension).$($ext)" -Wait -VpcCidr 10.1.0.0/16 -Force
                 }
 
                 It "Should throw with invalid region parameter ($($ext.ToUpper()))" {
 
-                    { Update-PSCFNStack -StackName pester -TemplateLocation "$PSScriptRoot\test-stack.$($ext)" -Wait -VpcCidr 10.1.0.0/16 -Region eu-west-9 } | Should Throw
+                    { Update-PSCFNStack -StackName pester -TemplateLocation "$($global:TestStackFilePathWithoutExtension).$($ext)" -Wait -VpcCidr 10.1.0.0/16 -Region eu-west-9 } | Should Throw
                 }
 
                 It "Should not throw with valid region parameter ($($ext.ToUpper()))" {
@@ -271,9 +282,14 @@ InModuleScope 'PSCloudFormation' {
                         ForEach-Object {
                         Write-Host -ForegroundColor DarkGreen "      [?] - Testing region $($_)"
 
-                        { Update-PSCFNStack -StackName pester -TemplateLocation "$PSScriptRoot\test-stack.$($ext)" -Wait -VpcCidr 10.1.0.0/16 -Region $_ -Force } | Should Not Throw
+                        { Update-PSCFNStack -StackName pester -TemplateLocation "$($global:TestStackFilePathWithoutExtension).$($ext)" -Wait -VpcCidr 10.1.0.0/16 -Region $_ -Force } | Should Not Throw
                     }
                 }
+            }
+            
+            It "Should update stack with -UsePreviousTemplate" {
+                    
+                Update-PSCFNStack -StackName pester -UsePreviousTemplate -Wait -VpcCidr 10.1.0.0/16 -Force
             }
         }
 

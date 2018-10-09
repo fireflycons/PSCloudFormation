@@ -29,7 +29,6 @@ function New-StackOperationArguments
         [Parameter(Mandatory = $true)]
         [string]$StackName,
 
-        [Parameter(Mandatory = $true)]
         [string]$TemplateLocation,
 
         [string]$Capabilities,
@@ -41,11 +40,24 @@ function New-StackOperationArguments
         'StackName' = $StackName
     }
 
-    $template = New-TemplateResolver -TemplateLocation $TemplateLocation
-
-    if ($template.IsFile)
+    $template = $(
+        if ($TemplateLocation)    
+        {
+            New-TemplateResolver -TemplateLocation $TemplateLocation
+        }
+        else 
+        {
+            New-TemplateResolver -StackName $StackName
+        }
+    )
+    
+    if ($template.Type -ieq 'File')
     {
         $stackArgs.Add('TemplateBody', $template.ReadTemplate())
+    }
+    elseif ($template.Type -ieq 'UsePreviousTemplate')
+    {
+        $stackArgs.Add('UsePreviousTemplate', $true)
     }
     else
     {

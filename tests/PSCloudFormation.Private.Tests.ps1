@@ -61,7 +61,7 @@ InModuleScope 'PSCloudFormation' {
 
                 $resolver = New-TemplateResolver -TemplateLocation $global:templatePath
 
-                $resolver.IsFile | Should Be $true
+                $resolver.Type | Should Be 'File'
             }
 
             It 'Creates a URL resolver for web URI' {
@@ -69,7 +69,7 @@ InModuleScope 'PSCloudFormation' {
                 $url = 'https://s3-us-east-1.amazonaws.com/bucket/path/to/test-stack.json'
                 $resolver = New-TemplateResolver -TemplateLocation $url
 
-                $resolver.IsFile | Should Be $false
+                $resolver.Type | Should Be 'Url'
                 $resolver.Url | Should Be $url
                 $resolver.BucketName | Should Be 'bucket'
                 $resolver.Key | Should Be 'path/to/test-stack.json'
@@ -89,10 +89,16 @@ InModuleScope 'PSCloudFormation' {
 
                 $resolver = New-TemplateResolver -TemplateLocation $uri
 
-                $resolver.IsFile | Should Be $false
+                $resolver.Type | Should Be 'Url'
                 $resolver.Url | Should Be $generatedUrl
                 $resolver.BucketName | Should Be 'bucket'
                 $resolver.Key | Should Be 'path/to/test-stack.json'
+            }
+
+            It 'Creates UsePreviousTemplate resolver when given a stack name instead of a template location' {
+
+                $resolver = New-TemplateResolver -StackName test-stack
+                $resolver.Type | Should Be 'UsePreviousTemplate'
             }
 
             It 'Throws with s3 URI when default AWS region cannot be determined' {
@@ -116,6 +122,12 @@ InModuleScope 'PSCloudFormation' {
                 }
 
                 $resolver = New-TemplateResolver -TemplateLocation 'https://s3-us-east-1.amazonaws.com/bucket/path/to/test-stack.json'
+                ($resolver.ReadTemplate()).GetHashCode() | Should Be $templateContentHash
+            }
+
+            It 'UsePreviousTemplate resolver returns original template' {
+
+                $resolver = New-TemplateResolver -StackName test-stack
                 ($resolver.ReadTemplate()).GetHashCode() | Should Be $templateContentHash
             }
         }

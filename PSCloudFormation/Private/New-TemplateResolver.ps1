@@ -16,27 +16,37 @@ function New-TemplateResolver
           you don't try to point to a different region with -Region
         - HTTP(S) Uri
 
+    .PARAMETER StackName
+        Used if -UsePreviousTemplate is true
+
     .OUTPUTS
         Custom Object.
     #>
 
     param
     (
-        [string]$TemplateLocation
+        [string]$TemplateLocation,
+        [bool]$UsePreviousTemplate,
+        [string]$StackName
     )
 
     $resolver = New-Object PSObject -Property @{
 
-        'IsFile'     = $null
+        'Type'       = $null
         'BucketName' = $null
         'Key'        = $null
         'Path'       = $null
         'Url'        = $null
+        'StackName'  = $null
     } |
         Add-Member -PassThru -Name ReadTemplate -MemberType ScriptMethod -Value {
 
-        # Reads the template contents from either S3 or file system as approriate.
-        if ($this.Path)
+        # Reads the template contents from either S3, previous tempalte or file system as approriate.
+        if ($this.StackName)
+        {
+            Get-CFNTemplate -StackName $this.StackName
+        }
+        elseif ($this.Path)
         {
             Get-Content -Raw -Path $this.Path
         }
@@ -62,7 +72,12 @@ function New-TemplateResolver
         Add-Member -PassThru -Name Length -MemberType ScriptMethod -Value {
 
         # Gets the file szie of the template
-        if ($this.Path)
+        if ($this.StackName)
+        {
+            # Template is always of acceptable size.
+            0
+        }
+        elseif ($this.Path)
         {
             (Get-ItemProperty -Name Length -Path $this.Path).Length
         }
@@ -78,7 +93,13 @@ function New-TemplateResolver
 
     $u = $null
 
-    if ([Uri]::TryCreate($TemplateLocation, 'Absolute', [ref]$u))
+    if ($StackName)
+    {
+        # UsePreviousTemplate
+        $resolver.StackName = $StackName
+        $resolver.Type = 'UsePreviousTemplate'
+    }
+    elseif ([Uri]::TryCreate($TemplateLocation, 'Absolute', [ref]$u))
     {
         switch ($u.Scheme)
         {
@@ -96,14 +117,14 @@ function New-TemplateResolver
                 $resolver.Url = [Uri]("https://s3-{0}.amazonaws.com/{1}{2}" -f $r.Region, $u.Authority, $u.LocalPath)
                 $resolver.BucketName = $u.Authority
                 $resolver.Key = $u.LocalPath.TrimStart('/')
-                $resolver.IsFile = $false
+                $resolver.Type = 'Url'
             }
 
             'file'
             {
 
                 $resolver.Path = $TemplateLocation
-                $resolver.IsFile = $true
+                $resolver.Type = 'File'
             }
 
             { $_ -ieq 'http' -or $_ -ieq 'https' }
@@ -112,7 +133,7 @@ function New-TemplateResolver
                 $resolver.Url = $u
                 $resolver.BucketName = $u.Segments[1].Trim('/');
                 $resolver.Key = $u.Segments[2..($u.Segments.Length - 1)] -join ''
-                $resolver.IsFile = $false
+                $resolver.Type = 'Url'
             }
 
             default
@@ -125,7 +146,7 @@ function New-TemplateResolver
     else
     {
         $resolver.Path = $TemplateLocation
-        $resolver.IsFile = $true
+        $resolver.Type = 'File'
     }
 
     $resolver

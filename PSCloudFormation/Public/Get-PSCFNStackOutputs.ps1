@@ -33,12 +33,10 @@ function Get-PSCFNStackOutputs
         YAML is not currently supported for this operation.
 
     .INPUTS
-        System.String[]
-            You can pipe stack names or ARNs to this function
+        [System.String[]] - You can pipe stack names or ARNs to this function
 
     .OUTPUTS
-        PSObject
-            An object dependent on the setting of the above switches. Pipe the output to ConvertTo-Json or ConvertTo-Yaml
+        [PSObject] - An object dependent on the setting of the above switches. Pipe the output to ConvertTo-Json or ConvertTo-Yaml
 
     .EXAMPLE
 

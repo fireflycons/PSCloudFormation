@@ -32,6 +32,7 @@ function Update-PSCFNStack
         - Path to a local file
         - s3:// URL pointing to template in a bucket
         - https:// URL pointing to template in a bucket
+        Conditional: You must specify only TemplateLocationL, or set the UsePreviousTemplate to true.
 
     .PARAMETER Capabilities
         If the stack requires IAM capabilities, TAB auctocompletes between the capability types.
@@ -51,6 +52,9 @@ function Update-PSCFNStack
     .PARAMETER Tag
         Key-value pairs to associate with this stack. AWS CloudFormation also propagates these tags to the resources created in the stack. A maximum number of 50 tags can be specified.
 
+    .PARAMETER UsePreviousTemplate
+        Reuse the existing template that is associated with the stack that you are updating. Conditional: You must specify only TemplateLocationL, or set the UsePreviousTemplate to true.
+        
     .PARAMETER Wait
         If set, wait for stack update to complete before returning.
 
@@ -102,7 +106,6 @@ function Update-PSCFNStack
         [Parameter(Mandatory = $true, ValueFromPipeline = $true, ValueFromPipelineByPropertyName = $true, Position = 0)]
         [string]$StackName,
 
-        [Parameter(Mandatory = $true)]
         [string]$TemplateLocation,
 
         [ValidateSet('CAPABILITY_IAM', 'CAPABILITY_NAMED_IAM')]
@@ -119,6 +122,8 @@ function Update-PSCFNStack
         [Alias('Tags')]
         [Amazon.CloudFormation.Model.Tag[]]$Tag,
 
+        [switch]$UsePreviousTemplate,
+
         [switch]$Wait,
 
         [switch]$Force
@@ -126,10 +131,19 @@ function Update-PSCFNStack
 
     DynamicParam
     {
+        $templateArguments = @{}
+        $PSBoundParameters.GetEnumerator() |
+        Where-Object {
+            ('TemplateLocation', 'UsePreviousTemplate', 'StackName') -icontains $_.Key
+        } |
+        ForEach-Object {
+            $templateArguments.Add($_.Key, $_.Value)
+        }
+
         #Create the RuntimeDefinedParameterDictionary
         New-Object System.Management.Automation.RuntimeDefinedParameterDictionary |
             New-CredentialDynamicParameters |
-            New-TemplateDynamicParameters -TemplateLocation $TemplateLocation
+            New-TemplateDynamicParameters @templateArguments
     }
 
     begin
