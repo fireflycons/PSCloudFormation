@@ -127,7 +127,12 @@ InModuleScope 'PSCloudFormation' {
 
             It 'UsePreviousTemplate resolver returns original template' {
 
-                $resolver = New-TemplateResolver -StackName test-stack
+                Mock -CommandName Get-CFNTemplate -MockWith {
+
+                    Get-Content -Raw $global:templatePath
+                }
+    
+                    $resolver = New-TemplateResolver -StackName test-stack
                 ($resolver.ReadTemplate()).GetHashCode() | Should Be $templateContentHash
             }
         }
