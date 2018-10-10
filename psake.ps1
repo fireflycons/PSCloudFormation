@@ -148,8 +148,8 @@ Task Deploy -Depends BuildHelp {
         if ($ENV:BHBuildSystem -ieq 'AppVeyor')
         {
             # We will deploy _something_
-            '- Deploying to'
-            '  - AppVeyor Artifact'
+            Write-Host '- Deploying to'
+            Write-Host '  - AppVeyor Artifact'
 
             $params = @{
                 Path  = $ProjectRoot
@@ -161,8 +161,11 @@ Task Deploy -Depends BuildHelp {
             {
                 # Tag push in master is a release, so we want to also push to PSGallery
                 $params['Tags'] += 'Production'
-                '  - PowerShell Gallery'
+                Write-Host '  - PowerShell Gallery'
             }
+
+            # Emit parameters
+            $params
         }
         else 
         {
