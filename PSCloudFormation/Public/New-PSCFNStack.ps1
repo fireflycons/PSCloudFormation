@@ -200,30 +200,39 @@ function New-PSCFNStack
 
     end
     {
-        if (Test-StackExists -StackName $StackName -CredentialArguments $credentialArguments)
+        try
         {
-            throw "Stack already exists: $StackName"
-        }
-
-        $stackArgs = New-StackOperationArguments -StackName $StackName -TemplateLocation $TemplateLocation -Capabilities $Capabilities -StackParameters $stackParameters
-        $arn = New-CFNStack @stackArgs @credentialArguments @passOnArguments
-
-        if ($Wait)
-        {
-            Write-Host "Waiting for creation to complete"
-
-            $stack = Wait-CFNStack -StackName $arn -Timeout ([TimeSpan]::FromMinutes(60).TotalSeconds) -Status @('CREATE_COMPLETE', 'ROLLBACK_IN_PROGRESS') @credentialArguments
-
-            if ($stack.StackStatus -like '*ROLLBACK*')
+            if (Test-StackExists -StackName $StackName -CredentialArguments $credentialArguments)
             {
-                Write-Host -ForegroundColor Red -BackgroundColor Black "Create failed: $arn"
-                Write-Host -ForegroundColor Red -BackgroundColor Black (Get-StackFailureEvents -StackName $arn -CredentialArguments $credentialArguments | Sort-Object -Descending Timestamp | Out-String)
-
-                throw $stack.StackStatusReason
+                throw "Stack already exists: $StackName"
             }
-        }
 
-        # Emit ARN
-        $arn
+            $stackArgs = New-StackOperationArguments -StackName $StackName -TemplateLocation $TemplateLocation -Capabilities $Capabilities -StackParameters $stackParameters
+            $arn = New-CFNStack @stackArgs @credentialArguments @passOnArguments
+
+            if ($Wait)
+            {
+                Write-Host "Waiting for creation to complete"
+
+                $stack = Wait-CFNStack -StackName $arn -Timeout ([TimeSpan]::FromMinutes(60).TotalSeconds) -Status @('CREATE_COMPLETE', 'ROLLBACK_IN_PROGRESS') @credentialArguments
+
+                if ($stack.StackStatus -like '*ROLLBACK*')
+                {
+                    Write-Host -ForegroundColor Red -BackgroundColor Black "Create failed: $arn"
+                    Write-Host -ForegroundColor Red -BackgroundColor Black (Get-StackFailureEvents -StackName $arn -CredentialArguments $credentialArguments | Sort-Object -Descending Timestamp | Out-String)
+
+                    throw $stack.StackStatusReason
+                }
+            }
+
+            # Emit ARN
+            $arn
+        }
+        catch
+        {
+            Format-ExceptionDetail $_
+            Write-Host
+            throw
+        }
     }
 }
