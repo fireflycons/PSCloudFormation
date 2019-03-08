@@ -196,6 +196,8 @@ function New-PSCFNStack
         ForEach-Object {
             $passOnArguments.Add($_, $PSBoundParameters[$_])
         }
+
+        $disableRollbackSet = ($PSBoundParameters.Keys -icontains 'DisableRollback' -and $DisableRollback)
     }
 
     end
@@ -221,7 +223,31 @@ function New-PSCFNStack
                     Write-Host -ForegroundColor Red -BackgroundColor Black "Create failed: $arn"
                     Write-Host -ForegroundColor Red -BackgroundColor Black (Get-StackFailureEvents -StackName $arn -CredentialArguments $credentialArguments | Sort-Object -Descending Timestamp | Out-String)
 
-                    throw $stack.StackStatusReason
+                    $updateFailedReason = $stack.StackStatusReason
+
+                    if (-not $disableRollbackSet)
+                    {
+                        $updateStart = [DateTime]::Now
+
+                        Write-Host "Waiting for rollback"
+
+                        $stack = Wait-CFNStack -StackName $arn -Timeout ([TimeSpan]::FromMinutes(60).TotalSeconds) -Status @('ROLLBACK_COMPLETE', 'ROLLBACK_FAILED') @credentialArguments
+
+                        if ($stack.StackStatus -like '*FAILED*')
+                        {
+                            Write-Host -ForegroundColor Red -BackgroundColor Black "Rollback failed: $arn"
+                            Write-Host -ForegroundColor Red -BackgroundColor Black (
+                                Get-StackFailureEvents -StackName $arn -CredentialArguments $credentialArguments |
+                                    Where-Object { $_.Timestamp -ge $updateStart } |
+                                    Sort-Object -Descending Timestamp |
+                                    Out-String
+                            )
+
+                            $updateFailedReason += [Environment]::NewLine + $stack.StackStatusReason
+                        }
+                    }
+
+                    throw $updateFailedReason
                 }
             }
 

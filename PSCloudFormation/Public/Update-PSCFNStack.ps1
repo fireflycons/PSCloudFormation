@@ -54,7 +54,7 @@ function Update-PSCFNStack
 
     .PARAMETER UsePreviousTemplate
         Reuse the existing template that is associated with the stack that you are updating. Conditional: You must specify only TemplateLocationL, or set the UsePreviousTemplate to true.
-        
+
     .PARAMETER Wait
         If set, wait for stack update to complete before returning.
 
@@ -259,7 +259,27 @@ function Update-PSCFNStack
                             Out-String
                     )
 
-                    throw $stack.StackStatusReason
+                    $updateFailedReason = $stack.StackStatusReason
+                    $updateStart = [DateTime]::Now
+
+                    Write-Host "Waiting for rollback"
+
+                    $stack = Wait-CFNStack -StackName $arn -Timeout ([TimeSpan]::FromMinutes(60).TotalSeconds) -Status @('UPDATE_ROLLBACK_COMPLETE', 'UPDATE_ROLLBACK_FAILED') @credentialArguments
+
+                    if ($stack.StackStatus -like '*FAILED*')
+                    {
+                        Write-Host -ForegroundColor Red -BackgroundColor Black "Rollback failed: $arn"
+                        Write-Host -ForegroundColor Red -BackgroundColor Black (
+                            Get-StackFailureEvents -StackName $arn -CredentialArguments $credentialArguments |
+                                Where-Object { $_.Timestamp -ge $updateStart } |
+                                Sort-Object -Descending Timestamp |
+                                Out-String
+                        )
+
+                        $updateFailedReason += [Environment]::NewLine + $stack.StackStatusReason
+                    }
+
+                    throw $updateFailedReason
                 }
 
                 # Emit ARN
