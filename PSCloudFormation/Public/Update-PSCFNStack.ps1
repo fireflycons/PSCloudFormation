@@ -217,7 +217,7 @@ function Update-PSCFNStack
                 throw "Changeset failed to create"
             }
 
-            Write-Host ($cs.Changes.ResourceChange | Select-Object Action, LogicalResourceId, PhysicalResourceId, ResourceType | Format-Table | Out-String)
+            Write-Host ($cs.Changes.ResourceChange | Format-Table -Property Action, LogicalResourceId, ResourceType, Replacement, PhysicalResourceId | Out-String)
 
             if (-not $Force)
             {
