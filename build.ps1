@@ -38,7 +38,23 @@ try
         if (($neededModules | Measure-Object).Count -gt 0)
         {
             Write-Host "Installing modules: $($neededModules -join ',')"
-            Install-Module $neededModules -Force -AllowClobber -SkipPublisherCheck -Scope CurrentUser
+
+            # Cludgy fix. powershell-yaml 0.4.0 blows up on appveyor
+            $neededModules |
+            Where-Object {
+                $_ -ine 'powershell-yaml'
+            } |
+            Foreach-Object {
+                Install-Module $_ -Force -AllowClobber -SkipPublisherCheck -Scope CurrentUser
+            }
+
+            $neededModules |
+            Where-Object {
+                $_ -ieq'powershell-yaml'
+            } |
+            Foreach-Object {
+                Install-Module $_ -Force -AllowClobber -SkipPublisherCheck -Scope CurrentUser -RequiredVersion 0.3.5
+            }
         }
 
         Write-Host "Importing modules: $($missingModules -join ',')"
