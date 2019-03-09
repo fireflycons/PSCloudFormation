@@ -21,6 +21,12 @@ function New-StackOperationArguments
     .PARAMETER StackParameters
         Array of template parameters for -Parameter argument
 
+    .PARAMETER CredentialArguments
+        Credential arguments passed to public function.
+
+    .PARAMETER UsePreviousTemplate
+        Setting of -UsePreviousTemplate if updating; else $false
+
     .OUTPUTS
         [hashtable] Argument hash to splat New-CFNStack/Update-CFNStack
     #>
@@ -32,7 +38,12 @@ function New-StackOperationArguments
         [string]$TemplateLocation,
 
         [string]$Capabilities,
-        [object]$StackParameters
+
+        [object]$StackParameters,
+
+        [hashtable]$CredentialArguments,
+
+        [bool]$UsePreviousTemplate = $false
     )
 
     $stackArgs = @{
@@ -40,20 +51,14 @@ function New-StackOperationArguments
         'StackName' = $StackName
     }
 
-    $template = $(
-        if ($TemplateLocation)    
-        {
-            New-TemplateResolver -TemplateLocation $TemplateLocation
-        }
-        else 
-        {
-            New-TemplateResolver -StackName $StackName
-        }
-    )
-    
+    $template = New-TemplateResolver -TemplateLocation $TemplateLocation -StackName $stackName -UsePreviousTemplate $UsePreviousTemplate -CredentialArguments $CredentialArguments
+
     if ($template.Type -ieq 'File')
     {
         $stackArgs.Add('TemplateBody', $template.ReadTemplate())
+
+        # Copy the template to S3 if too large
+        Copy-OversizeTemplateToS3 -TemplateLocation $TemplateLocation -StackArguments $stackArgs -CredentialArguments $CredentialArguments
     }
     elseif ($template.Type -ieq 'UsePreviousTemplate')
     {

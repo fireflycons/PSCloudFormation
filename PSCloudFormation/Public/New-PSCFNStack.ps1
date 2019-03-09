@@ -196,34 +196,69 @@ function New-PSCFNStack
         ForEach-Object {
             $passOnArguments.Add($_, $PSBoundParameters[$_])
         }
+
+        $disableRollbackSet = ($PSBoundParameters.Keys -icontains 'DisableRollback' -and $DisableRollback)
     }
 
     end
     {
-        if (Test-StackExists -StackName $StackName -CredentialArguments $credentialArguments)
+        try
         {
-            throw "Stack already exists: $StackName"
-        }
-
-        $stackArgs = New-StackOperationArguments -StackName $StackName -TemplateLocation $TemplateLocation -Capabilities $Capabilities -StackParameters $stackParameters
-        $arn = New-CFNStack @stackArgs @credentialArguments @passOnArguments
-
-        if ($Wait)
-        {
-            Write-Host "Waiting for creation to complete"
-
-            $stack = Wait-CFNStack -StackName $arn -Timeout ([TimeSpan]::FromMinutes(60).TotalSeconds) -Status @('CREATE_COMPLETE', 'ROLLBACK_IN_PROGRESS') @credentialArguments
-
-            if ($stack.StackStatus -like '*ROLLBACK*')
+            if (Test-StackExists -StackName $StackName -CredentialArguments $credentialArguments)
             {
-                Write-Host -ForegroundColor Red -BackgroundColor Black "Create failed: $arn"
-                Write-Host -ForegroundColor Red -BackgroundColor Black (Get-StackFailureEvents -StackName $arn -CredentialArguments $credentialArguments | Sort-Object -Descending Timestamp | Out-String)
-
-                throw $stack.StackStatusReason
+                throw "Stack already exists: $StackName"
             }
-        }
 
-        # Emit ARN
-        $arn
+            $stackArgs = New-StackOperationArguments -StackName $StackName -TemplateLocation $TemplateLocation -Capabilities $Capabilities -StackParameters $stackParameters -CredentialArguments $credentialArguments
+            $arn = New-CFNStack @stackArgs @credentialArguments @passOnArguments
+
+            if ($Wait)
+            {
+                Write-Host "Waiting for creation to complete"
+
+                $stack = Wait-CFNStack -StackName $arn -Timeout ([TimeSpan]::FromMinutes(60).TotalSeconds) -Status @('CREATE_COMPLETE', 'ROLLBACK_IN_PROGRESS') @credentialArguments
+
+                if ($stack.StackStatus -like '*ROLLBACK*')
+                {
+                    Write-Host -ForegroundColor Red -BackgroundColor Black "Create failed: $arn"
+                    Write-Host -ForegroundColor Red -BackgroundColor Black (Get-StackFailureEvents -StackName $arn -CredentialArguments $credentialArguments | Sort-Object -Descending Timestamp | Out-String)
+
+                    $updateFailedReason = $stack.StackStatusReason
+
+                    if (-not $disableRollbackSet)
+                    {
+                        $updateStart = [DateTime]::Now
+
+                        Write-Host "Waiting for rollback"
+
+                        $stack = Wait-CFNStack -StackName $arn -Timeout ([TimeSpan]::FromMinutes(60).TotalSeconds) -Status @('ROLLBACK_COMPLETE', 'ROLLBACK_FAILED') @credentialArguments
+
+                        if ($stack.StackStatus -like '*FAILED*')
+                        {
+                            Write-Host -ForegroundColor Red -BackgroundColor Black "Rollback failed: $arn"
+                            Write-Host -ForegroundColor Red -BackgroundColor Black (
+                                Get-StackFailureEvents -StackName $arn -CredentialArguments $credentialArguments |
+                                    Where-Object { $_.Timestamp -ge $updateStart } |
+                                    Sort-Object -Descending Timestamp |
+                                    Out-String
+                            )
+
+                            $updateFailedReason += [Environment]::NewLine + $stack.StackStatusReason
+                        }
+                    }
+
+                    throw $updateFailedReason
+                }
+            }
+
+            # Emit ARN
+            $arn
+        }
+        catch
+        {
+            Format-ExceptionDetail $_
+            Write-Host
+            throw
+        }
     }
 }

@@ -56,7 +56,7 @@ function New-TemplateDynamicParameters
         $templateArguments = @{}
         $PSBoundParameters.GetEnumerator() |
         Where-Object {
-            ('TemplateLocation', 'StackName') -icontains $_.Key
+            ('TemplateLocation', 'StackName', 'UsePreviousTemplate') -icontains $_.Key
         } |
         ForEach-Object {
             $templateArguments.Add($_.Key, $_.Value)

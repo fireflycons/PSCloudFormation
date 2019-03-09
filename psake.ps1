@@ -143,26 +143,48 @@ Task Build -Depends Test {
 Task Deploy -Depends BuildHelp {
     $lines
 
-    # Gate deployment
-    if (#$true
-        $ENV:BHBuildSystem -ne 'Unknown' -and
-        $ENV:BHBranchName -eq "master" -and
-        $ENV:BHCommitMessage -match '!deploy'
-    )
-    {
-        $Params = @{
-            Path  = $ProjectRoot
-            Force = $true
-        }
+    $deployParams = $(
 
-        Invoke-PSDeploy @Verbose @Params
+        if ($ENV:BHBuildSystem -ieq 'AppVeyor')
+        {
+            # We will deploy _something_
+            Write-Host '- Deploying to'
+            Write-Host '  - AppVeyor Artifact'
+
+            $params = @{
+                Path  = $ProjectRoot
+                Force = $true
+                Tags = @('Development') # Push AppVeyor artifact
+            }
+
+            if ($ENV:BHBranchName -eq "master" -and $ENV:APPVEYOR_REPO_TAG -ieq 'true')
+            {
+                # Tag push in master is a release, so we want to also push to PSGallery
+                $params['Tags'] += 'Production'
+                Write-Host '  - PowerShell Gallery'
+            }
+
+            # Emit parameters
+            $params
+        }
+        else 
+        {
+            $null
+        }
+    )
+
+    # Gate deployment
+    if ($null -ne $deployParams)
+    {
+        Invoke-PSDeploy @Verbose @deployParams
     }
     else
     {
         "Skipping deployment: To deploy, ensure that...`n" +
-        "`t* You are in a known build system (Current: $ENV:BHBuildSystem)`n" +
-        "`t* You are committing to the master branch (Current: $ENV:BHBranchName) `n" +
-        "`t* Your commit message includes !deploy (Current: $ENV:BHCommitMessage)"
+        "`t* You are in AppVeyor (Current: $ENV:BHBuildSystem)`n" +
+        "`t* For Gallery deployment`n" +
+        "`t  * You are committing to the master branch (Current: $ENV:BHBranchName) `n" +
+        "`t  * You have pushed a tag (i.e. created a release in GitHub)"
     }
 }
 

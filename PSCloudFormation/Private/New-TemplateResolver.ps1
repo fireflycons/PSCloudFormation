@@ -19,6 +19,12 @@ function New-TemplateResolver
     .PARAMETER StackName
         Used if -UsePreviousTemplate is true
 
+    .PARAMETER CredentialArguments
+        Credential arguments passed to public function.
+
+    .PARAMETER UsePreviousTemplate
+        Setting of -UsePreviousTemplate if updating; else $false
+
     .OUTPUTS
         Custom Object.
     #>
@@ -26,23 +32,25 @@ function New-TemplateResolver
     param
     (
         [string]$TemplateLocation,
-        [bool]$UsePreviousTemplate,
-        [string]$StackName
+        [bool]$UsePreviousTemplate = $false,
+        [string]$StackName,
+        [hashtable]$CredentialArguments
     )
 
     $resolver = New-Object PSObject -Property @{
 
-        'Type'       = $null
-        'BucketName' = $null
-        'Key'        = $null
-        'Path'       = $null
-        'Url'        = $null
-        'StackName'  = $null
+        Type                = $null
+        BucketName          = $null
+        Key                 = $null
+        Path                = $null
+        Url                 = $null
+        StackName           = $null
+        UsePreviousTemplate = $UsePreviousTemplate
     } |
         Add-Member -PassThru -Name ReadTemplate -MemberType ScriptMethod -Value {
 
         # Reads the template contents from either S3, previous tempalte or file system as approriate.
-        if ($this.StackName)
+        if ($this.StackName -and $this.UsePreviousTemplate)
         {
             Get-CFNTemplate -StackName $this.StackName
         }
@@ -93,7 +101,7 @@ function New-TemplateResolver
 
     $u = $null
 
-    if ($StackName)
+    if ($StackName -and $UsePreviousTemplate)
     {
         # UsePreviousTemplate
         $resolver.StackName = $StackName
@@ -106,7 +114,7 @@ function New-TemplateResolver
             's3'
             {
 
-                $r = Get-DefaultAWSRegion
+                $r = Get-CurrentRegion -CredentialArguments $CredentialArguments
 
                 # Convert to full URL
                 if (-not $r)
@@ -114,7 +122,7 @@ function New-TemplateResolver
                     throw "Cannot determine region. Please use Initialize-AWSDefaults or Set-DefaultAWSRegion"
                 }
 
-                $resolver.Url = [Uri]("https://s3-{0}.amazonaws.com/{1}{2}" -f $r.Region, $u.Authority, $u.LocalPath)
+                $resolver.Url = [Uri]("https://s3-{0}.amazonaws.com/{1}{2}" -f $r, $u.Authority, $u.LocalPath)
                 $resolver.BucketName = $u.Authority
                 $resolver.Key = $u.LocalPath.TrimStart('/')
                 $resolver.Type = 'Url'

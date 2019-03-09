@@ -18,12 +18,23 @@
 if($ENV:BHProjectName -and $ENV:BHProjectName.Count -eq 1)
 {
     Deploy Module {
+
         By PSGalleryModule {
             FromSource $ENV:BHProjectName
             To PSGallery
             WithOptions @{
                 ApiKey = $ENV:NugetApiKey
             }
+            Tagged Production
+        }
+
+        By AppVeyorModule {
+            FromSource $ENV:BHProjectName
+            To AppVeyor
+            WithOptions @{
+                Version = $env:APPVEYOR_BUILD_VERSION
+            }
+            Tagged Development
         }
     }
 }

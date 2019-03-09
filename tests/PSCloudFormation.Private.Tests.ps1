@@ -77,11 +77,9 @@ InModuleScope 'PSCloudFormation' {
 
             It 'Creates URL resolver for s3 URI when region is known' {
 
-                Mock -CommandName Get-DefaultAWSRegion -MockWith {
+                Mock -CommandName Get-CurrentRegion -MockWith {
 
-                    return @{
-                        Region = 'us-east-1'
-                    }
+                    return 'us-east-1'
                 }
 
                 $uri = 's3://bucket/path/to/test-stack.json'
@@ -89,23 +87,17 @@ InModuleScope 'PSCloudFormation' {
 
                 $resolver = New-TemplateResolver -TemplateLocation $uri
 
+                Assert-MockCalled -CommandName Get-CurrentRegion -Times 1
                 $resolver.Type | Should Be 'Url'
                 $resolver.Url | Should Be $generatedUrl
                 $resolver.BucketName | Should Be 'bucket'
                 $resolver.Key | Should Be 'path/to/test-stack.json'
             }
 
-            It 'Creates UsePreviousTemplate resolver when given a stack name instead of a template location' {
+            It 'Creates UsePreviousTemplate resolver when -UsePreviousTemplate set.' {
 
-                $resolver = New-TemplateResolver -StackName test-stack
+                $resolver = New-TemplateResolver -StackName test-stack -UsePreviousTemplate $true
                 $resolver.Type | Should Be 'UsePreviousTemplate'
-            }
-
-            It 'Throws with s3 URI when default AWS region cannot be determined' {
-
-                Mock -CommandName Get-DefaultAWSRegion -MockWith {}
-
-                { New-TemplateResolver -TemplateLocation 's3://bucket/path/to/test-stack.json' } | Should Throw
             }
 
             It 'File resolver returns local file' {
@@ -123,6 +115,7 @@ InModuleScope 'PSCloudFormation' {
 
                 $resolver = New-TemplateResolver -TemplateLocation 'https://s3-us-east-1.amazonaws.com/bucket/path/to/test-stack.json'
                 ($resolver.ReadTemplate()).GetHashCode() | Should Be $templateContentHash
+                Assert-MockCalled -CommandName Read-S3Object -Times 1
             }
 
             It 'UsePreviousTemplate resolver returns original template' {
@@ -131,9 +124,10 @@ InModuleScope 'PSCloudFormation' {
 
                     Get-Content -Raw $global:templatePath
                 }
-    
-                    $resolver = New-TemplateResolver -StackName test-stack
+
+                $resolver = New-TemplateResolver -StackName test-stack -UsePreviousTemplate $true
                 ($resolver.ReadTemplate()).GetHashCode() | Should Be $templateContentHash
+                Assert-MockCalled -CommandName Get-CFNTemplate -Times 1
             }
         }
 
@@ -153,6 +147,7 @@ InModuleScope 'PSCloudFormation' {
 
                 $url = 'https://s3-us-east-1.amazonaws.com/bucket/path/to/test-stack.json'
                 $args = New-StackOperationArguments -StackName 'pester' -TemplateLocation $url
+
                 $args['StackName'] | Should Be 'pester'
                 $args['TemplateURL'] | Should Be $url
                 $args['TemplateBody'] | Should BeNullOrEmpty
@@ -160,16 +155,17 @@ InModuleScope 'PSCloudFormation' {
 
             It 'Provides normalised -TemplateURL for s3 URI in known region' {
 
-                Mock -CommandName Get-DefaultAWSRegion -MockWith {
+                Mock -CommandName Get-CurrentRegion -MockWith {
 
-                    return @{
-                        Region = 'us-east-1'
-                    }
+                    return 'us-east-1'
                 }
+
 
                 $uri = 's3://bucket/path/to/test-stack.json'
                 $generatedUrl = 'https://s3-us-east-1.amazonaws.com/bucket/path/to/test-stack.json'
                 $args = New-StackOperationArguments -StackName 'pester' -TemplateLocation $uri
+
+                Assert-MockCalled -CommandName Get-CurrentRegion -Times 1
                 $args['StackName'] | Should Be 'pester'
                 $args['TemplateURL'] | Should Be $generatedUrl
                 $args['TemplateBody'] | Should BeNullOrEmpty
@@ -335,6 +331,115 @@ InModuleScope 'PSCloudFormation' {
 
                     Get-ParameterTypeFromStringValue -Value $_ | Should Be 'String'
                 }
+            }
+        }
+
+        Context 'S3 Cloudformation Bucket' {
+
+            It 'Should return bucket details if bucket exists' {
+
+                $region = 'us-east-1'
+                $expectedBucketName = "cf-templates-pscloudformation-$($region)"
+                $expectedBucketUrl = [uri]"https://s3.$($region).amazonaws.com/$expectedBucketName"
+
+                Mock -CommandName Get-S3BucketLocation -MockWith {
+
+                    New-Object PSObject -Property @{
+                        Value = $region
+                    }
+                }
+
+                $result = Get-CloudFormationBucket -CredentialArguments @{ Region = $region }
+                $result.BucketName | Should Be $expectedBucketName
+                $result.BucketUrl | Should Be $expectedBucketUrl
+            }
+
+            It 'Should create bucket if bucket does not exist' {
+
+                $region = 'us-east-1'
+                $expectedBucketName = "cf-templates-pscloudformation-$($region)"
+                $expectedBucketUrl = [uri]"https://s3.$($region).amazonaws.com/$expectedBucketName"
+                $script:callCount = 0
+
+                Mock -CommandName Get-S3BucketLocation -MockWith {
+
+                    if ($script:callCount++ -eq 0)
+                    {
+                        throw "The specified bucket does not exist"
+                    }
+
+                    New-Object PSObject -Property @{
+                        Value = $region
+                    }
+                }
+
+                Mock -CommandName New-S3Bucket -MockWith {
+                    $true
+                }
+
+                $result = Get-CloudFormationBucket -CredentialArguments @{ Region = $region }
+                $result.BucketName | Should Be $expectedBucketName
+                $result.BucketUrl | Should Be $expectedBucketUrl
+
+                Assert-MockCalled -CommandName Get-S3BucketLocation -Times 2
+                Assert-MockCalled -CommandName New-S3Bucket -Times 1
+            }
+
+            It 'Should not copy template to S3 if size less than 51200' {
+
+                $template = New-Object String -ArgumentList '*', 51119
+
+                $stackArguments = @{
+                    TemplateBody = $template
+                }
+
+                Mock -CommandName Get-CloudFormationBucket -MockWith { }
+
+                Mock -CommandName Resolve-Path -MockWith { }
+
+                Mock -CommandName Write-S3Object -MockWith { }
+
+                $dateStamp = [DateTime]::UtcNow.ToString('yyyyMMddHHmmss')
+                Copy-OversizeTemplateToS3 -TemplateLocation test.json -CredentialArguments @{} -StackArguments $stackArguments
+
+                $stackArguments.ContainsKey('TemplateBody') | Should Be $true
+                $StackArguments.ContainsKey('TemplateURL') | Should Be $false
+
+                Assert-MockCalled -CommandName Get-CloudFormationBucket -Times 0
+                Assert-MockCalled -CommandName Resolve-Path -Times 0
+                Assert-MockCalled -CommandName Write-S3Object -Times 0
+            }
+
+            It 'Should copy oversize template to S3' {
+
+                $template = New-Object String -ArgumentList '*', 51200
+
+                $stackArguments = @{
+                    TemplateBody = $template
+                }
+
+                Mock -CommandName Get-CloudFormationBucket -MockWith {
+                    New-Object PSObject -Property @{
+                        BucketName = 'test-bucket'
+                        BucketUrl = [uri]'https://s3.us-east-1.amazonaws.com/test-bucket'
+                    }
+                }
+
+                Mock -CommandName Resolve-Path -MockWith {
+
+                    New-Object PSObject -Property @{
+                        Path = 'c:\temp\test.json'
+                    }
+                }
+
+                Mock -CommandName Write-S3Object -MockWith { }
+
+                $dateStamp = [DateTime]::UtcNow.ToString('yyyyMMddHHmmss')
+                Copy-OversizeTemplateToS3 -TemplateLocation test.json -CredentialArguments @{} -StackArguments $stackArguments
+
+                $stackArguments.ContainsKey('TemplateBody') | Should Be $false
+                $StackArguments.ContainsKey('TemplateURL') | Should Be $true
+                $stackArguments['TemplateURL'] | Should Be "https://s3.us-east-1.amazonaws.com/test-bucket/$($dateStamp)-test.json"
             }
         }
     }

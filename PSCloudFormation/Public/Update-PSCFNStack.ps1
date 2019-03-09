@@ -54,7 +54,7 @@ function Update-PSCFNStack
 
     .PARAMETER UsePreviousTemplate
         Reuse the existing template that is associated with the stack that you are updating. Conditional: You must specify only TemplateLocationL, or set the UsePreviousTemplate to true.
-        
+
     .PARAMETER Wait
         If set, wait for stack update to complete before returning.
 
@@ -133,11 +133,19 @@ function Update-PSCFNStack
     {
         $templateArguments = @{}
         $PSBoundParameters.GetEnumerator() |
-        Where-Object {
+            Where-Object {
             ('TemplateLocation', 'UsePreviousTemplate', 'StackName') -icontains $_.Key
         } |
-        ForEach-Object {
-            $templateArguments.Add($_.Key, $_.Value)
+            ForEach-Object {
+
+                if ($_.Value -is [System.Management.Automation.SwitchParameter])
+                {
+                    $templateArguments.Add($_.Key, $_.Value.ToBool())
+                }
+                else
+                {
+                    $templateArguments.Add($_.Key, $_.Value)
+                }
         }
 
         #Create the RuntimeDefinedParameterDictionary
@@ -152,7 +160,7 @@ function Update-PSCFNStack
         $credentialArguments = Get-CommonCredentialParameters -CallerBoundParameters $PSBoundParameters
         $changeSetPassOnArguments = @{}
         $PSBoundParameters.Keys |
-        Where-Object {
+            Where-Object {
             @(
                 'Force'
                 'NotificationARNs'
@@ -162,7 +170,7 @@ function Update-PSCFNStack
                 'Tag'
             ) -icontains $_
         } |
-        ForEach-Object {
+            ForEach-Object {
             $changeSetPassOnArguments.Add($_, $PSBoundParameters[$_])
         }
 
@@ -172,101 +180,130 @@ function Update-PSCFNStack
     {
         try
         {
-            $stack = Get-CFNStack -StackName $StackName @credentialArguments
+            try
+            {
+                $stack = Get-CFNStack -StackName $StackName @credentialArguments
+            }
+            catch
+            {
+                throw "Stack $StackName does not exist"
+            }
+
+            # Add any parameters not present on command line
+            # as Use Previous Value
+            $stack.Parameters |
+                ForEach-Object {
+
+                if ($stackParameters.ParameterKey -inotcontains $_.ParameterKey)
+                {
+                    $stackParameters += $(
+                        $p = New-Object Amazon.CloudFormation.Model.Parameter
+                        $p.ParameterKey = $_.ParameterKey
+                        $p.UsePreviousValue = $true
+                        $p
+                    )
+                }
+            }
+
+            $changesetName = '{0}-{1}' -f [IO.Path]::GetFileNameWithoutExtension($MyInvocation.MyCommand.Module.Name), [int](([datetime]::UtcNow) - (get-date "1/1/1970")).TotalSeconds
+
+            Write-Host "Creating change set $changesetName"
+
+            $stackArgs = New-StackOperationArguments -StackName $StackName -TemplateLocation $TemplateLocation -Capabilities $Capabilities -StackParameters $stackParameters -CredentialArguments $credentialArguments -UsePreviousTemplate ([bool]$UsePreviousTemplate)
+            $csArn = New-CFNChangeSet -ChangeSetName $changesetName @stackArgs @credentialArguments @changeSetPassOnArguments
+            $cs = Get-CFNChangeSet -ChangeSetName $csArn @credentialArguments
+
+            while (('CREATE_COMPLETE', 'FAILED') -inotcontains $cs.Status)
+            {
+                Start-Sleep -Seconds 1
+                $cs = Get-CFNChangeSet -ChangeSetName $csArn @credentialArguments
+            }
+
+            if ($cs.Status -ieq 'FAILED')
+            {
+                Write-Host -ForegroundColor Red -BackgroundColor Black "Changeset $changesetName failed to create: $($cs.StatusReason)"
+                throw "Changeset failed to create"
+            }
+
+            Write-Host ($cs.Changes.ResourceChange | Format-Table -Property Action, LogicalResourceId, ResourceType, Replacement, PhysicalResourceId | Out-String)
+
+            if (-not $Force)
+            {
+                $choice = $host.ui.PromptForChoice(
+                    'Begin the stack update now?',
+                    $null,
+                    @(
+                        New-Object System.Management.Automation.Host.ChoiceDescription ('&Yes', "Start rebuild now." )
+                        New-Object System.Management.Automation.Host.ChoiceDescription ('&No', 'Abort operation.')
+                    ),
+                    0
+                )
+
+                if ($choice -ne 0)
+                {
+                    throw "Aborted."
+                }
+            }
+
+            Write-Host "Updating stack $StackName"
+            $updateStart = [DateTime]::Now
+
+            $arn = (Get-CFNStack -StackName $StackName @credentialArguments).StackId
+            Start-CFNChangeSet -StackName $StackName -ChangeSetName $changesetName @credentialArguments
+
+            if ($Wait)
+            {
+                Write-Host "Waiting for update to complete"
+
+                $stack = Wait-CFNStack -StackName $arn -Timeout ([TimeSpan]::FromMinutes(60).TotalSeconds) -Status @('UPDATE_COMPLETE', 'UPDATE_ROLLBACK_IN_PROGRESS') @credentialArguments
+
+                if ($stack.StackStatus -like '*ROLLBACK*')
+                {
+                    Write-Host -ForegroundColor Red -BackgroundColor Black "Update failed: $arn"
+                    Write-Host -ForegroundColor Red -BackgroundColor Black (
+                        Get-StackFailureEvents -StackName $arn -CredentialArguments $credentialArguments |
+                            Where-Object { $_.Timestamp -ge $updateStart } |
+                            Sort-Object -Descending Timestamp |
+                            Out-String
+                    )
+
+                    $updateFailedReason = $stack.StackStatusReason
+                    $updateStart = [DateTime]::Now
+
+                    Write-Host "Waiting for rollback"
+
+                    $stack = Wait-CFNStack -StackName $arn -Timeout ([TimeSpan]::FromMinutes(60).TotalSeconds) -Status @('UPDATE_ROLLBACK_COMPLETE', 'UPDATE_ROLLBACK_FAILED') @credentialArguments
+
+                    if ($stack.StackStatus -like '*FAILED*')
+                    {
+                        Write-Host -ForegroundColor Red -BackgroundColor Black "Rollback failed: $arn"
+                        Write-Host -ForegroundColor Red -BackgroundColor Black (
+                            Get-StackFailureEvents -StackName $arn -CredentialArguments $credentialArguments |
+                                Where-Object { $_.Timestamp -ge $updateStart } |
+                                Sort-Object -Descending Timestamp |
+                                Out-String
+                        )
+
+                        $updateFailedReason += [Environment]::NewLine + $stack.StackStatusReason
+                    }
+
+                    throw $updateFailedReason
+                }
+
+                # Emit ARN
+                $arn
+            }
+            else
+            {
+                # Emit ARN
+                $arn
+            }
         }
         catch
         {
-            throw "Stack $StackName does not exist"
-        }
-
-        # Add any parameters not present on command line
-        # as Use Previous Value
-        $stack.Parameters |
-            ForEach-Object {
-
-            if ($stackParameters.ParameterKey -inotcontains $_.ParameterKey)
-            {
-                $stackParameters += $(
-                    $p = New-Object Amazon.CloudFormation.Model.Parameter
-                    $p.ParameterKey = $_.ParameterKey
-                    $p.UsePreviousValue = $true
-                    $p
-                )
-            }
-        }
-
-        $changesetName = '{0}-{1}' -f [IO.Path]::GetFileNameWithoutExtension($MyInvocation.MyCommand.Module.Name), [int](([datetime]::UtcNow) - (get-date "1/1/1970")).TotalSeconds
-
-        Write-Host "Creating change set $changesetName"
-
-        $stackArgs = New-StackOperationArguments -StackName $StackName -TemplateLocation $TemplateLocation -Capabilities $Capabilities -StackParameters $stackParameters
-        $csArn = New-CFNChangeSet -ChangeSetName $changesetName @stackArgs @credentialArguments @changeSetPassOnArguments
-        $cs = Get-CFNChangeSet -ChangeSetName $csArn @credentialArguments
-
-        while (('CREATE_COMPLETE', 'FAILED') -inotcontains $cs.Status)
-        {
-            Start-Sleep -Seconds 1
-            $cs = Get-CFNChangeSet -ChangeSetName $csArn @credentialArguments
-        }
-
-        if ($cs.Status -ieq 'FAILED')
-        {
-            Write-Host -ForegroundColor Red -BackgroundColor Black "Changeset $changesetName failed to create: $($cs.StatusReason)"
-            throw "Changeset failed to create"
-        }
-
-        Write-Host ($cs.Changes.ResourceChange | Select-Object Action, LogicalResourceId, PhysicalResourceId, ResourceType | Format-Table | Out-String)
-
-        if (-not $Force)
-        {
-            $choice = $host.ui.PromptForChoice(
-                'Begin the stack update now?',
-                $null,
-                @(
-                    New-Object System.Management.Automation.Host.ChoiceDescription ('&Yes', "Start rebuild now." )
-                    New-Object System.Management.Automation.Host.ChoiceDescription ('&No', 'Abort operation.')
-                ),
-                0
-            )
-
-            if ($choice -ne 0)
-            {
-                throw "Aborted."
-            }
-        }
-
-        Write-Host "Updating stack $StackName"
-        $updateStart = [DateTime]::Now
-
-        $arn = (Get-CFNStack -StackName $StackName @credentialArguments).StackId
-        Start-CFNChangeSet -StackName $StackName -ChangeSetName $changesetName @credentialArguments
-
-        if ($Wait)
-        {
-            Write-Host "Waiting for update to complete"
-
-            $stack = Wait-CFNStack -StackName $arn -Timeout ([TimeSpan]::FromMinutes(60).TotalSeconds) -Status @('UPDATE_COMPLETE', 'UPDATE_ROLLBACK_IN_PROGRESS') @credentialArguments
-
-            if ($stack.StackStatus -like '*ROLLBACK*')
-            {
-                Write-Host -ForegroundColor Red -BackgroundColor Black "Update failed: $arn"
-                Write-Host -ForegroundColor Red -BackgroundColor Black (
-                    Get-StackFailureEvents -StackName $arn -CredentialArguments $credentialArguments |
-                        Where-Object { $_.Timestamp -ge $updateStart } |
-                        Sort-Object -Descending Timestamp |
-                        Out-String
-                )
-
-                throw $stack.StackStatusReason
-            }
-
-            # Emit ARN
-            $arn
-        }
-        else
-        {
-            # Emit ARN
-            $arn
+            Format-ExceptionDetail $_
+            Write-Host
+            throw
         }
     }
 }
