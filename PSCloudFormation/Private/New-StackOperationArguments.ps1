@@ -24,6 +24,9 @@ function New-StackOperationArguments
     .PARAMETER CredentialArguments
         Credential arguments passed to public function.
 
+    .PARAMETER UsePreviousTemplate
+        Setting of -UsePreviousTemplate if updating; else $false
+
     .OUTPUTS
         [hashtable] Argument hash to splat New-CFNStack/Update-CFNStack
     #>
@@ -48,7 +51,7 @@ function New-StackOperationArguments
         'StackName' = $StackName
     }
 
-    $template = New-TemplateResolver -TemplateLocation $TemplateLocation -StackName $stackName -UsePreviousTemplate $UsePreviousTemplate
+    $template = New-TemplateResolver -TemplateLocation $TemplateLocation -StackName $stackName -UsePreviousTemplate $UsePreviousTemplate -CredentialArguments $CredentialArguments
 
     if ($template.Type -ieq 'File')
     {

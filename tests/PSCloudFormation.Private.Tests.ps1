@@ -77,11 +77,9 @@ InModuleScope 'PSCloudFormation' {
 
             It 'Creates URL resolver for s3 URI when region is known' {
 
-                Mock -CommandName Get-DefaultAWSRegion -MockWith {
+                Mock -CommandName Get-CurrentRegion -MockWith {
 
-                    return @{
-                        Region = 'us-east-1'
-                    }
+                    return 'us-east-1'
                 }
 
                 $uri = 's3://bucket/path/to/test-stack.json'
@@ -89,6 +87,7 @@ InModuleScope 'PSCloudFormation' {
 
                 $resolver = New-TemplateResolver -TemplateLocation $uri
 
+                Assert-MockCalled -CommandName Get-CurrentRegion -Times 1
                 $resolver.Type | Should Be 'Url'
                 $resolver.Url | Should Be $generatedUrl
                 $resolver.BucketName | Should Be 'bucket'
@@ -99,13 +98,6 @@ InModuleScope 'PSCloudFormation' {
 
                 $resolver = New-TemplateResolver -StackName test-stack -UsePreviousTemplate $true
                 $resolver.Type | Should Be 'UsePreviousTemplate'
-            }
-
-            It 'Throws with s3 URI when default AWS region cannot be determined' {
-
-                Mock -CommandName Get-DefaultAWSRegion -MockWith {}
-
-                { New-TemplateResolver -TemplateLocation 's3://bucket/path/to/test-stack.json' } | Should Throw
             }
 
             It 'File resolver returns local file' {
@@ -155,6 +147,7 @@ InModuleScope 'PSCloudFormation' {
 
                 $url = 'https://s3-us-east-1.amazonaws.com/bucket/path/to/test-stack.json'
                 $args = New-StackOperationArguments -StackName 'pester' -TemplateLocation $url
+
                 $args['StackName'] | Should Be 'pester'
                 $args['TemplateURL'] | Should Be $url
                 $args['TemplateBody'] | Should BeNullOrEmpty
@@ -162,16 +155,17 @@ InModuleScope 'PSCloudFormation' {
 
             It 'Provides normalised -TemplateURL for s3 URI in known region' {
 
-                Mock -CommandName Get-DefaultAWSRegion -MockWith {
+                Mock -CommandName Get-CurrentRegion -MockWith {
 
-                    return @{
-                        Region = 'us-east-1'
-                    }
+                    return 'us-east-1'
                 }
+
 
                 $uri = 's3://bucket/path/to/test-stack.json'
                 $generatedUrl = 'https://s3-us-east-1.amazonaws.com/bucket/path/to/test-stack.json'
                 $args = New-StackOperationArguments -StackName 'pester' -TemplateLocation $uri
+
+                Assert-MockCalled -CommandName Get-CurrentRegion -Times 1
                 $args['StackName'] | Should Be 'pester'
                 $args['TemplateURL'] | Should Be $generatedUrl
                 $args['TemplateBody'] | Should BeNullOrEmpty
