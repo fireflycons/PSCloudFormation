@@ -12,7 +12,7 @@
     RootModule        = 'PSCloudFormation.psm1'
 
     # Version number of this module.
-    ModuleVersion     = '0.2.1'
+    ModuleVersion     = '0.3.0'
 
     # Supported PSEditions
     # CompatiblePSEditions = @()
@@ -110,7 +110,7 @@
             # IconUri = ''
 
             # ReleaseNotes of this module
-            ReleaseNotes = 'Now supports all relevant arguments of the wrapped cmdlets.'
+            ReleaseNotes = 'Fix several issues with stack updates. Now supports oversize templates (> 51200 bytes)'
 
         } # End of PSData hashtable
 
