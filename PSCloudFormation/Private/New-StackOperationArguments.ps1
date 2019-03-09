@@ -38,7 +38,9 @@ function New-StackOperationArguments
 
         [object]$StackParameters,
 
-        [hashtable]$CredentialArguments
+        [hashtable]$CredentialArguments,
+
+        [bool]$UsePreviousTemplate = $false
     )
 
     $stackArgs = @{
@@ -46,16 +48,7 @@ function New-StackOperationArguments
         'StackName' = $StackName
     }
 
-    $template = $(
-        if ($TemplateLocation)
-        {
-            New-TemplateResolver -TemplateLocation $TemplateLocation
-        }
-        else
-        {
-            New-TemplateResolver -StackName $StackName
-        }
-    )
+    $template = New-TemplateResolver -TemplateLocation $TemplateLocation -StackName $stackName -UsePreviousTemplate $UsePreviousTemplate
 
     if ($template.Type -ieq 'File')
     {

@@ -137,7 +137,15 @@ function Update-PSCFNStack
             ('TemplateLocation', 'UsePreviousTemplate', 'StackName') -icontains $_.Key
         } |
             ForEach-Object {
-            $templateArguments.Add($_.Key, $_.Value)
+
+                if ($_.Value -is [System.Management.Automation.SwitchParameter])
+                {
+                    $templateArguments.Add($_.Key, $_.Value.ToBool())
+                }
+                else
+                {
+                    $templateArguments.Add($_.Key, $_.Value)
+                }
         }
 
         #Create the RuntimeDefinedParameterDictionary
@@ -201,7 +209,7 @@ function Update-PSCFNStack
 
             Write-Host "Creating change set $changesetName"
 
-            $stackArgs = New-StackOperationArguments -StackName $StackName -TemplateLocation $TemplateLocation -Capabilities $Capabilities -StackParameters $stackParameters -CredentialArguments $credentialArguments
+            $stackArgs = New-StackOperationArguments -StackName $StackName -TemplateLocation $TemplateLocation -Capabilities $Capabilities -StackParameters $stackParameters -CredentialArguments $credentialArguments -UsePreviousTemplate ([bool]$UsePreviousTemplate)
             $csArn = New-CFNChangeSet -ChangeSetName $changesetName @stackArgs @credentialArguments @changeSetPassOnArguments
             $cs = Get-CFNChangeSet -ChangeSetName $csArn @credentialArguments
 

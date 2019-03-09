@@ -26,23 +26,24 @@ function New-TemplateResolver
     param
     (
         [string]$TemplateLocation,
-        [bool]$UsePreviousTemplate,
+        [bool]$UsePreviousTemplate = $false,
         [string]$StackName
     )
 
     $resolver = New-Object PSObject -Property @{
 
-        'Type'       = $null
-        'BucketName' = $null
-        'Key'        = $null
-        'Path'       = $null
-        'Url'        = $null
-        'StackName'  = $null
+        Type                = $null
+        BucketName          = $null
+        Key                 = $null
+        Path                = $null
+        Url                 = $null
+        StackName           = $null
+        UsePreviousTemplate = $UsePreviousTemplate
     } |
         Add-Member -PassThru -Name ReadTemplate -MemberType ScriptMethod -Value {
 
         # Reads the template contents from either S3, previous tempalte or file system as approriate.
-        if ($this.StackName)
+        if ($this.StackName -and $this.UsePreviousTemplate)
         {
             Get-CFNTemplate -StackName $this.StackName
         }
@@ -93,7 +94,7 @@ function New-TemplateResolver
 
     $u = $null
 
-    if ($StackName)
+    if ($StackName -and $UsePreviousTemplate)
     {
         # UsePreviousTemplate
         $resolver.StackName = $StackName

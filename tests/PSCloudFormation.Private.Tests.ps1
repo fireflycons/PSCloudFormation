@@ -95,9 +95,9 @@ InModuleScope 'PSCloudFormation' {
                 $resolver.Key | Should Be 'path/to/test-stack.json'
             }
 
-            It 'Creates UsePreviousTemplate resolver when given a stack name instead of a template location' {
+            It 'Creates UsePreviousTemplate resolver when -UsePreviousTemplate set.' {
 
-                $resolver = New-TemplateResolver -StackName test-stack
+                $resolver = New-TemplateResolver -StackName test-stack -UsePreviousTemplate $true
                 $resolver.Type | Should Be 'UsePreviousTemplate'
             }
 
@@ -123,6 +123,7 @@ InModuleScope 'PSCloudFormation' {
 
                 $resolver = New-TemplateResolver -TemplateLocation 'https://s3-us-east-1.amazonaws.com/bucket/path/to/test-stack.json'
                 ($resolver.ReadTemplate()).GetHashCode() | Should Be $templateContentHash
+                Assert-MockCalled -CommandName Read-S3Object -Times 1
             }
 
             It 'UsePreviousTemplate resolver returns original template' {
@@ -132,8 +133,9 @@ InModuleScope 'PSCloudFormation' {
                     Get-Content -Raw $global:templatePath
                 }
 
-                    $resolver = New-TemplateResolver -StackName test-stack
+                $resolver = New-TemplateResolver -StackName test-stack -UsePreviousTemplate $true
                 ($resolver.ReadTemplate()).GetHashCode() | Should Be $templateContentHash
+                Assert-MockCalled -CommandName Get-CFNTemplate -Times 1
             }
         }
 
