@@ -201,7 +201,7 @@ function Update-PSCFNStack
 
             Write-Host "Creating change set $changesetName"
 
-            $stackArgs = New-StackOperationArguments -StackName $StackName -TemplateLocation $TemplateLocation -Capabilities $Capabilities -StackParameters $stackParameters
+            $stackArgs = New-StackOperationArguments -StackName $StackName -TemplateLocation $TemplateLocation -Capabilities $Capabilities -StackParameters $stackParameters -CredentialArguments $credentialArguments
             $csArn = New-CFNChangeSet -ChangeSetName $changesetName @stackArgs @credentialArguments @changeSetPassOnArguments
             $cs = Get-CFNChangeSet -ChangeSetName $csArn @credentialArguments
 

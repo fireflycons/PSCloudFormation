@@ -35,6 +35,6 @@ if($ENV:BHProjectName -and $ENV:BHProjectName.Count -eq 1)
                 Version = $env:APPVEYOR_BUILD_VERSION
             }
             Tagged Development
-        }        
+        }
     }
 }

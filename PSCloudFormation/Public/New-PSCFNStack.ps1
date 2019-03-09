@@ -209,7 +209,7 @@ function New-PSCFNStack
                 throw "Stack already exists: $StackName"
             }
 
-            $stackArgs = New-StackOperationArguments -StackName $StackName -TemplateLocation $TemplateLocation -Capabilities $Capabilities -StackParameters $stackParameters
+            $stackArgs = New-StackOperationArguments -StackName $StackName -TemplateLocation $TemplateLocation -Capabilities $Capabilities -StackParameters $stackParameters -CredentialArguments $credentialArguments
             $arn = New-CFNStack @stackArgs @credentialArguments @passOnArguments
 
             if ($Wait)
