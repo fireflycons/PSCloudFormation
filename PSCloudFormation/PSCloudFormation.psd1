@@ -12,7 +12,7 @@
     RootModule        = 'PSCloudFormation.psm1'
 
     # Version number of this module.
-    ModuleVersion     = '0.3.1'
+    ModuleVersion     = '0.4.0'
 
     # Supported PSEditions
     # CompatiblePSEditions = @()
@@ -110,7 +110,7 @@
             # IconUri = ''
 
             # ReleaseNotes of this module
-            ReleaseNotes = 'Fix several issues with stack updates. Now supports oversize templates (> 51200 bytes)'
+            ReleaseNotes = 'Outputs stack events to console when waiting for updates to complete.'
 
         } # End of PSData hashtable
 

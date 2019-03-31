@@ -336,6 +336,12 @@ InModuleScope 'PSCloudFormation' {
 
         Context 'S3 Cloudformation Bucket' {
 
+            Mock Get-STSCallerIdentity -MockWith {
+                New-Object PSObject -Property @{
+                    Account = '0123456789012'
+                }
+            }
+
             It 'Should return bucket details if bucket exists' {
 
                 $region = 'us-east-1'

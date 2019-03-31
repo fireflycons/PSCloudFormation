@@ -6,6 +6,7 @@ function Update-PSCFNStack
 
     .DESCRIPTION
         Updates a stack via creation and application of a changeset.
+        If -Wait is specified, stack events are output to the console including events from any nested stacks.
 
         DYNAMIC PARAMETERS
 
@@ -246,48 +247,19 @@ function Update-PSCFNStack
             }
 
             Write-Host "Updating stack $StackName"
-            $updateStart = [DateTime]::Now
 
             $arn = (Get-CFNStack -StackName $StackName @credentialArguments).StackId
+            $startTime = [datetime]::UtcNow
+
             Start-CFNChangeSet -StackName $StackName -ChangeSetName $changesetName @credentialArguments
 
             if ($Wait)
             {
                 Write-Host "Waiting for update to complete"
 
-                $stack = Wait-CFNStack -StackName $arn -Timeout ([TimeSpan]::FromMinutes(60).TotalSeconds) -Status @('UPDATE_COMPLETE', 'UPDATE_ROLLBACK_IN_PROGRESS') @credentialArguments
-
-                if ($stack.StackStatus -like '*ROLLBACK*')
+                if (-not (Wait-PSCFNStack -StackArn $arn -CredentialArguments $credentialArguments -StartTime $startTime))
                 {
-                    Write-Host -ForegroundColor Red -BackgroundColor Black "Update failed: $arn"
-                    Write-Host -ForegroundColor Red -BackgroundColor Black (
-                        Get-StackFailureEvents -StackName $arn -CredentialArguments $credentialArguments |
-                            Where-Object { $_.Timestamp -ge $updateStart } |
-                            Sort-Object -Descending Timestamp |
-                            Out-String
-                    )
-
-                    $updateFailedReason = $stack.StackStatusReason
-                    $updateStart = [DateTime]::Now
-
-                    Write-Host "Waiting for rollback"
-
-                    $stack = Wait-CFNStack -StackName $arn -Timeout ([TimeSpan]::FromMinutes(60).TotalSeconds) -Status @('UPDATE_ROLLBACK_COMPLETE', 'UPDATE_ROLLBACK_FAILED') @credentialArguments
-
-                    if ($stack.StackStatus -like '*FAILED*')
-                    {
-                        Write-Host -ForegroundColor Red -BackgroundColor Black "Rollback failed: $arn"
-                        Write-Host -ForegroundColor Red -BackgroundColor Black (
-                            Get-StackFailureEvents -StackName $arn -CredentialArguments $credentialArguments |
-                                Where-Object { $_.Timestamp -ge $updateStart } |
-                                Sort-Object -Descending Timestamp |
-                                Out-String
-                        )
-
-                        $updateFailedReason += [Environment]::NewLine + $stack.StackStatusReason
-                    }
-
-                    throw $updateFailedReason
+                    throw "Update unsuccessful"
                 }
 
                 # Emit ARN
