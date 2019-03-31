@@ -12,7 +12,7 @@
     RootModule        = 'PSCloudFormation.psm1'
 
     # Version number of this module.
-    ModuleVersion     = '0.3.2'
+    ModuleVersion     = '0.4.0'
 
     # Supported PSEditions
     # CompatiblePSEditions = @()
@@ -110,7 +110,7 @@
             # IconUri = ''
 
             # ReleaseNotes of this module
-            ReleaseNotes = 'Now supports all relevant arguments of the wrapped cmdlets.'
+            ReleaseNotes = 'Outputs stack events to console when waiting for updates to complete.'
 
         } # End of PSData hashtable
 
