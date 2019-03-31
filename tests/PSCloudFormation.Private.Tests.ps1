@@ -345,8 +345,15 @@ InModuleScope 'PSCloudFormation' {
             It 'Should return bucket details if bucket exists' {
 
                 $region = 'us-east-1'
-                $expectedBucketName = "cf-templates-pscloudformation-$($region)-0123456789012"
+                $expectedBucketName = "cf-templates-pscloudformation-$($region)-000000000000"
                 $expectedBucketUrl = [uri]"https://s3.$($region).amazonaws.com/$expectedBucketName"
+
+                Mock -CommandName Get-STSCallerIdentity -MockWith {
+
+                    New-Object PSObject -Property @{
+                        Account = '000000000000'
+                    }
+                }
 
                 Mock -CommandName Get-S3BucketLocation -MockWith {
 
@@ -356,6 +363,7 @@ InModuleScope 'PSCloudFormation' {
                 }
 
                 $result = Get-CloudFormationBucket -CredentialArguments @{ Region = $region }
+                Assert-MockCalled -CommandName Get-STSCallerIdentity -Times 1
                 $result.BucketName | Should Be $expectedBucketName
                 $result.BucketUrl | Should Be $expectedBucketUrl
             }
@@ -363,9 +371,16 @@ InModuleScope 'PSCloudFormation' {
             It 'Should create bucket if bucket does not exist' {
 
                 $region = 'us-east-1'
-                $expectedBucketName = "cf-templates-pscloudformation-$($region)-0123456789012"
+                $expectedBucketName = "cf-templates-pscloudformation-$($region)-000000000000"
                 $expectedBucketUrl = [uri]"https://s3.$($region).amazonaws.com/$expectedBucketName"
                 $script:callCount = 0
+
+                Mock -CommandName Get-STSCallerIdentity -MockWith {
+
+                    New-Object PSObject -Property @{
+                        Account = '000000000000'
+                    }
+                }
 
                 Mock -CommandName Get-S3BucketLocation -MockWith {
 
