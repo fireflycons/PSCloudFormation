@@ -121,3 +121,4 @@ When using ```Update-PSCFNStack ``` you only need to supply values on the comman
 Thanks to
 
 * [ramblingcookiemonster](http://ramblingcookiemonster.github.io/) for New-DynamicParam and build stuff.
+* [Ahmad Gad](http://ahmad.jempress.com) for Write-PSObject that provides coloured output of stack events.

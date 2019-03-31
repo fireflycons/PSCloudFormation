@@ -6,6 +6,7 @@ function New-PSCFNStack
 
     .DESCRIPTION
         Creates a stack.
+        If -Wait is specified, stack events are output to the console including events from any nested stacks.
 
         DYNAMIC PARAMETERS
 
@@ -210,49 +211,21 @@ function New-PSCFNStack
             }
 
             $stackArgs = New-StackOperationArguments -StackName $StackName -TemplateLocation $TemplateLocation -Capabilities $Capabilities -StackParameters $stackParameters -CredentialArguments $credentialArguments
+            $startTime = [DateTime]::UtcNow
             $arn = New-CFNStack @stackArgs @credentialArguments @passOnArguments
 
             if ($Wait)
             {
                 Write-Host "Waiting for creation to complete"
 
-                $stack = Wait-CFNStack -StackName $arn -Timeout ([TimeSpan]::FromMinutes(60).TotalSeconds) -Status @('CREATE_COMPLETE', 'ROLLBACK_IN_PROGRESS') @credentialArguments
-
-                if ($stack.StackStatus -like '*ROLLBACK*')
+                if (-not (Wait-PSCFNStack -StackArn $arn -CredentialArguments $credentialArguments -StartTime $startTime))
                 {
-                    Write-Host -ForegroundColor Red -BackgroundColor Black "Create failed: $arn"
-                    Write-Host -ForegroundColor Red -BackgroundColor Black (Get-StackFailureEvents -StackName $arn -CredentialArguments $credentialArguments | Sort-Object -Descending Timestamp | Out-String)
-
-                    $updateFailedReason = $stack.StackStatusReason
-
-                    if (-not $disableRollbackSet)
-                    {
-                        $updateStart = [DateTime]::Now
-
-                        Write-Host "Waiting for rollback"
-
-                        $stack = Wait-CFNStack -StackName $arn -Timeout ([TimeSpan]::FromMinutes(60).TotalSeconds) -Status @('ROLLBACK_COMPLETE', 'ROLLBACK_FAILED') @credentialArguments
-
-                        if ($stack.StackStatus -like '*FAILED*')
-                        {
-                            Write-Host -ForegroundColor Red -BackgroundColor Black "Rollback failed: $arn"
-                            Write-Host -ForegroundColor Red -BackgroundColor Black (
-                                Get-StackFailureEvents -StackName $arn -CredentialArguments $credentialArguments |
-                                    Where-Object { $_.Timestamp -ge $updateStart } |
-                                    Sort-Object -Descending Timestamp |
-                                    Out-String
-                            )
-
-                            $updateFailedReason += [Environment]::NewLine + $stack.StackStatusReason
-                        }
-                    }
-
-                    throw $updateFailedReason
+                    throw "Create unsuccessful"
                 }
-            }
 
-            # Emit ARN
-            $arn
+                # Emit ARN
+                $arn
+            }
         }
         catch
         {

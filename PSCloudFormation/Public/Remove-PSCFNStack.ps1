@@ -6,6 +6,7 @@ function Remove-PSCFNStack
 
     .DESCRIPTION
         Delete one or more stacks.
+        If -Wait is specified, stack events are output to the console including events from any nested stacks.
 
         Deletion of multiple stacks can be either sequential or parallel.
         If deleting a gruop of stacks where there are dependencies between them
@@ -83,13 +84,12 @@ function Remove-PSCFNStack
 
     begin
     {
-        $endStates = @('DELETE_COMPLETE', 'DELETE_FAILED')
         $credentialArguments = Get-CommonCredentialParameters -CallerBoundParameters $PSBoundParameters
-        $deleteBegin = [DateTime]::Now
     }
 
     process
     {
+        $startTime = [DateTime]::UtcNow
         $arns = $StackName |
             ForEach-Object {
 
@@ -103,15 +103,10 @@ function Remove-PSCFNStack
                 {
                     # Wait for this delete to complete before starting the next
                     Write-Host "Waiting for delete: $arn"
-                    $stack = Wait-CFNStack -StackName $arn -Timeout ([TimeSpan]::FromMinutes(60).TotalSeconds) -Status $endStates @credentialArguments
 
-                    if ($stack.StackStatus -like 'DELETE_FAILED')
+                    if (-not (Wait-PSCFNStack -StackArn $arn -CredentialArguments $credentialArguments -StartTime $startTime))
                     {
-                        Write-Host -ForegroundColor Red -BackgroundColor Black "Delete failed: $arn"
-                        Write-Host -ForegroundColor Red -BackgroundColor Black (Get-StackFailureEvents -StackName $arn -CredentialArguments $credentialArguments | Sort-Object -Descending Timestamp | Out-String)
-
-                        # Have to give up now as chained stack almost certainly is used by this one
-                        throw $stack.StackStatusReason
+                        throw "Delete unsuccessful"
                     }
                 }
                 else
@@ -132,37 +127,7 @@ function Remove-PSCFNStack
         {
             Write-Host "Waiting for delete:`n$($arns -join "`n")"
 
-            while ($arns.Length -gt 0)
-            {
-                Start-Sleep -Seconds 5
-
-                foreach ($arn in $arns)
-                {
-                    $stack = Get-CFNStack -StackName $arn @credentialArguments
-
-                    if ($endStates -icontains $stack.StackStatus)
-                    {
-                        $arns = $arns | Where-Object { $_ -ine $arn }
-
-                        if ($stack.StackStatus -like 'DELETE_FAILED')
-                        {
-                            Write-Host -ForegroundColor Red -BackgroundColor Black "Delete failed: $arn"
-                            Write-Host -ForegroundColor Red -BackgroundColor Black "$($stack.StackStatusReason)"
-                            Write-Host -ForegroundColor Red -BackgroundColor Black (
-                                Get-StackFailureEvents -StackName $StackName -CredentialArguments $credentialArguments |
-                                    Where-Object { $_.Timestamp -ge $deleteBegin } |
-                                    Sort-Object -Descending Timestamp |
-                                    Out-String
-                            )
-                        }
-                        else
-                        {
-                            Write-Host "Delete complete: $arn"
-                            $arn
-                        }
-                    }
-                }
-            }
+            Wait-PSCFNStack -StackArn $arns -CredentialArguments $credentialArguments -StartTime $startTime
         }
         else
         {

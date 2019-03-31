@@ -6,6 +6,7 @@ function Reset-PSCFNStack
 
     .DESCRIPTION
         Completely replace an existing stack
+        If -Wait is specified, stack events are output to the console including events from any nested stacks.
 
         DYNAMIC PARAMETERS
 

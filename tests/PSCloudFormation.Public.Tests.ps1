@@ -67,6 +67,10 @@ InModuleScope 'PSCloudFormation' {
             )
         }
 
+        Mock -CommandName Wait-PSCFNStack -MockWith {
+            $true
+        }
+
         Context 'New-PSCFNStack' {
 
             Mock -CommandName Get-CFNStack -MockWith {
