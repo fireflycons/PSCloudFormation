@@ -25,7 +25,8 @@ function Get-CloudFormationBucket
         US  = 'us-east-1'
 
     }
-    $bucketName = "cf-templates-pscloudformation-$(Get-CurrentRegion -CredentialArguments $CredentialArguments)"
+
+    $bucketName = "cf-templates-pscloudformation-$(Get-CurrentRegion -CredentialArguments $CredentialArguments)-$((Get-STSCallerIdentity @CredentialArguments).Account)"
 
     try
     {
