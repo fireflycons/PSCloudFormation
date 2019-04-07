@@ -249,7 +249,9 @@ function Update-PSCFNStack
             Write-Host "Updating stack $StackName"
 
             $arn = (Get-CFNStack -StackName $StackName @credentialArguments).StackId
-            $startTime = [datetime]::UtcNow
+
+            # Issue #14 - Get-CFNStackEvents returns timestamp in local time
+            $startTime = [DateTime]::Now
 
             Start-CFNChangeSet -StackName $StackName -ChangeSetName $changesetName @credentialArguments
 

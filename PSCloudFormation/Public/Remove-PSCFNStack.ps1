@@ -89,7 +89,9 @@ function Remove-PSCFNStack
 
     process
     {
-        $startTime = [DateTime]::UtcNow
+        # Issue #14 - Get-CFNStackEvents returns timestamp in local time
+        $startTime = [DateTime]::Now
+
         $arns = $StackName |
             ForEach-Object {
 

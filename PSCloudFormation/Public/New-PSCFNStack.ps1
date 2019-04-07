@@ -211,7 +211,10 @@ function New-PSCFNStack
             }
 
             $stackArgs = New-StackOperationArguments -StackName $StackName -TemplateLocation $TemplateLocation -Capabilities $Capabilities -StackParameters $stackParameters -CredentialArguments $credentialArguments
-            $startTime = [DateTime]::UtcNow
+
+            # Issue #14 - Get-CFNStackEvents returns timestamp in local time
+            $startTime = [DateTime]::Now
+
             $arn = New-CFNStack @stackArgs @credentialArguments @passOnArguments
 
             if ($Wait)

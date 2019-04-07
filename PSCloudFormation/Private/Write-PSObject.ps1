@@ -967,7 +967,15 @@ Function Write-PSObject
                     $vLen = $headersLen[$j];
                 }
 
-                $valueText = $line.SubString($vPos, $vLen);
+                if ($j -eq $headersLen.Length -1)
+                {
+                    $valueText = $line.SubString($vPos);
+                }
+                else
+                {
+                    $valueText = $line.SubString($vPos, $vLen);
+                }
+
                 Write-Line -Object $valueText -NoNewline -ForegroundColor $foreColor -BackgroundColor $backColor;
                 If ($j -eq $columns.Count - 1)
                 {
