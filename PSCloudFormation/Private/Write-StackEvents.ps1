@@ -31,23 +31,57 @@ function Write-StackEvents
         [bool]$WriteHeaders
     )
 
+    function Format-FixedWidthString
+    {
+        param
+        (
+            [string]$Text,
+            [int]$Maxlen
+        )
+
+        if ($Text.Length -gt $MaxLen)
+        {
+            $Text.Substring(0, $Maxlen - 3) + "..."
+        }
+        else
+        {
+            $Text.PadRight($MaxLen)
+        }
+    }
+
     $writePSObjectArgs = @{
-        Column          = @('ResourceStatus', 'ResourceStatus', 'ResourceStatus')
-        MatchMethod     = @('Query', 'Query')
-        Value           = @("'ResourceStatus' -like '*COMPLETE'", "'ResourceStatus' -like '*PROGRESS'", "'ResourceStatus' -like '*FAILED'")
-        BodyOnly        = -not $WriteHeaders
+        Column          = @('Status', 'Status', 'Status')
+        MatchMethod     = @('Query', 'Query', 'Query')
+        Value           = @("'Status' -match 'COMPLETE\s*$'", "'Status' -match 'PROGRESS\s*$'", "'Status' -match 'FAILED\s*$'")
         ValueForeColor  = @('Green', 'Yellow', 'Red')
-        ColoredColumns  = 'StackName'
-        ColumnForeColor = 'Magenta'
+        BodyOnly        = -not $WriteHeaders
     }
 
     $events = Get-StackEvents -StackArn $StackArn -EventsAfter $EventsAfter -CredentialArguments $CredentialArguments
     $events |
-        Select-Object Timestamp, StackName, LogicalResourceId, ResourceStatus, ResourceStatusReason |
-        Sort-Object Timestamp |
-        Write-PSObject @writePSObjectArgs
+    Sort-Object Timestamp |
+    ForEach-Object {
+        # Issue #15 - Create a new object of fixed width strings
+        [PSCustomObject][ordered]@{
+            TimeStamp       = $ts = $_.Timestamp.ToString("HH:mm:ss")
+            StackName       = Format-FixedWidthString -Text $_.StackName -Maxlen 40
+            'Logical ID'    = Format-FixedWidthString -Text $_.LogicalResourceId -Maxlen 40
+            Status          = Format-FixedWidthString -Text $_.ResourceStatus.Value -Maxlen 45
+            'Status Reason' = $(
+                if ([string]::IsNullOrEmpty($_.ResourceStatusReason))
+                {
+                    "-"
+                }
+                else
+                {
+                    $_.ResourceStatusReason
+                }
+            )
+        }
+    } |
+    Write-PSObject @writePSObjectArgs
 
     $events.Timestamp |
-        Measure-Object -Maximum |
-        Select-Object -ExpandProperty Maximum
+    Measure-Object -Maximum |
+    Select-Object -ExpandProperty Maximum
 }
