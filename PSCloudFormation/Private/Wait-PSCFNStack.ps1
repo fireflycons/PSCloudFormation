@@ -52,7 +52,7 @@ function Wait-PSCFNStack
 
     while (($arns | Measure-Object).Count -gt 0)
     {
-        Start-Sleep -Seconds 15
+        Start-Sleep -Seconds 10
 
         $stacks = $arns |
             Foreach-Object {
