@@ -18,7 +18,8 @@ New-PSCFNStack [-StackName] <String> [-TemplateLocation] <String> [[-Capabilitie
  [[-EnableTerminationProtection] <Boolean>] [[-NotificationARNs] <String[]>] [[-OnFailure] <OnFailure>]
  [[-ResourceType] <String[]>] [[-RoleARN] <String>] [[-RollbackConfiguration_MonitoringTimeInMinute] <Int32>]
  [[-RollbackConfiguration_RollbackTrigger] <RollbackTrigger[]>] [[-StackPolicyBody] <String>]
- [[-StackPolicyURL] <String>] [[-Tag] <Tag[]>] [[-TimeoutInMinutes] <Int32>] [-Wait] [<CommonParameters>]
+ [[-StackPolicyURL] <String>] [[-Tag] <Tag[]>] [[-TimeoutInMinutes] <Int32>] [[-ParameterFile] <String>]
+ [-Wait] [<CommonParameters>]
 ```
 
 ## DESCRIPTION
@@ -358,6 +359,22 @@ Aliases:
 Required: False
 Position: 16
 Default value: 0
+Accept pipeline input: False
+Accept wildcard characters: False
+```
+
+### -ParameterFile
+If present, path to a JSON file containing a list of parameter structures as defined for 'aws cloudformation create-stack'. If a parameter of the same name is defined on the command line, the command line takes precedence.
+If your stack has a parameter with the same name as one of the parameters to this cmdlet, then you *must* set the stack parameter via a parameter file.
+
+```yaml
+Type: String
+Parameter Sets: (All)
+Aliases:
+
+Required: False
+Position: 17
+Default value: None
 Accept pipeline input: False
 Accept wildcard characters: False
 ```

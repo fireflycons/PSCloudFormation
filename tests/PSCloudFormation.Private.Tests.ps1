@@ -10,6 +10,8 @@ $ManifestFile = "$(Split-path (Split-Path -Parent -Path $MyInvocation.MyCommand.
 Import-Module -Name $ManifestFile
 
 $global:templatePath = Join-Path $PSScriptRoot test-stack.json
+$global:paramPath = Join-Path $PSScriptRoot test-params.json
+
 $global:azs = @(
     New-Object PSObject -Property @{ Region = 'ap-south-1'; ZoneName = @('ap-south-1a', 'ap-south-1b') }
     New-Object PSObject -Property @{ Region = 'eu-west-3'; ZoneName = @('eu-west-3a', 'eu-west-3b', 'eu-west-3c') }
@@ -331,6 +333,69 @@ InModuleScope 'PSCloudFormation' {
 
                     Get-ParameterTypeFromStringValue -Value $_ | Should Be 'String'
                 }
+            }
+        }
+
+        Context 'CommandLineStackParameters' {
+
+            Mock -CommandName Get-Variable -MockWith {
+
+                @("StackName", "ParameterFile") -icontains $Name
+            }
+
+            It 'Should return dynamic params as stack parameters' {
+
+                $commandLineParams = @{
+                    StackName = 'my-stack'
+                    Param1 = 'value1'
+                    Param2 = 'Value2'
+                }
+
+                $params = Get-CommandLineStackParameters -CallerBoundParameters $commandLineParams
+
+                $params.Length | Should Be 2
+            }
+
+            It 'Should load parameter file' {
+
+                $commandLineParams = @{
+                    StackName = 'my-stack'
+                    ParameterFile = $global:paramPath
+                }
+
+                $params = Get-CommandLineStackParameters -CallerBoundParameters $commandLineParams
+
+                $params.Length | Should Be 4
+                $params | Where-Object { $_.ParameterKey -eq 'FileParam1'} | Select-Object -ExpandProperty ParameterValue | Should -Be 'FileValue1'
+            }
+
+            It 'Should override parameter file when same param is on the command line' {
+
+                $commandLineParams = @{
+                    StackName = 'my-stack'
+                    ParameterFile = $global:paramPath
+                    FileParam1 = 'CommandLineValue1'
+                }
+
+                $params = Get-CommandLineStackParameters -CallerBoundParameters $commandLineParams
+
+                $params.Length | Should Be 4
+                $params | Where-Object { $_.ParameterKey -eq 'FileParam1'} | Select-Object -ExpandProperty ParameterValue | Should -Be 'CommandLineValue1'
+                $params | Where-Object { $_.ParameterKey -eq 'FileParam2'} | Select-Object -ExpandProperty ParameterValue | Should -Be 'FileValue2'
+
+            }
+
+            It 'Should accept a parameter that matches a defined command line argument from parameter file' {
+
+                $commandLineParams = @{
+                    StackName = 'my-stack'
+                    ParameterFile = $global:paramPath
+                }
+
+                $params = Get-CommandLineStackParameters -CallerBoundParameters $commandLineParams
+
+                $params | Where-Object { $_.ParameterKey -eq 'RoleARN'} | Select-Object -ExpandProperty ParameterValue | Should -Be 'arn:aws:iam:::matches_a_command_line_argument'
+
             }
         }
 
