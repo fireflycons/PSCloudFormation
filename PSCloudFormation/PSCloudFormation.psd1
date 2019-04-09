@@ -12,7 +12,7 @@
     RootModule        = 'PSCloudFormation.psm1'
 
     # Version number of this module.
-    ModuleVersion     = '0.4.0'
+    ModuleVersion     = '0.5.0'
 
     # Supported PSEditions
     # CompatiblePSEditions = @()
@@ -110,7 +110,7 @@
             # IconUri = ''
 
             # ReleaseNotes of this module
-            ReleaseNotes = 'Outputs stack events to console when waiting for updates to complete.'
+            ReleaseNotes = "Improve format of stack events.\nFix event timestamp bug - times are local not UTC.\nSupport JSON parameters.\nFix string formatting bug."
 
         } # End of PSData hashtable
 

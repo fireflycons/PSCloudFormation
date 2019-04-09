@@ -15,8 +15,8 @@ Updates a stack.
 ```
 Update-PSCFNStack [-StackName] <String> [-TemplateLocation <String>] [-Capabilities <String>]
  [-NotificationARNs <String[]>] [-ResourceType <String[]>] [-RoleARN <String>]
- [-RollbackConfiguration <RollbackConfiguration>] [-Tag <Tag[]>] [-UsePreviousTemplate] [-Wait] [-Force]
- [<CommonParameters>]
+ [-RollbackConfiguration <RollbackConfiguration>] [-Tag <Tag[]>] [-UsePreviousTemplate]
+ [-ParameterFile <String>] [-Wait] [-Force] [<CommonParameters>]
 ```
 
 ## DESCRIPTION
@@ -223,6 +223,22 @@ Aliases:
 Required: False
 Position: Named
 Default value: False
+Accept pipeline input: False
+Accept wildcard characters: False
+```
+
+### -ParameterFile
+If present, path to a JSON file containing a list of parameter structures as defined for 'aws cloudformation create-stack'. If a parameter of the same name is defined on the command line, the command line takes precedence.
+If your stack has a parameter with the same name as one of the parameters to this cmdlet, then you *must* set the stack parameter via a parameter file.
+
+```yaml
+Type: String
+Parameter Sets: (All)
+Aliases:
+
+Required: False
+Position: Named
+Default value: None
 Accept pipeline input: False
 Accept wildcard characters: False
 ```
