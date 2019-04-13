@@ -93,7 +93,8 @@ function Get-PSCFNStackOutputs
             {
                 $ti = New-Object System.Globalization.CultureInfo ("en-US")
 
-                $stackParam = ($_.Split(('_', '-')) |
+                # Explicit char casts or .net core gets it wrong
+                $stackParam = ($_.Split([char]'_', [char]'-') |
                 Foreach-Object {
                     $ti.TextInfo.ToTitleCase($_)
                 }) -join [string]::Empty

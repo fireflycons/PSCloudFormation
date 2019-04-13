@@ -1,11 +1,22 @@
-$ModuleName = 'PSCloudFormation'
+$ModuleName = $(
+    if ($PSVersionTable.PSEdition -ieq 'Core')
+    {
+        'PSCloudFormation.netcore'
+    }
+    else
+    {
+        'PSCloudFormation'
+    }
+)
+
+$global:haveYaml = $null -ne (Get-Module -ListAvailable | Where-Object {  $_.Name -ieq 'powershell-yaml' })
 
 # http://www.lazywinadmin.com/2016/05/using-pester-to-test-your-manifest-file.html
 # Make sure one or multiple versions of the module are not loaded
 Get-Module -Name $ModuleName | Remove-Module
 
 # Find the Manifest file
-$global:ManifestFile = "$(Split-path (Split-Path -Parent -Path $MyInvocation.MyCommand.Definition))\$ModuleName\$ModuleName.psd1"
+$ManifestFile = [IO.Path]::Combine((Split-path (Split-Path -Parent -Path $MyInvocation.MyCommand.Definition)), $ModuleName, "$ModuleName.psd1")
 
 $global:TestStackArn = 'arn:aws:cloudformation:us-east-1:000000000000:stack/pester/00000000-0000-0000-0000-000000000000'
 $global:TestStackFilePathWithoutExtension = Join-Path $PSScriptRoot test-stack
@@ -43,7 +54,7 @@ Describe "$ModuleName Module - Testing Manifest File (.psd1)" {
 }
 
 # https://github.com/PowerShell/PowerShell/issues/2408#issuecomment-251140889
-InModuleScope 'PSCloudFormation' {
+InModuleScope $ModuleName {
     Describe 'PSCloudFormation - Public Interface' {
 
         Mock -CommandName Get-EC2Region -MockWith {
@@ -90,72 +101,59 @@ InModuleScope 'PSCloudFormation' {
                 }
             }
 
-            if (${env:BHBuildSystem} -ne 'AppVeyor')
-            {
-                # This doesn't seem to work in an AppVeyor environment
-
-                It 'Detects when a parameter required by the template (-VpcCidr) not given on command line' {
-
-                    # Normally, the UI will prompt for the requirte parameter,
-                    # and the user can get the parameter's decription via the usual mandatory parameter help mechanism.
-                    # However to test that the dynamic parameter is generated and required, we need to set it up to throw rather than prompt.
-                    # We can then test the exeption type and properties to validate the correct argument is required.
-                    # https://github.com/PowerShell/PowerShell/issues/2408#issuecomment-251140889
-                    # http://nivot.org/blog/post/2010/05/03/PowerShell20DeveloperEssentials1InitializingARunspaceWithAModule
-                    $ex = Invoke-Command -NoNewScope {
-                        try
-                        {
-                            $iss = [System.Management.Automation.Runspaces.InitialSessionState]::CreateDefault()
-                            $iss.ImportPSModule($global:ManifestFile)
-                            $rs = [System.Management.Automation.Runspaces.RunspaceFactory]::CreateRunspace($iss)
-                            $rs.Open()
-                            $ri = New-Object System.Management.Automation.RunSpaceInvoke($rs)
-                            $ri.Invoke("New-PSCFNStack -StackName teststack -TemplateLocation '$($global:TestStackFilePathWithoutExtension).json'")
-                        }
-                        catch
-                        {
-                            $_.Exception.InnerException
-                        }
-                        finally
-                        {
-                            ($ri, $rs) |
-                                ForEach-Object {
-                                if ($_)
-                                {
-                                    $_.Dispose()
-                                }
-                            }
-                        }
-                    }
-
-                    $ex | SHould BeOfType System.Management.Automation.ParameterBindingException
-                    $ex.ParameterName.Trim() | SHould Be 'VpcCidr'
-                }
-            }
-
             foreach ($ext in @('json', 'yaml'))
             {
                 It "Should create stack and return ARN with valid command line arguments ($($ext.ToUpper()))" {
+
+                    if ($ext -eq 'yaml' -and -not $global:haveYaml)
+                    {
+                        Set-ItResult -Inconclusive -Because "No YAML parser loaded"
+                        return
+                    }
 
                     New-PSCFNStack -StackName pester -TemplateLocation "$($global:TestStackFilePathWithoutExtension).$($ext)" -Wait -VpcCidr 10.0.0.0/16 | Should Be $TestStackArn
                 }
 
                 It "Should throw with invalid CIDR ($($ext.ToUpper()))" {
 
+                    if ($ext -eq 'yaml' -and -not $global:haveYaml)
+                    {
+                        Set-ItResult -Inconclusive -Because "No YAML parser loaded"
+                        return
+                    }
+
                     { New-PSCFNStack -StackName pester -TemplateLocation "$($global:TestStackFilePathWithoutExtension).$($ext)" -Wait -VpcCidr 999.0.0.0/16 } | Should Throw
                 }
 
                 It "Should throw with a value that is not in AllowedValues ($($ext.ToUpper()))" {
+
+                    if ($ext -eq 'yaml' -and -not $global:haveYaml)
+                    {
+                        Set-ItResult -Inconclusive -Because "No YAML parser loaded"
+                        return
+                    }
 
                     { New-PSCFNStack -StackName pester -TemplateLocation "$($global:TestStackFilePathWithoutExtension).$($ext)" -Wait -VpcCidr 10.0.0.0/16 -DnsSupport BreakMe } | Should Throw
                 }
 
                 It "Should throw with invalid region parameter ($($ext.ToUpper()))" {
 
+                    if ($ext -eq 'yaml' -and -not $global:haveYaml)
+                    {
+                        Set-ItResult -Inconclusive -Because "No YAML parser loaded"
+                        return
+                    }
+
                     { New-PSCFNStack -StackName pester -TemplateLocation "$($global:TestStackFilePathWithoutExtension).$($ext)" -VpcCidr 10.0.0.0/16 -Region eu-west-9 } | Should Throw
                 }
 
                 It "Should not throw with valid region parameter ($($ext.ToUpper()))" {
+
+                    if ($ext -eq 'yaml' -and -not $global:haveYaml)
+                    {
+                        Set-ItResult -Inconclusive -Because "No YAML parser loaded"
+                        return
+                    }
 
                     @(
                         'ap-northeast-1'
@@ -251,20 +249,50 @@ InModuleScope 'PSCloudFormation' {
             {
                 It "Should fail when stack does not exist ($($ext.ToUpper()))" {
 
+                    if ($ext -eq 'yaml' -and -not $global:haveYaml)
+                    {
+                        Set-ItResult -Inconclusive -Because "No YAML parser loaded"
+                        return
+                    }
+
                     { Update-PSCFNStack -StackName DoesNotExist -TemplateLocation "$($global:TestStackFilePathWithoutExtension).$($ext)" -Wait -VpcCidr 10.0.0.0/16 } | Should Throw
                 }
 
                 It "Should update when stack exists ($($ext.ToUpper()))" {
+
+                    if ($ext -eq 'yaml' -and -not $global:haveYaml)
+                    {
+                        Set-ItResult -Inconclusive -Because "No YAML parser loaded"
+                        return
+                    }
+
+                    if ($ext -eq 'yaml' -and -not $global:haveYaml)
+                    {
+                        Set-ItResult -Inconclusive -Because "No YAML parser loaded"
+                        return
+                    }
 
                     Update-PSCFNStack -StackName pester -TemplateLocation "$($global:TestStackFilePathWithoutExtension).$($ext)" -Wait -VpcCidr 10.1.0.0/16 -Force
                 }
 
                 It "Should throw with invalid region parameter ($($ext.ToUpper()))" {
 
+                    if ($ext -eq 'yaml' -and -not $global:haveYaml)
+                    {
+                        Set-ItResult -Inconclusive -Because "No YAML parser loaded"
+                        return
+                    }
+
                     { Update-PSCFNStack -StackName pester -TemplateLocation "$($global:TestStackFilePathWithoutExtension).$($ext)" -Wait -VpcCidr 10.1.0.0/16 -Region eu-west-9 } | Should Throw
                 }
 
                 It "Should not throw with valid region parameter ($($ext.ToUpper()))" {
+
+                    if ($ext -eq 'yaml' -and -not $global:haveYaml)
+                    {
+                        Set-ItResult -Inconclusive -Because "No YAML parser loaded"
+                        return
+                    }
 
                     @(
                         'ap-northeast-1'
@@ -290,9 +318,9 @@ InModuleScope 'PSCloudFormation' {
                     }
                 }
             }
-            
+
             It "Should update stack with -UsePreviousTemplate" {
-                    
+
                 Update-PSCFNStack -StackName pester -UsePreviousTemplate -Wait -VpcCidr 10.1.0.0/16 -Force
             }
         }

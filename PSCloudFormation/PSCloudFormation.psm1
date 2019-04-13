@@ -3,17 +3,26 @@
 $ErrorActionPreference = 'Stop'
 
 # Check for YAML support
-if (Get-Module -ListAvailable | Where-Object {  $_.Name -ieq 'powershell-yaml' })
+if ($PSVersionTable.ContainsKey('PSEdition') -and $PSVersionTable.PSEdition -eq 'Core')
 {
-    Import-Module powershell-yaml
-    $script:yamlSupport = $true
+    Write-Warning 'YAML support unavailable. No suitable YAML modules exist for .NET Core'
+    Write-Warning 'Convert YAML templates to JSON with https://github.com/awslabs/aws-cfn-template-flip'
+    $Script:yamlSupport = $false
 }
 else
 {
-    Write-Warning 'YAML support unavailable'
-    Write-Warning 'To enable, install powershell-yaml from the gallery'
-    Write-Warning 'Install-Module -Name powershell-yaml'
-    $Script:yamlSupport = $false
+    if (Get-Module -ListAvailable | Where-Object {  $_.Name -ieq 'powershell-yaml' })
+    {
+        Import-Module powershell-yaml
+        $script:yamlSupport = $true
+    }
+    else
+    {
+        Write-Warning 'YAML support unavailable'
+        Write-Warning 'To enable, install powershell-yaml from the gallery'
+        Write-Warning 'Install-Module -Name powershell-yaml'
+        $Script:yamlSupport = $false
+    }
 }
 
 # Init region and AZ hash. AZ's are lazy-loaded when needed as this is time consuming
@@ -60,8 +69,8 @@ $Script:CommonCredentialArguments = @{
 #endregion
 
 # Get public and private function definition files.
-$Public = @( Get-ChildItem -Path "$PSScriptRoot\Public\*.ps1" -ErrorAction SilentlyContinue )
-$Private = @( Get-ChildItem -Path "$PSScriptRoot\Private\*.ps1" -ErrorAction SilentlyContinue )
+$Public = @( Get-ChildItem -Path ([IO.Path]::Combine($PSScriptRoot, "Public", "*.ps1")) -ErrorAction SilentlyContinue )
+$Private = @( Get-ChildItem -Path ([IO.Path]::Combine($PSScriptRoot, "Private", "*.ps1")) -ErrorAction SilentlyContinue )
 
 # Dot source the files
 foreach ($import in @($Public + $Private))
