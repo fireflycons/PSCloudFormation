@@ -9,9 +9,6 @@ image:
   - Visual Studio 2017
   - Ubuntu
 
-before_test:
-  - echo "shared before_test"
-
 test_script:
   - ps: . ./build.ps1 -Task BuildAppVeyor
 
@@ -21,8 +18,10 @@ for:
     only:
       - image: Ubuntu
 
+  # Generate a manifest for Core from orignal manifest then rename module directory to fool BuildHelpers.
   before_test:
-    - echo "before_test" && mv ./PSCloudFormation ./PSCloudFormation.netcore
+    - ps: ./New-NetCoreManifest.ps1
+    - mv ./PSCloudFormation ./PSCloudFormation.netcore
 
 
 # Skip on updates to the readme.
