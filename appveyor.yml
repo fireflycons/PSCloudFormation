@@ -9,15 +9,15 @@ image:
 #  - Visual Studio 2017
   - Ubuntu
 
-for:
--
-  matrix:
-    only:
-      - image: Ubuntu
+#for:
+#-
+#  matrix:
+#    only:
+#      - image: Ubuntu
 
-  # Change the module name as detected by BuildHelpers module
-  before_test:
-    - echo "before_build" && mv ./PSCloudFormation/PSCloudFormation ./PSCloudFormation/PSCloudFormation.netcore
+# Change the module name as detected by BuildHelpers module
+before_test:
+  - echo "before_build" && mv ./PSCloudFormation/PSCloudFormation ./PSCloudFormation/PSCloudFormation.netcore
 
 # Skip on updates to the readme.
 # We can force this by adding [skip ci] or [ci skip] anywhere in commit message
