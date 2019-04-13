@@ -30,13 +30,21 @@ Properties {
     }
 
     $DefaultLocale = 'en-US'
-    $DocsRootDir = "$PSScriptRoot\docs"
+    $DocsRootDir = Join-Path $PSScriptRoot docs
     $ModuleName = "PSCloudFormation"
-    $ModuleOutDir = "$PSScriptRoot\PSCloudFormation"
+    $ModuleOutDir = Join-Path $PSScriptRoot PSCloudFormation
 
 }
 
-Task Default -Depends Deploy
+if ($script:IsCoreCLR)
+{
+    Task Default -Depends Build, Deploy
+}
+else
+{
+    Task Default -Depends BuildHelp, Deploy
+}
+
 
 Task Init {
     $lines
@@ -90,10 +98,10 @@ Task Test -Depends Init {
 
     # Gather test results. Store them in a variable and file
     $pesterParameters = @{
-        Path         = "$ProjectRoot\Tests"
+        Path         = Join-Path $ProjectRoot Tests
         PassThru     = $true
         OutputFormat = "NUnitXml"
-        OutputFile   = "$ProjectRoot\$TestFile"
+        OutputFile   = Join-Path $ProjectRoot $TestFile
     }
 
     if (-Not $IsWindows) { $pesterParameters["ExcludeTag"] = "WindowsOnly" }
@@ -104,10 +112,10 @@ Task Test -Depends Init {
     {
         (New-Object 'System.Net.WebClient').UploadFile(
             "https://ci.appveyor.com/api/testresults/nunit/$($env:APPVEYOR_JOB_ID)",
-            "$ProjectRoot\$TestFile" )
+            (Join-Path $ProjectRoot $TestFile) )
     }
 
-    Remove-Item "$ProjectRoot\$TestFile" -Force -ErrorAction SilentlyContinue
+    Remove-Item (Join-Path $ProjectRoot $TestFile) -Force -ErrorAction SilentlyContinue
 
     # Failed tests?
     # Need to tell psake or it will proceed to the deployment. Danger!
@@ -140,7 +148,7 @@ Task Build -Depends Test {
     }
 }
 
-Task Deploy -Depends BuildHelp {
+Task Deploy {
     $lines
 
     $deployParams = $(
@@ -221,7 +229,7 @@ Task GenerateMarkdown -requiredVariables DefaultLocale, DocsRootDir {
         }
 
         # ErrorAction set to SilentlyContinue so this command will not overwrite an existing MD file.
-        New-MarkdownHelp -Module $ModuleName -Locale $DefaultLocale -OutputFolder $DocsRootDir\$DefaultLocale `
+        New-MarkdownHelp -Module $ModuleName -Locale $DefaultLocale -OutputFolder (Join-Path $DocsRootDir $DefaultLocale) `
             -WithModulePage -ErrorAction SilentlyContinue -Verbose:$VerbosePreference > $null
     }
     finally
@@ -248,7 +256,7 @@ Task GenerateHelpFiles -requiredVariables DocsRootDir, ModuleName, ModuleOutDir 
     # Generate the module's primary MAML help file.
     foreach ($locale in $helpLocales)
     {
-        New-ExternalHelp -Path $DocsRootDir\$locale -OutputPath $ModuleOutDir\$locale -Force `
+        New-ExternalHelp -Path (Join-Path $DocsRootDir $locale) -OutputPath (Join-Path $ModuleOutDir $locale) -Force `
             -ErrorAction SilentlyContinue -Verbose:$VerbosePreference > $null
     }
 }

@@ -1,16 +1,26 @@
-$ModuleName = 'PSCloudFormation'
+$ModuleName = $(
+    if ($PSVersionTable.PSEdition -ieq 'Core')
+    {
+        'PSCloudFormation.netcore'
+    }
+    else
+    {
+        'PSCloudFormation'
+    }
+)
 
 # http://www.lazywinadmin.com/2016/05/using-pester-to-test-your-manifest-file.html
 # Make sure one or multiple versions of the module are not loaded
 Get-Module -Name $ModuleName | Remove-Module
 
 # Find the Manifest file
-$ManifestFile = "$(Split-path (Split-Path -Parent -Path $MyInvocation.MyCommand.Definition))\$ModuleName\$ModuleName.psd1"
+$ManifestFile = [IO.Path]::Combine((Split-path (Split-Path -Parent -Path $MyInvocation.MyCommand.Definition)), $ModuleName, "$ModuleName.psd1")
 
 Import-Module -Name $ManifestFile
 
 $global:templatePath = Join-Path $PSScriptRoot test-stack.json
 $global:paramPath = Join-Path $PSScriptRoot test-params.json
+$global:haveYaml = $null -ne (Get-Module -ListAvailable | Where-Object {  $_.Name -ieq 'powershell-yaml' })
 
 $global:azs = @(
     New-Object PSObject -Property @{ Region = 'ap-south-1'; ZoneName = @('ap-south-1a', 'ap-south-1b') }
@@ -30,7 +40,7 @@ $global:azs = @(
     New-Object PSObject -Property @{ Region = 'us-west-2'; ZoneName = @('us-west-2a', 'us-west-2b', 'us-west-2c') }
 )
 
-InModuleScope 'PSCloudFormation' {
+InModuleScope $ModuleName {
 
     Describe 'PSCloudFormation - Private' {
 
@@ -514,7 +524,7 @@ InModuleScope 'PSCloudFormation' {
                 Mock -CommandName Resolve-Path -MockWith {
 
                     New-Object PSObject -Property @{
-                        Path = 'c:\temp\test.json'
+                        Path = Join-Path ([IO.Path]::GetTempPath()) 'test.json'
                     }
                 }
 
