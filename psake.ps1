@@ -36,15 +36,9 @@ Properties {
 
 }
 
-if ($script:IsCoreCLR)
-{
-    Task Default -Depends Build, Deploy
-}
-else
-{
-    Task Default -Depends BuildHelp, Deploy
-}
+Task Default -Depends BuildHelp, Deploy
 
+Task BuildAppVeyor -Depends Build, Deploy
 
 Task Init {
     $lines
