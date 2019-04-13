@@ -39,7 +39,7 @@ PowerShell builds a dynamic parameter set as soon as you give it an argument fro
 
 With the cmdlets in this module, as soon as you tell them where the CloudFormation template is, they parse the template and extract all the parameters within and provide them as additional argments to the cmdlet, along with knowledge of whether they are required (no default), are constrained (AllowedValues, AllowedPattern), or typed (Number, `AWS::EC2::Subnet::Id` etc.) and perform pre-validation before submitting the stack update.
 
-Additionally stack creation and update provide a dump of stack failure events to the console if errors occur.
+If a cmdlet is given the `-Wait` parameter then all stack events are output to the console, including events from any nested stacks with status values in colour so you can quickly spot what is going on.
 
 ## Module Cmdlets
 
@@ -62,9 +62,11 @@ This module provides the following stack modification cmdlets
 
 ### Template Support
 
-By default, only JSON templates are supported. 
+By default, only JSON templates are supported. YAML support in Windows PowerShell is enabled by installing `powershell-yaml` from the [PowerShell Gallery](https://www.powershellgallery.com/packages/powershell-yaml). For Linux/PowerShell Core, we are awaiting a build of `powershell-yaml` that works!
 
-YAML support is enabled by installing `powershell-yaml` from the [PowerShell Gallery](https://www.powershellgallery.com/packages/powershell-yaml)
+Oversize templates in your local file system (file size >= 51,200 bytes) are directly supported. They will be siliently uploaded to an S3 bucket which is created as necessary prior to processing. The bucket is named `cf-templates-pscloudformation-region-accountid` where
+* `region` is the region you are building the stack in, e.g. `eu-west-1`.
+* `accountid` is the numeric ID of the AWS account in which you are building the stack.
 
 ### Dynamic Template Parameter Arguments
 
