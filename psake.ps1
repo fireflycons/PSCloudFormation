@@ -36,15 +36,9 @@ Properties {
 
 }
 
-if ($script:IsCoreCLR)
-{
-    Task Default -Depends Build, Deploy
-}
-else
-{
-    Task Default -Depends BuildHelp, Deploy
-}
+Task Default -Depends BuildHelp, Deploy
 
+Task BuildAppVeyor -Depends Build, Deploy
 
 Task Init {
     $lines
@@ -98,7 +92,7 @@ Task Test -Depends Init {
 
     # Gather test results. Store them in a variable and file
     $pesterParameters = @{
-        Path         = Join-Path $ProjectRoot Tests
+        Path         = Join-Path $ProjectRoot tests
         PassThru     = $true
         OutputFormat = "NUnitXml"
         OutputFile   = Join-Path $ProjectRoot $TestFile
