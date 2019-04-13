@@ -1,12 +1,24 @@
-[![Build status](https://ci.appveyor.com/api/projects/status/fgt7d0icj7emc6hl/branch/master?svg=true)](https://ci.appveyor.com/project/fireflycons/pscloudformation/branch/master)
-
 # PSCloudFormation
+|Branch|Status|
+|------|------|
+| master | [![Build status](https://ci.appveyor.com/api/projects/status/fgt7d0icj7emc6hl/branch/master?svg=true)](https://ci.appveyor.com/project/fireflycons/pscloudformation/branch/master)|
+| dev | [![Build status](https://ci.appveyor.com/api/projects/status/fgt7d0icj7emc6hl/branch/dev?svg=true)](https://ci.appveyor.com/project/fireflycons/pscloudformation/branch/dev)|
+
 
 ## How to Install
 
 The module is published on the PowerShell Gallery and can be installed by following the instructions there
 
+### Windows PowerShell
 https://www.powershellgallery.com/packages/PSCloudFormation
+
+### PowerShell Core (Linux)
+https://www.powershellgallery.com/packages/PSCloudFormation.netcore
+
+Please note that currenly YAML templates are not supported in this version due to the fact that `powershell-yaml` does not work in Linux.
+As soon as that gets sorted out, YAML support will be added to this project.
+
+In the meantime, the guys at AWS have a tool that can convert templates between JSON and YAML formats [here](https://github.com/awslabs/aws-cfn-template-flip).
 
 ## What it isn't
 
