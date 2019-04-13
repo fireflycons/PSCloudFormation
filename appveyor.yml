@@ -16,7 +16,7 @@ for:
       - image: Ubuntu
 
   # Change the module name as detected by BuildHelpers module
-  before_build:
+  before_test:
     - echo "before_build" && mv ./PSCloudFormation/PSCloudFormation ./PSCloudFormation/PSCloudFormation.netcore
 
 # Skip on updates to the readme.
