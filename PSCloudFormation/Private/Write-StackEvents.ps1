@@ -20,6 +20,9 @@ function Write-StackEvents
     .PARAMETER WriteHeaders
         If true, write column headers
 
+    .PARAMETER StackColumnWidth
+        Max width of stack name column
+
     .OUTPUTS
         Timestamp of most recent event
     #>
@@ -28,7 +31,8 @@ function Write-StackEvents
         [string[]]$StackArn,
         [hashtable]$CredentialArguments,
         [DateTime]$EventsAfter,
-        [bool]$WriteHeaders
+        [bool]$WriteHeaders,
+        [int]$StackColumnWidth
     )
 
     function Format-FixedWidthString
@@ -57,29 +61,35 @@ function Write-StackEvents
         BodyOnly        = -not $WriteHeaders
     }
 
-    $events = Get-StackEvents -StackArn $StackArn -EventsAfter $EventsAfter -CredentialArguments $CredentialArguments
-    $events |
-    Sort-Object Timestamp |
-    ForEach-Object {
-        # Issue #15 - Create a new object of fixed width strings
-        [PSCustomObject][ordered]@{
-            TimeStamp       = $ts = $_.Timestamp.ToString("HH:mm:ss")
-            StackName       = Format-FixedWidthString -Text $_.StackName -Maxlen 40
-            'Logical ID'    = Format-FixedWidthString -Text $_.LogicalResourceId -Maxlen 40
-            Status          = Format-FixedWidthString -Text $_.ResourceStatus.Value -Maxlen 45
-            'Status Reason' = $(
-                if ([string]::IsNullOrEmpty($_.ResourceStatusReason))
-                {
-                    "-"
-                }
-                else
-                {
-                    $_.ResourceStatusReason
-                }
-            )
+    try {
+        $events = Get-StackEvents -StackArn $StackArn -EventsAfter $EventsAfter -CredentialArguments $CredentialArguments
+        $events |
+        Sort-Object Timestamp |
+        ForEach-Object {
+            # Issue #15 - Create a new object of fixed width strings
+            [PSCustomObject][ordered]@{
+                TimeStamp       = $_.Timestamp.ToString("HH:mm:ss")
+                StackName       = Format-FixedWidthString -Text $_.StackName -Maxlen $StackColumnWidth
+                'Logical ID'    = Format-FixedWidthString -Text $_.LogicalResourceId -Maxlen 40
+                Status          = Format-FixedWidthString -Text $_.ResourceStatus.Value -Maxlen 45
+                'Status Reason' = $(
+                    if ([string]::IsNullOrEmpty($_.ResourceStatusReason))
+                    {
+                        "-"
+                    }
+                    else
+                    {
+                        $_.ResourceStatusReason
+                    }
+                )
+            }
+        } |
+        Write-PSObject @writePSObjectArgs
         }
-    } |
-    Write-PSObject @writePSObjectArgs
+    catch {
+        $_.ScriptStackTrace
+        throw
+    }
 
     $events.Timestamp |
     Measure-Object -Maximum |
