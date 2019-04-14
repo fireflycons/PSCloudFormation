@@ -21,6 +21,7 @@ for:
     NuGetApiKey:
       secure: ZwF65Rl156oMAenHhi8BAY0LySWhhjDvNNt91dpU7D5N88E8ToZyZHCziktv7sz3
     APPVEYOR_SSH_KEY: ssh-rsa AAAAB3NzaC1yc2EAAAABJQAAAQEAnGF97nAjzT0pZn7JCrllP+2ao0k0hY9iAUH+kg8/gLrdEJhephXIynCjEuuSPeNB9XxSd1lwm8E80p55T0fYwuzP6LFX11GJVaIsnV4rH3SUFY//MuhILu7o2FxLINDT7Kjrc04VlNxQf6YDhYNeEcyJmK8JO/gVfZmfMuEPtbtbEw9v4v1qTJaotOlJ3gmaXg8kO580N5PYjKvqhirI1ygWe1HOyLny/k4xfKMCHlAvNxSIGXqJBU5OTwXvsXypgI0RQJw4DWv2XG3BSvJkvB/crdLBubZprWv+Q6RlyBzM8FysqXLxT289yGR7n57eq+NY3BSBLfdbYmSv15nFuQ==
+    TEST_VAR: test
 
   # Generate a manifest for Core from orignal manifest then rename module directory to fool BuildHelpers.
   before_test:
