@@ -108,11 +108,9 @@ try
 
     Set-BuildEnvironment -ErrorAction SilentlyContinue
 
-    if (${env:BHBuildSystem} -ine 'Unknown')
+    if (-not ($ENV:NugetApiKey))
     {
-        # Seems AppVeyor's version of this is quite out of date
-        # These commands are not found: Wait-CFNStack, New-CFNChangeSet
-        Install-Module AWSPowerShell -Force -AllowClobber -SkipPublisherCheck -Scope CurrentUser
+        Write-Warning "NugetApiKey not found in environment"
     }
 
     Invoke-psake -buildFile $ENV:BHProjectPath\psake.ps1 -taskList $Task -nologo
