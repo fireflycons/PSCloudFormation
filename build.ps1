@@ -108,11 +108,6 @@ try
 
     Set-BuildEnvironment -ErrorAction SilentlyContinue
 
-    if (-not ($ENV:NuGetApiKey))
-    {
-        Write-Warning "NuGetApiKey not found in environment"
-    }
-
     Invoke-psake -buildFile $ENV:BHProjectPath\psake.ps1 -taskList $Task -nologo
     exit ( [int]( -not $psake.build_success ) )
 }

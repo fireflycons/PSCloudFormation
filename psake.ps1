@@ -149,11 +149,6 @@ Task Deploy {
 
         if ($ENV:BHBuildSystem -ieq 'AppVeyor')
         {
-            if (-not ($ENV:NuGetApiKey))
-            {
-                Write-Warning "NuGetApiKey not found in environment"
-            }
-
             # We will deploy _something_
             Write-Host '- Deploying to'
             Write-Host '  - AppVeyor Artifact'
