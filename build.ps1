@@ -108,13 +108,6 @@ try
 
     Set-BuildEnvironment -ErrorAction SilentlyContinue
 
-    if (${env:BHBuildSystem} -ine 'Unknown')
-    {
-        # Seems AppVeyor's version of this is quite out of date
-        # These commands are not found: Wait-CFNStack, New-CFNChangeSet
-        Install-Module AWSPowerShell -Force -AllowClobber -SkipPublisherCheck -Scope CurrentUser
-    }
-
     Invoke-psake -buildFile $ENV:BHProjectPath\psake.ps1 -taskList $Task -nologo
     exit ( [int]( -not $psake.build_success ) )
 }
