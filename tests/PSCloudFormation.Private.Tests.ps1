@@ -484,6 +484,8 @@ InModuleScope $ModuleName {
             It 'Should not copy template to S3 if size less than 51200' {
 
                 $template = New-Object String -ArgumentList '*', 51119
+                $templatePath = [IO.Path]::Combine($TestDrive, "not-oversize.json")
+                [IO.File]::WriteAllText($templatePath, $template, (New-Object System.Text.ASCIIEncoding))
 
                 $stackArguments = @{
                     TemplateBody = $template
@@ -496,7 +498,7 @@ InModuleScope $ModuleName {
                 Mock -CommandName Write-S3Object -MockWith { }
 
                 $dateStamp = [DateTime]::UtcNow.ToString('yyyyMMddHHmmss')
-                Copy-OversizeTemplateToS3 -TemplateLocation test.json -CredentialArguments @{} -StackArguments $stackArguments
+                Copy-OversizeTemplateToS3 -TemplateLocation $templatePath -CredentialArguments @{} -StackArguments $stackArguments
 
                 $stackArguments.ContainsKey('TemplateBody') | Should Be $true
                 $StackArguments.ContainsKey('TemplateURL') | Should Be $false
@@ -509,6 +511,8 @@ InModuleScope $ModuleName {
             It 'Should copy oversize template to S3' {
 
                 $template = New-Object String -ArgumentList '*', 51200
+                $templatePath = [IO.Path]::Combine($TestDrive, "oversize.json")
+                [IO.File]::WriteAllText($templatePath, $template, (New-Object System.Text.ASCIIEncoding))
 
                 $stackArguments = @{
                     TemplateBody = $template
@@ -531,11 +535,11 @@ InModuleScope $ModuleName {
                 Mock -CommandName Write-S3Object -MockWith { }
 
                 $dateStamp = [DateTime]::UtcNow.ToString('yyyyMMddHHmmss')
-                Copy-OversizeTemplateToS3 -TemplateLocation test.json -CredentialArguments @{} -StackArguments $stackArguments
+                Copy-OversizeTemplateToS3 -TemplateLocation $templatePath -CredentialArguments @{} -StackArguments $stackArguments
 
                 $stackArguments.ContainsKey('TemplateBody') | Should Be $false
                 $StackArguments.ContainsKey('TemplateURL') | Should Be $true
-                $stackArguments['TemplateURL'] | Should Be "https://s3.us-east-1.amazonaws.com/test-bucket/$($dateStamp)-test.json"
+                $stackArguments['TemplateURL'] | Should Be "https://s3.us-east-1.amazonaws.com/test-bucket/$($dateStamp)-oversize.json"
             }
         }
     }

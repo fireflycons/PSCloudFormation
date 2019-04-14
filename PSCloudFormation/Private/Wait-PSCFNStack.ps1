@@ -46,8 +46,29 @@ function Wait-PSCFNStack
         'UPDATE_ROLLBACK_FAILED'
     )
 
-    $anyFailed = $false
+    # Best guess how wide to make stack name column
+    $stackColumnWidth = $arns | Foreach-Object {
+        Get-CFNStack -StackName $_ @CredentialArguments
+    } |
+    Foreach-Object {
+        $stack = $_
 
+        # This stack
+        $stack.StackName.Length
+
+        # Nested stacks
+        Get-CFNStackResourceList -StackName $_.StackId @CredentialArguments |
+        Where-Object {
+            $_.ResourceType -ieq 'AWS::CloudFormation::Stack'
+        } |
+        Foreach-Object {
+            ($stack.StackName + "-" + $_.LogicalResourceId + "-" + ("X" * 12)).Length
+        }
+    } |
+    Measure-Object -Maximum |
+    Select-Object -ExpandProperty Maximum
+
+    $anyFailed = $false
     $writeHeaders = $true
 
     while (($arns | Measure-Object).Count -gt 0)
@@ -77,7 +98,7 @@ function Wait-PSCFNStack
             $arns = Compare-Object -ReferenceObject $arns -DifferenceObject $completedStackArns -PassThru
         }
 
-        $ts = Write-StackEvents -StackArn $arns -EventsAfter $checkTime $CredentialArguments -WriteHeaders $writeHeaders
+        $ts = Write-StackEvents -StackArn $arns -EventsAfter $checkTime $CredentialArguments -WriteHeaders $writeHeaders -StackColumnWidth $stackColumnWidth
         $writeHeaders = $false
 
         if ($ts)
@@ -86,7 +107,7 @@ function Wait-PSCFNStack
         }
     }
 
-    Write-StackEvents -StackArn $StackArn -EventsAfter $checkTime $CredentialArguments -WriteHeaders $false
+    Write-StackEvents -StackArn $StackArn -EventsAfter $checkTime $CredentialArguments -WriteHeaders $false -StackColumnWidth $stackColumnWidth
 
     # Output boolean - any final state containing ROLLBACK or FAILED indicates operation unsuccessful
     -not $anyFailed

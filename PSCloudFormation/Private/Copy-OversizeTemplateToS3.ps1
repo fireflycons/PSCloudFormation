@@ -31,7 +31,7 @@ function Copy-OversizeTemplateToS3
     }
 
     # Measure the body size in bytes
-    if ([System.Text.ASCIIEncoding]::ASCII.GetByteCount($StackArguments['TemplateBody']) -lt 51200)
+    if ((Get-Item -Path $TemplateLocation).Length -lt 51200)
     {
         return
     }

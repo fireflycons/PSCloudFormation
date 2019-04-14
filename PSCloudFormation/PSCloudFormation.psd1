@@ -12,7 +12,7 @@
     RootModule        = 'PSCloudFormation.psm1'
 
     # Version number of this module.
-    ModuleVersion     = '0.5.0'
+    ModuleVersion     = '1.0.0'
 
     # Supported PSEditions
     # CompatiblePSEditions = @()
@@ -110,7 +110,7 @@
             # IconUri = ''
 
             # ReleaseNotes of this module
-            ReleaseNotes = "Improve format of stack events.\nFix event timestamp bug - times are local not UTC.\nSupport JSON parameters.\nFix string formatting bug."
+            ReleaseNotes = "First major release. Now supports PowerShell Core/Linux!"
 
         } # End of PSData hashtable
 
