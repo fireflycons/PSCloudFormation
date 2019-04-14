@@ -149,9 +149,9 @@ Task Deploy {
 
         if ($ENV:BHBuildSystem -ieq 'AppVeyor')
         {
-            if (-not ($ENV:NugetApiKey))
+            if (-not ($ENV:NuGetApiKey))
             {
-                Write-Warning "NugetApiKey not found in environment"
+                Write-Warning "NuGetApiKey not found in environment"
             }
 
             # We will deploy _something_
