@@ -24,9 +24,12 @@ for:
 
   # Generate a manifest for Core from orignal manifest then rename module directory to fool BuildHelpers.
   before_test:
+    - curl -sflL 'https://raw.githubusercontent.com/appveyor/ci/master/scripts/enable-ssh.sh' | bash -e -
     - ps: ./New-NetCoreManifest.ps1
     - mv ./PSCloudFormation ./PSCloudFormation.netcore
-
+  on_finish:
+    - sh: export APPVEYOR_SSH_BLOCK=true
+    - sh: curl -sflL 'https://raw.githubusercontent.com/appveyor/ci/master/scripts/enable-ssh.sh' | bash -e -
 
 # Skip on updates to the readme.
 # We can force this by adding [skip ci] or [ci skip] anywhere in commit message
