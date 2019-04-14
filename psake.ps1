@@ -169,7 +169,7 @@ Task Deploy {
             # Emit parameters
             $params
         }
-        else 
+        else
         {
             $null
         }
