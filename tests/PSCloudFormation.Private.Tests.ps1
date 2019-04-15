@@ -431,27 +431,15 @@ InModuleScope $ModuleName {
                 Get-CurrentRegion -CredentialArguments $credArgs | Should -Be 'eu-west-2'
             }
 
-            It 'Should throw on Linux if region undefined' {
+            It 'Should throw if default region never initialised' {
 
-                if ((Get-Variable -Name IsLinux -ErrorAction Ignore) -and $IsLinux)
+                if ($null -eq [Amazon.Runtime.FallbackRegionFactory]::GetRegionEndpoint())
                 {
                     { Get-CurrentRegion -CredentialArguments @{} } | Should -Throw
                 }
                 else
                 {
-                    Set-ItResult -Inconclusive -Because "Not running on Linux"
-                }
-            }
-
-            It 'Should get a default region on Windows if region undefined' {
-
-                if (-not ((Get-Variable -Name IsLinux -ErrorAction Ignore) -and $IsLinux))
-                {
-                    { Get-CurrentRegion -CredentialArguments @{} } | Should -Not -Throw
-                }
-                else
-                {
-                    Set-ItResult -Inconclusive -Because "Not running on Windows"
+                    Set-ItResult -Inconclusive -Because "you have already initialised a region (should not be the case on AppVeyor)."
                 }
             }
 
