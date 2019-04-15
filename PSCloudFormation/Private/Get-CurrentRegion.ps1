@@ -19,8 +19,21 @@ function Get-CurrentRegion
     {
         $CredentialArguments['Region']
     }
+    elseif (Test-Path -Path variable:StoredAWSRegion)
+    {
+        $StoredAWSRegion
+    }
     else
     {
-        [Amazon.Runtime.FallbackRegionFactory]::GetRegionEndpoint().SystemName
+        $fallbackRegion = [Amazon.Runtime.FallbackRegionFactory]::GetRegionEndpoint()
+
+        if ($null -ne $fallbackRegion)
+        {
+            $fallbackRegion.SystemName
+        }
+        else
+        {
+            throw "Cannot determine AWS Region. Either use Set-DefaultAWSRegion to set in shell, or supply -Region parameter."
+        }
     }
 }

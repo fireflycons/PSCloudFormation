@@ -14,7 +14,12 @@ $ModuleName = $(
 Get-Module -Name $ModuleName | Remove-Module
 
 # Find the Manifest file
-$ManifestFile = [IO.Path]::Combine((Split-path (Split-Path -Parent -Path $MyInvocation.MyCommand.Definition)), $ModuleName, "$ModuleName.psd1")
+$ManifestFile = Get-ChildItem -Path (Split-path (Split-Path -Parent -Path $MyInvocation.MyCommand.Definition)) -Recurse -Filter "$ModuleName.psd1" | Select-Object -ExpandProperty FullName
+
+if (($ManifestFile | Measure-Object).Count -ne 1)
+{
+    throw "Cannot locate $ModuleName.psd1"
+}
 
 Import-Module -Name $ManifestFile
 
@@ -408,6 +413,43 @@ InModuleScope $ModuleName {
 
             }
         }
+
+        Context 'Get-CurrentRegion' {
+
+            BeforeEach {
+
+                if (Test-Path -Path variable:StoredAWSRegion)
+                {
+                    Remove-Item  -Path variable:StoredAWSRegion
+                }
+            }
+
+            It 'Should return region passed in credential arguments' {
+
+                $credArgs = @{ Region = 'eu-west-2'}
+
+                Get-CurrentRegion -CredentialArguments $credArgs | Should -Be 'eu-west-2'
+            }
+
+            It 'Should throw if default region never initialised' {
+
+                if ($null -eq [Amazon.Runtime.FallbackRegionFactory]::GetRegionEndpoint())
+                {
+                    { Get-CurrentRegion -CredentialArguments @{} } | Should -Throw
+                }
+                else
+                {
+                    Set-ItResult -Inconclusive -Because "you have already initialised a region (should not be the case on AppVeyor)."
+                }
+            }
+
+            It 'Should return region set by Set-DefaultAWSRegion if no specific region passed' {
+
+                Set-DefaultAWSRegion -Region us-east-2
+                Get-CurrentRegion -CredentialArguments $credArgs | Should -Be 'us-east-2'
+            }
+        }
+
 
         Context 'S3 Cloudformation Bucket' {
 
