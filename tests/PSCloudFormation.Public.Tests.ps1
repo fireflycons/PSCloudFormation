@@ -16,7 +16,12 @@ $global:haveYaml = $null -ne (Get-Module -ListAvailable | Where-Object {  $_.Nam
 Get-Module -Name $ModuleName | Remove-Module
 
 # Find the Manifest file
-$ManifestFile = [IO.Path]::Combine((Split-path (Split-Path -Parent -Path $MyInvocation.MyCommand.Definition)), $ModuleName, "$ModuleName.psd1")
+$ManifestFile = Get-ChildItem -Path (Split-path (Split-Path -Parent -Path $MyInvocation.MyCommand.Definition)) -Recurse -Filter "$ModuleName.psd1" | Select-Object -ExpandProperty FullName
+
+if (($ManifestFile | Measure-Object).Count -ne 1)
+{
+    throw "Cannot locate $ModuleName.psd1"
+}
 
 $global:TestStackArn = 'arn:aws:cloudformation:us-east-1:000000000000:stack/pester/00000000-0000-0000-0000-000000000000'
 $global:TestStackFilePathWithoutExtension = Join-Path $PSScriptRoot test-stack
