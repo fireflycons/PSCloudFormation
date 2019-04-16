@@ -12,7 +12,7 @@
     RootModule        = 'PSCloudFormation.psm1'
 
     # Version number of this module.
-    ModuleVersion     = '1.0.4'
+    ModuleVersion     = '1.0.5'
 
     # Supported PSEditions
     # CompatiblePSEditions = @()
@@ -101,7 +101,7 @@
             ExternalModuleDependencies = @('AWSPowerShell')
 
             # A URL to the license for this module.
-            LicenseUri                 = 'https://github.com/fireflycons/PSCloudFormation/LICENSE'
+            LicenseUri                 = 'https://github.com/fireflycons/PSCloudFormation/blob/master/LICENSE'
 
             # A URL to the main website for this project.
             ProjectUri                 = 'https://github.com/fireflycons/PSCloudFormation'
@@ -110,7 +110,7 @@
             # IconUri = ''
 
             # ReleaseNotes of this module
-            ReleaseNotes = "First major release. Now supports PowerShell Core/Linux!"
+            ReleaseNotes = "https://github.com/fireflycons/PSCloudFormation/blob/master/RELEASENOTES.md"
 
         } # End of PSData hashtable
 
