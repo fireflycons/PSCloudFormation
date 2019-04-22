@@ -33,6 +33,10 @@ try
 
     $sharedModules = @(
         New-Object PSObject -Property @{
+            Name            = 'powershell-yaml'
+            RequiredVersion = [Version]'0.4.0'
+        }
+        New-Object PSObject -Property @{
             Name            = 'psake'
             RequiredVersion = [Version]'4.7.4'
         }
@@ -64,10 +68,6 @@ try
                     Name            = 'AWSPowerShell'
                     RequiredVersion = [Version]'3.3.485.0'
                 }
-                New-Object PSObject -Property @{
-                    Name            = 'powershell-yaml'
-                    RequiredVersion = [Version]'0.4.0'
-                }
             )
         }
     }
@@ -80,10 +80,6 @@ try
                 New-Object PSObject -Property @{
                     Name            = 'AWSPowerShell.netcore'
                     RequiredVersion = [Version]'3.3.485.0'
-                }
-                New-Object PSObject -Property @{
-                    Name            = 'powershell-yaml'
-                    RequiredVersion = [Version]'0.4.0'
                 }
             )
         }
