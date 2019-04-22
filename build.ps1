@@ -38,7 +38,11 @@ try
             Name            = 'PSDeploy'
             RequiredVersion = [Version]'1.0.1'
         }
-    )
+        New-Object PSObject -Property @{
+            Name            = 'powershell-yaml'
+            RequiredVersion = [Version]'0.4.0'
+        }
+)
 
     if ($IsWindows -and -not $IsCoreClr)
     {
@@ -49,10 +53,6 @@ try
                 New-Object PSObject -Property @{
                     Name            = 'platyPS'
                     RequiredVersion = [Version]'0.12.0'
-                }
-                New-Object PSObject -Property @{
-                    Name            = 'powershell-yaml'
-                    RequiredVersion = [Version]'0.3.5'
                 }
                 New-Object PSObject -Property @{
                     Name            = 'AWSPowerShell'
