@@ -22,6 +22,8 @@ for:
 #    - sudo apt update -y
 #    - sudo apt upgrade powershell -y
     - sudo snap install --classic powershell
+    - sudo mkdir /run/user/1001
+    - sudo chown 1001 /run/user/1001
     - /snap/bin/pwsh -Command "$PSVersionTable"
     - ps: ./New-NetCoreManifest.ps1
     - mv ./PSCloudFormation ./PSCloudFormation.netcore
