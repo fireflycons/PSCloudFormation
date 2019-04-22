@@ -7,6 +7,16 @@ try
 
     # Grab nuget bits, install modules, set build variables, start build.
     Write-Host 'Setting up build environment'
+
+    $PSVersionTable
+
+    $assemblies = [System.AppDomain]::CurrentDomain.GetAssemblies()
+    $yamlDotNet = $assemblies | where-object Location -Match YamlDotNet.dll
+    if ($yamlDotNet) {
+        $yamlDotNet | fl *
+    }
+    $assemblies
+    
     Get-PackageProvider -Name NuGet -ForceBootstrap | Out-Null
 
     if (-not (Get-Variable -Name IsWindows -ErrorAction SilentlyContinue))
@@ -38,11 +48,7 @@ try
             Name            = 'PSDeploy'
             RequiredVersion = [Version]'1.0.1'
         }
-        New-Object PSObject -Property @{
-            Name            = 'powershell-yaml'
-            RequiredVersion = [Version]'0.4.0'
-        }
-)
+    )
 
     if ($IsWindows -and -not $IsCoreClr)
     {
@@ -58,8 +64,11 @@ try
                     Name            = 'AWSPowerShell'
                     RequiredVersion = [Version]'3.3.485.0'
                 }
+                New-Object PSObject -Property @{
+                    Name            = 'powershell-yaml'
+                    RequiredVersion = [Version]'0.4.0'
+                }
             )
-
         }
     }
     else
@@ -71,6 +80,10 @@ try
                 New-Object PSObject -Property @{
                     Name            = 'AWSPowerShell.netcore'
                     RequiredVersion = [Version]'3.3.485.0'
+                }
+                New-Object PSObject -Property @{
+                    Name            = 'powershell-yaml'
+                    RequiredVersion = [Version]'0.4.0'
                 }
             )
         }
