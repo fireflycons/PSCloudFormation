@@ -19,6 +19,7 @@ for:
 
   # Generate a manifest for Core from orignal manifest then rename module directory to fool BuildHelpers.
   before_test:
+    - sudo apt update -y
     - sudo apt upgrade powershell -y
     - ps: ./New-NetCoreManifest.ps1
     - mv ./PSCloudFormation ./PSCloudFormation.netcore
