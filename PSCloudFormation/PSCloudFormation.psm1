@@ -3,17 +3,31 @@
 $ErrorActionPreference = 'Stop'
 
 # Check for YAML support
-if (Get-Module -ListAvailable | Where-Object {  $_.Name -ieq 'powershell-yaml' })
+$psyaml = Get-Module -ListAvailable |
+Where-Object {
+    $_.Name -ieq 'powershell-yaml'
+}
+
+$Script:yamlSupport = $false
+
+if ($psyaml)
 {
-    Import-Module powershell-yaml
-    $script:yamlSupport = $true
+    if ($PSVersionTable.ContainsKey('PSEdition') -and $PSVersionTable.PSEdition -eq 'Core' -and -not ($psyaml | Where-Object { $_.Version -ge [Version]'0.4.0'} ))
+    {
+        Write-Warning "powershell-yaml >= 0.4.0 required in this version."
+        Write-Warning "Please upgrade to enable YAML support."
+    }
+    else
+    {
+        Import-Module powershell-yaml
+        $script:yamlSupport = $true
+    }
 }
 else
 {
     Write-Warning 'YAML support unavailable'
     Write-Warning 'To enable, install powershell-yaml from the gallery'
     Write-Warning 'Install-Module -Name powershell-yaml'
-    $Script:yamlSupport = $false
 }
 
 # Init region and AZ hash. AZ's are lazy-loaded when needed as this is time consuming
