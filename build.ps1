@@ -7,6 +7,7 @@ try
 
     # Grab nuget bits, install modules, set build variables, start build.
     Write-Host 'Setting up build environment'
+
     Get-PackageProvider -Name NuGet -ForceBootstrap | Out-Null
 
     if (-not (Get-Variable -Name IsWindows -ErrorAction SilentlyContinue))
@@ -22,6 +23,10 @@ try
     $loadedModules = Get-Module | Select-Object Name, Version
 
     $sharedModules = @(
+        New-Object PSObject -Property @{
+            Name            = 'powershell-yaml'
+            RequiredVersion = [Version]'0.4.0'
+        }
         New-Object PSObject -Property @{
             Name            = 'psake'
             RequiredVersion = [Version]'4.7.4'
@@ -51,15 +56,10 @@ try
                     RequiredVersion = [Version]'0.12.0'
                 }
                 New-Object PSObject -Property @{
-                    Name            = 'powershell-yaml'
-                    RequiredVersion = [Version]'0.3.5'
-                }
-                New-Object PSObject -Property @{
                     Name            = 'AWSPowerShell'
                     RequiredVersion = [Version]'3.3.485.0'
                 }
             )
-
         }
     }
     else

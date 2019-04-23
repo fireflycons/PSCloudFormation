@@ -3,26 +3,31 @@
 $ErrorActionPreference = 'Stop'
 
 # Check for YAML support
-if ($PSVersionTable.ContainsKey('PSEdition') -and $PSVersionTable.PSEdition -eq 'Core')
-{
-    Write-Warning 'YAML support unavailable. No suitable YAML modules exist for .NET Core'
-    Write-Warning 'Convert YAML templates to JSON with https://github.com/awslabs/aws-cfn-template-flip'
-    $Script:yamlSupport = $false
+$psyaml = Get-Module -ListAvailable |
+Where-Object {
+    $_.Name -ieq 'powershell-yaml'
 }
-else
+
+$Script:yamlSupport = $false
+
+if ($psyaml)
 {
-    if (Get-Module -ListAvailable | Where-Object {  $_.Name -ieq 'powershell-yaml' })
+    if ($PSVersionTable.ContainsKey('PSEdition') -and $PSVersionTable.PSEdition -eq 'Core' -and -not ($psyaml | Where-Object { $_.Version -ge [Version]'0.4.0'} ))
+    {
+        Write-Warning "powershell-yaml >= 0.4.0 required in this version."
+        Write-Warning "Please upgrade to enable YAML support."
+    }
+    else
     {
         Import-Module powershell-yaml
         $script:yamlSupport = $true
     }
-    else
-    {
-        Write-Warning 'YAML support unavailable'
-        Write-Warning 'To enable, install powershell-yaml from the gallery'
-        Write-Warning 'Install-Module -Name powershell-yaml'
-        $Script:yamlSupport = $false
-    }
+}
+else
+{
+    Write-Warning 'YAML support unavailable'
+    Write-Warning 'To enable, install powershell-yaml from the gallery'
+    Write-Warning 'Install-Module -Name powershell-yaml'
 }
 
 # Init region and AZ hash. AZ's are lazy-loaded when needed as this is time consuming

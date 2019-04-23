@@ -19,6 +19,7 @@ for:
 
   # Generate a manifest for Core from orignal manifest then rename module directory to fool BuildHelpers.
   before_test:
+    # Set up for .net core build
     - ps: ./New-NetCoreManifest.ps1
     - mv ./PSCloudFormation ./PSCloudFormation.netcore
 
