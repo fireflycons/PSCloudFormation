@@ -15,11 +15,6 @@ https://www.powershellgallery.com/packages/PSCloudFormation
 ### PowerShell Core (Linux)
 https://www.powershellgallery.com/packages/PSCloudFormation.netcore
 
-Please note that currenly YAML templates are not supported in this version due to the fact that `powershell-yaml` does not work in Linux.
-As soon as that gets sorted out, YAML support will be added to this project.
-
-In the meantime, the guys at AWS have a tool that can convert templates between JSON and YAML formats [here](https://github.com/awslabs/aws-cfn-template-flip).
-
 ## What it isn't
 
 It isn't intended as a replacement for the raw API `New-CFNStack` etc. You should continue to use those in automation scripts.
@@ -62,7 +57,7 @@ This module provides the following stack modification cmdlets
 
 ### Template Support
 
-By default, only JSON templates are supported. YAML support in Windows PowerShell is enabled by installing `powershell-yaml` from the [PowerShell Gallery](https://www.powershellgallery.com/packages/powershell-yaml). For Linux/PowerShell Core, we are awaiting a build of `powershell-yaml` that works!
+By default, only JSON templates are supported. YAML support is enabled by installing `powershell-yaml` from the [PowerShell Gallery](https://www.powershellgallery.com/packages/powershell-yaml).
 
 Oversize templates in your local file system (file size >= 51,200 bytes) are directly supported. They will be siliently uploaded to an S3 bucket which is created as necessary prior to processing. The bucket is named `cf-templates-pscloudformation-region-accountid` where
 * `region` is the region you are building the stack in, e.g. `eu-west-1`.
@@ -134,5 +129,6 @@ When using ```Update-PSCFNStack ``` you only need to supply values on the comman
 
 Thanks to
 
-* [ramblingcookiemonster](http://ramblingcookiemonster.github.io/) for New-DynamicParam and build stuff.
-* [Ahmad Gad](http://ahmad.jempress.com) for Write-PSObject that provides coloured output of stack events.
+* [ramblingcookiemonster](http://ramblingcookiemonster.github.io/) for `New-DynamicParam` and build stuff.
+* [Ahmad Gad](http://ahmad.jempress.com) for `Write-PSObject` that provides coloured output of stack events.
+* [Gabriel Samfira](https://github.com/gabriel-samfira) for `powershell-yaml` and his help in [getting to the bottom of an assembly version clash](https://github.com/cloudbase/powershell-yaml/issues/47) when loading it.
