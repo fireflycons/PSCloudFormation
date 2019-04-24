@@ -247,14 +247,15 @@ function Update-PSCFNStack
                     $null,
                     @(
                         New-Object System.Management.Automation.Host.ChoiceDescription ('&Yes', "Start rebuild now." )
-                        New-Object System.Management.Automation.Host.ChoiceDescription ('&No', 'Abort operation.')
+                        New-Object System.Management.Automation.Host.ChoiceDescription ('&No', 'Cancel operation.')
                     ),
                     0
                 )
 
                 if ($choice -ne 0)
                 {
-                    throw "Aborted."
+                    Write-Warning "Update cancelled."
+                    return $stack.StackId
                 }
             }
 
