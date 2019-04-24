@@ -23,7 +23,7 @@ function Copy-OversizeTemplateToS3
         [string]$TemplateLocation
     )
 
-    $dateStamp = [DateTime]::UtcNow.ToString('yyyyMMddHHmmss')
+    $dateStamp = (Get-Date).ToUniversalTime().ToString('yyyyMMddHHmmssfff')
 
     if (-not $StackArguments.ContainsKey('TemplateBody'))
     {
@@ -38,7 +38,7 @@ function Copy-OversizeTemplateToS3
 
     # Oversize - need to upload
     $bucket = Get-CloudFormationBucket -CredentialArguments $CredentialArguments
-    $key = $dateStamp + '-' + [IO.Path]::GetFileName($TemplateLocation)
+    $key = $dateStamp + '_' + $StackArguments['StackName'] + '_' + [IO.Path]::GetFileName($TemplateLocation)
 
     $ub = New-Object UriBuilder -ArgumentList $bucket.BucketUrl
     $ub.Path += "/$key"

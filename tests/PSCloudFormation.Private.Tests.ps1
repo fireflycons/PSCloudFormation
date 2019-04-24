@@ -539,7 +539,6 @@ InModuleScope $ModuleName {
 
                 Mock -CommandName Write-S3Object -MockWith { }
 
-                $dateStamp = [DateTime]::UtcNow.ToString('yyyyMMddHHmmss')
                 Copy-OversizeTemplateToS3 -TemplateLocation $templatePath -CredentialArguments @{} -StackArguments $stackArguments
 
                 $stackArguments.ContainsKey('TemplateBody') | Should Be $true
@@ -557,6 +556,7 @@ InModuleScope $ModuleName {
                 [IO.File]::WriteAllText($templatePath, $template, (New-Object System.Text.ASCIIEncoding))
 
                 $stackArguments = @{
+                    StackName = "oversize-stack"
                     TemplateBody = $template
                 }
 
@@ -565,6 +565,11 @@ InModuleScope $ModuleName {
                         BucketName = 'test-bucket'
                         BucketUrl = [uri]'https://s3.us-east-1.amazonaws.com/test-bucket'
                     }
+                }
+
+                Mock -CommandName Get-Date -MockWith {
+
+                    New-Object DateTime -ArgumentList (2000,1,1,0,0,0,0)
                 }
 
                 Mock -CommandName Resolve-Path -MockWith {
@@ -576,12 +581,11 @@ InModuleScope $ModuleName {
 
                 Mock -CommandName Write-S3Object -MockWith { }
 
-                $dateStamp = [DateTime]::UtcNow.ToString('yyyyMMddHHmmss')
                 Copy-OversizeTemplateToS3 -TemplateLocation $templatePath -CredentialArguments @{} -StackArguments $stackArguments
 
                 $stackArguments.ContainsKey('TemplateBody') | Should Be $false
                 $StackArguments.ContainsKey('TemplateURL') | Should Be $true
-                $stackArguments['TemplateURL'] | Should Be "https://s3.us-east-1.amazonaws.com/test-bucket/$($dateStamp)-oversize.json"
+                $stackArguments['TemplateURL'] | Should Be "https://s3.us-east-1.amazonaws.com/test-bucket/20000101000000000_oversize-stack_oversize.json"
             }
         }
     }
