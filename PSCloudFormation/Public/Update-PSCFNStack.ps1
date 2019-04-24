@@ -228,6 +228,12 @@ function Update-PSCFNStack
 
             if ($cs.Status -ieq 'FAILED')
             {
+                if ($cs.StatusReason -ilike "*The submitted information didn't contain changes*")
+                {
+                    Write-Warning "Changeset $changesetName failed to create: $($cs.StatusReason)"
+                    return $stack.StackId
+                }
+
                 Write-Host -ForegroundColor Red -BackgroundColor Black "Changeset $changesetName failed to create: $($cs.StatusReason)"
                 throw "Changeset failed to create"
             }
