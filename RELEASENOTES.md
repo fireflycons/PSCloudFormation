@@ -1,6 +1,20 @@
 # Release Notes
 
-## CURRENT (v1.0.5)
+## v1.2.0
+
+24 Apr 2019
+
+* `Update-PSCFNStack` - Don't throw if no changes detected. Only warn.
+* `Update-PSCFNStack` - Don't throw if update cancelled. Only warn.
+* Oversize templates - Generate a more unique S3 key.
+
+## v1.1.0
+
+23 Apr 2019
+
+* Fixed issues with powershell-yaml in NetCore/Linux. YAML support now available
+
+## v1.0.5
 
 16 Apr 2019
 

@@ -228,6 +228,12 @@ function Update-PSCFNStack
 
             if ($cs.Status -ieq 'FAILED')
             {
+                if ($cs.StatusReason -ilike "*The submitted information didn't contain changes*")
+                {
+                    Write-Warning "Changeset $changesetName failed to create: $($cs.StatusReason)"
+                    return $stack.StackId
+                }
+
                 Write-Host -ForegroundColor Red -BackgroundColor Black "Changeset $changesetName failed to create: $($cs.StatusReason)"
                 throw "Changeset failed to create"
             }
@@ -241,14 +247,15 @@ function Update-PSCFNStack
                     $null,
                     @(
                         New-Object System.Management.Automation.Host.ChoiceDescription ('&Yes', "Start rebuild now." )
-                        New-Object System.Management.Automation.Host.ChoiceDescription ('&No', 'Abort operation.')
+                        New-Object System.Management.Automation.Host.ChoiceDescription ('&No', 'Cancel operation.')
                     ),
                     0
                 )
 
                 if ($choice -ne 0)
                 {
-                    throw "Aborted."
+                    Write-Warning "Update cancelled."
+                    return $stack.StackId
                 }
             }
 

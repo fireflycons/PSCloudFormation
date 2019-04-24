@@ -9,7 +9,7 @@ $ModuleName = $(
     }
 )
 
-$global:haveYaml = $null -ne (Get-Module -ListAvailable | Where-Object {  $_.Name -ieq 'powershell-yaml' })
+$global:haveYaml = $null -ne (Get-Module -ListAvailable | Where-Object { $_.Name -ieq 'powershell-yaml' })
 
 # http://www.lazywinadmin.com/2016/05/using-pester-to-test-your-manifest-file.html
 # Make sure one or multiple versions of the module are not loaded
@@ -24,6 +24,8 @@ if (($ManifestFile | Measure-Object).Count -ne 1)
 }
 
 $global:TestStackArn = 'arn:aws:cloudformation:us-east-1:000000000000:stack/pester/00000000-0000-0000-0000-000000000000'
+$global:UnchangedStackArn = 'arn:aws:cloudformation:us-east-1:000000000000:stack/unchanged/00000000-0000-0000-0000-000000000000'
+
 $global:TestStackFilePathWithoutExtension = Join-Path $PSScriptRoot test-stack
 
 # Import the module and store the information about the module
@@ -177,7 +179,7 @@ InModuleScope $ModuleName {
                         'us-west-1'
                         'us-west-2'
                     ) |
-                        ForEach-Object {
+                    ForEach-Object {
 
                         Write-Host -ForegroundColor DarkGreen "      [?] - Testing region $($_)"
                         { New-PSCFNStack -StackName pester -TemplateLocation "$($global:TestStackFilePathWithoutExtension).$($ext)" -VpcCidr 10.0.0.0/16 -Region $_ } | Should Not Throw
@@ -198,7 +200,7 @@ InModuleScope $ModuleName {
                 return @{
                     StackParameters = @(
                         New-Object Amazon.CloudFormation.Model.Parameter |
-                            ForEach-Object {
+                        ForEach-Object {
                             $_.ParameterKey = 'VpcCidr'
                             $_.ParameterValue = '10.0.0.0/16'
                             $_.UsePreviousValue = $true
@@ -206,6 +208,22 @@ InModuleScope $ModuleName {
                         }
                     )
                     StackId         = $global:TestStackArn
+                }
+            }
+
+            Mock -CommandName Get-CFNStack -ParameterFilter { $StackName -eq 'unchanged' } -MockWith {
+
+                return @{
+                    StackParameters = @(
+                        New-Object Amazon.CloudFormation.Model.Parameter |
+                        ForEach-Object {
+                            $_.ParameterKey = 'VpcCidr'
+                            $_.ParameterValue = '10.0.0.0/16'
+                            $_.UsePreviousValue = $true
+                            $_
+                        }
+                    )
+                    StackId         = $global:UnchangedStackArn
                 }
             }
 
@@ -217,6 +235,11 @@ InModuleScope $ModuleName {
                 }
 
                 return 'arn:aws:cloudformation:us-east-1:000000000000:changeSet/SampleChangeSet/1a2345b6-0000-00a0-a123-00abc0abc000'
+            }
+
+            Mock -CommandName New-CFNChangeSet -ParameterFilter { $StackName -eq 'unchanged' } -MockWith {
+
+                return 'arn:aws:cloudformation:us-east-1:000000000000:changeSet/Unchanged/1a2345b6-0000-00a0-a123-00abc0abc000'
             }
 
             Mock -CommandName Get-CFNChangeSet -MockWith {
@@ -236,7 +259,15 @@ InModuleScope $ModuleName {
                 }
             }
 
-            Mock -CommandName Start-CFNChangeSet -MockWith {}
+            Mock -CommandName Get-CFNChangeSet -ParameterFilter { $ChangeSetName -eq 'arn:aws:cloudformation:us-east-1:000000000000:changeSet/Unchanged/1a2345b6-0000-00a0-a123-00abc0abc000' }  -MockWith {
+
+                return @{
+                    Status       = 'FAILED'
+                    StatusReason = "The submitted information didn't contain changes. Submit different information to create a change set."
+                }
+            }
+
+            Mock -CommandName Start-CFNChangeSet -MockWith { }
 
             Mock -CommandName Wait-CFNStack -MockWith {
 
@@ -264,12 +295,6 @@ InModuleScope $ModuleName {
                 }
 
                 It "Should update when stack exists ($($ext.ToUpper()))" {
-
-                    if ($ext -eq 'yaml' -and -not $global:haveYaml)
-                    {
-                        Set-ItResult -Inconclusive -Because "No YAML parser loaded"
-                        return
-                    }
 
                     if ($ext -eq 'yaml' -and -not $global:haveYaml)
                     {
@@ -316,11 +341,22 @@ InModuleScope $ModuleName {
                         'us-west-1'
                         'us-west-2'
                     ) |
-                        ForEach-Object {
+                    ForEach-Object {
                         Write-Host -ForegroundColor DarkGreen "      [?] - Testing region $($_)"
 
                         { Update-PSCFNStack -StackName pester -TemplateLocation "$($global:TestStackFilePathWithoutExtension).$($ext)" -Wait -VpcCidr 10.1.0.0/16 -Region $_ -Force } | Should Not Throw
                     }
+                }
+
+                It "Should not throw if no changes are detected ($($ext.ToUpper()))" {
+
+                    if ($ext -eq 'yaml' -and -not $global:haveYaml)
+                    {
+                        Set-ItResult -Inconclusive -Because "No YAML parser loaded"
+                        return
+                    }
+
+                    Update-PSCFNStack -StackName unchanged -TemplateLocation "$($global:TestStackFilePathWithoutExtension).$($ext)" -Wait -VpcCidr 10.0.0.0/16 -Force | Should -Be $global:UnchangedStackArn
                 }
             }
 
@@ -344,7 +380,7 @@ InModuleScope $ModuleName {
                 }
             }
 
-            Mock -CommandName Remove-CFNStack {}
+            Mock -CommandName Remove-CFNStack { }
 
             Mock -CommandName Wait-CFNStack -MockWith {
 
@@ -387,7 +423,7 @@ InModuleScope $ModuleName {
                     'us-west-1'
                     'us-west-2'
                 ) |
-                    ForEach-Object {
+                ForEach-Object {
 
                     Write-Host -ForegroundColor DarkGreen "      [?] - Testing region $($_)"
                     { Remove-PSCFNStack -StackName pester -Region $_ } | Should Not Throw
