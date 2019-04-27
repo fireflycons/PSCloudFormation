@@ -214,7 +214,7 @@ function Update-PSCFNStack
 
             $changesetName = '{0}-{1}' -f [IO.Path]::GetFileNameWithoutExtension($MyInvocation.MyCommand.Module.Name), [int](([datetime]::UtcNow) - (get-date "1/1/1970")).TotalSeconds
 
-            Write-Host "Creating change set $changesetName"
+            Write-Host "`nCreating change set $changesetName for $StackName"
 
             $stackArgs = New-StackOperationArguments -StackName $StackName -TemplateLocation $TemplateLocation -Capabilities $Capabilities -StackParameters $stackParameters -CredentialArguments $credentialArguments -UsePreviousTemplate ([bool]$UsePreviousTemplate)
             $csArn = New-CFNChangeSet -ChangeSetName $changesetName @stackArgs @credentialArguments @changeSetPassOnArguments
@@ -243,7 +243,7 @@ function Update-PSCFNStack
             if (-not $Force)
             {
                 $choice = $host.ui.PromptForChoice(
-                    'Begin the stack update now?',
+                    "Begin update of $StackName now?",
                     $null,
                     @(
                         New-Object System.Management.Automation.Host.ChoiceDescription ('&Yes', "Start rebuild now." )
