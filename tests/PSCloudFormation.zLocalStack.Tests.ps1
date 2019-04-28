@@ -140,7 +140,10 @@ InModuleScope $ModuleName {
 
             It 'Should create oversize template bucket and tag it' {
 
-                $bucket = Get-CloudformationBucket -CredentialArguments @{ Region = 'eu-west-1'; EndpointUrl = $global:localStackEndpoints.S3 }
+                $credArgs = $localStackCommonParameters.Clone()
+                $credArgs.Add('EndpointUrl', $global:localStackEndpoints.S3)
+
+                $bucket = Get-CloudformationBucket -CredentialArguments $credArgs
 
                 $bucket.BucketName | Should -Be 'cf-templates-pscloudformation-eu-west-1-000000000000'
                 Assert-MockCalled Get-STSCallerIdentity
