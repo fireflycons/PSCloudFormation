@@ -38,7 +38,7 @@ If a cmdlet is given the `-Wait` parameter then all stack events are output to t
 
 ## Module Cmdlets
 
-All the cmdlets support the standard AWSPowerShell [Common Credential and Region Parameters](https://docs.aws.amazon.com/powershell/latest/reference/items/pstoolsref-commonparams.html) with the exception of `EndpointUrl`
+All the cmdlets support the standard AWSPowerShell [Common Credential and Region Parameters](https://docs.aws.amazon.com/powershell/latest/reference/items/pstoolsref-commonparams.html).
 
 For full syntax and some examples, use `Get-Help` on the module's cmdlets.
 

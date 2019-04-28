@@ -1,5 +1,11 @@
 # Release Notes
 
+## v1.3.0
+
+* `Update-PSCFNStack` should name the stack when asking to proceed with update
+* Tag S3 bucket when creating. When PSCloudFormation creates a bucket for processing large templates, it is tagged with info identifying its purpose.
+* Support -EndpointUrl so that limited testing with localstack is possible. Add localstack tests.
+
 ## v1.2.0
 
 24 Apr 2019
