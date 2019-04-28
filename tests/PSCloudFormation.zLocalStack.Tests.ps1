@@ -85,6 +85,10 @@ if ($null -eq $localstackUri)
 else
 {
     Write-Host "LocalStack found at $localstackUri"
+
+    # We need to set some credentials, altough localstack doesn't care what they are
+    Set-AWSCredential -AccessKey AKIANOTUSED -SecretKey 5tf890798s7df98c90s87d987sd987r243r
+
     Write-Host "Cleaning LocalStack resources"
 
     $localStackHost = ([Uri]$localstackUri).Host
