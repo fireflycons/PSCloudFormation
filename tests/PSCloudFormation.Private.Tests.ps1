@@ -70,6 +70,8 @@ InModuleScope $ModuleName {
             )
         }
 
+        Mock -CommandName Write-S3BucketTagging -MockWith {}
+
         $templateContentHash = (Get-Content -Raw -Path $global:templatePath).GetHashCode()
 
         Context 'New-TemplateResolver' {
