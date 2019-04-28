@@ -38,21 +38,28 @@ $global:UnchangedStackArn = 'arn:aws:cloudformation:us-east-1:000000000000:stack
 $global:TestStackFilePathWithoutExtension = Join-Path $PSScriptRoot test-stack
 $global:TestOversizeStackFilePath = Join-Path $PSScriptRoot test-oversize.json
 
+# We need to pass some credentials, altough localstack doesn't care what they are
+$global:localStackCommonParameters = @{
+    AccessKey = 'AKAINOTUSED'
+    SecretKey = 'notused'
+    Region    = 'eu-west-1'
+}
+
 function global:Reset-LocalStack
 {
-    Get-S3Bucket -EndpointUrl $localStackEndpoints.S3 |
+    Get-S3Bucket @localStackCommonParameters -EndpointUrl $localStackEndpoints.S3 |
     Select-Object -ExpandProperty BucketName |
     Foreach-Object {
-        Remove-S3Bucket -BucketName $_ -DeleteBucketContent -EndpointUrl $localStackEndpoints.S3 -Force
+        Remove-S3Bucket -BucketName $_ -DeleteBucketContent @localStackCommonParameters -EndpointUrl $localStackEndpoints.S3 -Force
     }
 
-    Get-CFNStack -EndpointUrl $localStackEndpoints.CF |
+    Get-CFNStack @localStackCommonParameters -EndpointUrl $localStackEndpoints.CF |
     Select-Object -ExpandProperty StackName |
     ForEach-Object {
-        Remove-CFNStack -StackName $_ -EndpointUrl $localStackEndpoints.CF -Force
+        Remove-CFNStack -StackName $_ @localStackCommonParameters -EndpointUrl $localStackEndpoints.CF -Force
     }
 
-    while ((Get-CFNStack -EndpointUrl $localStackEndpoints.CF | Measure-Object).Count -gt 0)
+    while ((Get-CFNStack @localStackCommonParameters -EndpointUrl $localStackEndpoints.CF | Measure-Object).Count -gt 0)
     {
         Start-Sleep -Seconds 1
     }
@@ -86,8 +93,6 @@ else
 {
     Write-Host "LocalStack found at $localstackUri"
 
-    # We need to set some credentials, altough localstack doesn't care what they are
-    Set-AWSCredential -AccessKey AKIANOTUSED -SecretKey 5tf890798s7df98c90s87d987sd987r243r
 
     Write-Host "Cleaning LocalStack resources"
 
@@ -139,8 +144,8 @@ InModuleScope $ModuleName {
 
                 $bucket.BucketName | Should -Be 'cf-templates-pscloudformation-eu-west-1-000000000000'
                 Assert-MockCalled Get-STSCallerIdentity
-                Get-S3Bucket -BucketName $bucket.BucketName -EndpointUrl $global:localStackEndpoints.S3 | Should -Not -Be $null
-                $tags = Get-S3BucketTagging -BucketName $bucket.BucketName -EndpointUrl $global:localStackEndpoints.S3
+                Get-S3Bucket -BucketName $bucket.BucketName @localStackCommonParameters -EndpointUrl $global:localStackEndpoints.S3 | Should -Not -Be $null
+                $tags = Get-S3BucketTagging -BucketName $bucket.BucketName @localStackCommonParameters -EndpointUrl $global:localStackEndpoints.S3
                 $tags.Count | Should -Be 4
 
             }
@@ -156,14 +161,14 @@ InModuleScope $ModuleName {
 
             It "Should create stack with valid command line arguments" {
 
-                $arn = New-PSCFNStack -StackName pester -TemplateLocation "$($global:TestStackFilePathWithoutExtension).json" -EndpointUrl $localStackEndpoints.CF -Wait -VpcCidr 10.0.0.0/16
-                { Get-CFNStack -StackName $arn -EndpointUrl $localStackEndpoints.CF } | Should Not Throw
+                $arn = New-PSCFNStack -StackName pester -TemplateLocation "$($global:TestStackFilePathWithoutExtension).json" @localStackCommonParameters -EndpointUrl $localStackEndpoints.CF -Wait -VpcCidr 10.0.0.0/16
+                { Get-CFNStack -StackName $arn @localStackCommonParameters -EndpointUrl $localStackEndpoints.CF } | Should Not Throw
             }
 
             It "Should create stack with oversize template and valid command line arguments" {
 
-                $arn = New-PSCFNStack -StackName oversize -TemplateLocation "$($global:TestOversizeStackFilePath)" -EndpointUrl $localStackEndpoints.CF -Wait
-                { Get-CFNStack -StackName $arn -EndpointUrl $localStackEndpoints.CF } | Should Not Throw
+                $arn = New-PSCFNStack -StackName oversize -TemplateLocation "$($global:TestOversizeStackFilePath)" @localStackCommonParameters -EndpointUrl $localStackEndpoints.CF -Wait
+                { Get-CFNStack -StackName $arn @localStackCommonParameters -EndpointUrl $localStackEndpoints.CF } | Should Not Throw
             }
         }
 
@@ -172,11 +177,11 @@ InModuleScope $ModuleName {
             It "Should delete a stack" {
 
                 # Setup
-                New-CFNStack -StackName test-delete -TemplateBody (Get-Content -Raw "$($global:TestStackFilePathWithoutExtension).json") -Parameter @{ ParameterKey = 'VpcCidr'; ParameterValue = '10.0.0.0/16' } -EndpointUrl $localStackEndpoints.CF
+                New-CFNStack -StackName test-delete -TemplateBody (Get-Content -Raw "$($global:TestStackFilePathWithoutExtension).json") -Parameter @{ ParameterKey = 'VpcCidr'; ParameterValue = '10.0.0.0/16' } @localStackCommonParameters -EndpointUrl $localStackEndpoints.CF
 
                 while ($true)
                 {
-                    $stack = Get-CFNStack -StackName test-delete  -EndpointUrl $localStackEndpoints.CF
+                    $stack = Get-CFNStack -StackName test-delete  @localStackCommonParameters -EndpointUrl $localStackEndpoints.CF
 
                     if ($stack.StackStatus -ieq 'CREATE_COMPLETE')
                     {
@@ -190,9 +195,9 @@ InModuleScope $ModuleName {
                 }
 
                 # test
-                Remove-PSCFNStack -StackName test-delete -EndpointUrl $localStackEndpoints.CF -Wait
+                Remove-PSCFNStack -StackName test-delete @localStackCommonParameters -EndpointUrl $localStackEndpoints.CF -Wait
 
-                { Get-CFNStack -StackName test-delete  -EndpointUrl $localStackEndpoints.CF } | Should Throw
+                { Get-CFNStack -StackName test-delete  @localStackCommonParameters -EndpointUrl $localStackEndpoints.CF } | Should Throw
             }
         }
     }
