@@ -21,14 +21,7 @@ function Get-Executable
 
 
 
-$dockerCompose = Get-Executable -name "docker-compose"
 $docker = Get-Executable -name "docker"
-
-if ($null -eq $dockerCompose)
-{
-    Write-Warning "Cannot locate docker-compose"
-    return
-}
 
 if ($null -eq $docker)
 {
@@ -36,11 +29,25 @@ if ($null -eq $docker)
     return
 }
 
-Push-Location ([IO.Path]::Combine($PSScriptRoot, "docker", "appveyor"))
-
 try
 {
-    & $dockerCompose up -d
+    $dockerArgs = @(
+        'run'
+        '-d'
+        '-p'
+        '4572:4572'
+        '-p'
+        '4581:4581'
+        '-p'
+        '8080:8080'
+        '-e'
+        "SERVICES=s3,cloudformation"
+        '-e'
+        "DEFAULT_REGION=eu-west-1"
+        'localstack/localstack'
+    )
+
+    & $docker $dockerArgs
     Write-Host "Waiting for docker to start"
     Start-Sleep -Seconds 10
 
@@ -79,5 +86,3 @@ catch
 {
     Write-Warning "Could not start container: $($_.Exception.Message)"
 }
-
-Pop-Location

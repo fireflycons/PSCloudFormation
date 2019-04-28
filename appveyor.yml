@@ -19,7 +19,6 @@ for:
 
   before_test:
     # Run up localstack in docker
-    - sudo apt update -y && && sudo apt upgrade docker -y && sudo apt install docker-compose -y
     - ps: ./launch-localstack.ps1
     # Set up for .net core build - Generate a manifest for Core from orignal manifest then rename module directory to fool BuildHelpers.
     - ps: ./New-NetCoreManifest.ps1
