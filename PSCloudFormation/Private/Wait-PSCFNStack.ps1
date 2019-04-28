@@ -71,9 +71,21 @@ function Wait-PSCFNStack
     $anyFailed = $false
     $writeHeaders = $true
 
+    # If localstack testing, poll faster
+    $sleepTime = $(
+        if ($CredentialArguments.Keys -icontains 'EndpointUrl')
+        {
+            1
+        }
+        else
+        {
+            10
+        }
+    )
+
     while (($arns | Measure-Object).Count -gt 0)
     {
-        Start-Sleep -Seconds 10
+        Start-Sleep -Seconds $sleepTime
 
         $stacks = $arns |
             Foreach-Object {

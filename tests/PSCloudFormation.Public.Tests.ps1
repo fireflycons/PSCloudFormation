@@ -89,6 +89,8 @@ InModuleScope $ModuleName {
             $true
         }
 
+        Mock -CommandName Write-S3BucketTagging -MockWith {}
+
         Context 'New-PSCFNStack' {
 
             Mock -CommandName Get-CFNStack -MockWith {

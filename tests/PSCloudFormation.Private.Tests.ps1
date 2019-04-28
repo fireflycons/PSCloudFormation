@@ -70,6 +70,8 @@ InModuleScope $ModuleName {
             )
         }
 
+        Mock -CommandName Write-S3BucketTagging -MockWith {}
+
         $templateContentHash = (Get-Content -Raw -Path $global:templatePath).GetHashCode()
 
         Context 'New-TemplateResolver' {
@@ -154,7 +156,7 @@ InModuleScope $ModuleName {
 
             It 'Provides -TemplateBody for local file' {
 
-                $args = New-StackOperationArguments -StackName 'pester' -TemplateLocation $global:templatePath
+                $args = New-StackOperationArguments -StackName 'pester' -TemplateLocation $global:templatePath -CredentialArguments @{}
                 $args['StackName'] | Should Be 'pester'
                 $args['TemplateBody'].GetHashCode() | Should Be $templateContentHash
                 $args['TemplateURL'] | Should BeNullOrEmpty
