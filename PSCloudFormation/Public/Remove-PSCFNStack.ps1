@@ -99,7 +99,7 @@ function Remove-PSCFNStack
             {
                 $arn = (Get-CFNStack -StackName $_ @credentialArguments).StackId
 
-                Remove-CFNStack -StackName $arn -Force
+                Remove-CFNStack -StackName $arn -Force @credentialArguments
 
                 if ($Sequential -or ($Wait -and ($StackName | Measure-Object).Count -eq 1))
                 {

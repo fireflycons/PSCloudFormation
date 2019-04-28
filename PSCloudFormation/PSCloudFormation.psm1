@@ -12,7 +12,7 @@ $Script:yamlSupport = $false
 
 if ($psyaml)
 {
-    if ($PSVersionTable.ContainsKey('PSEdition') -and $PSVersionTable.PSEdition -eq 'Core' -and -not ($psyaml | Where-Object { $_.Version -ge [Version]'0.4.0'} ))
+    if ($PSVersionTable.ContainsKey('PSEdition') -and $PSVersionTable.PSEdition -eq 'Core' -and -not ($psyaml | Where-Object { $_.Version -ge [Version]'0.4.0' } ))
     {
         Write-Warning "powershell-yaml >= 0.4.0 required in this version."
         Write-Warning "Please upgrade to enable YAML support."
@@ -69,6 +69,14 @@ $Script:CommonCredentialArguments = @{
         Type        = [string]
         Description = 'The system name of the AWS region in which the operation should be invoked. For example, us-east-1, eu-west-1 etc.'
     }
+    EndpointUrl       = @{
+        Type        = [string]
+        Description = 'The endpoint to make the call against.'
+    }
+}
+
+$script:localStackPorts = @{
+    S3 = 4572
 }
 
 #endregion

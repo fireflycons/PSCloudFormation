@@ -1,0 +1,18 @@
+version: "3.2"
+services:
+
+  localstack:
+    image: localstack/localstack
+    ports:
+      - "4572:4572"
+      - "4581:4581"
+      - "8080:8080"
+    networks:
+      - dockernet
+    environment:
+      DEFAULT_REGION: eu-west-1
+      HOSTNAME: localstack
+      SERVICES: cloudformation,s3
+
+networks:
+  dockernet:

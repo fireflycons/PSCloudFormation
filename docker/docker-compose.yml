@@ -1,8 +1,0 @@
-version: "3"
-
-services:
-  powershell-test-env:
-    build:
-      context: .
-      dockerfile: Dockerfile
-    container_name: powershell-test-env

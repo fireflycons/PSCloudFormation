@@ -45,11 +45,28 @@ function Get-CloudFormationBucket
         USW2  = 'us-west-1'
     }
 
-    $bucketName = "cf-templates-pscloudformation-$(Get-CurrentRegion -CredentialArguments $CredentialArguments)-$((Get-STSCallerIdentity @CredentialArguments).Account)"
+    # To support localstack testing, we have to fudge EndpointURL if present
+    $s3Arguments = @{}
+
+    $CredentialArguments.Keys |
+    ForEach-Object {
+        $value = $CredentialArguments[$_]
+
+        if ($_ -ieq 'EndpointUrl')
+        {
+            $ub = [UriBuilder]$value
+            $ub.Port = $script:localStackPorts.S3
+            $value = $ub.ToString()
+        }
+
+        $s3Arguments.Add($_, $value)
+    }
+
+    $bucketName = "cf-templates-pscloudformation-$(Get-CurrentRegion -CredentialArguments $s3Arguments)-$((Get-STSCallerIdentity @CredentialArguments).Account)"
 
     try
     {
-        $location = Get-S3BucketLocation -BucketName $bucketName @CredentialArguments | Select-Object -ExpandProperty Value
+        $location = Get-S3BucketLocation -BucketName $bucketName @s3Arguments | Select-Object -ExpandProperty Value
 
         if ($defaultRegionsMap.ContainsKey($location))
         {
@@ -67,7 +84,7 @@ function Get-CloudFormationBucket
     }
 
     # Try to create it
-    $response = New-S3Bucket -BucketName $bucketName @CredentialArguments
+    $response = New-S3Bucket -BucketName $bucketName @s3Arguments
 
     if ($response)
     {
@@ -75,7 +92,7 @@ function Get-CloudFormationBucket
         try
         {
             $module = (Get-Command (Get-PSCallStack | Select-Object -First 1).Command).Module
-            Write-S3BucketTagging -BucketName $bucketName @CredentialArguments -TagSet @(
+            Write-S3BucketTagging -BucketName $bucketName @s3Arguments -TagSet @(
                 @{
                     Key   = 'CreatedBy'
                     Value = $module.Name
@@ -99,7 +116,7 @@ function Get-CloudFormationBucket
             Write-Warning "Unable to tag S3 bucket $($bucketName): $($_.Exception.Message)"
         }
 
-        $location = Get-S3BucketLocation -BucketName $bucketName @CredentialArguments | Select-Object -ExpandProperty Value
+        $location = Get-S3BucketLocation -BucketName $bucketName @s3Arguments | Select-Object -ExpandProperty Value
 
         if ($defaultRegionsMap.ContainsKey($location))
         {

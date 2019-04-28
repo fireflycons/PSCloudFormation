@@ -23,6 +23,23 @@ function Copy-OversizeTemplateToS3
         [string]$TemplateLocation
     )
 
+    # To support localstack testing, we have to fudge EndpointURL if present
+    $s3Arguments = @{}
+
+    $CredentialArguments.Keys |
+    ForEach-Object {
+        $value = $CredentialArguments[$_]
+
+        if ($_ -ieq 'EndpointUrl')
+        {
+            $ub = [UriBuilder]$value
+            $ub.Port = $script:localStackPorts.S3
+            $value = $ub.ToString()
+        }
+
+        $s3Arguments.Add($_, $value)
+    }
+
     $dateStamp = (Get-Date).ToUniversalTime().ToString('yyyyMMddHHmmssfff')
 
     if (-not $StackArguments.ContainsKey('TemplateBody'))
@@ -45,7 +62,7 @@ function Copy-OversizeTemplateToS3
 
     Write-Host "Copying oversize template to $($ub.Uri.ToString())"
 
-    Write-S3Object -BucketName $bucket.BucketName -Key $key -File (Resolve-Path $TemplateLocation).Path @CredentialArguments
+    Write-S3Object -BucketName $bucket.BucketName -Key $key -File (Resolve-Path $TemplateLocation).Path @s3Arguments
 
     # Now adjust the stack arguments to point to what we have just uploaded.
 
