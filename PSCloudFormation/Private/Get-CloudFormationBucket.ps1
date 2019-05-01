@@ -67,6 +67,7 @@ function Get-CloudFormationBucket
     try
     {
         $location = Get-S3BucketLocation -BucketName $bucketName @s3Arguments | Select-Object -ExpandProperty Value
+        Write-CloudFormationBucketTagging -BucketName $bucketName -CredentialArguments $s3Arguments
 
         if ($defaultRegionsMap.ContainsKey($location))
         {
@@ -89,32 +90,7 @@ function Get-CloudFormationBucket
     if ($response)
     {
         Write-Host "Created S3 bucket $bucketName to store oversize templates."
-        try
-        {
-            $module = (Get-Command (Get-PSCallStack | Select-Object -First 1).Command).Module
-            Write-S3BucketTagging -BucketName $bucketName @s3Arguments -TagSet @(
-                @{
-                    Key   = 'CreatedBy'
-                    Value = $module.Name
-                }
-                @{
-                    Key   = 'ProjectURL'
-                    Value = $module.ProjectUri.ToString()
-                }
-                @{
-                    Key   = 'Purpose'
-                    Value = 'CloudFormation templates larger than 51200 bytes'
-                }
-                @{
-                    Key   = 'DeletionPolicy'
-                    Value = 'Safe to delete objects more than 1 hour old'
-                }
-            )
-        }
-        catch
-        {
-            Write-Warning "Unable to tag S3 bucket $($bucketName): $($_.Exception.Message)"
-        }
+        Write-CloudFormationBucketTagging -BucketName $bucketName -CredentialArguments $s3Arguments
 
         $location = Get-S3BucketLocation -BucketName $bucketName @s3Arguments | Select-Object -ExpandProperty Value
 

@@ -1,6 +1,14 @@
 # Release Notes
 
+## v1.4.0
+
+01 May 2019
+
+* Add tags to existing cloudformation bucket if they are not present
+
 ## v1.3.0
+
+28 Apr 2019
 
 * `Update-PSCFNStack` should name the stack when asking to proceed with update
 * Tag S3 bucket when creating. When PSCloudFormation creates a bucket for processing large templates, it is tagged with info identifying its purpose.
