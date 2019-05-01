@@ -457,9 +457,20 @@ InModuleScope $ModuleName {
 
             Mock Get-STSCallerIdentity -MockWith {
                 New-Object PSObject -Property @{
-                    Account = '0123456789012'
+                    Account = '000000000000'
                 }
             }
+
+            Mock -CommandName Get-S3BucketLocation -MockWith {
+
+                New-Object PSObject -Property @{
+                    Value = 'us-east-1'
+                }
+            }
+
+            Mock -Command Get-S3BucketTagging -MockWith {}
+
+            Mock -Command Write-S3BucketTagging -MockWith {}
 
             It 'Should return bucket details if bucket exists' {
 
@@ -467,39 +478,27 @@ InModuleScope $ModuleName {
                 $expectedBucketName = "cf-templates-pscloudformation-$($region)-000000000000"
                 $expectedBucketUrl = [uri]"https://s3.$($region).amazonaws.com/$expectedBucketName"
 
-                Mock -CommandName Get-STSCallerIdentity -MockWith {
-
-                    New-Object PSObject -Property @{
-                        Account = '000000000000'
-                    }
-                }
-
-                Mock -CommandName Get-S3BucketLocation -MockWith {
-
-                    New-Object PSObject -Property @{
-                        Value = $region
-                    }
-                }
-
                 $result = Get-CloudFormationBucket -CredentialArguments @{ Region = $region }
                 Assert-MockCalled -CommandName Get-STSCallerIdentity -Times 1
                 $result.BucketName | Should Be $expectedBucketName
                 $result.BucketUrl | Should Be $expectedBucketUrl
             }
 
-            It 'Should create bucket if bucket does not exist' {
+            It 'Should tag existing bucket if untagged' {
+
+                $region = 'us-east-1'
+                Set-DefaultAWSRegion -Region $region
+
+                Get-CloudFormationBucket -CredentialArguments @{} | Out-Null
+                Assert-MockCalled -CommandName Write-S3BucketTagging -Times 1 -Scope It
+            }
+
+            It 'Should create and tag bucket if bucket does not exist' {
 
                 $region = 'us-east-1'
                 $expectedBucketName = "cf-templates-pscloudformation-$($region)-000000000000"
                 $expectedBucketUrl = [uri]"https://s3.$($region).amazonaws.com/$expectedBucketName"
                 $script:callCount = 0
-
-                Mock -CommandName Get-STSCallerIdentity -MockWith {
-
-                    New-Object PSObject -Property @{
-                        Account = '000000000000'
-                    }
-                }
 
                 Mock -CommandName Get-S3BucketLocation -MockWith {
 
@@ -521,8 +520,9 @@ InModuleScope $ModuleName {
                 $result.BucketName | Should Be $expectedBucketName
                 $result.BucketUrl | Should Be $expectedBucketUrl
 
-                Assert-MockCalled -CommandName Get-S3BucketLocation -Times 2
-                Assert-MockCalled -CommandName New-S3Bucket -Times 1
+                Assert-MockCalled -CommandName Get-S3BucketLocation -Times 2 -Scope It
+                Assert-MockCalled -CommandName New-S3Bucket -Times 1 -Scope It
+                Assert-MockCalled -CommandName Write-S3BucketTagging -Times 1 -Scope It
             }
 
             It 'Should not copy template to S3 if size less than 51200' {

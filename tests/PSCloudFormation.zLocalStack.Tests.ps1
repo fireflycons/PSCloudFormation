@@ -138,6 +138,8 @@ InModuleScope $ModuleName {
 
         Context 'S3 Bucket' {
 
+            # These tests musat be run in this order...
+
             It 'Should create oversize template bucket and tag it' {
 
                 $credArgs = $localStackCommonParameters.Clone()
@@ -146,11 +148,33 @@ InModuleScope $ModuleName {
                 $bucket = Get-CloudformationBucket -CredentialArguments $credArgs
 
                 $bucket.BucketName | Should -Be 'cf-templates-pscloudformation-eu-west-1-000000000000'
-                Assert-MockCalled Get-STSCallerIdentity
+
                 Get-S3Bucket -BucketName $bucket.BucketName @localStackCommonParameters -EndpointUrl $global:localStackEndpoints.S3 | Should -Not -Be $null
                 $tags = Get-S3BucketTagging -BucketName $bucket.BucketName @localStackCommonParameters -EndpointUrl $global:localStackEndpoints.S3
                 $tags.Count | Should -Be 4
+            }
 
+            It 'Should tag untagged bucket' {
+
+                $credArgs = $localStackCommonParameters.Clone()
+                $credArgs.Add('EndpointUrl', $global:localStackEndpoints.S3)
+
+                Remove-S3BucketTagging -BucketName 'cf-templates-pscloudformation-eu-west-1-000000000000' @credArgs -Force
+
+                $bucket = Get-CloudformationBucket -CredentialArguments $credArgs
+                $tags = Get-S3BucketTagging -BucketName $bucket.BucketName @localStackCommonParameters -EndpointUrl $global:localStackEndpoints.S3
+                $tags.Count | Should -Be 4
+            }
+
+            It 'Should not tag bucket if tags already present' {
+
+                Mock -CommandName Write-S3BucketTagging -MockWith {}
+
+                $credArgs = $localStackCommonParameters.Clone()
+                $credArgs.Add('EndpointUrl', $global:localStackEndpoints.S3)
+
+                Get-CloudformationBucket -CredentialArguments $credArgs | Out-Null
+                Assert-MockCalled -CommandName Write-S3BucketTagging -Times 0 -Scope It
             }
         }
 
