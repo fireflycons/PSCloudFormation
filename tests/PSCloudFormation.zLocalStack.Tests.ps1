@@ -138,7 +138,7 @@ InModuleScope $ModuleName {
 
         Context 'S3 Bucket' {
 
-            # These tests musat be run in this order...
+            # These tests must be run in this order...
 
             It 'Should create oversize template bucket and tag it' {
 
@@ -178,6 +178,24 @@ InModuleScope $ModuleName {
             }
         }
 
+        Context 'Template Backup' {
+
+            It 'Should create a template backup with parameter file' {
+
+                New-CFNStack -StackName test-backup -TemplateBody (Get-Content -Raw "$($global:TestStackFilePathWithoutExtension).json") -Parameter @{ ParameterKey = 'VpcCidr'; ParameterValue = '10.0.0.0/16' } @localStackCommonParameters -EndpointUrl $localStackEndpoints.CF
+
+                $backupPathWithoutExtension = Join-Path $TestDrive "test-backup"
+
+                $credArgs = $localStackCommonParameters.Clone()
+                $credArgs.Add('EndpointUrl', $global:localStackEndpoints.CF)
+
+                Save-TemplateBackup -StackName test-backup -OutputPath $TestDrive -CredentialArguments $credArgs
+
+                Test-Path -Path "$($backupPathWithoutExtension).template.bak.json" | Should -Be $true
+                Test-Path -Path "$($backupPathWithoutExtension).parameters.bak.json" | Should -Be $true
+            }
+        }
+
         Context 'New-PSCFNStack' {
 
             BeforeEach {
@@ -201,11 +219,9 @@ InModuleScope $ModuleName {
 
         Context 'Remove-PSCFNStack' {
 
-            It "Should delete a stack" {
+            BeforeEach {
 
-                # Setup
                 New-CFNStack -StackName test-delete -TemplateBody (Get-Content -Raw "$($global:TestStackFilePathWithoutExtension).json") -Parameter @{ ParameterKey = 'VpcCidr'; ParameterValue = '10.0.0.0/16' } @localStackCommonParameters -EndpointUrl $localStackEndpoints.CF
-
                 while ($true)
                 {
                     $stack = Get-CFNStack -StackName test-delete  @localStackCommonParameters -EndpointUrl $localStackEndpoints.CF
@@ -220,9 +236,25 @@ InModuleScope $ModuleName {
                         throw "Could not create test stack: $($stack.StackStatusReason)"
                     }
                 }
+            }
 
-                # test
+            AfterEach {
+
+                Get-ChildItem -Path (Get-Location).Path -Filter "*.bak.json" | Remove-Item
+            }
+
+            It "Should delete a stack" {
+
                 Remove-PSCFNStack -StackName test-delete @localStackCommonParameters -EndpointUrl $localStackEndpoints.CF -Wait
+
+                { Get-CFNStack -StackName test-delete  @localStackCommonParameters -EndpointUrl $localStackEndpoints.CF } | Should Throw
+            }
+
+            It "Should delete a stack and backup template when requested" {
+
+                Get-ChildItem -Path (Get-Location).Path -Filter "*.bak.json" | Measure-Object | Select-Object -ExpandProperty Count | Should -Be 0
+                Remove-PSCFNStack -StackName test-delete @localStackCommonParameters -EndpointUrl $localStackEndpoints.CF -BackupTemplate -Wait
+                Get-ChildItem -Path (Get-Location).Path -Filter "*.bak.json" | Measure-Object | Select-Object -ExpandProperty Count | Should -Be 2
 
                 { Get-CFNStack -StackName test-delete  @localStackCommonParameters -EndpointUrl $localStackEndpoints.CF } | Should Throw
             }

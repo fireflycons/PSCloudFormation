@@ -14,23 +14,24 @@ Get the outputs of a stack in various formats
 
 ### Mappings (Default)
 ```
-Get-PSCFNStackOutputs [-StackName] <String[]> [-AsMappingBlock] [-AccessKey <String>] [-ProfileName <String>]
- [-Credential <AWSCredentials>] [-NetworkCredential <PSCredential>] [-SessionToken <String>]
- [-SecretKey <String>] [-Region <String>] [-ProfileLocation <String>] [<CommonParameters>]
+Get-PSCFNStackOutputs [-StackName] <String[]> [-AsMappingBlock] [-ProfileName <String>] [-EndpointUrl <String>]
+ [-AccessKey <String>] [-SecretKey <String>] [-ProfileLocation <String>] [-SessionToken <String>]
+ [-NetworkCredential <PSCredential>] [-Credential <AWSCredentials>] [-Region <String>] [<CommonParameters>]
 ```
 
 ### Parameters
 ```
-Get-PSCFNStackOutputs [-StackName] <String[]> [-AsParameterBlock] [-AccessKey <String>] [-ProfileName <String>]
- [-Credential <AWSCredentials>] [-NetworkCredential <PSCredential>] [-SessionToken <String>]
- [-SecretKey <String>] [-Region <String>] [-ProfileLocation <String>] [<CommonParameters>]
+Get-PSCFNStackOutputs [-StackName] <String[]> [-AsParameterBlock] [-ProfileName <String>]
+ [-EndpointUrl <String>] [-AccessKey <String>] [-SecretKey <String>] [-ProfileLocation <String>]
+ [-SessionToken <String>] [-NetworkCredential <PSCredential>] [-Credential <AWSCredentials>] [-Region <String>]
+ [<CommonParameters>]
 ```
 
 ### Exports
 ```
-Get-PSCFNStackOutputs [-StackName] <String[]> [-AsCrossStackReferences] [-AccessKey <String>]
- [-ProfileName <String>] [-Credential <AWSCredentials>] [-NetworkCredential <PSCredential>]
- [-SessionToken <String>] [-SecretKey <String>] [-Region <String>] [-ProfileLocation <String>]
+Get-PSCFNStackOutputs [-StackName] <String[]> [-AsCrossStackReferences] [-ProfileName <String>]
+ [-EndpointUrl <String>] [-AccessKey <String>] [-SecretKey <String>] [-ProfileLocation <String>]
+ [-SessionToken <String>] [-NetworkCredential <PSCredential>] [-Credential <AWSCredentials>] [-Region <String>]
  [<CommonParameters>]
 ```
 
@@ -157,6 +158,21 @@ An AWSCredentials object instance containing access and secret key information, 
 
 ```yaml
 Type: AWSCredentials
+Parameter Sets: (All)
+Aliases:
+
+Required: False
+Position: Named
+Default value: None
+Accept pipeline input: False
+Accept wildcard characters: False
+```
+
+### -EndpointUrl
+The endpoint to make the call against.
+
+```yaml
+Type: String
 Parameter Sets: (All)
 Aliases:
 

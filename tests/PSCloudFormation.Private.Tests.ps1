@@ -452,6 +452,44 @@ InModuleScope $ModuleName {
             }
         }
 
+        Context 'Template Backup' {
+
+            It 'Should create a template backup with parameter file' {
+
+                Mock -CommandName Get-CFNTemplate -MockWith {
+
+                    Get-Content -Raw -Path $global:templatePath
+                }
+
+                Mock -CommandName Get-CFNStackResourceList -MockWith {}
+
+                Mock -CommandName Get-CFNStack -MockWith {
+
+                    New-Object PSObject -Property @{
+
+                        StackName = 'test-stack'
+                        StackId = 'test-stack'
+                        Parameters = @(
+                            @{
+                                ParameterKey = 'VpcCidr'
+                                ParameterValue = '10.0.0.0/16'
+                            }
+                            @{
+                                ParameterKey = 'DnsSupport'
+                                ParameterValue = 'true'
+                            }
+                        )
+                    }
+                }
+
+                $backupPathWithoutExtension = Join-Path $TestDrive "test-stack"
+
+                Save-TemplateBackup -StackName test-backup -OutputPath $TestDrive
+
+                Test-Path -Path "$($backupPathWithoutExtension).template.bak.json" | Should -Be $true
+                Test-Path -Path "$($backupPathWithoutExtension).parameters.bak.json" | Should -Be $true
+            }
+        }
 
         Context 'S3 Cloudformation Bucket' {
 

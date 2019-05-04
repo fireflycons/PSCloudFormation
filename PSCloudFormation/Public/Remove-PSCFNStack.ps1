@@ -23,6 +23,10 @@ function Remove-PSCFNStack
         If set, delete stacks in the order they are specified on the command line or received from the pipeline,
         waiting for each stack to delete successfully before proceeding to the next one.
 
+    .PARAMETER BackupTemplate
+        If set, back up the current version of the template stored by CloudFormation, along with the current parameter set if any to files in the current directory. This will assist with undoing any unwanted change.
+        Note that if you have dropped or replaced a database or anything else associcated with stored data, then the data is lost forever!
+
     .INPUTS
         System.String[]
             You can pipe the names or ARNs of the stacks to delete to this function
@@ -36,6 +40,12 @@ function Remove-PSCFNStack
         Remove-PSCFNStack -StackName MyStack
 
         Deletes a single stack.
+
+    .EXAMPLE
+
+        Remove-PSCFNStack -StackName MyStack -BackupTemplate
+
+        As per the first example, but with the previous version of the template and its current parameter set saved to files in the current directory.
 
     .EXAMPLE
 
@@ -72,7 +82,9 @@ function Remove-PSCFNStack
 
         [switch]$Wait,
 
-        [switch]$Sequential
+        [switch]$Sequential,
+
+        [switch]$BackupTemplate
     )
 
     DynamicParam
@@ -98,6 +110,11 @@ function Remove-PSCFNStack
             if (Test-StackExists -StackName $_ -CredentialArguments $credentialArguments)
             {
                 $arn = (Get-CFNStack -StackName $_ @credentialArguments).StackId
+
+                if ($BackupTemplate)
+                {
+                    Save-TemplateBackup -StackName $arn -CredentialArguments $credentialArguments -OutputPath (Get-Location).Path
+                }
 
                 Remove-CFNStack -StackName $arn -Force @credentialArguments
 
