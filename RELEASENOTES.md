@@ -5,6 +5,7 @@
 04 May 2019
 
 * Add `-BackupTemplate` switch to `Update-PSCFNStack` and `Remove-PSCFNStack`. This saves the current state of the template and any paramaters to files in the current directory.
+* Fix a bug unearthed with handling of `-ParameterFile` when testing the above.
 
 ## v1.4.0
 

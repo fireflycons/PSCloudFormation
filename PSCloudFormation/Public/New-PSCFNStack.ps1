@@ -172,7 +172,7 @@ function New-PSCFNStack
         #Create the RuntimeDefinedParameterDictionary
         New-Object System.Management.Automation.RuntimeDefinedParameterDictionary |
             New-CredentialDynamicParameters |
-            New-TemplateDynamicParameters -TemplateLocation $TemplateLocation -EnforceMandatory
+            New-TemplateDynamicParameters -TemplateLocation $TemplateLocation -EnforceMandatory -ParameterFile $ParameterFile
     }
 
     begin

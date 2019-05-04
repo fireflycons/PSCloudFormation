@@ -240,7 +240,7 @@ InModuleScope $ModuleName {
 
             AfterEach {
 
-                Get-ChildItem -Path (Get-Location).Path -Filter "*.bak.json" | Remove-Item
+                Get-ChildItem -Path . -Filter "*.bak.json" | Remove-Item
             }
 
             It "Should delete a stack" {
@@ -250,13 +250,17 @@ InModuleScope $ModuleName {
                 { Get-CFNStack -StackName test-delete  @localStackCommonParameters -EndpointUrl $localStackEndpoints.CF } | Should Throw
             }
 
-            It "Should delete a stack and backup template when requested" {
+            It "Should delete a stack and create template backup when requested, and recreate stack from backups" {
 
-                Get-ChildItem -Path (Get-Location).Path -Filter "*.bak.json" | Measure-Object | Select-Object -ExpandProperty Count | Should -Be 0
+                Get-ChildItem -Path . -Filter "*.bak.json" | Measure-Object | Select-Object -ExpandProperty Count | Should -Be 0
                 Remove-PSCFNStack -StackName test-delete @localStackCommonParameters -EndpointUrl $localStackEndpoints.CF -BackupTemplate -Wait
-                Get-ChildItem -Path (Get-Location).Path -Filter "*.bak.json" | Measure-Object | Select-Object -ExpandProperty Count | Should -Be 2
 
                 { Get-CFNStack -StackName test-delete  @localStackCommonParameters -EndpointUrl $localStackEndpoints.CF } | Should Throw
+                Get-ChildItem -Path . -Filter "*.bak.json" | Measure-Object | Select-Object -ExpandProperty Count | Should -Be 2
+
+                New-PSCFNStack -StackName test-delete @localStackCommonParameters -EndpointUrl $localStackEndpoints.CF -TemplateLocation test-delete.template.bak.json -ParameterFile test-delete.parameters.bak.json -Wait
+
+                { Get-CFNStack -StackName test-delete  @localStackCommonParameters -EndpointUrl $localStackEndpoints.CF } | Should Not Throw
             }
         }
     }

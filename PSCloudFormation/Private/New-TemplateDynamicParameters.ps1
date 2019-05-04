@@ -20,6 +20,9 @@ function New-TemplateDynamicParameters
         - S3 URI (which is converted to HTTPS URI for the current region)
         - HTTP(S) Uri
 
+    .PARAMETER ParameterFile
+        If present and non-null, path to a JSON file containing a list of parameter structures
+
     .PARAMETER UsePreviousTemplate
         Reuse the existing template that is associated with the stack that you are updating. Conditional: You must specify only TemplateLocationL, or set the UsePreviousTemplate to true.
 
@@ -40,6 +43,7 @@ function New-TemplateDynamicParameters
         [Parameter(ValueFromPipeline = $true)]
         [System.Management.Automation.RuntimeDefinedParameterDictionary]$Dictionary,
         [string]$TemplateLocation,
+        [string]$ParameterFile,
         [bool]$UsePreviousTemplate,
         [string]$StackName,
         [switch]$EnforceMandatory
@@ -60,6 +64,15 @@ function New-TemplateDynamicParameters
         } |
         ForEach-Object {
             $templateArguments.Add($_.Key, $_.Value)
+        }
+
+        # List of ParameterKey names from any supplied parameter file.
+        # If we are importing parameters, then matching command line paramater must become optional
+        $parameterFileParameters = @()
+
+        if (-not [string]::IsNullOrEmpty($ParameterFile))
+        {
+            $parameterFileParameters = (Get-Content -Raw -Path $ParameterFile | ConvertFrom-Json).ParameterKey
         }
     }
 
@@ -140,7 +153,7 @@ function New-TemplateDynamicParameters
                 $paramDefinition.Add('HelpMessage', $param.Value.Description);
             }
 
-            if ($EnforceMandatory -and -not $param.Value.PSObject.Properties['Default'])
+            if ($EnforceMandatory -and -not $param.Value.PSObject.Properties['Default'] -and -not $parameterFileParameters -ccontains $param.Name)
             {
                 # If no default in the template, parameter is mandatory
                 $paramDefinition.Add('Mandatory', $true);
