@@ -58,7 +58,11 @@ function Update-PSCFNStack
         Key-value pairs to associate with this stack. AWS CloudFormation also propagates these tags to the resources created in the stack. A maximum number of 50 tags can be specified.
 
     .PARAMETER UsePreviousTemplate
-        Reuse the existing template that is associated with the stack that you are updating. Conditional: You must specify only TemplateLocationL, or set the UsePreviousTemplate to true.
+        Reuse the existing template that is associated with the stack that you are updating. Conditional: You must specify only TemplateLocation, or set the UsePreviousTemplate to true.
+
+    .PARAMETER BackupTemplate
+        If set, back up the current version of the template stored by CloudFormation, along with the current parameter set if any to files in the current directory. This will assist with undoing any unwanted change.
+        Note that if you have dropped or replaced a database or anything else associcated with stored data, then the data is lost forever!
 
     .PARAMETER Wait
         If set, wait for stack update to complete before returning.
@@ -81,6 +85,12 @@ function Update-PSCFNStack
         Updates an existing stack of the same name or ARN from a local template file and waits for it to complete.
         This template would have 'VpcCidr' defined within its parameter block
         A changeset is created and displayed, and you are asked for confirmation befre proceeding.
+
+    .EXAMPLE
+
+        Update-PSCFNStack -StackName MyStack -TemplateLocation .\mystack.json -Capabilities CAPABILITY_IAM -Wait -VpcCidr 10.1.0.0/16 -BackupTemplate
+
+        As per the first example, but with the previous version of the template and its current parameter set saved to files in the current directory.
 
     .EXAMPLE
 
@@ -133,7 +143,9 @@ function Update-PSCFNStack
 
         [switch]$Wait,
 
-        [switch]$Force
+        [switch]$Force,
+
+        [switch]$BackupTemplate
     )
 
     DynamicParam
@@ -265,6 +277,11 @@ function Update-PSCFNStack
 
             # Issue #14 - Get-CFNStackEvents returns timestamp in local time
             $startTime = [DateTime]::Now
+
+            if ($BackupTemplate)
+            {
+                Save-TemplateBackup -StackName $StackName -CredentialArguments $credentialArguments -OutputPath (Get-Location).Path
+            }
 
             Start-CFNChangeSet -StackName $StackName -ChangeSetName $changesetName @credentialArguments
 

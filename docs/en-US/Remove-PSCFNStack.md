@@ -13,13 +13,15 @@ Delete one or more stacks.
 ## SYNTAX
 
 ```
-Remove-PSCFNStack [-StackName] <String[]> [-Wait] [-Sequential] [-AccessKey <String>] [-ProfileName <String>]
- [-Credential <AWSCredentials>] [-NetworkCredential <PSCredential>] [-SessionToken <String>]
- [-SecretKey <String>] [-Region <String>] [-ProfileLocation <String>] [<CommonParameters>]
+Remove-PSCFNStack [-StackName] <String[]> [-Wait] [-Sequential] [-BackupTemplate] [-ProfileName <String>]
+ [-EndpointUrl <String>] [-AccessKey <String>] [-SecretKey <String>] [-ProfileLocation <String>]
+ [-SessionToken <String>] [-NetworkCredential <PSCredential>] [-Credential <AWSCredentials>] [-Region <String>]
+ [<CommonParameters>]
 ```
 
 ## DESCRIPTION
 Delete one or more stacks.
+If -Wait is specified, stack events are output to the console including events from any nested stacks.
 
 Deletion of multiple stacks can be either sequential or parallel.
 If deleting a gruop of stacks where there are dependencies between them
@@ -36,19 +38,26 @@ Deletes a single stack.
 
 ### EXAMPLE 2
 ```
+Remove-PSCFNStack -StackName MyStack -BackupTemplate
+```
+
+As per the first example, but with the previous version of the template and its current parameter set saved to files in the current directory.
+
+### EXAMPLE 3
+```
 'DependentStack', 'BaseStack' | Remove-PSCFNStack -Sequential
 ```
 
 Deletes 'DependentStack', waits for completion, then deletes 'BaseStack'.
 
-### EXAMPLE 3
+### EXAMPLE 4
 ```
 'Stack1', 'Stack2' | Remove-PSCFNStack -Wait
 ```
 
 Sets both stacks deleting in parallel, then waits for them both to complete.
 
-### EXAMPLE 4
+### EXAMPLE 5
 ```
 'Stack1', 'Stack2' | Remove-PSCFNStack
 ```
@@ -56,7 +65,7 @@ Sets both stacks deleting in parallel, then waits for them both to complete.
 Sets both stacks deleting in parallel, and returns immediately.
 See the CloudFormation console to monitor progress.
 
-### EXAMPLE 5
+### EXAMPLE 6
 ```
 Get-CFNStack | Remove-PSCFNStack
 ```
@@ -115,6 +124,23 @@ Accept pipeline input: False
 Accept wildcard characters: False
 ```
 
+### -BackupTemplate
+If set, back up the current version of the template stored by CloudFormation, along with the current parameter set if any to files in the current directory.
+This will assist with undoing any unwanted change.
+Note that if you have dropped or replaced a database or anything else associcated with stored data, then the data is lost forever!
+
+```yaml
+Type: SwitchParameter
+Parameter Sets: (All)
+Aliases:
+
+Required: False
+Position: Named
+Default value: False
+Accept pipeline input: False
+Accept wildcard characters: False
+```
+
 ### -AccessKey
 The AWS access key for the user account.
 This can be a temporary access key if the corresponding session token is supplied to the -SessionToken parameter.
@@ -136,6 +162,21 @@ An AWSCredentials object instance containing access and secret key information, 
 
 ```yaml
 Type: AWSCredentials
+Parameter Sets: (All)
+Aliases:
+
+Required: False
+Position: Named
+Default value: None
+Accept pipeline input: False
+Accept wildcard characters: False
+```
+
+### -EndpointUrl
+The endpoint to make the call against.
+
+```yaml
+Type: String
 Parameter Sets: (All)
 Aliases:
 
@@ -243,16 +284,17 @@ Accept wildcard characters: False
 ```
 
 ### CommonParameters
-This cmdlet supports the common parameters: -Debug, -ErrorAction, -ErrorVariable, -InformationAction, -InformationVariable, -OutVariable, -OutBuffer, -PipelineVariable, -Verbose, -WarningAction, and -WarningVariable. For more information, see about_CommonParameters (http://go.microsoft.com/fwlink/?LinkID=113216).
+This cmdlet supports the common parameters: -Debug, -ErrorAction, -ErrorVariable, -InformationAction, -InformationVariable, -OutVariable, -OutBuffer, -PipelineVariable, -Verbose, -WarningAction, and -WarningVariable.
+For more information, see about_CommonParameters (http://go.microsoft.com/fwlink/?LinkID=113216).
 
 ## INPUTS
 
 ### System.String[]
-### You can pipe the names or ARNs of the stacks to delete to this function
+###     You can pipe the names or ARNs of the stacks to delete to this function
 ## OUTPUTS
 
 ### System.String[]
-### ARN(s) of deleted stack(s) else nothing if the stack did not exist.
+###     ARN(s) of deleted stack(s) else nothing if the stack did not exist.
 ## NOTES
 
 ## RELATED LINKS

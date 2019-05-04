@@ -77,6 +77,7 @@ $Script:CommonCredentialArguments = @{
 
 $script:localStackPorts = @{
     S3 = 4572
+    CF = 4581
 }
 
 #endregion

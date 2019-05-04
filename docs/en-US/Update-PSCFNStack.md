@@ -16,11 +16,12 @@ Updates a stack.
 Update-PSCFNStack [-StackName] <String> [-TemplateLocation <String>] [-Capabilities <String>]
  [-NotificationARNs <String[]>] [-ResourceType <String[]>] [-RoleARN <String>]
  [-RollbackConfiguration <RollbackConfiguration>] [-Tag <Tag[]>] [-UsePreviousTemplate]
- [-ParameterFile <String>] [-Wait] [-Force] [<CommonParameters>]
+ [-ParameterFile <String>] [-Wait] [-Force] [-BackupTemplate] [<CommonParameters>]
 ```
 
 ## DESCRIPTION
 Updates a stack via creation and application of a changeset.
+If -Wait is specified, stack events are output to the console including events from any nested stacks.
 
 DYNAMIC PARAMETERS
 
@@ -51,12 +52,19 @@ A changeset is created and displayed, and you are asked for confirmation befre p
 
 ### EXAMPLE 2
 ```
+Update-PSCFNStack -StackName MyStack -TemplateLocation .\mystack.json -Capabilities CAPABILITY_IAM -Wait -VpcCidr 10.1.0.0/16 -BackupTemplate
+```
+
+As per the first example, but with the previous version of the template and its current parameter set saved to files in the current directory.
+
+### EXAMPLE 3
+```
 Update-PSCFNStack -StackName MyStack -TemplateLocation https://s3-eu-west-1.amazonaws.com/mybucket/mystack.json -Capabilities CAPABILITY_IAM -Wait -VpcCidr 10.1.0.0/16
 ```
 
 As per the first example, but with the template located in S3.
 
-### EXAMPLE 3
+### EXAMPLE 4
 ```
 Update-PSCFNStack -StackName MyStack -TemplateLocation s3://mybucket/mystack.json -Capabilities CAPABILITY_IAM -Wait -VpcCidr 10.1.0.0/16
 ```
@@ -65,7 +73,7 @@ As per the first example, but using an S3 URL.
 Caveat to this mechanism is that you must have a default region set in the curent shell.
 The bucket is assumed to be in this region and the stack will also be built in this region.
 
-### EXAMPLE 4
+### EXAMPLE 5
 ```
 Update-PSCFNStack -StackName MyStack -TemplateLocation .\mystack.json -Capabilities CAPABILITY_IAM -Wait -VpcCidr 10.1.0.0/16 -Force
 ```
@@ -213,7 +221,7 @@ Accept wildcard characters: False
 
 ### -UsePreviousTemplate
 Reuse the existing template that is associated with the stack that you are updating.
-Conditional: You must specify only TemplateLocationL, or set the UsePreviousTemplate to true.
+Conditional: You must specify only TemplateLocation, or set the UsePreviousTemplate to true.
 
 ```yaml
 Type: SwitchParameter
@@ -228,7 +236,8 @@ Accept wildcard characters: False
 ```
 
 ### -ParameterFile
-If present, path to a JSON file containing a list of parameter structures as defined for 'aws cloudformation create-stack'. If a parameter of the same name is defined on the command line, the command line takes precedence.
+If present, path to a JSON file containing a list of parameter structures as defined for 'aws cloudformation create-stack'.
+If a parameter of the same name is defined on the command line, the command line takes precedence.
 If your stack has a parameter with the same name as one of the parameters to this cmdlet, then you *must* set the stack parameter via a parameter file.
 
 ```yaml
@@ -260,6 +269,23 @@ Accept wildcard characters: False
 
 ### -Force
 If set, do not ask for confirmation of the changeset before proceeding.
+
+```yaml
+Type: SwitchParameter
+Parameter Sets: (All)
+Aliases:
+
+Required: False
+Position: Named
+Default value: False
+Accept pipeline input: False
+Accept wildcard characters: False
+```
+
+### -BackupTemplate
+If set, back up the current version of the template stored by CloudFormation, along with the current parameter set if any to files in the current directory.
+This will assist with undoing any unwanted change.
+Note that if you have dropped or replaced a database or anything else associcated with stored data, then the data is lost forever!
 
 ```yaml
 Type: SwitchParameter

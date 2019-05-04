@@ -7,8 +7,8 @@ function Write-CloudFormationBucketTagging
     .PARAMETER BucketName
         Bucket to tag
 
-    .PARAMETER $CredentialArguments
-        Common credential arguments
+    .PARAMETER CredentialArguments
+        Common credential arguments - assmued to be S3 endpoint adjusted
 #>
     param
     (
