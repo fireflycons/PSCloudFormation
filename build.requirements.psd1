@@ -3,7 +3,8 @@
     PSDependOptions         = @{
         Target     = 'CurrentUser'
         Parameters = @{
-            AllowClobber = $True
+            AllowClobber       = $True
+            SkipPublisherCheck = $True
         }
     }
 
