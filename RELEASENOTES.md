@@ -1,5 +1,11 @@
 # Release Notes
 
+## 1.6.0
+
+10 May 2019
+
+* Fix `Update-PSCFNStack` bug where new version of template has fewer template parameters than existing stack.
+
 ## v1.5.0
 
 04 May 2019
