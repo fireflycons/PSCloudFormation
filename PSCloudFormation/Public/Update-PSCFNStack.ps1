@@ -150,36 +150,39 @@ function Update-PSCFNStack
 
     DynamicParam
     {
-        $templateArguments = @{}
+        $templateArguments = @{ }
         $PSBoundParameters.GetEnumerator() |
-            Where-Object {
+        Where-Object {
             ('TemplateLocation', 'UsePreviousTemplate', 'StackName') -icontains $_.Key
         } |
-            ForEach-Object {
+        ForEach-Object {
 
-                if ($_.Value -is [System.Management.Automation.SwitchParameter])
-                {
-                    $templateArguments.Add($_.Key, $_.Value.ToBool())
-                }
-                else
-                {
-                    $templateArguments.Add($_.Key, $_.Value)
-                }
+            if ($_.Value -is [System.Management.Automation.SwitchParameter])
+            {
+                $templateArguments.Add($_.Key, $_.Value.ToBool())
+            }
+            else
+            {
+                $templateArguments.Add($_.Key, $_.Value)
+            }
         }
 
-        #Create the RuntimeDefinedParameterDictionary
-        New-Object System.Management.Automation.RuntimeDefinedParameterDictionary |
-            New-CredentialDynamicParameters |
-            New-TemplateDynamicParameters @templateArguments
+        # Create the RuntimeDefinedParameterDictionary, storing in a variable for use later on
+        $runtimeDefinedParameterDictionary = New-Object System.Management.Automation.RuntimeDefinedParameterDictionary |
+        New-CredentialDynamicParameters |
+        New-TemplateDynamicParameters @templateArguments
+
+        # Emit dynamic parameters
+        $runtimeDefinedParameterDictionary
     }
 
     begin
     {
         $stackParameters = Get-CommandLineStackParameters -CallerBoundParameters $PSBoundParameters
         $credentialArguments = Get-CommonCredentialParameters -CallerBoundParameters $PSBoundParameters
-        $changeSetPassOnArguments = @{}
+        $changeSetPassOnArguments = @{ }
         $PSBoundParameters.Keys |
-            Where-Object {
+        Where-Object {
             @(
                 'Force'
                 'NotificationARNs'
@@ -189,7 +192,7 @@ function Update-PSCFNStack
                 'Tag'
             ) -icontains $_
         } |
-            ForEach-Object {
+        ForEach-Object {
             $changeSetPassOnArguments.Add($_, $PSBoundParameters[$_])
         }
 
@@ -208,19 +211,27 @@ function Update-PSCFNStack
                 throw "Stack $StackName does not exist"
             }
 
-            # Add any parameters not present on command line
-            # as Use Previous Value
-            $stack.Parameters |
-                ForEach-Object {
+            # Get names of parameters declared in the template we are updating _to_
+            $updatedTemplateParameterNames = $runtimeDefinedParameterDictionary.Keys |
+            Where-Object {
+                $CommonCredentialArguments.Keys -inotcontains $_
+            }
 
-                if ($stackParameters.ParameterKey -inotcontains $_.ParameterKey)
+            # Add any parameters not present on command line
+            # as Use Previous Value where that parameter still
+            # exists in the new version of the template we are applying
+            $stack.Parameters |
+            Where-Object {
+                $updatedTemplateParameterNames -ccontains $_.ParameterKey
+            } |
+            ForEach-Object {
+
+                if ($stackParameters.ParameterKey -cnotcontains $_.ParameterKey)
                 {
-                    $stackParameters += $(
-                        $p = New-Object Amazon.CloudFormation.Model.Parameter
-                        $p.ParameterKey = $_.ParameterKey
-                        $p.UsePreviousValue = $true
-                        $p
-                    )
+                    $stackParameters += New-Object Amazon.CloudFormation.Model.Parameter -Property @{
+                        ParameterKey     = $_.ParameterKey
+                        UsePreviousValue = $true
+                    }
                 }
             }
 
