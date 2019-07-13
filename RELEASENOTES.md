@@ -1,5 +1,10 @@
 # Release Notes
 
+## 1.7.0
+
+* Make `Remove-PSCFNStack` ask unless `-Force` parameter present
+* Give `Get-PSCFNStackOutputs` a `-AsHashtable` parameter to return the outputs as a raw format for processing by other commands.
+
 ## 1.6.0
 
 10 May 2019
