@@ -393,17 +393,17 @@ InModuleScope $ModuleName {
 
             It 'Should return nothing if stack does not exist' {
 
-                Remove-PSCFNStack -StackName DoesNotExist | Should BeNullOrEmpty
+                Remove-PSCFNStack -StackName DoesNotExist -Force | Should BeNullOrEmpty
             }
 
             It 'Should return ARN if stack exists' {
 
-                Remove-PSCFNStack -StackName pester | Should Be $global:TestStackArn
+                Remove-PSCFNStack -StackName pester -Force | Should Be $global:TestStackArn
             }
 
             It 'Should throw with invalid region parameter' {
 
-                { Remove-PSCFNStack -StackName pester -Region eu-west-9 } | Should Throw
+                { Remove-PSCFNStack -StackName pester -Force -Region eu-west-9 } | Should Throw
             }
 
             It 'Should not throw with valid region parameter' {
@@ -428,7 +428,7 @@ InModuleScope $ModuleName {
                 ForEach-Object {
 
                     Write-Host -ForegroundColor DarkGreen "      [?] - Testing region $($_)"
-                    { Remove-PSCFNStack -StackName pester -Region $_ } | Should Not Throw
+                    { Remove-PSCFNStack -StackName pester -Force -Region $_ } | Should Not Throw
                 }
             }
         }

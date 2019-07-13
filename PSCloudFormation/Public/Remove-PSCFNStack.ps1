@@ -19,6 +19,9 @@ function Remove-PSCFNStack
     .PARAMETER Wait
         If set and -Sequential is not set (so deleting in parallel), wait for all stacks to be deleted before returning.
 
+    .PARAMETER Force
+        If set, do not ask first.
+
     .PARAMETER Sequential
         If set, delete stacks in the order they are specified on the command line or received from the pipeline,
         waiting for each stack to delete successfully before proceeding to the next one.
@@ -33,7 +36,7 @@ function Remove-PSCFNStack
 
     .OUTPUTS
         System.String[]
-            ARN(s) of deleted stack(s) else nothing if the stack did not exist.
+            ARN(s) of deleted stack(s) else nothing if the stack did not exist or no stacks were deleted.
 
     .EXAMPLE
 
@@ -84,6 +87,8 @@ function Remove-PSCFNStack
 
         [switch]$Sequential,
 
+        [switch]$Force,
+
         [switch]$BackupTemplate
     )
 
@@ -97,6 +102,7 @@ function Remove-PSCFNStack
     begin
     {
         $credentialArguments = Get-CommonCredentialParameters -CallerBoundParameters $PSBoundParameters
+        $deleteErrors = $false
     }
 
     process
@@ -107,6 +113,8 @@ function Remove-PSCFNStack
         $arns = $StackName |
             ForEach-Object {
 
+            $cancelled = $false
+
             if (Test-StackExists -StackName $_ -CredentialArguments $credentialArguments)
             {
                 $arn = (Get-CFNStack -StackName $_ @credentialArguments).StackId
@@ -116,21 +124,44 @@ function Remove-PSCFNStack
                     Save-TemplateBackup -StackName $arn -CredentialArguments $credentialArguments -OutputPath (Get-Location).Path
                 }
 
-                Remove-CFNStack -StackName $arn -Force @credentialArguments
-
-                if ($Sequential -or ($Wait -and ($StackName | Measure-Object).Count -eq 1))
+                if (-not $Force)
                 {
-                    # Wait for this delete to complete before starting the next
-                    Write-Host "Waiting for delete: $arn"
+                    $choice = $host.ui.PromptForChoice(
+                        "Delete $StackName now?",
+                        $null,
+                        @(
+                            New-Object System.Management.Automation.Host.ChoiceDescription ('&Yes', "Delete now." )
+                            New-Object System.Management.Automation.Host.ChoiceDescription ('&No', 'Cancel operation.')
+                        ),
+                        1
+                    )
 
-                    if (-not (Wait-PSCFNStack -StackArn $arn -CredentialArguments $credentialArguments -StartTime $startTime))
+                    if ($choice -ne 0)
                     {
-                        throw "Delete unsuccessful"
+                        Write-Warning "Delete $_ cancelled."
+                        $cancelled = $true
                     }
                 }
-                else
+
+                if (-not $cancelled)
                 {
-                    $arn
+                    Remove-CFNStack -StackName $arn -Force @credentialArguments
+
+                    if ($Sequential -or ($Wait -and ($StackName | Measure-Object).Count -eq 1))
+                    {
+                        # Wait for this delete to complete before starting the next
+                        Write-Host "Waiting for delete: $arn"
+
+                        if (-not (Wait-PSCFNStack -StackArn $arn -CredentialArguments $credentialArguments -StartTime $startTime))
+                        {
+                            Write-Warning "Delete $_ unsuccessful"
+                            $deleteErrors = $true
+                        }
+                    }
+                    else
+                    {
+                        $arn
+                    }
                 }
             }
             else
@@ -151,6 +182,11 @@ function Remove-PSCFNStack
         else
         {
             $arns
+        }
+
+        if ($deleteErrors)
+        {
+            throw "At least one stack failed to delete - see warnings above."
         }
     }
 }
