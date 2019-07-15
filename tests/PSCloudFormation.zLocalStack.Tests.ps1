@@ -121,7 +121,7 @@ InModuleScope $ModuleName {
                 New-Object PSObject -Property @{ RegionName = "ap-south-1" }
                 New-Object PSObject -Property @{ RegionName = "eu-west-3" }
                 New-Object PSObject -Property @{ RegionName = "eu-west-2" }
-                New-Object PSObject -Property @{ RegionName = "us-east-1" }
+                New-Object PSObject -Property @{ RegionName = "eu-west-1" }
                 New-Object PSObject -Property @{ RegionName = "ap-northeast-2" }
                 New-Object PSObject -Property @{ RegionName = "ap-northeast-1" }
                 New-Object PSObject -Property @{ RegionName = "sa-east-1" }

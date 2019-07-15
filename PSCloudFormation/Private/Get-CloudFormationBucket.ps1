@@ -79,6 +79,32 @@ function Get-CloudFormationBucket
 
         $location = Get-S3BucketLocation -BucketName $bucketName @s3Arguments | Select-Object -ExpandProperty Value
 
+        if ([string]::IsNullOrEmpty($location))
+        {
+            $sb = New-Object System.Text.StringBuilder
+
+            $sb.AppendLine("Unable to get location for bucket $bucketName").
+                Append('  ') | Out-Null
+
+            $s3Arguments.Keys |
+            Foreach-Object {
+                $sb.Append("-($_) ")
+
+                if ($_ -ieq 'SecretKey')
+                {
+                    $sb.Append('**** ')
+                }
+                else
+                {
+                    $sb.Append("$($s3Arguments[$_]) ") | Out-Null
+                }
+            }
+
+            $sb.AppendLine();
+
+            throw $sb.ToString()
+        }
+
         if ($defaultRegionsMap.ContainsKey($location))
         {
             $location = $defaultRegionsMap[$location]
