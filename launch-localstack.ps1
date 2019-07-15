@@ -43,7 +43,7 @@ try
         '-e'
         "SERVICES=s3,cloudformation"
         '-e'
-        "DEFAULT_REGION=eu-west-1"
+        "DEFAULT_REGION=us-east-1"
         'localstack/localstack'
     )
 

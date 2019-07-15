@@ -42,7 +42,7 @@ $global:TestOversizeStackFilePath = Join-Path $PSScriptRoot test-oversize.json
 $global:localStackCommonParameters = @{
     AccessKey = 'AKAINOTUSED'
     SecretKey = 'notused'
-    Region    = 'eu-west-1'
+    Region    = 'us-east-1'
 }
 
 function global:Reset-LocalStack
@@ -121,7 +121,7 @@ InModuleScope $ModuleName {
                 New-Object PSObject -Property @{ RegionName = "ap-south-1" }
                 New-Object PSObject -Property @{ RegionName = "eu-west-3" }
                 New-Object PSObject -Property @{ RegionName = "eu-west-2" }
-                New-Object PSObject -Property @{ RegionName = "eu-west-1" }
+                New-Object PSObject -Property @{ RegionName = "us-east-1" }
                 New-Object PSObject -Property @{ RegionName = "ap-northeast-2" }
                 New-Object PSObject -Property @{ RegionName = "ap-northeast-1" }
                 New-Object PSObject -Property @{ RegionName = "sa-east-1" }
@@ -147,7 +147,7 @@ InModuleScope $ModuleName {
 
                 $bucket = Get-CloudformationBucket -CredentialArguments $credArgs
 
-                $bucket.BucketName | Should -Be 'cf-templates-pscloudformation-eu-west-1-000000000000'
+                $bucket.BucketName | Should -Be 'cf-templates-pscloudformation-us-east-1-000000000000'
 
                 Get-S3Bucket -BucketName $bucket.BucketName @localStackCommonParameters -EndpointUrl $global:localStackEndpoints.S3 | Should -Not -Be $null
                 $tags = Get-S3BucketTagging -BucketName $bucket.BucketName @localStackCommonParameters -EndpointUrl $global:localStackEndpoints.S3
@@ -159,7 +159,7 @@ InModuleScope $ModuleName {
                 $credArgs = $localStackCommonParameters.Clone()
                 $credArgs.Add('EndpointUrl', $global:localStackEndpoints.S3)
 
-                Remove-S3BucketTagging -BucketName 'cf-templates-pscloudformation-eu-west-1-000000000000' @credArgs -Force
+                Remove-S3BucketTagging -BucketName 'cf-templates-pscloudformation-us-east-1-000000000000' @credArgs -Force
 
                 $bucket = Get-CloudformationBucket -CredentialArguments $credArgs
                 $tags = Get-S3BucketTagging -BucketName $bucket.BucketName @localStackCommonParameters -EndpointUrl $global:localStackEndpoints.S3
