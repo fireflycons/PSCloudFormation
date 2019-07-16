@@ -14,6 +14,9 @@ function Get-PSCFNStackOutputs
     .PARAMETER StackName
         One or more stacks to process. One object is produced for each stack
 
+    .PARAMETER AsHashtable
+        If set (default), returned object is a hashtable - key/value pairs for each stack output.
+
     .PARAMETER AsMappingBlock
         If set (default), returned object is formatted as a CloudFomration mapping block.
         Converting the output to JSON or YAML renders text that can be pasted within a Mappings declararion.
@@ -55,12 +58,21 @@ function Get-PSCFNStackOutputs
        Get-PSCFNStackOutputs -StackName MyStack -AsCrossStackReferences
 
        When converted to JSON or YAML, provides a collection of Fn::Import stanzas that can be individually pasted into a new template
+
+    .EXAMPLE
+
+       $hash = Get-PSCFNStackOutputs -StackName MyStack -AsHashtable
+
+       Returns hashtable of output key vs output value
     #>
-    [CmdletBinding(DefaultParameterSetName = 'Mappings')]
+    [CmdletBinding(DefaultParameterSetName = 'Hash')]
     param
     (
         [Parameter(Mandatory = $true, ValueFromPipeline = $true, ValueFromPipelineByPropertyName = $true, Position = 0)]
         [string[]]$StackName,
+
+        [Parameter(ParameterSetName = 'Hash')]
+        [switch]$AsHashtable,
 
         [Parameter(ParameterSetName = 'Mappings')]
         [switch]$AsMappingBlock,
@@ -139,8 +151,16 @@ function Get-PSCFNStackOutputs
 
                 if ($outputs.Count -gt 0)
                 {
-                    # Emit outputs as object
-                    New-Object PSObject -Property $outputs
+                    if ($AsHashtable)
+                    {
+                        # Just emit the hashtable
+                        $outputs
+                    }
+                    else
+                    {
+                        # Emit outputs as object
+                        New-Object PSObject -Property $outputs
+                    }
                 }
             }
         }

@@ -12,7 +12,14 @@ Get the outputs of a stack in various formats
 
 ## SYNTAX
 
-### Mappings (Default)
+### Hash (Default)
+```
+Get-PSCFNStackOutputs [-StackName] <String[]> [-AsHashtable] [-ProfileName <String>] [-EndpointUrl <String>]
+ [-AccessKey <String>] [-SecretKey <String>] [-ProfileLocation <String>] [-SessionToken <String>]
+ [-NetworkCredential <PSCredential>] [-Credential <AWSCredentials>] [-Region <String>] [<CommonParameters>]
+```
+
+### Mappings
 ```
 Get-PSCFNStackOutputs [-StackName] <String[]> [-AsMappingBlock] [-ProfileName <String>] [-EndpointUrl <String>]
  [-AccessKey <String>] [-SecretKey <String>] [-ProfileLocation <String>] [-SessionToken <String>]
@@ -65,6 +72,13 @@ Get-PSCFNStackOutputs -StackName MyStack -AsCrossStackReferences
 
 When converted to JSON or YAML, provides a collection of Fn::Import stanzas that can be individually pasted into a new template
 
+### EXAMPLE 4
+```
+$hash = Get-PSCFNStackOutputs -StackName MyStack -AsHashtable
+```
+
+Returns hashtable of output key vs output value
+
 ## PARAMETERS
 
 ### -StackName
@@ -80,6 +94,21 @@ Required: True
 Position: 1
 Default value: None
 Accept pipeline input: True (ByPropertyName, ByValue)
+Accept wildcard characters: False
+```
+
+### -AsHashtable
+If set (default), returned object is a hashtable - key/value pairs for each stack output.
+
+```yaml
+Type: SwitchParameter
+Parameter Sets: Hash
+Aliases:
+
+Required: False
+Position: Named
+Default value: False
+Accept pipeline input: False
 Accept wildcard characters: False
 ```
 

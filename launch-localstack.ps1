@@ -19,7 +19,11 @@ function Get-Executable
     $null
 }
 
-
+if ($env:DISABLE_LOCALSTACK)
+{
+    Write-Host "LocalStack tests disabled in configuration"
+    return
+}
 
 $docker = Get-Executable -name "docker"
 
@@ -43,7 +47,7 @@ try
         '-e'
         "SERVICES=s3,cloudformation"
         '-e'
-        "DEFAULT_REGION=eu-west-1"
+        "DEFAULT_REGION=us-east-1"
         'localstack/localstack'
     )
 

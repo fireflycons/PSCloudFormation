@@ -42,7 +42,7 @@ $global:TestOversizeStackFilePath = Join-Path $PSScriptRoot test-oversize.json
 $global:localStackCommonParameters = @{
     AccessKey = 'AKAINOTUSED'
     SecretKey = 'notused'
-    Region    = 'eu-west-1'
+    Region    = 'us-east-1'
 }
 
 function global:Reset-LocalStack
@@ -147,7 +147,7 @@ InModuleScope $ModuleName {
 
                 $bucket = Get-CloudformationBucket -CredentialArguments $credArgs
 
-                $bucket.BucketName | Should -Be 'cf-templates-pscloudformation-eu-west-1-000000000000'
+                $bucket.BucketName | Should -Be 'cf-templates-pscloudformation-us-east-1-000000000000'
 
                 Get-S3Bucket -BucketName $bucket.BucketName @localStackCommonParameters -EndpointUrl $global:localStackEndpoints.S3 | Should -Not -Be $null
                 $tags = Get-S3BucketTagging -BucketName $bucket.BucketName @localStackCommonParameters -EndpointUrl $global:localStackEndpoints.S3
@@ -159,7 +159,7 @@ InModuleScope $ModuleName {
                 $credArgs = $localStackCommonParameters.Clone()
                 $credArgs.Add('EndpointUrl', $global:localStackEndpoints.S3)
 
-                Remove-S3BucketTagging -BucketName 'cf-templates-pscloudformation-eu-west-1-000000000000' @credArgs -Force
+                Remove-S3BucketTagging -BucketName 'cf-templates-pscloudformation-us-east-1-000000000000' @credArgs -Force
 
                 $bucket = Get-CloudformationBucket -CredentialArguments $credArgs
                 $tags = Get-S3BucketTagging -BucketName $bucket.BucketName @localStackCommonParameters -EndpointUrl $global:localStackEndpoints.S3
@@ -245,7 +245,7 @@ InModuleScope $ModuleName {
 
             It "Should delete a stack" {
 
-                Remove-PSCFNStack -StackName test-delete @localStackCommonParameters -EndpointUrl $localStackEndpoints.CF -Wait
+                Remove-PSCFNStack -StackName test-delete @localStackCommonParameters -EndpointUrl $localStackEndpoints.CF -Wait -Force
 
                 { Get-CFNStack -StackName test-delete  @localStackCommonParameters -EndpointUrl $localStackEndpoints.CF } | Should Throw
             }
@@ -253,7 +253,7 @@ InModuleScope $ModuleName {
             It "Should delete a stack and create template backup when requested, and recreate stack from backups" {
 
                 Get-ChildItem -Path . -Filter "*.bak.json" | Measure-Object | Select-Object -ExpandProperty Count | Should -Be 0
-                Remove-PSCFNStack -StackName test-delete @localStackCommonParameters -EndpointUrl $localStackEndpoints.CF -BackupTemplate -Wait
+                Remove-PSCFNStack -StackName test-delete @localStackCommonParameters -EndpointUrl $localStackEndpoints.CF -BackupTemplate -Wait -Force
 
                 { Get-CFNStack -StackName test-delete  @localStackCommonParameters -EndpointUrl $localStackEndpoints.CF } | Should Throw
                 Get-ChildItem -Path . -Filter "*.bak.json" | Measure-Object | Select-Object -ExpandProperty Count | Should -Be 2
