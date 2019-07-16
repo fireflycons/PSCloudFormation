@@ -19,7 +19,11 @@ function Get-Executable
     $null
 }
 
-
+if ($env:DISABLE_LOCALSTACK)
+{
+    Write-Host "LocalStack tests disabled in configuration"
+    return
+}
 
 $docker = Get-Executable -name "docker"
 
