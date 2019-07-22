@@ -194,7 +194,16 @@ function Reset-PSCFNStack
             $createParameters.Add($_, $PSBoundParameters[$_])
         }
 
-        Remove-PSCFNStack -StackName $StackName -Wait @credentialArguments
+        try
+        {
+            Remove-PSCFNStack -StackName $StackName -Wait @credentialArguments -ThrowOnAbort -Force:$Force
+        }
+        catch
+        {
+            Write-Warning $_.Exception.Message
+            return
+        }
+
         New-PSCFNStack @createParameters
     }
 }

@@ -1,5 +1,9 @@
 # Release Notes
 
+## 1.7.1
+
+* Minor bug fixes on `Reset-PSCFNStack`
+
 ## 1.7.0
 
 * Make `Remove-PSCFNStack` ask unless `-Force` parameter present
