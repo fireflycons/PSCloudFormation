@@ -13,7 +13,7 @@ Delete one or more stacks.
 ## SYNTAX
 
 ```
-Remove-PSCFNStack [-StackName] <String[]> [-Wait] [-Sequential] [-Force] [-BackupTemplate]
+Remove-PSCFNStack [-StackName] <String[]> [-Wait] [-Sequential] [-Force] [-ThrowOnAbort] [-BackupTemplate]
  [-ProfileName <String>] [-EndpointUrl <String>] [-AccessKey <String>] [-SecretKey <String>]
  [-ProfileLocation <String>] [-SessionToken <String>] [-NetworkCredential <PSCredential>]
  [-Credential <AWSCredentials>] [-Region <String>] [<CommonParameters>]
@@ -126,6 +126,22 @@ Accept wildcard characters: False
 
 ### -Force
 If set, do not ask first.
+
+```yaml
+Type: SwitchParameter
+Parameter Sets: (All)
+Aliases:
+
+Required: False
+Position: Named
+Default value: False
+Accept pipeline input: False
+Accept wildcard characters: False
+```
+
+### -ThrowOnAbort
+If set, and user answers no when asked if stack should be deleted, throw an exception instead of just warning.
+This switch is primarily for use by Reset-PSCFNStack to enable cancellation of the reset process.
 
 ```yaml
 Type: SwitchParameter
@@ -299,16 +315,17 @@ Accept wildcard characters: False
 ```
 
 ### CommonParameters
-This cmdlet supports the common parameters: -Debug, -ErrorAction, -ErrorVariable, -InformationAction, -InformationVariable, -OutVariable, -OutBuffer, -PipelineVariable, -Verbose, -WarningAction, and -WarningVariable. For more information, see about_CommonParameters (http://go.microsoft.com/fwlink/?LinkID=113216).
+This cmdlet supports the common parameters: -Debug, -ErrorAction, -ErrorVariable, -InformationAction, -InformationVariable, -OutVariable, -OutBuffer, -PipelineVariable, -Verbose, -WarningAction, and -WarningVariable.
+For more information, see about_CommonParameters (http://go.microsoft.com/fwlink/?LinkID=113216).
 
 ## INPUTS
 
 ### System.String[]
-### You can pipe the names or ARNs of the stacks to delete to this function
+###     You can pipe the names or ARNs of the stacks to delete to this function
 ## OUTPUTS
 
 ### System.String[]
-### ARN(s) of deleted stack(s) else nothing if the stack did not exist.
+###     ARN(s) of deleted stack(s) else nothing if the stack did not exist or no stacks were deleted.
 ## NOTES
 
 ## RELATED LINKS

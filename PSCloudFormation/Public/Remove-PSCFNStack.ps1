@@ -22,6 +22,10 @@ function Remove-PSCFNStack
     .PARAMETER Force
         If set, do not ask first.
 
+    .PARAMETER ThrowOnAbort
+        If set, and user answers no when asked if stack should be deleted, throw an exception instead of just warning.
+        This switch is primarily for use by Reset-PSCFNStack to enable cancellation of the reset process.
+
     .PARAMETER Sequential
         If set, delete stacks in the order they are specified on the command line or received from the pipeline,
         waiting for each stack to delete successfully before proceeding to the next one.
@@ -89,6 +93,8 @@ function Remove-PSCFNStack
 
         [switch]$Force,
 
+        [switch]$ThrowOnAbort,
+
         [switch]$BackupTemplate
     )
 
@@ -138,6 +144,11 @@ function Remove-PSCFNStack
 
                     if ($choice -ne 0)
                     {
+                        if ($ThrowOnAbort)
+                        {
+                            throw "Delete $_ cancelled"
+                        }
+
                         Write-Warning "Delete $_ cancelled."
                         $cancelled = $true
                     }
