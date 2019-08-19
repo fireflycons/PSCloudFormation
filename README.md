@@ -1,23 +1,21 @@
 # PSCloudFormation
-|Branch|Status|
-|------|------|
-| master | [![Build status](https://ci.appveyor.com/api/projects/status/fgt7d0icj7emc6hl/branch/master?svg=true)](https://ci.appveyor.com/project/fireflycons/pscloudformation/branch/master)|
-| dev | [![Build status](https://ci.appveyor.com/api/projects/status/fgt7d0icj7emc6hl/branch/dev?svg=true)](https://ci.appveyor.com/project/fireflycons/pscloudformation/branch/dev)|
-
+[![Build status](https://ci.appveyor.com/api/projects/status/fgt7d0icj7emc6hl/branch/master?svg=true)](https://ci.appveyor.com/project/fireflycons/pscloudformation/branch/master)
 
 ## How to Install
 
-The module is published on the PowerShell Gallery and can be installed by following the instructions there
+The module is published on the PowerShell Gallery and can be installed by following the instructions there. Click on badges below to go there.
 
 ### Windows PowerShell
-https://www.powershellgallery.com/packages/PSCloudFormation
+[![PowerShell Gallery](https://img.shields.io/powershellgallery/v/PSCloudFormation)](https://www.powershellgallery.com/packages/PSCloudFormation)
+
 
 ### PowerShell Core (Linux)
-https://www.powershellgallery.com/packages/PSCloudFormation.netcore
+[![PowerShell Gallery](https://img.shields.io/powershellgallery/v/PSCloudFormation.netcore)](https://www.powershellgallery.com/packages/PSCloudFormation.netcore)
+
 
 ## What it isn't
 
-It isn't intended as a replacement for the raw API `New-CFNStack` etc. You should continue to use those in automation scripts.
+It isn't intended as a replacement for the raw API `New-CFNStack` etc. You should probably continue to use those in automation scripts, though there's nothing to stop you using this library to get more visual feedback but as always, ensure you test well before unleashing on production systems.
 
 ## What it is
 
