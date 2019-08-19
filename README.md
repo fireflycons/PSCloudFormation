@@ -3,14 +3,18 @@
 
 ## How to Install
 
-The module is published on the PowerShell Gallery and can be installed by following the instructions there. Click on badges below to go there.
+The module is published on the PowerShell Gallery and can be installed by following the instructions there.
 
 ### Windows PowerShell
-[![PowerShell Gallery](https://img.shields.io/powershellgallery/v/PSCloudFormation)](https://www.powershellgallery.com/packages/PSCloudFormation)
+![PowerShell Gallery](https://img.shields.io/powershellgallery/v/PSCloudFormation)
+
+https://www.powershellgallery.com/packages/PSCloudFormation
 
 
 ### PowerShell Core (Linux)
-[![PowerShell Gallery](https://img.shields.io/powershellgallery/v/PSCloudFormation.netcore)](https://www.powershellgallery.com/packages/PSCloudFormation.netcore)
+![PowerShell Gallery](https://img.shields.io/powershellgallery/v/PSCloudFormation.netcore)
+
+https://www.powershellgallery.com/packages/PSCloudFormation.netcore
 
 
 ## What it isn't
