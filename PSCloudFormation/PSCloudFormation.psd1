@@ -12,7 +12,7 @@
     RootModule        = 'PSCloudFormation.psm1'
 
     # Version number of this module.
-    ModuleVersion     = '1.7.1'
+    ModuleVersion     = '1.8.0'
 
     # Supported PSEditions
     # CompatiblePSEditions = @()
@@ -69,7 +69,7 @@
     # NestedModules    = @()
 
     # Functions to export from this module, for best performance, do not use wildcards and do not delete the entry, use an empty array if there are no functions to export.
-    FunctionsToExport = @('Get-PSCFNStackOutputs','New-PSCFNStack','Remove-PSCFNStack','Reset-PSCFNStack','Update-PSCFNStack')
+    FunctionsToExport = @('Get-PSCFNStackOutputs','New-PSCFNStack','Remove-PSCFNStack','Reset-PSCFNStack','Update-PSCFNStack', 'New-PSCFNPackage')
 
     # Cmdlets to export from this module, for best performance, do not use wildcards and do not delete the entry, use an empty array if there are no cmdlets to export.
     CmdletsToExport   = @()

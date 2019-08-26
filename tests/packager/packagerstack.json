@@ -1,0 +1,35 @@
+{
+    "AWSTemplateFormatVersion": "2010-09-09",
+    "Description": "Packager test",
+    "Parameters": {
+        "RuntimeVersion": {
+            "Type": "String",
+            "DefaultValue:": "python3.6"
+        }
+    },
+    "Resources": {
+        "GlueJob": {
+            "Type": "AWS::Glue::Job",
+            "Properties": {
+                "Command": {
+                    "ScriptLocation": "./gluejob.py"
+                }
+            }
+        },
+        "ApiGateway": {
+            "Type": "AWS::ApiGateway::RestApi",
+            "Properties": {
+                "BodyS3Location": "./restapi.json"
+            }
+        },
+        "Lambda": {
+            "Type": "AWS::Lambda::Function",
+            "Properties": {
+                "Code": "./lambda.py",
+                "Runtime": {
+                    "Fn::Sub": "RuntimeVersion"
+                }
+            }
+        }
+    }
+}
