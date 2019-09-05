@@ -5,15 +5,15 @@ Parameters:
     Type: String
     'DefaultValue:': python3.6
 Resources:
+  ApiGateway:
+    Type: AWS::ApiGateway::RestApi
+    Properties:
+      BodyS3Location: ./restapi.json
   GlueJob:
     Type: AWS::Glue::Job
     Properties:
       Command:
         ScriptLocation: ./gluejob.py
-  ApiGateway:
-    Type: AWS::ApiGateway::RestApi
-    Properties:
-      BodyS3Location: ./restapi.json
   Lambda:
     Type: AWS::Lambda::Function
     Properties:
