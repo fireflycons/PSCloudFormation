@@ -2,6 +2,12 @@
 
 $ErrorActionPreference = 'Stop'
 
+# .NET compression libraries
+'System.IO.Compression', 'System.IO.Compression.FileSystem' |
+Foreach-Object {
+    [System.Reflection.Assembly]::LoadWithPartialName($_) | Out-Null
+}
+
 # Check for YAML support
 $psyaml = Get-Module -ListAvailable |
 Where-Object {
@@ -28,6 +34,29 @@ else
     Write-Warning 'YAML support unavailable'
     Write-Warning 'To enable, install powershell-yaml from the gallery'
     Write-Warning 'Install-Module -Name powershell-yaml'
+}
+
+# Get cfn-flip if present. That's the only safe way to convert short-form intrinsics
+$script:cfnFlip = $(
+    foreach ($exe in @('cfn-flip.exe', 'cfn-flip'))
+    {
+        $cmd = Get-Command -Name $exe -ErrorAction SilentlyContinue
+
+        if ($null -ne $cmd)
+        {
+            $cmd
+            break;
+        }
+    }
+)
+
+$script:haveCfnFlip = ($null -ne $script:cfnFlip)
+
+if (-not $script:haveCfnFlip)
+{
+    Write-Warning "cfn-flip not found. The following will not work as indicated:"
+    Write-Warning "- New-PSCFNPackage will not do any format conversion as is the behaviour of 'aws cloudformation package'. Output will be in same format as input."
+    Write-Warning "See https://github.com/awslabs/aws-cfn-template-flip fo how to install."
 }
 
 # Init region and AZ hash. AZ's are lazy-loaded when needed as this is time consuming
@@ -84,7 +113,7 @@ $script:localStackPorts = @{
 
 # Get public and private function definition files.
 $Public = @( Get-ChildItem -Path ([IO.Path]::Combine($PSScriptRoot, "Public", "*.ps1")) -ErrorAction SilentlyContinue )
-$Private = @( Get-ChildItem -Path ([IO.Path]::Combine($PSScriptRoot, "Private", "*.ps1")) -ErrorAction SilentlyContinue )
+$Private = @( Get-ChildItem -Recurse -Path ([IO.Path]::Combine($PSScriptRoot, "Private", "*.ps1")) -ErrorAction SilentlyContinue )
 
 # Dot source the files
 foreach ($import in @($Public + $Private))

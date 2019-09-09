@@ -7,15 +7,19 @@ Parameters:
 Resources:
   ApiGateway:
     Type: AWS::ApiGateway::RestApi
-    Properties:
-      BodyS3Location: ./restapi.json
+    &492464927 Properties:
+      BodyS3Location: https://bucket.s3.amazonaws.com/restapi.json
   GlueJob:
     Type: AWS::Glue::Job
     Properties:
       Command:
-        ScriptLocation: ./gluejob.py
+        ScriptLocation: https://bucket.s3.amazonaws.com/gluejob.py
   Lambda:
     Type: AWS::Lambda::Function
     Properties:
-      Code: ./lambda.py
+      Code:
+        S3Bucket: bucket
+        S3Key: lambda.zip
       Runtime: !Sub 'RuntimeVersion'
+...
+
