@@ -18,11 +18,11 @@ function Write-S3PackageArtifact
         [string]$Bucket,
         [string]$Key,
         [hashtable]$CredentialArguments,
+        [hashtable]$Metadata,
+        [string]$KmsKeyId,
         [switch]$Force
 
     )
-
-    $hashMetaDataTagName = 'new-pscfnpackage-hash'
 
     function Get-MD5Hash
     {
@@ -59,11 +59,14 @@ function Write-S3PackageArtifact
     # AWS quotes the ETag (MD5 hash value)
     $hash = '"' + (Get-MD5Hash $Path) + '"'
 
+    # To support localstack testing, we have to fudge EndpointURL if present
+    $s3Arguments = Update-EndpointValue -CredentialArguments $CredentialArguments -Service S3
+
     if (-not $Force)
     {
         try
         {
-            $s3Object = Get-S3Object -BucketName $Bucket -Key $Key @CredentialArguments
+            $s3Object = Get-S3Object -BucketName $Bucket -Key $Key @s3Arguments
 
             if ($null -ne $s3Object -and $s3Object.ETag -ieq $hash)
             {
@@ -73,13 +76,11 @@ function Write-S3PackageArtifact
         }
         catch
         {
-            # Not found or some othe error - proceed to upload
+            # Not found or some other error - proceed to upload
         }
     }
 
     # Upload the file
-    # To support localstack testing, we have to fudge EndpointURL if present
-    $s3Arguments = Update-EndpointValue -CredentialArguments $CredentialArguments -Service S3
 
     if (-not (Get-S3Bucket -BucketName $Bucket))
     {
@@ -87,6 +88,18 @@ function Write-S3PackageArtifact
         New-S3Bucket -BucketName $Bucket @s3Arguments
     }
 
-    Write-S3Object -BucketName $Bucket -Key $Key -File $Path -Metadata @{ $hashMetaDataTagName = $hash } @s3Arguments
+    $additionalArguments = @{}
+
+    if ($Metadata -and $Metadata.Keys.Length -gt 0)
+    {
+        $additionalArguments.Add('Metadata', $Metadata)
+    }
+
+    if (-not [string]::IsNullOrEmpty($KmsKeyId))
+    {
+        $additionalArguments.Add('ServerSideEncryptionKeyManagementServiceKeyId ', $KmsKeyId)
+    }
+
+    Write-S3Object -BucketName $Bucket -Key $Key -File $Path @s3Arguments @additionalArguments
     return $true
 }

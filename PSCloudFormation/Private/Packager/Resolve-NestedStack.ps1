@@ -14,31 +14,36 @@ function Resolve-NestedStack
     .PARAMETER CallerBoundParameters
         Parameter hash passed to invocation of New-PSCFNPackage
 
-    .OUTPUTS
-        S3 URL of uploaded nested stack template.
+    .PARAMETER TempFolder
+        Temporary directory to use
 #>
     param
     (
         [string]$TemplateFile,
-        [hashtable]$CallerBoundParameters
+        [hashtable]$CallerBoundParameters,
+        [string]$TempFolder
     )
 
     # Create name for modified nested template
-    $ext = $(
-        if ($UseJson)
-        {
-            '.json'
-        }
-        else
-        {
-            '.yaml'
-        }
-    )
+    $ext = [IO.Path]::GetExtension($TemplateFile)
 
-    $credentialParameters = Get-CommonCredentialParameters -CallerBoundParameters $CallerBoundParameters
+    if ($script:haveCfnFlip)
+    {
+        # If we can flip template format
+        $ext = $(
+            if ($CallerBoundParameters.ContainsKey('UseJson') -and $CallerBoundParameters['UseJson'])
+            {
+                '.json'
+            }
+            else
+            {
+                '.yaml'
+            }
+        )
+    }
 
     $templateToUpload = $TemplateFile
-    $nestedOutputTemplateFile = Join-Path ([IO.Path]::GetDirectoryName($TemplateFile)) ([IO.Path]::GetFileNameWithoutExtension($TemplateFile) + "-packaged" + $ext)
+    $nestedOutputTemplateFile = Join-Path $TempFolder ([IO.Path]::GetFileNameWithoutExtension($TemplateFile) + $ext)
 
     $argumentHash = @{}
 
@@ -61,20 +66,5 @@ function Resolve-NestedStack
         $templateToUpload = $nestedOutputTemplateFile
     }
 
-    # Now upload template to S3
-    $bucket = $CallerBoundParameters['S3Bucket']
-    $key = $(
-        if ($CallerBoundParameters.ContainsKey('S3Prefix'))
-        {
-            $CallerBoundParameters['S3Prefix'] + '/' + [IO.Path]::GetFileName($templateToUpload)
-        }
-        else
-        {
-            [IO.Path]::GetFileName($templateToUpload)
-        }
-    )
-
-    $region = Get-CurrentRegion -CredentialArguments $credentialParameters
-
-    return "https://s3.$($region).amazonaws.com/$bucket/$key"
+    return $templateToUpload
 }

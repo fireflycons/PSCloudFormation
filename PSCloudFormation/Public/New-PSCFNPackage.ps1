@@ -4,6 +4,30 @@ function New-PSCFNPackage
     .SYNOPSIS
         Create a deployment package a-la aws cloudformation package
 
+    .PARAMETER TemplateFile
+        The path where your AWS CloudFormation template is located.
+
+    .PARAMETER S3Bucket
+        The name of the S3 bucket where this command uploads the artifacts that are referenced in your template.
+
+    .PARAMETER S3Prefix
+        A prefix name that the command adds to the artifacts' name when it uploads them to the S3 bucket. The prefix name is a path name (folder name) for the S3 bucket.
+
+    .PARAMETER KmsKeyId
+        The ID of an AWS KMS key that the command uses to encrypt artifacts that are at rest in the S3 bucket.
+
+    .PARAMETER OutputTemplateFile
+        The path to the file where the command writes the output AWS CloudFormation template. If you don't specify a path, the command writes the template to the standard output.
+
+    .PARAMETER UseJson
+        Indicates whether to use JSON as the format for the output AWS CloudFormation template. YAML is used by default.
+
+    .PARAMETER ForceUpload
+        Indicates whether to override existing files in the S3 bucket. Specify this flag to upload artifacts even if they match existing artifacts in the S3 bucket.
+
+    .PARAMETER Metadata
+        A map of metadata to attach to ALL the artifacts that are referenced in your template.
+
     .NOTES
         https://github.com/aws/aws-extensions-for-dotnet-cli/blob/master/src/Amazon.Lambda.Tools/LambdaUtilities.cs
 #>
@@ -50,6 +74,45 @@ function New-PSCFNPackage
             {
                 throw "Assertion failure: { $($Predicate.ToString()) }"
             }
+        }
+
+        function Switch-Template
+        {
+            param
+            (
+                [string]$Template,
+
+                [ValidateSet("JSON", "YAML")]
+                [string]$Format,
+
+                [string]$TempFolder
+            )
+
+            if (-not $script:haveCfnFlip)
+            {
+                return $template
+            }
+
+            $inputFile = Join-Path $TempFolder ([Guid]::NewGuid())
+            $outputFIle = Join-Path $TempFolder ([Guid]::NewGuid())
+
+            $Template | Out-FileWithoutBOM -FilePath $inputFile
+
+            if ($Format -ieq 'JSON')
+            {
+                & $script:cfnFlip -j $inputFile $outputFile
+            }
+            else
+            {
+                & $script:cfnFlip -y $inputFile $outputFile
+            }
+
+            if ($LASTEXITCODE -ne 0)
+            {
+                throw "Error running cfn-flip"
+            }
+
+            return (Get-Content -Raw $outputFile)
         }
 
         $credentialParameters = Get-CommonCredentialParameters -CallerBoundParameters $PSBoundParameters
@@ -102,6 +165,10 @@ function New-PSCFNPackage
     {
         try
         {
+            # Create a temp folder for any work
+            $tempFolder = Join-Path ([IO.Path]::GetTempPath()) ([Guid]::NewGuid().ToString())
+            New-Item -Path $tempFolder -ItemType Directory | Out-Null
+
             # Get absolute path to template.
             $TemplateFile = (Resolve-Path -Path $TemplateFile).Path
 
@@ -146,43 +213,10 @@ function New-PSCFNPackage
                                     if ($resource.Type -eq 'AWS::Cloudformation::Stack')
                                     {
                                         # Recurse nested stack.
-                                        # Create name for modified nested template
-                                        $ext = $(
-                                            if ($UseJson)
-                                            {
-                                                '.json'
-                                            }
-                                            else
-                                            {
-                                                '.yaml'
-                                            }
-                                        )
-
-                                        $nestedOutputTemplateFile = Join-Path ([IO.Path]::GetDirectoryName($referencedFileSystemObject)) ([IO.Path]::GetFileNameWithoutExtension($referencedFileSystemObject) + "-packaged" + $ext)
-
-                                        $argumentHash = @{}
-
-                                        $PSBoundParameters.Keys |
-                                        Where-Object {
-                                            ('OutputTemplateFile', 'TemplateFile') -inotcontains $_
-                                        } |
-                                        ForEach-Object {
-                                            $argumentHash.Add($_, $PSBoundParameters[$_])
-                                        }
-
-                                        $argumentHash.Add('TemplateFile', $referencedFileSystemObject)
-                                        $argumentHash.Add('OutputTemplateFile', $nestedOutputTemplateFile)
-
-                                        New-PSCFNPackage @argumentHash
-
-                                        if (Test-Path -Path $nestedOutputTemplateFile)
-                                        {
-                                            # Substitutions were made
-                                            $referencedFileSystemObject = $nestedOutputTemplateFile
-                                        }
+                                        $referencedFileSystemObject = Resolve-NestedStack -TempFolder $tempFolder -TemplateFile $referencedFileSystemObject -CallerBoundParameters $PSBoundParameters
                                     }
 
-                                    $node = Write-Resource -Json -Payload $referencedFileSystemObject -ResourceType $resource.Type -Bucket $S3Bucket -Prefix $S3Prefix -Force:$ForceUpload -CredentialArguments $credentialParameters
+                                    $node = Write-Resource -TempFolder $tempFolder -Json -Payload $referencedFileSystemObject -ResourceType $resource.Type -Bucket $S3Bucket -Prefix $S3Prefix -Force:$ForceUpload -CredentialArguments $credentialParameters -Metadata $Metadata
                                     $propObject.Value = $node.Value
 
                                     $modifiedResources++
@@ -192,47 +226,34 @@ function New-PSCFNPackage
                         catch
                         {
                             Write-Host -ForegroundColor Red -BackgroundColor Black $_.Exception.Message
+                            Write-Host -ForegroundColor Red -BackgroundColor Black $_.ScriptStackTrace
                             throw "Error processing resource '$resourceName' ($($resource.Type))"
                         }
                     }
 
                     if ($modifiedResources -gt 0)
                     {
-<#                        
-                        $forceJson = (-not $Script:yamlSupport -and -not $UseJson)
-
-                        if ($forceJson)
-                        {
-                            Write-Warning "YAML support unavailable. Output will be JSON"
-
-                            if (-not ([string]::IsNullOrEmpty($OutputTemplateFile)))
-                            {
-                                $outputTemplateFileName = [IO.Path]::GetFileNameWithoutExtension($OutputTemplateFile) + ".json"
-                                $OutputTemplateFile = Join-Path [IO.Path]::GetDirectoryName($OutputTemplateFile) $outputTemplateFileName
-                            }
-                        }
-
-                        $renderedTemplate = $(
-                            if ($UseJson -or $forceJson)
-                            {
-                                $templateObject | ConvertTo-Json -Depth 20
-                            }
-                            else
-                            {
-                                $templateObject | ConvertTo-Yaml
-                            }
-                        )
-#>
+                        $haveOutputFile = -not ([string]::IsNullOrEmpty($OutputTemplateFile))
                         $renderedTemplate = $templateObject | ConvertTo-Json -Depth 20 | Format-Json
 
-                        if ((-not ([string]::IsNullOrEmpty($OutputTemplateFile))))
+                        if ($script:cfnFlip -and -not $UseJson -and (-not $haveOutputFile -or ($haveOutputFile -and [IO.Path]::GetExtension($OutputTemplateFile) -ieq '.yaml')))
                         {
-                            $renderedTemplate | Out-File -FilePath $OutputTemplateFile
+                            # If we can flip template format and either no output file, not UseJson, or output file is yaml
+                            $renderedTemplate = Switch-Template -Template $renderedTemplate -Format YAML -TempFolder $tempFolder
+                        }
+
+                        if ($haveOutputFile)
+                        {
+                            $renderedTemplate | Out-FileWithoutBOM -FilePath $OutputTemplateFile
                         }
                         else
                         {
                             $renderedTemplate
                         }
+                    }
+                    else
+                    {
+                        Write-Host "$TemplateFile - Unchanged"
                     }
                 }
 
@@ -309,12 +330,13 @@ function New-PSCFNPackage
                                 {
                                     $referencedFileSystemObject = Get-PathToReferencedFilesystemObject -ParentTemplate $TemplateFile -ReferencedFileSystemObject $v
 
-                                    if ($resource.Type -eq 'AWS::Cloudformation::Stack')
+                                    if ($type -eq 'AWS::Cloudformation::Stack')
                                     {
-                                        # Recurse
+                                        # Recurse nested stack.
+                                        $referencedFileSystemObject  = Resolve-NestedStack -TempFolder $tempFolder -TemplateFile $referencedFileSystemObject -CallerBoundParameters $PSBoundParameters
                                     }
 
-                                    $node = Write-Resource -Yaml -Payload $referencedFileSystemObject -ResourceType $type -Bucket $S3Bucket -Prefix $S3Prefix -Force:$ForceUpload -CredentialArguments $credentialParameters
+                                    $node = Write-Resource -TempFolder $tempFolder -Yaml -Payload $referencedFileSystemObject -ResourceType $type -Bucket $S3Bucket -Prefix $S3Prefix -Force:$ForceUpload -CredentialArguments $credentialParameters -Metadata $Metadata
                                     $propObject.Children.Remove($k) | Out-Null
                                     $propObject.Add($k.Value, $node.Value)
                                     $modifiedResources++
@@ -323,11 +345,34 @@ function New-PSCFNPackage
                         }
                     }
 
-                    $sw = New-Object System.IO.StringWriter
-                    $yaml.Save($sw, $false)  # Do not assign anchors
+                    if ($modifiedResources -gt 0)
+                    {
+                        $haveOutputFile = -not ([string]::IsNullOrEmpty($OutputTemplateFile))
 
-                    $template = $sw.ToString()
-                    $template
+                        $sw = New-Object System.IO.StringWriter
+                        $yaml.Save($sw, $false)  # Do not assign anchors
+
+                        $renderedTemplate = $sw.ToString()
+
+                        if ($script:cfnFlip -and $UseJson)
+                        {
+                            # If we can flip template format and either no output file, not UseJson, or output file is yaml
+                            $renderedTemplate = Switch-Template -Template $renderedTemplate -Format JSON -TempFolder $tempFolder
+                        }
+
+                        if ($haveOutputFile)
+                        {
+                            $renderedTemplate | Out-FileWithoutBOM -FilePath $OutputTemplateFile
+                        }
+                        else
+                        {
+                            $renderedTemplate
+                        }
+                    }
+                    else
+                    {
+                        Write-Host "$TemplateFile - Unchanged"
+                    }
                 }
             }
 
@@ -337,6 +382,13 @@ function New-PSCFNPackage
             Write-Host -ForegroundColor Red -BackgroundColor Black $_.Exception.Message
             Write-Host -ForegroundColor Red -BackgroundColor Black $_.ScriptStackTrace
             throw "Error processing template '$TemplateFile'"
+        }
+        finally
+        {
+            if (Test-Path -Path $tempFolder -PathType Container)
+            {
+                Remove-Item $tempFolder -Recurse -Force
+            }
         }
     }
 }

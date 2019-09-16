@@ -15,6 +15,12 @@ function Write-Resource
 
         [string]$Prefix,
 
+        [string]$TempFolder,
+
+        [hashtable]$Metadata,
+
+        [string]$KmsKeyId,
+
         [switch]$Force,
 
         [hashtable]$CredentialArguments,
@@ -68,68 +74,54 @@ function Write-Resource
         # Artifact is a directory. Must be zipped.
         $zipFile = [IO.Path]::GetFileName($Payload) + ".zip"
 
+        if ($typeUsesBundle)
+        {
+            if ($Json)
+            {
+                $v = New-S3BundleNode -Json -Bucket $Bucket -Prefix $Prefix -ArtifactZip $zipFile
+            }
+            else
+            {
+                $v = (New-S3BundleNode -Yaml -Bucket $Bucket -Prefix $Prefix -ArtifactZip $zipFile).MappingNode
+            }
+        }
+        else
+        {
+            $v = New-S3ObjectUrl -Bucket $Bucket -Prefix $Prefix -Artifact $zipFile
+        }
+
         $artifactDetail =  New-Object PSObject -Property @{
             Artifact = $zipFile
             Zip = $true
-            Value = $(
-                if ($typeUsesBundle)
-                {
-                    if ($Json)
-                    {
-                        New-S3BundleNode -Json -Bucket $Bucket -Prefix $Prefix -ArtifactZip $zipFile
-                    }
-                    else
-                    {
-                        (New-S3BundleNode -Yaml -Bucket $Bucket -Prefix $Prefix -ArtifactZip $zipFile).MappingNode
-                    }
-                }
-                else
-                {
-                    New-S3ObjectUrl -Bucket $Bucket -Prefix $Prefix -Artifact $zipFile
-                }
-            )
+            Value = $v
             Uploaded = $false
         }
     }
 
-    $tmpPath = $null
     $fileToUpload = $referencedFileSystemObject
 
-    try
+    # Create zip if needed in a unique temp dir to prevent overwriting anything existing
+    if ($artifactDetail.Zip)
     {
-        # Create zip if needed in a unique temp dir to prevent overwriting anything existing
-        if ($artifactDetail.Zip)
-        {
-            $tmpPath = Join-Path ([IO.Path]::GetTempPath()) ([Guid]::NewGuid().Guid)
-
-            New-Item -Path $tmpPath -ItemType Directory | Out-Null
-            $fileToUpload = Join-Path $tmpPath $artifactDetail.Artifact
-            Compress-UnixZip -ZipFile $fileToUpload -Path $referencedFileSystemObject
-        }
-
-        # Now write
-        $s3Key = $(
-
-            $f = [IO.Path]::GetFileName($fileToUpload)
-            if ([string]::IsNullOrEmpty($Prefix))
-            {
-                $f
-            }
-            else
-            {
-                $Prefix.Trim('/') + '/' + $f
-            }
-        )
-
-        $artifactDetail.Uploaded = Write-S3PackageArtifact -Bucket $Bucket -Key $s3Key -Path $fileToUpload -Force:$Force -CredentialArguments $CredentialArguments
+        $fileToUpload = Join-Path $TempFolder $artifactDetail.Artifact
+        Compress-UnixZip -ZipFile $fileToUpload -Path $referencedFileSystemObject
     }
-    finally
-    {
-        if ($null -ne $tmpPath)
+
+    # Now write
+    $s3Key = $(
+
+        $f = [IO.Path]::GetFileName($fileToUpload)
+        if ([string]::IsNullOrEmpty($Prefix))
         {
-            Remove-Item $tmpPath -Recurse -Force
+            $f
         }
-    }
+        else
+        {
+            $Prefix.Trim('/') + '/' + $f
+        }
+    )
+
+    $artifactDetail.Uploaded = Write-S3PackageArtifact -Bucket $Bucket -Key $s3Key -Path $fileToUpload -Force:$Force -CredentialArguments $CredentialArguments -Metadata $Metadata -KmsKeyId $KmsKeyId
 
     return $artifactDetail
 }
