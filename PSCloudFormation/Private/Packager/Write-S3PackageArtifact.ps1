@@ -84,7 +84,7 @@ function Write-S3PackageArtifact
 
     if (-not (Get-S3Bucket -BucketName $Bucket))
     {
-        Write-Host "Creating bucket: $Bucket"
+        Write-Verbose "Creating bucket: $Bucket"
         New-S3Bucket -BucketName $Bucket @s3Arguments
     }
 
@@ -100,6 +100,6 @@ function Write-S3PackageArtifact
         $additionalArguments.Add('ServerSideEncryptionKeyManagementServiceKeyId ', $KmsKeyId)
     }
 
-    Write-S3Object -BucketName $Bucket -Key $Key -File $Path @s3Arguments @additionalArguments
+    Write-S3Object -BucketName $Bucket -Key $Key -File $Path @s3Arguments @additionalArguments | Out-Null
     return $true
 }

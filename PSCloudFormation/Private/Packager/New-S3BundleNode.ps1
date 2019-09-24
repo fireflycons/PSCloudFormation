@@ -32,7 +32,7 @@ function New-S3BundleNode
 
     if ($Json)
     {
-        New-Object PSObject -Property @{
+        [pscustomobject][ordered]@{
             S3Bucket = $Bucket
             S3Key = $s3Key
         }

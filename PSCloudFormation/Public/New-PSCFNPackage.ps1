@@ -352,6 +352,7 @@ function New-PSCFNPackage
                         $sw = New-Object System.IO.StringWriter
                         $yaml.Save($sw, $false)  # Do not assign anchors
 
+                        # Render
                         $renderedTemplate = $sw.ToString()
 
                         if ($script:cfnFlip -and $UseJson)
