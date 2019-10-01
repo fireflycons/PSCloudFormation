@@ -4,7 +4,7 @@
     "Parameters": {
         "RuntimeVersion": {
             "Type": "String",
-            "DefaultValue": "nodejs8.10"
+            "Default": "nodejs8.10"
         }
     },
     "Resources": {

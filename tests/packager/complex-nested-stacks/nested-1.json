@@ -1,0 +1,18 @@
+{
+    "AWSTemplateFormatVersion": "2010-09-09",
+    "Description": "",
+    "Resources": {
+        "SubNested2": {
+            "Type": "AWS::CloudFormation::Stack",
+            "Properties": {
+                "TemplateURL": "sub-nested-2.json"
+            }
+        },
+        "secGroupName": {
+            "Type": "AWS::EC2::SecurityGroup",
+            "Properties": {
+                "GroupDescription": "SubNested1Sg"
+            }
+        }
+    }
+}

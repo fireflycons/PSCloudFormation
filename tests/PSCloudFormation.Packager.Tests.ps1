@@ -74,17 +74,11 @@ InModuleScope $ModuleName {
 
     Describe 'PSCloudFormation - Packaging' {
 
+        . ./MockS3.class.ps1
+
+        $mockS3 = [MockS3]::UseS3Mocks()
+
         Context 'Lambda' {
-
-            Mock -CommandName Get-S3Object -MockWith {
-                throw "The specified bucket does not exist"
-            }
-
-            Mock -CommandName Get-S3Bucket -MockWith { }
-
-            Mock -CommandName New-S3Bucket -MockWith { }
-
-            Mock -CommandName Write-S3Object -MockWith { }
 
             ('json', 'yaml') |
             Foreach-Object {
@@ -98,7 +92,8 @@ InModuleScope $ModuleName {
                     $expectedOutput = Join-Path $assetsDir lambdasimple-expected.yaml
 
                     $template = Format-Yaml -Template (New-PSCFNPackage -TemplateFile $inputFile -S3Bucket my-bucket)
-                    $expectedOutput | Should -FileContentMatchMultiline $template
+                    "TestDrive:/my-bucket/lambdasimple.zip" | Should -Exist
+                    $template | Should -Be (Get-Content -Raw $expectedOutput)
                 }
 
                 It "Should process complex (in a directory) lambda: $_" {
@@ -107,8 +102,73 @@ InModuleScope $ModuleName {
                     $expectedOutput = Join-Path $assetsDir lambdacomplex-expected.yaml
 
                     $template = Format-Yaml -Template (New-PSCFNPackage -TemplateFile $inputFile -S3Bucket my-bucket)
-                    $expectedOutput | Should -FileContentMatchMultiline $template
+                    "TestDrive:/my-bucket/lambdacomplex.zip" | Should -Exist
+                    $template | Should -Be (Get-Content -Raw $expectedOutput)
                 }
+            }
+        }
+
+        Context 'Glue' {
+
+            ('json', 'yaml') |
+            Foreach-Object {
+
+                $ext = $_
+                $assetsDir = [IO.Path]::Combine($TestRoot, 'packager', 'glue')
+
+                It "Should process glue job: $_" {
+
+                    $inputFile = Join-Path $assetsDir ('glue.' + $ext)
+                    $expectedOutput = Join-Path $assetsDir glue-expected.yaml
+
+                    $template = Format-Yaml -Template (New-PSCFNPackage -TemplateFile $inputFile -S3Bucket my-bucket)
+                    "TestDrive:/my-bucket/glue.py" | Should -Exist
+                    $template | Should -Be (Get-Content -Raw $expectedOutput)
+                }
+            }
+        }
+
+        Context 'With Metadata' {
+
+            $assetsDir = [IO.Path]::Combine($TestRoot, 'packager', 'glue')
+
+            It 'Should upload artifacts with metadata' {
+
+                $inputFile = Join-Path $assetsDir 'glue.yaml'
+                New-PSCFNPackage -TemplateFile $inputFile -S3Bucket my-bucket -Metadata @{ 'data1' = 'value1' } | Out-Null
+
+                $response = Get-S3ObjectMetadata -BucketName my-bucket -key glue.py
+                $response.Metadata['x-amz-meta-data1'] | Should -Be 'value1'
+            }
+        }
+
+        Context 'Nested Stacks' {
+
+            $assetsDir = [IO.Path]::Combine($TestRoot, 'packager', 'complex-nested-stacks')
+
+            It 'Should process multi-level neested stack' {
+
+                $inputFile = Join-Path $assetsDir 'base-stack.json'
+                $template = Format-Yaml -Template (New-PSCFNPackage -TemplateFile $inputFile -S3Bucket my-bucket)
+                "TestDrive:/my-bucket/nested-1.yaml" | Should -Exist
+                "TestDrive:/my-bucket/sub-nested-2.yaml" | Should -Exist
+                "TestDrive:/my-bucket/lambdasimple.zip" | Should -Exist
+
+            }
+        }
+
+        Context 'Nested Stacks With -UseJson' {
+
+            $assetsDir = [IO.Path]::Combine($TestRoot, 'packager', 'complex-nested-stacks')
+
+            It 'Should process multi-level neested stack' {
+
+                $inputFile = Join-Path $assetsDir 'base-stack.json'
+                $template = Format-Yaml -Template (New-PSCFNPackage -TemplateFile $inputFile -S3Bucket my-bucket -UseJson)
+                Get-TemplateFormat -TemplateBody $template | Should -Be 'JSON'
+                "TestDrive:/my-bucket/nested-1.json" | Should -Exist
+                "TestDrive:/my-bucket/sub-nested-2.json" | Should -Exist
+                "TestDrive:/my-bucket/lambdasimple.zip" | Should -Exist
             }
         }
     }

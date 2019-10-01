@@ -24,6 +24,8 @@ function New-PSCFNPackage
 
     .PARAMETER ForceUpload
         Indicates whether to override existing files in the S3 bucket. Specify this flag to upload artifacts even if they match existing artifacts in the S3 bucket.
+        CAVEAT: MD5 checksums are used to compare the local and S3 versions of the artifact. If the artifact is a zip file, then it will almost certainly be
+        uploaded every time as zip files contain datetimes (esp. last access time) and other file metadata that may change from subsequent invocations of zip on the local artifacts.
 
     .PARAMETER Metadata
         A map of metadata to attach to ALL the artifacts that are referenced in your template.

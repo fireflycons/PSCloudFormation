@@ -11,7 +11,7 @@
         "Lambda": {
             "Type": "AWS::Lambda::Function",
             "Properties": {
-                "Code": "lambdacomplex",
+                "Code": "../lambdafunction/lambdasimple.js",
                 "Runtime": {
                     "Fn::Sub": "RuntimeVersion"
                 },
