@@ -306,145 +306,21 @@ class MockS3
                 $mockS3.GetBucketTagging($BucketName)
             }
 
-            Mock -CommandName Add-S3PublicAccessBlock -MockWith { throw (New-Object NotImplementedException -ArgumentList "Add-S3PublicAccessBlock not implemented") }
-
-            Mock -CommandName Copy-S3Object -MockWith { throw (New-Object NotImplementedException -ArgumentList "Copy-S3Object not implemented") }
-
-            Mock -CommandName Get-S3ACL -MockWith { throw (New-Object NotImplementedException -ArgumentList "Get-S3ACL not implemented") }
-
-            Mock -CommandName Get-S3BucketAccelerateConfiguration -MockWith { throw (New-Object NotImplementedException -ArgumentList "Get-S3BucketAccelerateConfiguration not implemented") }
-
-            Mock -CommandName Get-S3BucketAnalyticsConfiguration -MockWith { throw (New-Object NotImplementedException -ArgumentList "Get-S3BucketAnalyticsConfiguration not implemented") }
-
-            Mock -CommandName Get-S3BucketAnalyticsConfigurationList -MockWith { throw (New-Object NotImplementedException -ArgumentList "Get-S3BucketAnalyticsConfigurationList not implemented") }
-
-            Mock -CommandName Get-S3BucketEncryption -MockWith { throw (New-Object NotImplementedException -ArgumentList "Get-S3BucketEncryption not implemented") }
-
-            Mock -CommandName Get-S3BucketInventoryConfiguration -MockWith { throw (New-Object NotImplementedException -ArgumentList "Get-S3BucketInventoryConfiguration not implemented") }
-
-            Mock -CommandName Get-S3BucketInventoryConfigurationList -MockWith { throw (New-Object NotImplementedException -ArgumentList "Get-S3BucketInventoryConfigurationList not implemented") }
-
-            Mock -CommandName Get-S3BucketLocation -MockWith { throw (New-Object NotImplementedException -ArgumentList "Get-S3BucketLocation not implemented") }
-
-            Mock -CommandName Get-S3BucketLogging -MockWith { throw (New-Object NotImplementedException -ArgumentList "Get-S3BucketLogging not implemented") }
-
-            Mock -CommandName Get-S3BucketMetricsConfiguration -MockWith { throw (New-Object NotImplementedException -ArgumentList "Get-S3BucketMetricsConfiguration not implemented") }
-
-            Mock -CommandName Get-S3BucketMetricsConfigurationList -MockWith { throw (New-Object NotImplementedException -ArgumentList "Get-S3BucketMetricsConfigurationList not implemented") }
-
-            Mock -CommandName Get-S3BucketNotification -MockWith { throw (New-Object NotImplementedException -ArgumentList "Get-S3BucketNotification not implemented") }
-
-            Mock -CommandName Get-S3BucketPolicy -MockWith { throw (New-Object NotImplementedException -ArgumentList "Get-S3BucketPolicy not implemented") }
-
-            Mock -CommandName Get-S3BucketPolicyStatus -MockWith { throw (New-Object NotImplementedException -ArgumentList "Get-S3BucketPolicyStatus not implemented") }
-
-            Mock -CommandName Get-S3BucketReplication -MockWith { throw (New-Object NotImplementedException -ArgumentList "Get-S3BucketReplication not implemented") }
-
-            Mock -CommandName Get-S3BucketRequestPayment -MockWith { throw (New-Object NotImplementedException -ArgumentList "Get-S3BucketRequestPayment not implemented") }
-
-            Mock -CommandName Get-S3BucketVersioning -MockWith { throw (New-Object NotImplementedException -ArgumentList "Get-S3BucketVersioning not implemented") }
-
-            Mock -CommandName Get-S3BucketWebsite -MockWith { throw (New-Object NotImplementedException -ArgumentList "Get-S3BucketWebsite not implemented") }
-
-            Mock -CommandName Get-S3CORSConfiguration -MockWith { throw (New-Object NotImplementedException -ArgumentList "Get-S3CORSConfiguration not implemented") }
-
-            Mock -CommandName Get-S3LifecycleConfiguration -MockWith { throw (New-Object NotImplementedException -ArgumentList "Get-S3LifecycleConfiguration not implemented") }
-
-            Mock -CommandName Get-S3ObjectLegalHold -MockWith { throw (New-Object NotImplementedException -ArgumentList "Get-S3ObjectLegalHold not implemented") }
-
-            Mock -CommandName Get-S3ObjectLockConfiguration -MockWith { throw (New-Object NotImplementedException -ArgumentList "Get-S3ObjectLockConfiguration not implemented") }
-
-            Mock -CommandName Get-S3ObjectRetention -MockWith { throw (New-Object NotImplementedException -ArgumentList "Get-S3ObjectRetention not implemented") }
-
-            Mock -CommandName Get-S3ObjectTagSet -MockWith { throw (New-Object NotImplementedException -ArgumentList "Get-S3ObjectTagSet not implemented") }
-
-            Mock -CommandName Get-S3PreSignedURL -MockWith { throw (New-Object NotImplementedException -ArgumentList "Get-S3PreSignedURL not implemented") }
-
-            Mock -CommandName Get-S3PublicAccessBlock -MockWith { throw (New-Object NotImplementedException -ArgumentList "Get-S3PublicAccessBlock not implemented") }
-
-            Mock -CommandName Get-S3Version -MockWith { throw (New-Object NotImplementedException -ArgumentList "Get-S3Version not implemented") }
-
-            Mock -CommandName Read-S3Object -MockWith { throw (New-Object NotImplementedException -ArgumentList "Read-S3Object not implemented") }
-
-            Mock -CommandName Remove-S3BucketAnalyticsConfiguration -MockWith { throw (New-Object NotImplementedException -ArgumentList "Remove-S3BucketAnalyticsConfiguration not implemented") }
-
-            Mock -CommandName Remove-S3Bucket -MockWith { throw (New-Object NotImplementedException -ArgumentList "Remove-S3Bucket not implemented") }
-
-            Mock -CommandName Remove-S3BucketEncryption -MockWith { throw (New-Object NotImplementedException -ArgumentList "Remove-S3BucketEncryption not implemented") }
-
-            Mock -CommandName Remove-S3BucketInventoryConfiguration -MockWith { throw (New-Object NotImplementedException -ArgumentList "Remove-S3BucketInventoryConfiguration not implemented") }
-
-            Mock -CommandName Remove-S3BucketMetricsConfiguration -MockWith { throw (New-Object NotImplementedException -ArgumentList "Remove-S3BucketMetricsConfiguration not implemented") }
-
-            Mock -CommandName Remove-S3BucketPolicy -MockWith { throw (New-Object NotImplementedException -ArgumentList "Remove-S3BucketPolicy not implemented") }
-
-            Mock -CommandName Remove-S3BucketReplication -MockWith { throw (New-Object NotImplementedException -ArgumentList "Remove-S3BucketReplication not implemented") }
-
-            Mock -CommandName Remove-S3BucketTagging -MockWith { throw (New-Object NotImplementedException -ArgumentList "Remove-S3BucketTagging not implemented") }
-
-            Mock -CommandName Remove-S3BucketWebsite -MockWith { throw (New-Object NotImplementedException -ArgumentList "Remove-S3BucketWebsite not implemented") }
-
-            Mock -CommandName Remove-S3CORSConfiguration -MockWith { throw (New-Object NotImplementedException -ArgumentList "Remove-S3CORSConfiguration not implemented") }
-
-            Mock -CommandName Remove-S3LifecycleConfiguration -MockWith { throw (New-Object NotImplementedException -ArgumentList "Remove-S3LifecycleConfiguration not implemented") }
-
-            Mock -CommandName Remove-S3MultipartUpload -MockWith { throw (New-Object NotImplementedException -ArgumentList "Remove-S3MultipartUpload not implemented") }
-
-            Mock -CommandName Remove-S3Object -MockWith { throw (New-Object NotImplementedException -ArgumentList "Remove-S3Object not implemented") }
-
-            Mock -CommandName Remove-S3ObjectTagSet -MockWith { throw (New-Object NotImplementedException -ArgumentList "Remove-S3ObjectTagSet not implemented") }
-
-            Mock -CommandName Remove-S3PublicAccessBlock -MockWith { throw (New-Object NotImplementedException -ArgumentList "Remove-S3PublicAccessBlock not implemented") }
-
-            Mock -CommandName Restore-S3Object -MockWith { throw (New-Object NotImplementedException -ArgumentList "Restore-S3Object not implemented") }
-
-            Mock -CommandName Select-S3ObjectContent -MockWith { throw (New-Object NotImplementedException -ArgumentList "Select-S3ObjectContent not implemented") }
-
-            Mock -CommandName Set-S3ACL -MockWith { throw (New-Object NotImplementedException -ArgumentList "Set-S3ACL not implemented") }
-
-            Mock -CommandName Set-S3BucketEncryption -MockWith { throw (New-Object NotImplementedException -ArgumentList "Set-S3BucketEncryption not implemented") }
-
-            Mock -CommandName Test-S3Bucket -MockWith { throw (New-Object NotImplementedException -ArgumentList "Test-S3Bucket not implemented") }
-
-            Mock -CommandName Write-S3BucketAccelerateConfiguration -MockWith { throw (New-Object NotImplementedException -ArgumentList "Write-S3BucketAccelerateConfiguration not implemented") }
-
-            Mock -CommandName Write-S3BucketAnalyticsConfiguration -MockWith { throw (New-Object NotImplementedException -ArgumentList "Write-S3BucketAnalyticsConfiguration not implemented") }
-
-            Mock -CommandName Write-S3BucketInventoryConfiguration -MockWith { throw (New-Object NotImplementedException -ArgumentList "Write-S3BucketInventoryConfiguration not implemented") }
-
-            Mock -CommandName Write-S3BucketLogging -MockWith { throw (New-Object NotImplementedException -ArgumentList "Write-S3BucketLogging not implemented") }
-
-            Mock -CommandName Write-S3BucketMetricsConfiguration -MockWith { throw (New-Object NotImplementedException -ArgumentList "Write-S3BucketMetricsConfiguration not implemented") }
-
-            Mock -CommandName Write-S3BucketNotification -MockWith { throw (New-Object NotImplementedException -ArgumentList "Write-S3BucketNotification not implemented") }
-
-            Mock -CommandName Write-S3BucketPolicy -MockWith { throw (New-Object NotImplementedException -ArgumentList "Write-S3BucketPolicy not implemented") }
-
-            Mock -CommandName Write-S3BucketReplication -MockWith { throw (New-Object NotImplementedException -ArgumentList "Write-S3BucketReplication not implemented") }
-
-            Mock -CommandName Write-S3BucketRequestPayment -MockWith { throw (New-Object NotImplementedException -ArgumentList "Write-S3BucketRequestPayment not implemented") }
-
-            Mock -CommandName Write-S3BucketVersioning -MockWith { throw (New-Object NotImplementedException -ArgumentList "Write-S3BucketVersioning not implemented") }
-
-            Mock -CommandName Write-S3BucketWebsite -MockWith { throw (New-Object NotImplementedException -ArgumentList "Write-S3BucketWebsite not implemented") }
-
-            Mock -CommandName Write-S3CORSConfiguration -MockWith { throw (New-Object NotImplementedException -ArgumentList "Write-S3CORSConfiguration not implemented") }
-
-            Mock -CommandName Write-S3LifecycleConfiguration -MockWith { throw (New-Object NotImplementedException -ArgumentList "Write-S3LifecycleConfiguration not implemented") }
-
-            Mock -CommandName Write-S3ObjectLegalHold -MockWith { throw (New-Object NotImplementedException -ArgumentList "Write-S3ObjectLegalHold not implemented") }
-
-            Mock -CommandName Write-S3ObjectLockConfiguration -MockWith { throw (New-Object NotImplementedException -ArgumentList "Write-S3ObjectLockConfiguration not implemented") }
-
-            Mock -CommandName Write-S3ObjectRetention -MockWith { throw (New-Object NotImplementedException -ArgumentList "Write-S3ObjectRetention not implemented") }
-
-            Mock -CommandName Write-S3ObjectTagSet -MockWith { throw (New-Object NotImplementedException -ArgumentList "Write-S3ObjectTagSet not implemented") }
-
-            Mock -CommandName Add-S3CPublicAccessBlock -MockWith { throw (New-Object NotImplementedException -ArgumentList "Add-S3CPublicAccessBlock not implemented") }
-
-            Mock -CommandName Get-S3CPublicAccessBlock -MockWith { throw (New-Object NotImplementedException -ArgumentList "Get-S3CPublicAccessBlock not implemented") }
-
-            Mock -CommandName Remove-S3CPublicAccessBlock -MockWith { throw (New-Object NotImplementedException -ArgumentList "Remove-S3CPublicAccessBlock not implemented") }
+            # Throw undefined for all remaining S3 operations
+            $implemented = ('New-S3Bucket', 'Get-S3Bucket', 'Write-S3Object', 'Get-S3Object', 'Get-S3ObjectMetadata', 'Write-S3BucketTagging', 'Get-S3BucketTagging')
+
+            Get-AWSCmdletName -Service S3 |
+            Select-Object -ExpandProperty CmdletName |
+            Where-Object {
+                $implemented -inotcontains $_
+            } |
+            ForEach-Object {
+
+                $cmdlet = $_
+                Mock -CommandName $cmdlet -MockWith {
+                    throw (New-Object NotImplementedException -ArgumentList "$cmdlet not implemented")
+                }
+            }
 
             $mockS3
         }
