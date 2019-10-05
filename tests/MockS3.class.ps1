@@ -317,7 +317,6 @@ class MockS3
             ForEach-Object {
 
                 $cmdlet = $_
-                Write-Host "Generating NotImplemented mock for $cmdlet"
 
                 try
                 {
