@@ -72,6 +72,39 @@ InModuleScope $ModuleName {
         }
     }
 
+    function Compare-Templates
+    {
+        <#
+            .SYNOPSIS
+                Comae generated template with expected, ignoring blank lines and line endings
+        #>
+        [CmdletBinding()]
+        param
+        (
+            [Parameter(ValueFromPipeline)]
+            [string]$Template,
+
+            [string]$ExpectedOutput
+        )
+
+        end
+        {
+            $templateLines = $Template -split [System.Environment]::NewLine
+            $expectedLines = Get-Content $ExpectedOutput
+
+            $result = Compare-Object -ReferenceObject $templateLines -DifferenceObject $expectedLines |
+            Where-Object {
+                # Ignore blank lines
+                -not [string]::IsNullOrEmpty($_.InputObject)
+            }
+
+            if (($result | Measure-Object).Count -gt 0)
+            {
+                throw "Files are different`nExpected: $($result[0].InputObject)`nGot $($result[1].InputObject)"
+            }
+        }
+    }
+
     Describe 'PSCloudFormation - Packaging' {
 
         $linux = $(
@@ -102,21 +135,21 @@ InModuleScope $ModuleName {
                 It "Should process simple lambda: $_" {
 
                     $inputFile = Join-Path $assetsDir ('lambdasimple.' + $ext)
-                    $expectedOutput = Join-Path $assetsDir "lambdasimple-expected$linux.yaml"
+                    $expectedOutput = Join-Path $assetsDir "lambdasimple-expected.yaml"
 
                     $template = Format-Yaml -Template (New-PSCFNPackage -TemplateFile $inputFile -S3Bucket my-bucket)
                     "TestDrive:/my-bucket/lambdasimple.zip" | Should -Exist
-                    $template | Should -Be (Get-Content -Raw $expectedOutput)
+                    $template | Compare-Templates -ExpectedOutput $expectedOutput
                 }
 
                 It "Should process complex (in a directory) lambda: $_" {
 
                     $inputFile = Join-Path $assetsDir ('lambdacomplex.' + $ext)
-                    $expectedOutput = Join-Path $assetsDir "lambdacomplex-expected$linux.yaml"
+                    $expectedOutput = Join-Path $assetsDir "lambdacomplex-expected.yaml"
 
                     $template = Format-Yaml -Template (New-PSCFNPackage -TemplateFile $inputFile -S3Bucket my-bucket)
                     "TestDrive:/my-bucket/lambdacomplex.zip" | Should -Exist
-                    $template | Should -Be (Get-Content -Raw $expectedOutput)
+                    $template | Compare-Templates -ExpectedOutput $expectedOutput
                 }
             }
         }
@@ -132,11 +165,11 @@ InModuleScope $ModuleName {
                 It "Should process glue job: $_" {
 
                     $inputFile = Join-Path $assetsDir ('glue.' + $ext)
-                    $expectedOutput = Join-Path $assetsDir "glue-expected$linux.yaml"
+                    $expectedOutput = Join-Path $assetsDir "glue-expected.yaml"
 
                     $template = Format-Yaml -Template (New-PSCFNPackage -TemplateFile $inputFile -S3Bucket my-bucket)
                     "TestDrive:/my-bucket/glue.py" | Should -Exist
-                    $template | Should -Be (Get-Content -Raw $expectedOutput)
+                    $template | Compare-Templates -ExpectedOutput $expectedOutput
                 }
             }
         }
