@@ -5,7 +5,7 @@
         "Nested1": {
             "Type": "AWS::CloudFormation::Stack",
             "Properties": {
-                "TemplateURL": "nested-1.json",
+                "TemplateURL": "nested-1.json"
             }
         }
     }

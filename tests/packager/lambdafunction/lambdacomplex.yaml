@@ -1,17 +1,13 @@
 AWSTemplateFormatVersion: '2010-09-09'
 Description: ''
-Parameters:
-  RuntimeVersion:
-    Type: String
-    Default: nodejs8.10
 Resources:
   Lambda:
     Type: AWS::Lambda::Function
     Properties:
       Code: lambdacomplex
-      Runtime: !Sub 'RuntimeVersion'
-      Handler: lambdasimple.handler
-      Role: !Ref 'LambdaRole'
+      Runtime: nodejs8.10
+      Handler: index.handler
+      Role: !GetAtt 'LambdaRole.Arn'
   LambdaRole:
     Type: AWS::IAM::Role
     Properties:
@@ -24,6 +20,6 @@ Resources:
                 - lambda.amazonaws.com
             Action:
               - sts:AssumeRole
-      Path: ''
+      Path: /
       ManagedPolicyArns:
         - arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole

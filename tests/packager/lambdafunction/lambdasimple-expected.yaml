@@ -1,9 +1,5 @@
 AWSTemplateFormatVersion: '2010-09-09'
 Description: ''
-Parameters:
-  RuntimeVersion:
-    Type: String
-    Default: nodejs8.10
 Resources:
   Lambda:
     Type: AWS::Lambda::Function
@@ -11,9 +7,9 @@ Resources:
       Code:
         S3Bucket: my-bucket
         S3Key: lambdasimple.zip
-      Runtime: !Sub 'RuntimeVersion'
+      Runtime: nodejs8.10
       Handler: lambdasimple.handler
-      Role: !Ref 'LambdaRole'
+      Role: !GetAtt 'LambdaRole.Arn'
   LambdaRole:
     Type: AWS::IAM::Role
     Properties:
@@ -26,7 +22,7 @@ Resources:
             - lambda.amazonaws.com
           Action:
           - sts:AssumeRole
-      Path: ''
+      Path: /
       ManagedPolicyArns:
       - arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole
 ...

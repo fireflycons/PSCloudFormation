@@ -1,23 +1,18 @@
 {
     "AWSTemplateFormatVersion": "2010-09-09",
     "Description": "",
-    "Parameters": {
-        "RuntimeVersion": {
-            "Type": "String",
-            "Default": "nodejs8.10"
-        }
-    },
     "Resources": {
         "Lambda": {
             "Type": "AWS::Lambda::Function",
             "Properties": {
                 "Code": "../lambdafunction/lambdasimple.js",
-                "Runtime": {
-                    "Fn::Sub": "RuntimeVersion"
-                },
+                "Runtime": "nodejs8.10",
                 "Handler": "lambdasimple.handler",
                 "Role": {
-                    "Ref": "LambdaRole"
+                    "Fn::GetAtt": [
+                        "LambdaRole",
+                        "Arn"
+                    ]
                 }
             }
         },
@@ -40,7 +35,7 @@
                         }
                     ]
                 },
-                "Path": "",
+                "Path": "/",
                 "ManagedPolicyArns": [
                     "arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole"
                 ]
