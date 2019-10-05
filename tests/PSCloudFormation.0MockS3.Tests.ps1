@@ -15,7 +15,7 @@ else
     }
 }
 
-. (Join-Path $global:TestRoot MockS3.class.ps1)
+. (Join-Path $PSScriptRoot MockS3.class.ps1)
 
 $thisFile = $MyInvocation.MyCommand.Path
 
