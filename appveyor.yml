@@ -8,8 +8,8 @@ image:
   - Visual Studio 2017
   - Ubuntu
 
-init:
-  - ps: ./cfn-flip-install.ps1
+install:
+  - ps: . ./cfn-flip-install.ps1
 
 # Does the whole process
 test_script:
