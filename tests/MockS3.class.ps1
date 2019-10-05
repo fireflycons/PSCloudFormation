@@ -345,3 +345,9 @@ class MockS3
         return Join-Path $this.rootDir $bucketName
     }
 }
+
+
+
+$mockS3 = [MockS3]::UseS3Mocks()
+
+

@@ -107,22 +107,7 @@ InModuleScope $ModuleName {
 
     Describe 'PSCloudFormation - Packaging' {
 
-        $linux = $(
-            if ((Get-Variable -Name IsLinux -ErrorAction Ignore) -and $IsLinux)
-            {
-                Write-Host 'Running on Linux'
-                '.linux'
-            }
-            else
-            {
-                Write-Host 'Running on Windows'
-                [string]::Empty
-            }
-        )
-
         . (Join-Path $global:TestRoot MockS3.class.ps1)
-
-        $mockS3 = [MockS3]::UseS3Mocks()
 
         Context 'Lambda' {
 

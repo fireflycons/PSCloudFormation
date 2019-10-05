@@ -15,13 +15,11 @@ else
     }
 }
 
-. (Join-Path $PSScriptRoot MockS3.class.ps1)
-
 $thisFile = $MyInvocation.MyCommand.Path
 
 Describe 'MockS3' {
 
-    $mockS3 = [MockS3]::UseS3Mocks()
+    . (Join-Path $PSScriptRoot MockS3.class.ps1)
 
     Context 'Bucket' {
 
