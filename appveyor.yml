@@ -8,6 +8,9 @@ image:
   - Visual Studio 2017
   - Ubuntu
 
+install:
+  - ps: . ./cfn-flip-install.ps1
+
 # Does the whole process
 test_script:
   - ps: . ./build.ps1 -Task BuildAppVeyor

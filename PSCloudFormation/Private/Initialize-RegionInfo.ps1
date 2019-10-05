@@ -8,12 +8,23 @@ function Initialize-RegionInfo
     if (-not $Script:RegionInfo)
     {
         $Script:RegionInfo = @{}
-        
+
         # Get-EC2Region asks an AWS service for current regions so is always up to date.
         # OTOH Get-AWSRegion is client-side and depends on the version of AWSPowerShell installed.
-        Get-EC2Region |
+        try
+        {
+            Get-EC2Region |
             ForEach-Object {
-            $Script:RegionInfo.Add($_.RegionName, $null)
+                $Script:RegionInfo.Add($_.RegionName, $null)
+            }
+        }
+        catch
+        {
+            Write-Warning "No region specified or obtained from persisted/shell defaults. Module will use regions known to your current AWSPowershell version."
+            Get-AWSRegion |
+            ForEach-Object {
+                $Script:RegionInfo.Add($_.Region, $null)
+            }
         }
     }
 

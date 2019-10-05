@@ -47,7 +47,59 @@ $global:azs = @(
 
 InModuleScope $ModuleName {
 
-    Describe 'PSCloudFormation - Private' {
+    Describe 'PSCloudFormation - Private Unit' {
+
+        Context 'Test-IsFileSystemPath' {
+
+            It 'Should return true for an absolute Unix path' {
+
+                Test-IsFileSystemPath -PropertyValue '/tmp/path' | Should -Be $true
+            }
+
+            It 'Should return true for an absolute Windows path' {
+
+                Test-IsFileSystemPath -PropertyValue 'C:\Temp\path' | Should -Be $true
+            }
+
+            It 'Should return true for a relative Unix path' {
+
+                Test-IsFileSystemPath -PropertyValue '../tmp/path' | Should -Be $true
+            }
+
+            It 'Should return true for a relative Windows path' {
+
+                Test-IsFileSystemPath -PropertyValue '..\Temp\path' | Should -Be $true
+            }
+
+            It 'Should return false for an https uri' {
+
+                Test-IsFileSystemPath -PropertyValue 'https://bucket.s3.amaxonaws.com/prefix' | Should -Be $false            }
+
+            It 'Should return false for a s3 uri' {
+
+                Test-IsFileSystemPath -PropertyValue 's3://bucket/prefix' | Should -Be $false
+            }
+
+            It 'Should return false for an object that looks like inline lambda code' {
+
+                $code = New-Object PSObject -Property @{
+                    ZipFile = New-Object PSObject -Property @{
+                        "Fn::Join" = @(
+                            "`n",
+                            @(
+                                "import os"
+                                "import json"
+                            )
+                        )
+                    }
+                }
+
+                Test-IsFileSystemPath -ProperyValue $code | Should -Be $false
+            }
+        }
+    }
+
+    Describe 'PSCloudFormation - Private 2' {
 
         Mock -CommandName Get-EC2Region -MockWith {
 
