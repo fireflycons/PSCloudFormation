@@ -9,7 +9,7 @@ image:
   - Ubuntu
 
 init:
-  - pip install cfn_flip --user
+  - ps: . ./cfn-flip-install.ps1
 
 # Does the whole process
 test_script:
