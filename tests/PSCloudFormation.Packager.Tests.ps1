@@ -74,7 +74,7 @@ InModuleScope $ModuleName {
 
     Describe 'PSCloudFormation - Packaging' {
 
-        . "$($global:TestRoot)/MockS3.class.ps1"
+        . (Join-Path $global:TestRoot MockS3.class.ps1)
 
         $mockS3 = [MockS3]::UseS3Mocks()
 

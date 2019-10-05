@@ -15,7 +15,7 @@ else
     }
 }
 
-. "$PSScriptRoot\MockS3.Class.ps1"
+.\build.ps1 -Task Test
 
 $thisFile = $MyInvocation.MyCommand.Path
 
