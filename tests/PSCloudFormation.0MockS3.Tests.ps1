@@ -15,7 +15,7 @@ else
     }
 }
 
-.\build.ps1 -Task Test
+. (Join-Path $global:TestRoot MockS3.class.ps1)
 
 $thisFile = $MyInvocation.MyCommand.Path
 
