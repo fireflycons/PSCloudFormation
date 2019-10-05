@@ -9,7 +9,7 @@ image:
   - Ubuntu
 
 init:
-  - ps: . ./cfn-flip-install.ps1
+  - ps: ./cfn-flip-install.ps1
 
 # Does the whole process
 test_script:
