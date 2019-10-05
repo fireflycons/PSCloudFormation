@@ -77,10 +77,12 @@ InModuleScope $ModuleName {
         $linux = $(
             if ((Get-Variable -Name IsLinux -ErrorAction Ignore) -and $IsLinux)
             {
+                Write-Host 'Running on Linux'
                 '.linux'
             }
             else
             {
+                Write-Host 'Running on Windows'
                 [string]::Empty
             }
         )
