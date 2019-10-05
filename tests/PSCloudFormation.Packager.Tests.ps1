@@ -74,6 +74,17 @@ InModuleScope $ModuleName {
 
     Describe 'PSCloudFormation - Packaging' {
 
+        $linux = $(
+            if ((Get-Variable -Name IsLinux -ErrorAction Ignore) -and $IsLinux)
+            {
+                '.linux'
+            }
+            else
+            {
+                [string]::Empty
+            }
+        )
+
         . (Join-Path $global:TestRoot MockS3.class.ps1)
 
         $mockS3 = [MockS3]::UseS3Mocks()
@@ -89,7 +100,7 @@ InModuleScope $ModuleName {
                 It "Should process simple lambda: $_" {
 
                     $inputFile = Join-Path $assetsDir ('lambdasimple.' + $ext)
-                    $expectedOutput = Join-Path $assetsDir lambdasimple-expected.yaml
+                    $expectedOutput = Join-Path $assetsDir "lambdasimple-expected$linux.yaml"
 
                     $template = Format-Yaml -Template (New-PSCFNPackage -TemplateFile $inputFile -S3Bucket my-bucket)
                     "TestDrive:/my-bucket/lambdasimple.zip" | Should -Exist
@@ -99,7 +110,7 @@ InModuleScope $ModuleName {
                 It "Should process complex (in a directory) lambda: $_" {
 
                     $inputFile = Join-Path $assetsDir ('lambdacomplex.' + $ext)
-                    $expectedOutput = Join-Path $assetsDir lambdacomplex-expected.yaml
+                    $expectedOutput = Join-Path $assetsDir "lambdacomplex-expected$linux.yaml"
 
                     $template = Format-Yaml -Template (New-PSCFNPackage -TemplateFile $inputFile -S3Bucket my-bucket)
                     "TestDrive:/my-bucket/lambdacomplex.zip" | Should -Exist
@@ -119,7 +130,7 @@ InModuleScope $ModuleName {
                 It "Should process glue job: $_" {
 
                     $inputFile = Join-Path $assetsDir ('glue.' + $ext)
-                    $expectedOutput = Join-Path $assetsDir glue-expected.yaml
+                    $expectedOutput = Join-Path $assetsDir "glue-expected$linux.yaml"
 
                     $template = Format-Yaml -Template (New-PSCFNPackage -TemplateFile $inputFile -S3Bucket my-bucket)
                     "TestDrive:/my-bucket/glue.py" | Should -Exist
