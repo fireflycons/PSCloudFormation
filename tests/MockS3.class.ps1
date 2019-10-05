@@ -319,8 +319,15 @@ class MockS3
                 $cmdlet = $_
                 Write-Host "Generating NotImplemented mock for $cmdlet"
 
-                Mock -CommandName $cmdlet -MockWith {
-                    throw (New-Object NotImplementedException -ArgumentList "$cmdlet not implemented")
+                try
+                {
+                    Mock -CommandName $cmdlet -MockWith {
+                        throw (New-Object NotImplementedException -ArgumentList "$cmdlet not implemented")
+                    }
+                }
+                catch
+                {
+                    Write-Warning "Unable to generate NotImplemented mock for $cmdlet"
                 }
             }
 
