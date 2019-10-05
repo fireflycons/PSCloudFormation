@@ -312,11 +312,13 @@ class MockS3
             Get-AWSCmdletName -Service S3 |
             Select-Object -ExpandProperty CmdletName |
             Where-Object {
-                $implemented -inotcontains $_
+                -not [string]::IsNullOrEmpty($_) -and $implemented -inotcontains $_
             } |
             ForEach-Object {
 
                 $cmdlet = $_
+                Write-Host "Generating NotImplemented mock for $cmdlet"
+
                 Mock -CommandName $cmdlet -MockWith {
                     throw (New-Object NotImplementedException -ArgumentList "$cmdlet not implemented")
                 }
