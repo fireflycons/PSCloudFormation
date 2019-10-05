@@ -8,6 +8,9 @@ image:
   - Visual Studio 2017
   - Ubuntu
 
+init:
+  - pip install cfn_flip
+
 # Does the whole process
 test_script:
   - ps: . ./build.ps1 -Task BuildAppVeyor
