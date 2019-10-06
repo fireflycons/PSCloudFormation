@@ -9,7 +9,8 @@ image:
   - Ubuntu
 
 install:
-  - ps: . ./cfn-flip-install.ps1
+  - ps: . ./build/cfn-flip-install.ps1
+  - ps: . ./build/psdeploy-install.ps1
 
 # Does the whole process
 test_script:

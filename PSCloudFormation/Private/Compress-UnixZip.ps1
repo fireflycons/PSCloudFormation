@@ -59,11 +59,7 @@ function Compress-UnixZip
 
     # Account for powershell and OS current directory not being the same
     # as .NET objects like ZipFile will use OS path
-    $osZipPath = $ZipFile
-
-    New-Item -Path $osZipPath -ItemType File | Out-Null
-    $osZipPath = (Resolve-Path -Path $osZipPath).Path
-    Remove-Item $osZipPath -Force
+    $osZipPath = $ExecutionContext.SessionState.Path.GetUnresolvedProviderPathFromPSPath($ZipFile)
 
     try
     {

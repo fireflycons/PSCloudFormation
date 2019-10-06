@@ -18,34 +18,82 @@ function Get-TemplateParameters
 
     $template = $TemplateResolver.ReadTemplate()
 
-    # Check YAML/JSON
-    try
+    switch (Get-TemplateFormat -TemplateBody $template)
     {
-        $templateObject = $template | ConvertFrom-Json
-
-        if ($templateObject.PSObject.Properties.Name -contains 'Parameters')
+        'JSON'
         {
-            return $templateObject.Parameters
-        }
-        else
-        {
-            # No parameters
-            return
-        }
-    }
-    catch
-    {
-        if (-not $Script:yamlSupport)
-        {
-            throw "Template cannot be parsed as JSON and YAML support unavailable"
-        }
-    }
+            $templateObject = $template | ConvertFrom-Json
 
-    # Try YAML - convert it through JSON and back to ensure the final object looks the same as one converted directly from JSON
-    $templateObject = $template | ConvertFrom-Yaml | ConvertTo-Json | ConvertFrom-Json
+            if ($templateObject.PSObject.Properties.Name -contains 'Parameters')
+            {
+                return $templateObject.Parameters
+            }
+            else
+            {
+                # No parameters
+                return
+            }
+        }
 
-    if ($templateObject.PSObject.Properties.Name -contains 'Parameters')
-    {
-        return $templateObject.Parameters
+        'YAML'
+        {
+            $yaml = New-Object YamlDotNet.RepresentationModel.YamlStream
+            $input = New-Object System.IO.StringReader($template)
+
+            $yaml.Load($input)
+
+            $root = [YamlDotNet.RepresentationModel.YamlMappingNode]$yaml.Documents[0].RootNode
+
+            if ($null -eq $root)
+            {
+                throw "Empty document or not YAML"
+            }
+
+            $parametersKey = New-Object YamlDotNet.RepresentationModel.YamlScalarNode("Parameters")
+
+            if (-not $root.Children.ContainsKey($parametersKey))
+            {
+                # No parameters
+                return
+            }
+
+            $parameters = [YamlDotNet.RepresentationModel.YamlMappingNode]$root.Children[$parametersKey]
+
+            # Now create a PSObject that looks like parameters parsed from JSON
+            $returnParameters = New-Object PSObject
+
+            foreach ($parameterNode in $parameters.Children.GetEnumerator())
+            {
+                $parameterBody = $parameterNode.Value
+
+                $parameterData = New-Object psobject
+
+                foreach ($parameterPropertyNode in $parameterBody.Children.GetEnumerator())
+                {
+                    if ($parameterPropertyNode.Value -is [YamlDotNet.RepresentationModel.YamlScalarNode])
+                    {
+                        $parameterData | Add-Member -MemberType NoteProperty -Name $parameterPropertyNode.Key.ToString() -Value $parameterPropertyNode.Value.ToString()
+                    }
+                    elseif ($parameterPropertyNode.Value -is [YamlDotNet.RepresentationModel.YamlSequenceNode])
+                    {
+                        $values = @()
+                        foreach ($seqNode in $parameterPropertyNode.Value.Children)
+                        {
+                            $values += $seqNode.Value.ToString()
+                        }
+
+                        $parameterData | Add-Member -MemberType NoteProperty -Name $parameterPropertyNode.Key.ToString() -Value $values
+                    }
+                    else
+                    {
+                        throw "Unexpected type $($parameterPropertyNode.Value.GetType().Name) in parameter block"
+                    }
+                }
+
+                $returnParameters | Add-Member -MemberType NoteProperty -Name $parameterNode.Key.ToString() -Value $parameterData
+            }
+
+            return $returnParameters
+        }
     }
 }

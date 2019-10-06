@@ -14,17 +14,7 @@ function Out-FileWithoutBOM
     )
 
     # Handle difference between provider path and .NET path
-    $fullPath = $(
-        try
-        {
-            (Resolve-Path -Path $FilePath).Path
-        }
-        catch
-        {
-            New-Item -Path $FilePath -ItemType File | Out-Null
-            (Resolve-Path -Path $FilePath).Path
-        }
-    )
+    $fullPath = $ExecutionContext.SessionState.Path.GetUnresolvedProviderPathFromPSPath($FilePath)
 
     $enc = New-Object System.Text.UTF8Encoding -ArgumentList $false
 
