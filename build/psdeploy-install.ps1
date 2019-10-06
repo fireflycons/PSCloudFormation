@@ -3,7 +3,7 @@ $moduleLocation = 'https://ci.appveyor.com/api/buildjobs/be2ipkygtbbd9aa0/artifa
 $downloadedPackage = Join-Path ([IO.Path]::GetTempPath()) 'psdeploy.zip'
 
 Write-Host "Downloading $moduleLocation"
-Get-WebRequest -Uri $moduleLocation -OutFile $downloadedPackage
+Invoke-WebRequest -UseBasicParsing -Uri $moduleLocation -OutFile $downloadedPackage
 
 
 # Find local module dir
