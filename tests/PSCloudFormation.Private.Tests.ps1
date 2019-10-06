@@ -23,9 +23,9 @@ if (($ManifestFile | Measure-Object).Count -ne 1)
 
 Import-Module -Name $ManifestFile
 
-$global:templatePath = Join-Path $PSScriptRoot test-stack.json
+$global:templatePathJson = Join-Path $PSScriptRoot test-stack.json
+$global:templatePathYaml = Join-Path $PSScriptRoot test-stack.yaml
 $global:paramPath = Join-Path $PSScriptRoot test-params.json
-$global:haveYaml = $null -ne (Get-Module -ListAvailable | Where-Object {  $_.Name -ieq 'powershell-yaml' })
 
 $global:azs = @(
     New-Object PSObject -Property @{ Region = 'ap-south-1'; ZoneName = @('ap-south-1a', 'ap-south-1b') }
@@ -124,83 +124,7 @@ InModuleScope $ModuleName {
 
         Mock -CommandName Write-S3BucketTagging -MockWith {}
 
-        $templateContentHash = (Get-Content -Raw -Path $global:templatePath).GetHashCode()
-
-        Context 'New-TemplateResolver' {
-
-            It 'Creates a file resolver for local file' {
-
-                $resolver = New-TemplateResolver -TemplateLocation $global:templatePath
-
-                $resolver.Type | Should Be 'File'
-            }
-
-            It 'Creates a URL resolver for web URI' {
-
-                $url = 'https://s3-us-east-1.amazonaws.com/bucket/path/to/test-stack.json'
-                $resolver = New-TemplateResolver -TemplateLocation $url
-
-                $resolver.Type | Should Be 'Url'
-                $resolver.Url | Should Be $url
-                $resolver.BucketName | Should Be 'bucket'
-                $resolver.Key | Should Be 'path/to/test-stack.json'
-            }
-
-            It 'Creates URL resolver for s3 URI when region is known' {
-
-                Mock -CommandName Get-CurrentRegion -MockWith {
-
-                    return 'us-east-1'
-                }
-
-                $uri = 's3://bucket/path/to/test-stack.json'
-                $generatedUrl = 'https://s3-us-east-1.amazonaws.com/bucket/path/to/test-stack.json'
-
-                $resolver = New-TemplateResolver -TemplateLocation $uri
-
-                Assert-MockCalled -CommandName Get-CurrentRegion -Times 1
-                $resolver.Type | Should Be 'Url'
-                $resolver.Url | Should Be $generatedUrl
-                $resolver.BucketName | Should Be 'bucket'
-                $resolver.Key | Should Be 'path/to/test-stack.json'
-            }
-
-            It 'Creates UsePreviousTemplate resolver when -UsePreviousTemplate set.' {
-
-                $resolver = New-TemplateResolver -StackName test-stack -UsePreviousTemplate $true
-                $resolver.Type | Should Be 'UsePreviousTemplate'
-            }
-
-            It 'File resolver returns local file' {
-
-                $resolver = New-TemplateResolver -TemplateLocation $global:templatePath
-                ($resolver.ReadTemplate()).GetHashCode() | Should Be $templateContentHash
-            }
-
-            It 'URL resolver returns correct file' {
-
-                Mock -CommandName Read-S3Object -MockWith {
-
-                    Copy-Item $global:templatePath $File
-                }
-
-                $resolver = New-TemplateResolver -TemplateLocation 'https://s3-us-east-1.amazonaws.com/bucket/path/to/test-stack.json'
-                ($resolver.ReadTemplate()).GetHashCode() | Should Be $templateContentHash
-                Assert-MockCalled -CommandName Read-S3Object -Times 1
-            }
-
-            It 'UsePreviousTemplate resolver returns original template' {
-
-                Mock -CommandName Get-CFNTemplate -MockWith {
-
-                    Get-Content -Raw $global:templatePath
-                }
-
-                $resolver = New-TemplateResolver -StackName test-stack -UsePreviousTemplate $true
-                ($resolver.ReadTemplate()).GetHashCode() | Should Be $templateContentHash
-                Assert-MockCalled -CommandName Get-CFNTemplate -Times 1
-            }
-        }
+        $templateContentHash = (Get-Content -Raw -Path $global:templatePathJson).GetHashCode()
 
         Context 'New-StackOperationArguments' {
 
@@ -208,7 +132,7 @@ InModuleScope $ModuleName {
 
             It 'Provides -TemplateBody for local file' {
 
-                $args = New-StackOperationArguments -StackName 'pester' -TemplateLocation $global:templatePath -CredentialArguments @{}
+                $args = New-StackOperationArguments -StackName 'pester' -TemplateLocation $global:templatePathJson -CredentialArguments @{}
                 $args['StackName'] | Should Be 'pester'
                 $args['TemplateBody'].GetHashCode() | Should Be $templateContentHash
                 $args['TemplateURL'] | Should BeNullOrEmpty
@@ -510,7 +434,7 @@ InModuleScope $ModuleName {
 
                 Mock -CommandName Get-CFNTemplate -MockWith {
 
-                    Get-Content -Raw -Path $global:templatePath
+                    Get-Content -Raw -Path $global:templatePathJson
                 }
 
                 Mock -CommandName Get-CFNStackResourceList -MockWith {}
@@ -618,8 +542,8 @@ InModuleScope $ModuleName {
             It 'Should not copy template to S3 if size less than 51200' {
 
                 $template = New-Object String -ArgumentList '*', 51119
-                $templatePath = [IO.Path]::Combine($TestDrive, "not-oversize.json")
-                [IO.File]::WriteAllText($templatePath, $template, (New-Object System.Text.ASCIIEncoding))
+                $tempTemplatePath = [IO.Path]::Combine($TestDrive, "not-oversize.json")
+                [IO.File]::WriteAllText($tempTemplatePath, $template, (New-Object System.Text.ASCIIEncoding))
 
                 $stackArguments = @{
                     TemplateBody = $template
@@ -631,7 +555,7 @@ InModuleScope $ModuleName {
 
                 Mock -CommandName Write-S3Object -MockWith { }
 
-                Copy-OversizeTemplateToS3 -TemplateLocation $templatePath -CredentialArguments @{} -StackArguments $stackArguments
+                Copy-OversizeTemplateToS3 -TemplateLocation $tempTemplatePath -CredentialArguments @{} -StackArguments $stackArguments
 
                 $stackArguments.ContainsKey('TemplateBody') | Should Be $true
                 $StackArguments.ContainsKey('TemplateURL') | Should Be $false
@@ -644,8 +568,8 @@ InModuleScope $ModuleName {
             It 'Should copy oversize template to S3' {
 
                 $template = New-Object String -ArgumentList '*', 51200
-                $templatePath = [IO.Path]::Combine($TestDrive, "oversize.json")
-                [IO.File]::WriteAllText($templatePath, $template, (New-Object System.Text.ASCIIEncoding))
+                $tempTemplatePath = [IO.Path]::Combine($TestDrive, "oversize.json")
+                [IO.File]::WriteAllText($tempTemplatePath, $template, (New-Object System.Text.ASCIIEncoding))
 
                 $stackArguments = @{
                     StackName = "oversize-stack"
@@ -673,11 +597,190 @@ InModuleScope $ModuleName {
 
                 Mock -CommandName Write-S3Object -MockWith { }
 
-                Copy-OversizeTemplateToS3 -TemplateLocation $templatePath -CredentialArguments @{} -StackArguments $stackArguments
+                Copy-OversizeTemplateToS3 -TemplateLocation $tempTemplatePath -CredentialArguments @{} -StackArguments $stackArguments
 
                 $stackArguments.ContainsKey('TemplateBody') | Should Be $false
                 $StackArguments.ContainsKey('TemplateURL') | Should Be $true
                 $stackArguments['TemplateURL'] | Should Be "https://s3.us-east-1.amazonaws.com/test-bucket/20000101000000000_oversize-stack_oversize.json"
+            }
+        }
+    }
+
+    Describe 'Template Manipulation' {
+
+        $templateContentHash = (Get-Content -Raw -Path $global:templatePathJson).GetHashCode()
+
+        Context 'Creating File Template Resolver' {
+
+            $resolver = New-TemplateResolver -TemplateLocation $global:templatePathJson
+
+            It 'Resolver type should be UsePreviousTemplate' {
+
+                $resolver.Type | Should Be 'File'
+            }
+
+            It 'Should have loaded the correct template' {
+
+                ($resolver.ReadTemplate()).GetHashCode() | Should Be $templateContentHash
+            }
+        }
+
+        Context 'Creating URL Template Resolver' {
+
+            Mock -CommandName Read-S3Object -MockWith {
+
+                Copy-Item $global:templatePathJson $File
+            }
+
+            $url = 'https://s3-us-east-1.amazonaws.com/bucket/path/to/test-stack.json'
+            $resolver = New-TemplateResolver -TemplateLocation $url
+
+            It 'Resolver type should be Url' {
+
+                $resolver.Type | Should Be 'Url'
+            }
+
+            It 'Resolver URL should be expected URL' {
+
+                $resolver.Url | Should Be $url
+            }
+
+            It 'Resolver S3 bucket should be expected value' {
+
+                $resolver.BucketName | Should Be 'bucket'
+            }
+
+            It 'Resolver S3 key should be expected value' {
+
+                $resolver.Key | Should Be 'path/to/test-stack.json'
+            }
+
+            It 'Should have downloaded the correct template' {
+
+                ($resolver.ReadTemplate()).GetHashCode() | Should Be $templateContentHash
+            }
+
+            It 'Should have called Get-S3Object' {
+
+                # Call is made by ReadTemplate()
+                Assert-MockCalled -CommandName Read-S3Object -Times 1 -Scope Context
+            }
+        }
+
+        Context 'Creating URL resolver when AWS region is set in the session context' {
+
+            Mock -CommandName Get-CurrentRegion -MockWith {
+
+                return 'us-east-1'
+            }
+
+            $uri = 's3://bucket/path/to/test-stack.json'
+            $generatedUrl = 'https://s3-us-east-1.amazonaws.com/bucket/path/to/test-stack.json'
+
+            $resolver = New-TemplateResolver -TemplateLocation $uri
+
+            It 'Has called Get-CurentRegion' {
+
+                Assert-MockCalled -CommandName Get-CurrentRegion -Times 1 -Scope Context
+            }
+
+            It 'Resolver type should be Url' {
+
+                $resolver.Type | Should Be 'Url'
+            }
+
+            It 'Resolver URL should be expected URL' {
+
+                $resolver.Url | Should Be $generatedUrl
+            }
+
+
+            It 'Resolver S3 bucket should be expected value' {
+
+                $resolver.BucketName | Should Be 'bucket'
+            }
+
+            It 'Resolver S3 key should be expected value' {
+
+                $resolver.Key | Should Be 'path/to/test-stack.json'
+            }
+        }
+
+        Context 'Resolver with -UsePreviousTemplate' {
+
+            Mock -CommandName Get-CFNTemplate -MockWith {
+
+                Get-Content -Raw $global:templatePathJson
+            }
+
+            $resolver = New-TemplateResolver -StackName test-stack -UsePreviousTemplate $true
+
+            It 'Resolver type should be UsePreviousTemplate' {
+
+                $resolver.Type | Should Be 'UsePreviousTemplate'
+            }
+
+            It 'Should download correct template from exitsing stack' {
+
+                ($resolver.ReadTemplate()).GetHashCode() | Should Be $templateContentHash
+            }
+
+            It 'Should have called Get-CFNTemplate' {
+
+                # Called by ReadTemplate() above
+                Assert-MockCalled Get-CFNTemplate -Times 1 -Scope Context
+            }
+        }
+
+        ('Json', 'Yaml') |
+        Foreach-Object {
+
+            $format = $_
+
+            Context "Stack Parameter Parsing - $format" {
+
+                $location = Get-Variable -Name "templatePath$format" -ValueOnly
+
+                $resolver = New-TemplateResolver -TemplateLocation $location
+                $parameters = Get-TemplateParameters -TemplateResolver $resolver
+
+                It 'Should have read two parameters from the input' {
+
+                    $parameters.PSObject.Properties | SHould -HaveCount 2
+                }
+
+                ('VpcCidr', 'DnsSupport') |
+                Foreach-Object {
+
+                    $paramName = $_
+
+                    It "Should have a parameter '$paramName'" {
+
+                        $parameters.PSObject.Properties.Name | Where-Object { $_ -ceq $paramName } | Should -HaveCount 1
+                    }
+
+                    It "Type of '$paramName' should be String" {
+
+                        $parameters.$paramName.Type | Should -Be 'String'
+                    }
+                }
+
+                It 'VpcCidr should have the correct value for AllowedPattern' {
+
+                    $pattern = '^(([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])\.){3}([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])(/([0-9]|[1-2][0-9]|3[0-2]))$'
+                    $parameters.VpcCidr.AllowedPattern | Should -Be $pattern
+                }
+
+                ('true', 'false') |
+                Foreach-Object {
+
+                    $value = $_
+
+                    It "DnsSupport should have '$value' in AllowedValues" {
+
+                        $parameters.DnsSupport.AllowedValues | Should -Contain $value
+                    }
+                }
             }
         }
     }

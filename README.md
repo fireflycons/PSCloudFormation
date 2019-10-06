@@ -59,8 +59,6 @@ This module provides the following stack modification cmdlets
 
 ### Template Support
 
-By default, only JSON templates are supported. YAML support is enabled by installing `powershell-yaml` from the [PowerShell Gallery](https://www.powershellgallery.com/packages/powershell-yaml).
-
 Oversize templates in your local file system (file size >= 51,200 bytes) are directly supported. They will be siliently uploaded to an S3 bucket which is created as necessary prior to processing. The bucket is named `cf-templates-pscloudformation-region-accountid` where
 * `region` is the region you are building the stack in, e.g. `eu-west-1`.
 * `accountid` is the numeric ID of the AWS account in which you are building the stack.
@@ -133,4 +131,4 @@ Thanks to
 
 * [ramblingcookiemonster](http://ramblingcookiemonster.github.io/) for `New-DynamicParam` and build stuff.
 * [Ahmad Gad](http://ahmad.jempress.com) for `Write-PSObject` that provides coloured output of stack events.
-* [Gabriel Samfira](https://github.com/gabriel-samfira) for `powershell-yaml` and his help in [getting to the bottom of an assembly version clash](https://github.com/cloudbase/powershell-yaml/issues/47) when loading it.
+* [Antoine Aubry](https://github.com/aaubry/YamlDotNet) for `YamlDotNet`

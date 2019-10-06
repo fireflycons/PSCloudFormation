@@ -9,8 +9,6 @@ $ModuleName = $(
     }
 )
 
-$global:haveYaml = $null -ne (Get-Module -ListAvailable | Where-Object { $_.Name -ieq 'powershell-yaml' })
-
 # http://www.lazywinadmin.com/2016/05/using-pester-to-test-your-manifest-file.html
 # Make sure one or multiple versions of the module are not loaded
 Get-Module -Name $ModuleName | Remove-Module
@@ -114,55 +112,25 @@ InModuleScope $ModuleName {
             {
                 It "Should create stack and return ARN with valid command line arguments ($($ext.ToUpper()))" {
 
-                    if ($ext -eq 'yaml' -and -not $global:haveYaml)
-                    {
-                        Set-ItResult -Inconclusive -Because "No YAML parser loaded"
-                        return
-                    }
-
                     New-PSCFNStack -StackName pester -TemplateLocation "$($global:TestStackFilePathWithoutExtension).$($ext)" -Wait -VpcCidr 10.0.0.0/16 | Should Be $TestStackArn
                 }
 
                 It "Should throw with invalid CIDR ($($ext.ToUpper()))" {
-
-                    if ($ext -eq 'yaml' -and -not $global:haveYaml)
-                    {
-                        Set-ItResult -Inconclusive -Because "No YAML parser loaded"
-                        return
-                    }
 
                     { New-PSCFNStack -StackName pester -TemplateLocation "$($global:TestStackFilePathWithoutExtension).$($ext)" -Wait -VpcCidr 999.0.0.0/16 } | Should Throw
                 }
 
                 It "Should throw with a value that is not in AllowedValues ($($ext.ToUpper()))" {
 
-                    if ($ext -eq 'yaml' -and -not $global:haveYaml)
-                    {
-                        Set-ItResult -Inconclusive -Because "No YAML parser loaded"
-                        return
-                    }
-
                     { New-PSCFNStack -StackName pester -TemplateLocation "$($global:TestStackFilePathWithoutExtension).$($ext)" -Wait -VpcCidr 10.0.0.0/16 -DnsSupport BreakMe } | Should Throw
                 }
 
                 It "Should throw with invalid region parameter ($($ext.ToUpper()))" {
 
-                    if ($ext -eq 'yaml' -and -not $global:haveYaml)
-                    {
-                        Set-ItResult -Inconclusive -Because "No YAML parser loaded"
-                        return
-                    }
-
                     { New-PSCFNStack -StackName pester -TemplateLocation "$($global:TestStackFilePathWithoutExtension).$($ext)" -VpcCidr 10.0.0.0/16 -Region eu-west-9 } | Should Throw
                 }
 
                 It "Should not throw with valid region parameter ($($ext.ToUpper()))" {
-
-                    if ($ext -eq 'yaml' -and -not $global:haveYaml)
-                    {
-                        Set-ItResult -Inconclusive -Because "No YAML parser loaded"
-                        return
-                    }
 
                     @(
                         'ap-northeast-1'
@@ -287,44 +255,20 @@ InModuleScope $ModuleName {
             {
                 It "Should fail when stack does not exist ($($ext.ToUpper()))" {
 
-                    if ($ext -eq 'yaml' -and -not $global:haveYaml)
-                    {
-                        Set-ItResult -Inconclusive -Because "No YAML parser loaded"
-                        return
-                    }
-
                     { Update-PSCFNStack -StackName DoesNotExist -TemplateLocation "$($global:TestStackFilePathWithoutExtension).$($ext)" -Wait -VpcCidr 10.0.0.0/16 } | Should Throw
                 }
 
                 It "Should update when stack exists ($($ext.ToUpper()))" {
-
-                    if ($ext -eq 'yaml' -and -not $global:haveYaml)
-                    {
-                        Set-ItResult -Inconclusive -Because "No YAML parser loaded"
-                        return
-                    }
 
                     Update-PSCFNStack -StackName pester -TemplateLocation "$($global:TestStackFilePathWithoutExtension).$($ext)" -Wait -VpcCidr 10.1.0.0/16 -Force
                 }
 
                 It "Should throw with invalid region parameter ($($ext.ToUpper()))" {
 
-                    if ($ext -eq 'yaml' -and -not $global:haveYaml)
-                    {
-                        Set-ItResult -Inconclusive -Because "No YAML parser loaded"
-                        return
-                    }
-
                     { Update-PSCFNStack -StackName pester -TemplateLocation "$($global:TestStackFilePathWithoutExtension).$($ext)" -Wait -VpcCidr 10.1.0.0/16 -Region eu-west-9 } | Should Throw
                 }
 
                 It "Should not throw with valid region parameter ($($ext.ToUpper()))" {
-
-                    if ($ext -eq 'yaml' -and -not $global:haveYaml)
-                    {
-                        Set-ItResult -Inconclusive -Because "No YAML parser loaded"
-                        return
-                    }
 
                     @(
                         'ap-northeast-1'
@@ -351,12 +295,6 @@ InModuleScope $ModuleName {
                 }
 
                 It "Should not throw if no changes are detected ($($ext.ToUpper()))" {
-
-                    if ($ext -eq 'yaml' -and -not $global:haveYaml)
-                    {
-                        Set-ItResult -Inconclusive -Because "No YAML parser loaded"
-                        return
-                    }
 
                     Update-PSCFNStack -StackName unchanged -TemplateLocation "$($global:TestStackFilePathWithoutExtension).$($ext)" -Wait -VpcCidr 10.0.0.0/16 -Force | Should -Be $global:UnchangedStackArn
                 }

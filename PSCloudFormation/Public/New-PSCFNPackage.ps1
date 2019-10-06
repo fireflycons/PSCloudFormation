@@ -261,11 +261,6 @@ function New-PSCFNPackage
 
                 'YAML'
                 {
-                    if (-not $script:yamlSupport)
-                    {
-                        throw "YAML support unavailable."
-                    }
-
                     # Do using raw yaml stream so as not to bollox any short form intrinsics
                     # https://github.com/aws/aws-extensions-for-dotnet-cli/blob/master/src/Amazon.Lambda.Tools/LambdaUtilities.cs line 283
 
@@ -285,7 +280,7 @@ function New-PSCFNPackage
 
                     if (-not $root.Children.ContainsKey($resourcesKey))
                     {
-                        # TODO return doc
+                        throw "Invalid template. It contains no resources"
                     }
 
                     $resources = [YamlDotNet.RepresentationModel.YamlMappingNode]$root.Children[$resourcesKey]
