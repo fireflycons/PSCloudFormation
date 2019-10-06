@@ -41,7 +41,6 @@ Write-Host "Extracting to $moduleDir"
 [System.IO.Compression.ZipFile]::ExtractToDirectory($downloadedPackage, $moduleDir)
 
 Write-Host "Checking installation"
-Get-Module -ListAvailable | Out-Host
 
 if (-not (Get-Module -ListAvailable PSDeploy))
 {
