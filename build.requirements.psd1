@@ -8,20 +8,9 @@
         }
     }
 
-    'powershell-yaml'       = @{
-        DependencyType = 'PSGalleryModule'
-        Version        = '0.4.0'
-        Tags           = @('Desktop', 'Core')
-    }
     'psake'                 = @{
         DependencyType = 'PSGalleryModule'
         Version        = '4.7.4'
-        Tags           = @('Desktop', 'Core')
-    }
-    'PSDeploy'              = @{
-        DependencyType = 'PSGalleryModule'
-        Version        = '1.0.1'
-        DependsOn      = 'powershell-yaml' # Must install psyaml first to avoid dll hell.
         Tags           = @('Desktop', 'Core')
     }
     'BuildHelpers'          = @{
