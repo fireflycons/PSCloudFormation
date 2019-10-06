@@ -11,7 +11,7 @@ $moduleDir = $(
 
     if ((Get-Variable -Name IsLinux -ErrorAction Ignore) -and $IsLinux)
     {
-        "~/.local/share/powershell/Modules/PSDeploy/1.0.4"
+        $ExecutionContext.SessionState.Path.GetUnresolvedProviderPathFromPSPath('~/.local/share/powershell/Modules/PSDeploy/1.0.4')
     }
     elseif ($PSVersionTable.PSEdition -ieq 'Core')
     {
@@ -41,6 +41,7 @@ Write-Host "Extracting to $moduleDir"
 [System.IO.Compression.ZipFile]::ExtractToDirectory($downloadedPackage, $moduleDir)
 
 Write-Host "Checking installation"
+Get-Module -ListAvailable | Out-Host
 
 if (-not (Get-Module -ListAvailable PSDeploy))
 {
