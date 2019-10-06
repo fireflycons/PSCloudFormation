@@ -16,12 +16,12 @@ $moduleDir = $(
     elseif ($PSVersionTable.PSEdition -ieq 'Core')
     {
         # Core on Windows
-        "$($env:HOME)\Documents\PowerShell\Modules\PSDeploy\1.0.4"
+        "$($env:USERPROFILE)\Documents\PowerShell\Modules\PSDeploy\1.0.4"
     }
     else
     {
         # Windows Powershell
-        "$($env:HOME)\Documents\WindowsPowerShell\Modules\PSDeploy\1.0.4"
+        "$($env:USERPROFILE)\Documents\WindowsPowerShell\Modules\PSDeploy\1.0.4"
     }
 )
 
