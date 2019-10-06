@@ -33,10 +33,16 @@ if (-not (Test-Path -Path $moduleDir -PathType Container))
 # .NET compression libraries
 'System.IO.Compression', 'System.IO.Compression.FileSystem' |
     Foreach-Object {
-        [System.Reflection.Assembly]::LoadWithPartialName($_)
+        [System.Reflection.Assembly]::LoadWithPartialName($_) | Out-Null
     }
 
 Write-Host "Extracting to $moduleDir"
 
 [System.IO.Compression.ZipFile]::ExtractToDirectory($downloadedPackage, $moduleDir)
 
+Write-Host "Checking installation"
+
+if (-not (et-Module -ListAvailable PSDeploy))
+{
+    throw "Installation unsuccessful"
+}
