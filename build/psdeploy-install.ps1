@@ -42,7 +42,7 @@ Write-Host "Extracting to $moduleDir"
 
 Write-Host "Checking installation"
 
-if (-not (et-Module -ListAvailable PSDeploy))
+if (-not (Get-Module -ListAvailable PSDeploy))
 {
     throw "Installation unsuccessful"
 }
