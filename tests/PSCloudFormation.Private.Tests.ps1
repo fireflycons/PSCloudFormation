@@ -51,31 +51,31 @@ InModuleScope $ModuleName {
 
         It 'Should return true for an absolute Unix path' {
 
-            Test-IsFileSystemPath -PropertyValue '/tmp/path' | Should -Be $true
+            Test-IsFileSystemPath -PropertyValue '/tmp/path' | Should -BeTrue
         }
 
         It 'Should return true for an absolute Windows path' {
 
-            Test-IsFileSystemPath -PropertyValue 'C:\Temp\path' | Should -Be $true
+            Test-IsFileSystemPath -PropertyValue 'C:\Temp\path' | Should -BeTrue
         }
 
         It 'Should return true for a relative Unix path' {
 
-            Test-IsFileSystemPath -PropertyValue '../tmp/path' | Should -Be $true
+            Test-IsFileSystemPath -PropertyValue '../tmp/path' | Should -BeTrue
         }
 
         It 'Should return true for a relative Windows path' {
 
-            Test-IsFileSystemPath -PropertyValue '..\Temp\path' | Should -Be $true
+            Test-IsFileSystemPath -PropertyValue '..\Temp\path' | Should -BeTrue
         }
 
         It 'Should return false for an https uri' {
 
-            Test-IsFileSystemPath -PropertyValue 'https://bucket.s3.amaxonaws.com/prefix' | Should -Be $false            }
+            Test-IsFileSystemPath -PropertyValue 'https://bucket.s3.amaxonaws.com/prefix' | Should -BeFalse            }
 
         It 'Should return false for a s3 uri' {
 
-            Test-IsFileSystemPath -PropertyValue 's3://bucket/prefix' | Should -Be $false
+            Test-IsFileSystemPath -PropertyValue 's3://bucket/prefix' | Should -BeFalse
         }
 
         It 'Should return false for an object that looks like inline lambda code' {
@@ -92,7 +92,7 @@ InModuleScope $ModuleName {
                 }
             }
 
-            Test-IsFileSystemPath -ProperyValue $code | Should -Be $false
+            Test-IsFileSystemPath -ProperyValue $code | Should -BeFalse
         }
     }
 
@@ -475,35 +475,47 @@ InModuleScope $ModuleName {
         }
     }
 
-    Describe 'PSCloudFormation - Private 2' {
+    Describe 'Region detection - Get-CurrentRegion' {
+
+        $allRegions = (Get-AWSRegion).Region
 
         Mock -CommandName Get-EC2Region -MockWith {
 
-            @(
-                New-Object PSObject -Property @{ RegionName = "ap-south-1" }
-                New-Object PSObject -Property @{ RegionName = "eu-west-3" }
-                New-Object PSObject -Property @{ RegionName = "eu-west-2" }
-                New-Object PSObject -Property @{ RegionName = "eu-west-1" }
-                New-Object PSObject -Property @{ RegionName = "ap-northeast-2" }
-                New-Object PSObject -Property @{ RegionName = "ap-northeast-1" }
-                New-Object PSObject -Property @{ RegionName = "sa-east-1" }
-                New-Object PSObject -Property @{ RegionName = "ca-central-1" }
-                New-Object PSObject -Property @{ RegionName = "ap-southeast-1" }
-                New-Object PSObject -Property @{ RegionName = "ap-southeast-2" }
-                New-Object PSObject -Property @{ RegionName = "eu-central-1" }
-                New-Object PSObject -Property @{ RegionName = "us-east-1" }
-                New-Object PSObject -Property @{ RegionName = "us-east-2" }
-                New-Object PSObject -Property @{ RegionName = "us-west-1" }
-                New-Object PSObject -Property @{ RegionName = "us-west-2" }
-            )
+            (Get-AWSRegion).Region |
+            ForEach-Object {
+
+                New-Object PSObject -Property @{ RegionName = $_ }
+            }
         }
 
-        Mock -CommandName Write-S3BucketTagging -MockWith {}
+        It 'Should throw if default region never initialised' {
 
-        $templateContentHash = (Get-Content -Raw -Path $global:templatePathJson).GetHashCode()
+            if ($null -eq [Amazon.Runtime.FallbackRegionFactory]::GetRegionEndpoint())
+            {
+                { Get-CurrentRegion -CredentialArguments @{} } | Should -Throw
+            }
+            else
+            {
+                Set-ItResult -Inconclusive -Because "You have already initialised a region (should not be the case on AppVeyor)."
+            }
+        }
 
+        Context 'Region passed as command line argument' {
 
-        Context 'Get-CurrentRegion' {
+            $allRegions | Foreach-Object {
+
+                $r = $_
+
+                It "Should retun '$r' when given as argument" {
+
+                    $credArgs = @{ Region = $r}
+
+                    Get-CurrentRegion -CredentialArguments $credArgs | Should -Be $r
+                }
+            }
+        }
+
+        Context 'Region set by Set-DefaultAWSRegion' {
 
             BeforeEach {
 
@@ -513,170 +525,282 @@ InModuleScope $ModuleName {
                 }
             }
 
-            It 'Should return region passed in credential arguments' {
+            $allRegions | Foreach-Object {
 
-                $credArgs = @{ Region = 'eu-west-2'}
+                $r = $_
 
-                Get-CurrentRegion -CredentialArguments $credArgs | Should -Be 'eu-west-2'
-            }
+                It "Should return '$r' set by Set-DefaultAWSRegion if no specific region passed" {
 
-            It 'Should throw if default region never initialised' {
-
-                if ($null -eq [Amazon.Runtime.FallbackRegionFactory]::GetRegionEndpoint())
-                {
-                    { Get-CurrentRegion -CredentialArguments @{} } | Should -Throw
-                }
-                else
-                {
-                    Set-ItResult -Inconclusive -Because "you have already initialised a region (should not be the case on AppVeyor)."
+                    Set-DefaultAWSRegion -Region $r
+                    Get-CurrentRegion -CredentialArguments $credArgs | Should -Be $r
                 }
             }
+        }
+    }
 
-            It 'Should return region set by Set-DefaultAWSRegion if no specific region passed' {
+    Describe 'Template Backup' {
 
-                Set-DefaultAWSRegion -Region us-east-2
-                Get-CurrentRegion -CredentialArguments $credArgs | Should -Be 'us-east-2'
+        Mock -CommandName Get-CFNTemplate -MockWith {
+
+            Get-Content -Raw -Path $global:templatePathJson
+        }
+
+        Mock -CommandName Get-CFNStackResourceList -MockWith {}
+
+        Context 'Stack without parameters' {
+
+            Mock -CommandName Get-CFNStack -MockWith {
+
+                New-Object PSObject -Property @{
+
+                    StackName = 'test-stack'
+                    StackId = 'test-stack'
+                    Parameters = @()
+                }
+            }
+
+            $backupPathWithoutExtension = Join-Path $TestDrive "test-stack"
+            Save-TemplateBackup -StackName test-backup -OutputPath $TestDrive
+
+            It 'Should have called Get-CFNStack' {
+
+                Assert-MockCalled -CommandName Get-CFNStack -Times 1 -Scope Context
+            }
+
+            It 'Should have called Get-CFNTemplate' {
+
+                Assert-MockCalled -CommandName Get-CFNTemplate -Times 1 -Scope Context
+            }
+
+            It 'Should have called Get-CFNStackResourceList' {
+
+                Assert-MockCalled -CommandName Get-CFNStackResourceList -Times 1 -Scope Context
+            }
+
+            It 'Should create a template backup at given output path' {
+
+                Test-Path -Path "$($backupPathWithoutExtension).template.bak.json" | Should -BeTrue
+            }
+
+            It 'Should not create a parameter file at given output path' {
+
+                Test-Path -Path "$($backupPathWithoutExtension).parameters.bak.json" | Should -BeFalse
             }
         }
 
-        Context 'Template Backup' {
+        Context 'Stack with parameters' {
 
-            It 'Should create a template backup with parameter file' {
+            Mock -CommandName Get-CFNStack -MockWith {
 
-                Mock -CommandName Get-CFNTemplate -MockWith {
+                New-Object PSObject -Property @{
 
-                    Get-Content -Raw -Path $global:templatePathJson
+                    StackName = 'test-stack'
+                    StackId = 'test-stack'
+                    Parameters = @(
+                        @{
+                            ParameterKey = 'VpcCidr'
+                            ParameterValue = '10.0.0.0/16'
+                        }
+                        @{
+                            ParameterKey = 'DnsSupport'
+                            ParameterValue = 'true'
+                        }
+                    )
                 }
+            }
 
-                Mock -CommandName Get-CFNStackResourceList -MockWith {}
+            $backupPathWithoutExtension = Join-Path $TestDrive "test-stack"
+            Save-TemplateBackup -StackName test-backup -OutputPath $TestDrive
 
-                Mock -CommandName Get-CFNStack -MockWith {
+            It 'Should have called  Get-CFNStack' {
 
-                    New-Object PSObject -Property @{
+                Assert-MockCalled -CommandName Get-CFNStack -Times 1 -Scope Context
+            }
 
-                        StackName = 'test-stack'
-                        StackId = 'test-stack'
-                        Parameters = @(
-                            @{
-                                ParameterKey = 'VpcCidr'
-                                ParameterValue = '10.0.0.0/16'
-                            }
-                            @{
-                                ParameterKey = 'DnsSupport'
-                                ParameterValue = 'true'
-                            }
-                        )
-                    }
-                }
+            It 'Should have called  Get-CFNTemplate' {
 
-                $backupPathWithoutExtension = Join-Path $TestDrive "test-stack"
+                Assert-MockCalled -CommandName Get-CFNTemplate -Times 1 -Scope Context
+            }
 
-                Save-TemplateBackup -StackName test-backup -OutputPath $TestDrive
+            It 'Should have called  Get-CFNStackResourceList' {
 
-                Test-Path -Path "$($backupPathWithoutExtension).template.bak.json" | Should -Be $true
-                Test-Path -Path "$($backupPathWithoutExtension).parameters.bak.json" | Should -Be $true
+                Assert-MockCalled -CommandName Get-CFNStackResourceList -Times 1 -Scope Context
+            }
+
+            It 'Should create a template backup at given output path' {
+
+                Test-Path -Path "$($backupPathWithoutExtension).template.bak.json" | Should -BeTrue
+            }
+
+            It 'Should create a parameter file at given output path' {
+
+                Test-Path -Path "$($backupPathWithoutExtension).parameters.bak.json" | Should -BeTrue
+            }
+        }
+    }
+
+    Describe 'S3 Interaction' {
+
+        $regionList = (Get-AWSRegion).Region
+
+        Mock -CommandName Get-EC2Region -MockWith {
+
+            (Get-AWSRegion).Region |
+            ForEach-Object {
+
+                New-Object PSObject -Property @{ RegionName = $_ }
             }
         }
 
-        Context 'S3 Cloudformation Bucket' {
-
-            Mock Get-STSCallerIdentity -MockWith {
-                New-Object PSObject -Property @{
-                    Account = '000000000000'
-                }
+        Mock -CommandName Get-STSCallerIdentity -MockWith {
+            New-Object PSObject -Property @{
+                Account = '000000000000'
             }
+        }
 
-            Mock -CommandName Get-S3BucketLocation -MockWith {
+        Mock -Command Get-S3BucketTagging -MockWith {}
 
-                New-Object PSObject -Property @{
-                    Value = 'us-east-1'
-                }
-            }
+        Mock -Command Write-S3BucketTagging -MockWith {}
 
-            Mock -Command Get-S3BucketTagging -MockWith {}
+        $regionList |
+        ForEach-Object {
 
-            Mock -Command Write-S3BucketTagging -MockWith {}
+            $region = $_
 
-            It 'Should return bucket details if bucket exists' {
+            Context "Create S3 Cloudformation Bucket: $region" {
 
-                $region = 'us-east-1'
-                $expectedBucketName = "cf-templates-pscloudformation-$($region)-000000000000"
-                $expectedBucketUrl = [uri]"https://s3.$($region).amazonaws.com/$expectedBucketName"
+                Mock -CommandName Get-S3Bucket -MockWith {}
 
-                $result = Get-CloudFormationBucket -CredentialArguments @{ Region = $region }
-                Assert-MockCalled -CommandName Get-STSCallerIdentity -Times 1
-                $result.BucketName | Should Be $expectedBucketName
-                $result.BucketUrl | Should Be $expectedBucketUrl
-            }
-
-            It 'Should tag existing bucket if untagged' {
-
-                $region = 'us-east-1'
-                Set-DefaultAWSRegion -Region $region
-
-                Get-CloudFormationBucket -CredentialArguments @{} | Out-Null
-                Assert-MockCalled -CommandName Write-S3BucketTagging -Times 1 -Scope It
-            }
-
-            It 'Should create and tag bucket if bucket does not exist' {
-
-                $region = 'us-east-1'
-                $expectedBucketName = "cf-templates-pscloudformation-$($region)-000000000000"
-                $expectedBucketUrl = [uri]"https://s3.$($region).amazonaws.com/$expectedBucketName"
-                $script:callCount = 0
+                Mock -CommandName New-S3Bucket -MockWith { $true }
 
                 Mock -CommandName Get-S3BucketLocation -MockWith {
-
-                    if ($script:callCount++ -eq 0)
-                    {
-                        throw "The specified bucket does not exist"
-                    }
 
                     New-Object PSObject -Property @{
                         Value = $region
                     }
                 }
 
-                Mock -CommandName New-S3Bucket -MockWith {
-                    $true
+                $expectedBucketName = "cf-templates-pscloudformation-$($region)-000000000000"
+                $expectedBucketUrl = [uri]"https://s3.$($region).amazonaws.com/$expectedBucketName"
+                $result = Get-CloudFormationBucket -CredentialArguments @{ Region = $region }
+
+                It 'Should create the bucket' {
+
+                    # TODO check with MockS3
+                    $true | Should -BeTrue
                 }
+
+                It 'Should have expected name' {
+
+                    $result.BucketName | Should Be $expectedBucketName
+                }
+
+                It 'Should have expected URL' {
+
+                    $result.BucketUrl | Should Be $expectedBucketUrl
+                }
+
+                It 'Should be tagged' {
+
+                    Assert-MockCalled -CommandName Write-S3BucketTagging -Times 1 -Scope COntext
+                }
+            }
+        }
+
+        $regionList |
+        Foreach-Object {
+
+            $region = $_
+
+            Context "Get existing bucket: $region" {
+
+                Mock -CommandName Get-S3Bucket -MockWith { $true }
+
+                Mock -CommandName Get-S3BucketLocation -MockWith {
+
+                    New-Object PSObject -Property @{
+                        Value = $region
+                    }
+                }
+
+                $expectedBucketName = "cf-templates-pscloudformation-$($region)-000000000000"
+                $expectedBucketUrl = [uri]"https://s3.$($region).amazonaws.com/$expectedBucketName"
 
                 $result = Get-CloudFormationBucket -CredentialArguments @{ Region = $region }
-                $result.BucketName | Should Be $expectedBucketName
-                $result.BucketUrl | Should Be $expectedBucketUrl
 
-                Assert-MockCalled -CommandName Get-S3BucketLocation -Times 2 -Scope It
-                Assert-MockCalled -CommandName New-S3Bucket -Times 1 -Scope It
-                Assert-MockCalled -CommandName Write-S3BucketTagging -Times 1 -Scope It
-            }
+                It "Should return expected bucket name" {
 
-            It 'Should not copy template to S3 if size less than 51200' {
-
-                $template = New-Object String -ArgumentList '*', 51119
-                $tempTemplatePath = [IO.Path]::Combine($TestDrive, "not-oversize.json")
-                [IO.File]::WriteAllText($tempTemplatePath, $template, (New-Object System.Text.ASCIIEncoding))
-
-                $stackArguments = @{
-                    TemplateBody = $template
+                    $result.BucketName | Should Be $expectedBucketName
                 }
 
-                Mock -CommandName Get-CloudFormationBucket -MockWith { }
+                It 'Should return expected bucket URL' {
 
-                Mock -CommandName Resolve-Path -MockWith { }
+                    $result.BucketUrl | Should Be $expectedBucketUrl
+                }
+            }
+        }
 
-                Mock -CommandName Write-S3Object -MockWith { }
+        $regionList |
+        Foreach-Object {
 
-                Copy-OversizeTemplateToS3 -TemplateLocation $tempTemplatePath -CredentialArguments @{} -StackArguments $stackArguments
+            $region = $_
 
-                $stackArguments.ContainsKey('TemplateBody') | Should Be $true
-                $StackArguments.ContainsKey('TemplateURL') | Should Be $false
+            Context "Tag untagged bucket: $region" {
 
-                Assert-MockCalled -CommandName Get-CloudFormationBucket -Times 0
-                Assert-MockCalled -CommandName Resolve-Path -Times 0
-                Assert-MockCalled -CommandName Write-S3Object -Times 0
+                Mock -CommandName Get-S3Bucket -MockWith { $true }
+
+                Mock -CommandName Get-S3BucketLocation -MockWith {
+
+                    New-Object PSObject -Property @{
+                        Value = $region
+                    }
+                }
+
+                Get-CloudFormationBucket -CredentialArguments @{ Region = $region } | Out-Null
+
+                It 'Has tagged the bucket' {
+
+                    Assert-MockCalled -CommandName Write-S3BucketTagging -Times 1 -Scope Context
+                }
+            }
+        }
+
+        Context 'Should not copy template to S3 if size less than 51200' {
+
+            Mock -CommandName Get-S3Bucket -MockWith {}
+
+            $template = New-Object String -ArgumentList '*', 51119
+            $tempTemplatePath = [IO.Path]::Combine($TestDrive, "not-oversize.json")
+            [IO.File]::WriteAllText($tempTemplatePath, $template, (New-Object System.Text.ASCIIEncoding))
+
+            $stackArguments = @{
+                TemplateBody = $template
             }
 
-            It 'Should copy oversize template to S3' {
+            Copy-OversizeTemplateToS3 -TemplateLocation $tempTemplatePath -CredentialArguments @{} -StackArguments $stackArguments
+
+            It 'Should not have called Get-S3Bucket' {
+
+                Assert-MockCalled -CommandName Get-S3Bucket -Times 0
+            }
+
+            It 'Arguments for *-CFNStack should contain TemplateBody' {
+
+                $stackArguments.ContainsKey('TemplateBody') | Should -BeTrue
+            }
+
+            It 'Arguments for *-CFNStack should not contain TemplateURL' {
+
+                $stackArguments.ContainsKey('TemplateURL') | Should -BeFalse
+            }
+        }
+
+        $regionList |
+        ForEach-Object {
+
+            $region = $_
+
+            Context "Should copy oversize template (>= 51200 bytes) to S3: $region" {
 
                 $template = New-Object String -ArgumentList '*', 51200
                 $tempTemplatePath = [IO.Path]::Combine($TestDrive, "oversize.json")
@@ -690,7 +814,7 @@ InModuleScope $ModuleName {
                 Mock -CommandName Get-CloudFormationBucket -MockWith {
                     New-Object PSObject -Property @{
                         BucketName = 'test-bucket'
-                        BucketUrl = [uri]'https://s3.us-east-1.amazonaws.com/test-bucket'
+                        BucketUrl = [uri]"https://s3.$region.amazonaws.com/test-bucket"
                     }
                 }
 
@@ -706,13 +830,38 @@ InModuleScope $ModuleName {
                     }
                 }
 
+                Mock -CommandName Get-S3BucketLocation -MockWith {
+
+                    New-Object PSObject -Property @{
+                        Value = $region
+                    }
+                }
+
                 Mock -CommandName Write-S3Object -MockWith { }
 
-                Copy-OversizeTemplateToS3 -TemplateLocation $tempTemplatePath -CredentialArguments @{} -StackArguments $stackArguments
+                $expectedUrl = "https://s3.$region.amazonaws.com/test-bucket/20000101000000000_oversize-stack_oversize.json"
 
-                $stackArguments.ContainsKey('TemplateBody') | Should Be $false
-                $StackArguments.ContainsKey('TemplateURL') | Should Be $true
-                $stackArguments['TemplateURL'] | Should Be "https://s3.us-east-1.amazonaws.com/test-bucket/20000101000000000_oversize-stack_oversize.json"
+                Copy-OversizeTemplateToS3 -TemplateLocation $tempTemplatePath -CredentialArguments @{ Region = $region } -StackArguments $stackArguments
+
+                It 'Should have called Write-S3Object' {
+
+                    Assert-MockCalled -CommandName Write-S3Object -Exactly -Times 1 -Scope Context
+                }
+
+                It 'Arguments for *-CFNStack should not contain TemplateBody' {
+
+                    $stackArguments.ContainsKey('TemplateBody') | Should -BeFalse
+                }
+
+                It 'Arguments for *-CFNStack should contain TemplateURL' {
+
+                    $stackArguments.ContainsKey('TemplateURL') | Should -BeTrue
+                }
+
+                It 'TemplateURL should be expected URL' {
+
+                    $stackArguments['TemplateURL'] | Should Be $expectedUrl
+                }
             }
         }
     }
@@ -725,7 +874,7 @@ InModuleScope $ModuleName {
 
             $resolver = New-TemplateResolver -TemplateLocation $global:templatePathJson
 
-            It 'Resolver type should be UsePreviousTemplate' {
+            It 'Resolver type should be File' {
 
                 $resolver.Type | Should Be 'File'
             }
@@ -778,7 +927,7 @@ InModuleScope $ModuleName {
             }
         }
 
-        Context 'Creating URL resolver when AWS region is set in the session context' {
+        Context 'Creating URL resolver from s3://... when AWS region is set in the session context' {
 
             Mock -CommandName Get-CurrentRegion -MockWith {
 
@@ -814,6 +963,56 @@ InModuleScope $ModuleName {
             It 'Resolver S3 key should be expected value' {
 
                 $resolver.Key | Should Be 'path/to/test-stack.json'
+            }
+        }
+
+        Context 'Creating URL resolver from s3://... when AWS region is set on the command line' {
+
+            $uri = 's3://bucket/path/to/test-stack.json'
+            $generatedUrl = 'https://s3-us-west-1.amazonaws.com/bucket/path/to/test-stack.json'
+
+            $resolver = New-TemplateResolver -TemplateLocation $uri -CredentialArguments @{ Region = 'us-west-1' }
+
+            It 'Resolver type should be Url' {
+
+                $resolver.Type | Should Be 'Url'
+            }
+
+            It 'Resolver URL should be expected URL' {
+
+                $resolver.Url | Should Be $generatedUrl
+            }
+
+
+            It 'Resolver S3 bucket should be expected value' {
+
+                $resolver.BucketName | Should Be 'bucket'
+            }
+
+            It 'Resolver S3 key should be expected value' {
+
+                $resolver.Key | Should Be 'path/to/test-stack.json'
+            }
+        }
+
+        Context 'Creating URL resolver from s3://... when no AWS region can be determined' {
+
+            Mock -CommandName Get-CurrentRegion -MockWith {
+
+                throw "Cannot determine AWS Region. Either use Set-DefaultAWSRegion to set in shell, or supply -Region parameter."
+            }
+
+
+            $uri = 's3://bucket/path/to/test-stack.json'
+
+            It 'Should throw because bucket region cannot be detemined' {
+
+                { New-TemplateResolver -TemplateLocation $uri } | Should -Throw
+            }
+
+            It 'Has called Get-CurentRegion' {
+
+                Assert-MockCalled -CommandName Get-CurrentRegion -Times 1 -Scope Context
             }
         }
 
