@@ -49,7 +49,7 @@ function Get-CloudFormationBucket
     $s3Arguments = Update-EndpointValue -CredentialArguments $CredentialArguments -Service S3
     $bucketName = "cf-templates-pscloudformation-$(Get-CurrentRegion -CredentialArguments $s3Arguments)-$((Get-STSCallerIdentity @CredentialArguments).Account)"
 
-    try
+    if (Get-S3Bucket -BucketName $bucketName @s3Arguments)
     {
         $location = Get-S3BucketLocation -BucketName $bucketName @s3Arguments | Select-Object -ExpandProperty Value
         Write-CloudFormationBucketTagging -BucketName $bucketName -CredentialArguments $s3Arguments
@@ -63,10 +63,6 @@ function Get-CloudFormationBucket
             BucketName = $bucketName
             BucketUrl  = [uri]"https://s3.$($location).amazonaws.com/$bucketName"
         }
-    }
-    catch
-    {
-        # Bucket not found
     }
 
     # Try to create it
