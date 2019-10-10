@@ -231,10 +231,10 @@ function New-PSCFNStack
                 {
                     throw "Create unsuccessful"
                 }
-
-                # Emit ARN
-                $arn
             }
+
+            # Emit ARN
+            $arn
         }
         catch
         {
