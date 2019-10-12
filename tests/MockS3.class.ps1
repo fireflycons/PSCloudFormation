@@ -1,7 +1,36 @@
-
+<#
+    Correct me if I'm wrong, but all bucket operations work on any existing bucket in any region
+    regardless of the -Region parameter to the call
+    Only exception is New-S3Bucket which creates the bucket in the given region.
+#>
 class MockS3
 {
     [string]$rootDir
+
+    hidden static [hashtable]$regionMap = @{
+        'ap-east-1' = [Amazon.S3.S3Region]::new('ap-east-1')
+        'ap-northeast-1' = [Amazon.S3.S3Region]::APN1
+        'ap-northeast-2' = [Amazon.S3.S3Region]::APN2
+        'ap-northeast-3' = [Amazon.S3.S3Region]::APN3
+        'ap-south-1' = [Amazon.S3.S3Region]::APS3
+        'ap-southeast-1' = [Amazon.S3.S3Region]::APS1
+        'ap-southeast-2' = [Amazon.S3.S3Region]::APS2
+        'ca-central-1' = [Amazon.S3.S3Region]::CAN1
+        'cn-north-1' = [Amazon.S3.S3Region]::CN
+        'cn-northwest-1' = [Amazon.S3.S3Region]::CNW1
+        'eu-central-1' = [Amazon.S3.S3Region]::EUC1
+        'eu-north-1' = [Amazon.S3.S3Region]::EUN1
+        'eu-west-1' = [Amazon.S3.S3Region]::EUW1
+        'eu-west-2' = [Amazon.S3.S3Region]::EUW2
+        'eu-west-3' = [Amazon.S3.S3Region]::EUW3
+        'sa-east-1' = [Amazon.S3.S3Region]::SAE1
+        'us-east-1' = [Amazon.S3.S3Region]::new('us-east-1')
+        'us-east-2' = [Amazon.S3.S3Region]::USE2
+        'us-gov-east-1' = [Amazon.S3.S3Region]::GOVE1
+        'us-gov-west-1' = [Amazon.S3.S3Region]::GOVW1
+        'us-west-1' = [Amazon.S3.S3Region]::USW1
+        'us-west-2' = [Amazon.S3.S3Region]::USW2
+    }
 
     MockS3([string]$RootDir)
     {
@@ -10,9 +39,19 @@ class MockS3
 
     [Amazon.S3.Model.S3Bucket]NewBucket([string]$bucketName)
     {
+        return $this.NewBucket($bucketName, 'eu-west-1')
+    }
+
+    [Amazon.S3.Model.S3Bucket]NewBucket([string]$bucketName, [string]$Region)
+    {
         if ($this.BucketExists($bucketName))
         {
             throw "Your previous request to create the named bucket succeeded and you already own it."
+        }
+
+        if ([string]::IsNullOrEmpty($Region))
+        {
+            $Region = 'us-east-1'
         }
 
         $path = $this.BucketPath($bucketName)
@@ -21,6 +60,7 @@ class MockS3
 
         New-Object PSObject -Property @{
             Tags = @{}
+            Region = [MockS3]::regionMap[$region].Value
         } |
         ConvertTo-Json |
         Out-File -FilePath (Join-Path $path '.bucket-metadata')
@@ -29,6 +69,19 @@ class MockS3
             BucketName = $bucketName
             CreationDate = [DateTime]::Now
         }
+    }
+
+    [Amazon.S3.S3Region]GetBucketLocation([string]$bucketName)
+    {
+        if (-not $this.BucketExists($bucketName))
+        {
+            throw 'The specified bucket does not exist'
+        }
+
+        $metadataFile = Join-Path $this.BucketPath($bucketName) '.bucket-metadata'
+        $metadata = Get-Content -Raw $metadataFile | ConvertFrom-Json
+
+        return [MockS3]::regionMap[$metadata.Region]
     }
 
     [System.Collections.Generic.List[Amazon.S3.Model.S3Bucket]]GetBucket([string]$bucketName)
@@ -274,7 +327,7 @@ class MockS3
             $mockS3 = $mockS3 = [MockS3]::new($testdrive)
 
             Mock -CommandName New-S3Bucket -MockWith {
-                $mockS3.NewBucket($BucketName)
+                $mockS3.NewBucket($BucketName, $Region)
             }
 
             Mock -CommandName Get-S3Bucket -MockWith {
@@ -306,8 +359,13 @@ class MockS3
                 $mockS3.GetBucketTagging($BucketName)
             }
 
+            Mock -CommandName Get-S3BucketLocation -MockWith {
+
+                $mocks3.GetBucketLocation($BucketName)
+            }
+
             # Throw undefined for all remaining S3 operations
-            $implemented = ('New-S3Bucket', 'Get-S3Bucket', 'Write-S3Object', 'Get-S3Object', 'Get-S3ObjectMetadata', 'Write-S3BucketTagging', 'Get-S3BucketTagging')
+            $implemented = ('New-S3Bucket', 'Get-S3Bucket', 'Get-S3BucketLocation', 'Write-S3Object', 'Get-S3Object', 'Get-S3ObjectMetadata', 'Write-S3BucketTagging', 'Get-S3BucketTagging')
 
             Get-AWSCmdletName -Service S3 |
             Select-Object -ExpandProperty CmdletName |
@@ -345,9 +403,5 @@ class MockS3
         return Join-Path $this.rootDir $bucketName
     }
 }
-
-
-
-$mockS3 = [MockS3]::UseS3Mocks()
 
 
