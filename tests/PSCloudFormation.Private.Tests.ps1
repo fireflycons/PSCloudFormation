@@ -641,6 +641,9 @@ InModuleScope $ModuleName {
 
     Describe 'S3 Interaction' {
 
+        . (Join-Path $PSScriptRoot MockS3.class.ps1)
+        $mockS3 = [MockS3]::UseS3Mocks()
+
         $regionList = (Get-AWSRegion).Region
 
         Mock -CommandName Get-EC2Region -MockWith {
@@ -658,27 +661,12 @@ InModuleScope $ModuleName {
             }
         }
 
-        Mock -Command Get-S3BucketTagging -MockWith {}
-
-        Mock -Command Write-S3BucketTagging -MockWith {}
-
         $regionList |
         ForEach-Object {
 
             $region = $_
 
             Context "Create S3 Cloudformation Bucket: $region" {
-
-                Mock -CommandName Get-S3Bucket -MockWith {}
-
-                Mock -CommandName New-S3Bucket -MockWith { $true }
-
-                Mock -CommandName Get-S3BucketLocation -MockWith {
-
-                    New-Object PSObject -Property @{
-                        Value = $region
-                    }
-                }
 
                 $expectedBucketName = "cf-templates-pscloudformation-$($region)-000000000000"
                 $expectedBucketUrl = [uri]"https://s3.$($region).amazonaws.com/$expectedBucketName"
@@ -687,7 +675,7 @@ InModuleScope $ModuleName {
                 It 'Should create the bucket' {
 
                     # TODO check with MockS3
-                    $true | Should -BeTrue
+                    Join-Path $TestDrive $expectedBucketName | Should -Exist
                 }
 
                 It 'Should have expected name' {
@@ -703,64 +691,6 @@ InModuleScope $ModuleName {
                 It 'Should be tagged' {
 
                     Assert-MockCalled -CommandName Write-S3BucketTagging -Times 1 -Scope COntext
-                }
-            }
-        }
-
-        $regionList |
-        Foreach-Object {
-
-            $region = $_
-
-            Context "Get existing bucket: $region" {
-
-                Mock -CommandName Get-S3Bucket -MockWith { $true }
-
-                Mock -CommandName Get-S3BucketLocation -MockWith {
-
-                    New-Object PSObject -Property @{
-                        Value = $region
-                    }
-                }
-
-                $expectedBucketName = "cf-templates-pscloudformation-$($region)-000000000000"
-                $expectedBucketUrl = [uri]"https://s3.$($region).amazonaws.com/$expectedBucketName"
-
-                $result = Get-CloudFormationBucket -CredentialArguments @{ Region = $region }
-
-                It "Should return expected bucket name" {
-
-                    $result.BucketName | Should Be $expectedBucketName
-                }
-
-                It 'Should return expected bucket URL' {
-
-                    $result.BucketUrl | Should Be $expectedBucketUrl
-                }
-            }
-        }
-
-        $regionList |
-        Foreach-Object {
-
-            $region = $_
-
-            Context "Tag untagged bucket: $region" {
-
-                Mock -CommandName Get-S3Bucket -MockWith { $true }
-
-                Mock -CommandName Get-S3BucketLocation -MockWith {
-
-                    New-Object PSObject -Property @{
-                        Value = $region
-                    }
-                }
-
-                Get-CloudFormationBucket -CredentialArguments @{ Region = $region } | Out-Null
-
-                It 'Has tagged the bucket' {
-
-                    Assert-MockCalled -CommandName Write-S3BucketTagging -Times 1 -Scope Context
                 }
             }
         }
@@ -811,41 +741,18 @@ InModuleScope $ModuleName {
                     TemplateBody = $template
                 }
 
-                Mock -CommandName Get-CloudFormationBucket -MockWith {
-                    New-Object PSObject -Property @{
-                        BucketName = 'test-bucket'
-                        BucketUrl = [uri]"https://s3.$region.amazonaws.com/test-bucket"
-                    }
-                }
-
                 Mock -CommandName Get-Date -MockWith {
 
                     New-Object DateTime -ArgumentList (2000,1,1,0,0,0,0)
                 }
 
-                Mock -CommandName Resolve-Path -MockWith {
-
-                    New-Object PSObject -Property @{
-                        Path = Join-Path ([IO.Path]::GetTempPath()) 'test.json'
-                    }
-                }
-
-                Mock -CommandName Get-S3BucketLocation -MockWith {
-
-                    New-Object PSObject -Property @{
-                        Value = $region
-                    }
-                }
-
-                Mock -CommandName Write-S3Object -MockWith { }
-
-                $expectedUrl = "https://s3.$region.amazonaws.com/test-bucket/20000101000000000_oversize-stack_oversize.json"
+                $expectedUrl = "https://s3.$region.amazonaws.com/cf-templates-pscloudformation-$region-000000000000/20000101000000000_oversize-stack_oversize.json"
 
                 Copy-OversizeTemplateToS3 -TemplateLocation $tempTemplatePath -CredentialArguments @{ Region = $region } -StackArguments $stackArguments
 
-                It 'Should have called Write-S3Object' {
+                It 'Should have uploaded the template' {
 
-                    Assert-MockCalled -CommandName Write-S3Object -Exactly -Times 1 -Scope Context
+                    [IO.Path]::Combine($testdrive, "cf-templates-pscloudformation-$region-000000000000", '20000101000000000_oversize-stack_oversize.json') | Should -Exist
                 }
 
                 It 'Arguments for *-CFNStack should not contain TemplateBody' {

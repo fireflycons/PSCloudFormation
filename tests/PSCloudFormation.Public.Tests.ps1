@@ -58,6 +58,9 @@ Describe "$ModuleName Module - Testing Manifest File (.psd1)" {
     }
 }
 
+# Import MockS3
+. (Join-Path $PSScriptRoot MockS3.class.ps1)
+
 # https://github.com/PowerShell/PowerShell/issues/2408#issuecomment-251140889
 InModuleScope $ModuleName {
 
