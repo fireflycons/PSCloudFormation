@@ -5,96 +5,119 @@ online version:
 schema: 2.0.0
 ---
 
-# Remove-PSCFNStack
+# New-PSCFNPackage
 
 ## SYNOPSIS
-Delete one or more stacks.
+Create a deployment package a-la aws cloudformation package
 
 ## SYNTAX
 
 ```
-Remove-PSCFNStack [-StackName] <String[]> [-Wait] [-Sequential] [-Force] [-ThrowOnAbort] [-BackupTemplate]
- [-ProfileName <String>] [-EndpointUrl <String>] [-AccessKey <String>] [-SecretKey <String>]
- [-ProfileLocation <String>] [-SessionToken <String>] [-NetworkCredential <PSCredential>]
- [-Credential <AWSCredentials>] [-Region <String>] [<CommonParameters>]
+New-PSCFNPackage [-TemplateFile] <String> [-S3Bucket] <String> [[-S3Prefix] <String>] [[-KmsKeyId] <String>]
+ [[-OutputTemplateFile] <String>] [-UseJson] [-ForceUpload] [[-Metadata] <Hashtable>] [-ProfileName <String>]
+ [-EndpointUrl <String>] [-AccessKey <String>] [-SecretKey <String>] [-ProfileLocation <String>]
+ [-SessionToken <String>] [-NetworkCredential <PSCredential>] [-Credential <AWSCredentials>] [-Region <String>]
+ [<CommonParameters>]
 ```
 
 ## DESCRIPTION
-Delete one or more stacks.
-If -Wait is specified, stack events are output to the console including events from any nested stacks.
-
-Deletion of multiple stacks can be either sequential or parallel.
-If deleting a gruop of stacks where there are dependencies between them
-use the -Sequential switch and list the stacks in dependency order.
+Packages the local artifacts (local paths) that your AWS CloudFormation template references.
+The command uploads local artifacts, such as source code for an AWS Lambda function or a Swagger file for an AWS API Gateway REST API, to an S3 bucket.
+The command returns a copy of your template, replacing references to local artifacts with the S3 location where the command uploaded the artifacts.
+Use this command to quickly upload local artifacts that might be required by your template.
+After you package your template's artifacts, run one of the *-PSCFNStack cmdlets to deploy the returned template.
 
 ## EXAMPLES
 
-### EXAMPLE 1
-```
-Remove-PSCFNStack -StackName MyStack
-```
-
-Deletes a single stack.
-
-### EXAMPLE 2
-```
-Remove-PSCFNStack -StackName MyStack -BackupTemplate
+### Example 1
+```powershell
+PS C:\> {{ Add example code here }}
 ```
 
-As per the first example, but with the previous version of the template and its current parameter set saved to files in the current directory.
-
-### EXAMPLE 3
-```
-'DependentStack', 'BaseStack' | Remove-PSCFNStack -Sequential
-```
-
-Deletes 'DependentStack', waits for completion, then deletes 'BaseStack'.
-
-### EXAMPLE 4
-```
-'Stack1', 'Stack2' | Remove-PSCFNStack -Wait
-```
-
-Sets both stacks deleting in parallel, then waits for them both to complete.
-
-### EXAMPLE 5
-```
-'Stack1', 'Stack2' | Remove-PSCFNStack
-```
-
-Sets both stacks deleting in parallel, and returns immediately.
-See the CloudFormation console to monitor progress.
-
-### EXAMPLE 6
-```
-Get-CFNStack | Remove-PSCFNStack
-```
-
-You would NOT want to do this, just like you wouldn't do rm -rf / !
-It is for illustration only.
-Sets ALL stacks in the region deleting simultaneously, which would probably trash some stacks
-and then others would fail due to dependent resources.
+{{ Add example description here }}
 
 ## PARAMETERS
 
-### -StackName
-Either stack names or the object returned by Get-CFNStack, New-CFNStack, Update-CFNStack
-and other functions in this module when run with -Wait.
+### -TemplateFile
+The path where your AWS CloudFormation template is located.
 
 ```yaml
-Type: String[]
+Type: String
 Parameter Sets: (All)
 Aliases:
 
 Required: True
 Position: 1
 Default value: None
-Accept pipeline input: True (ByPropertyName, ByValue)
+Accept pipeline input: False
 Accept wildcard characters: False
 ```
 
-### -Wait
-If set and -Sequential is not set (so deleting in parallel), wait for all stacks to be deleted before returning.
+### -S3Bucket
+The name of the S3 bucket where this command uploads the artifacts that are referenced in your template.
+
+```yaml
+Type: String
+Parameter Sets: (All)
+Aliases:
+
+Required: True
+Position: 2
+Default value: None
+Accept pipeline input: False
+Accept wildcard characters: False
+```
+
+### -S3Prefix
+A prefix name that the command adds to the artifacts' name when it uploads them to the S3 bucket.
+The prefix name is a path name (folder name) for the S3 bucket.
+
+```yaml
+Type: String
+Parameter Sets: (All)
+Aliases:
+
+Required: False
+Position: 3
+Default value: None
+Accept pipeline input: False
+Accept wildcard characters: False
+```
+
+### -KmsKeyId
+The ID of an AWS KMS key that the command uses to encrypt artifacts that are at rest in the S3 bucket.
+
+```yaml
+Type: String
+Parameter Sets: (All)
+Aliases:
+
+Required: False
+Position: 4
+Default value: None
+Accept pipeline input: False
+Accept wildcard characters: False
+```
+
+### -OutputTemplateFile
+The path to the file where the command writes the output AWS CloudFormation template.
+If you don't specify a path, the command writes the template to the standard output.
+
+```yaml
+Type: String
+Parameter Sets: (All)
+Aliases:
+
+Required: False
+Position: 5
+Default value: None
+Accept pipeline input: False
+Accept wildcard characters: False
+```
+
+### -UseJson
+Indicates whether to use JSON as the format for the output AWS CloudFormation template.
+YAML is used by default.
 
 ```yaml
 Type: SwitchParameter
@@ -108,9 +131,13 @@ Accept pipeline input: False
 Accept wildcard characters: False
 ```
 
-### -Sequential
-If set, delete stacks in the order they are specified on the command line or received from the pipeline,
-waiting for each stack to delete successfully before proceeding to the next one.
+### -ForceUpload
+Indicates whether to override existing files in the S3 bucket.
+Specify this flag to upload artifacts even if they match existing artifacts in the S3 bucket.
+CAVEAT: MD5 checksums are used to compare the local and S3 versions of the artifact.
+If the artifact is a zip file, then it will almost certainly be
+uploaded every time as zip files contain datetimes (esp.
+last access time) and other file metadata that may change from subsequent invocations of zip on the local artifacts.
 
 ```yaml
 Type: SwitchParameter
@@ -124,50 +151,17 @@ Accept pipeline input: False
 Accept wildcard characters: False
 ```
 
-### -Force
-If set, do not ask first.
+### -Metadata
+A map of metadata to attach to ALL the artifacts that are referenced in your template.
 
 ```yaml
-Type: SwitchParameter
+Type: Hashtable
 Parameter Sets: (All)
 Aliases:
 
 Required: False
-Position: Named
-Default value: False
-Accept pipeline input: False
-Accept wildcard characters: False
-```
-
-### -ThrowOnAbort
-If set, and user answers no when asked if stack should be deleted, throw an exception instead of just warning.
-This switch is primarily for use by Reset-PSCFNStack to enable cancellation of the reset process.
-
-```yaml
-Type: SwitchParameter
-Parameter Sets: (All)
-Aliases:
-
-Required: False
-Position: Named
-Default value: False
-Accept pipeline input: False
-Accept wildcard characters: False
-```
-
-### -BackupTemplate
-If set, back up the current version of the template stored by CloudFormation, along with the current parameter set if any to files in the current directory.
-This will assist with undoing any unwanted change.
-Note that if you have dropped or replaced a database or anything else associcated with stored data, then the data is lost forever!
-
-```yaml
-Type: SwitchParameter
-Parameter Sets: (All)
-Aliases:
-
-Required: False
-Position: Named
-Default value: False
+Position: 6
+Default value: None
 Accept pipeline input: False
 Accept wildcard characters: False
 ```
@@ -315,16 +309,17 @@ Accept wildcard characters: False
 ```
 
 ### CommonParameters
-This cmdlet supports the common parameters: -Debug, -ErrorAction, -ErrorVariable, -InformationAction, -InformationVariable, -OutVariable, -OutBuffer, -PipelineVariable, -Verbose, -WarningAction, and -WarningVariable. For more information, see about_CommonParameters (http://go.microsoft.com/fwlink/?LinkID=113216).
+This cmdlet supports the common parameters: -Debug, -ErrorAction, -ErrorVariable, -InformationAction, -InformationVariable, -OutVariable, -OutBuffer, -PipelineVariable, -Verbose, -WarningAction, and -WarningVariable.
+For more information, see about_CommonParameters (http://go.microsoft.com/fwlink/?LinkID=113216).
 
 ## INPUTS
 
-### System.String[]
-### You can pipe the names or ARNs of the stacks to delete to this function
+### None
 ## OUTPUTS
 
-### System.String[]
-### ARN(s) of deleted stack(s) else nothing if the stack did not exist or no stacks were deleted.
+### [string]
+### If -OutputTemplateFile is not provided, then the output is the converted template.
 ## NOTES
+https://github.com/aws/aws-extensions-for-dotnet-cli/blob/master/src/Amazon.Lambda.Tools/LambdaUtilities.cs
 
 ## RELATED LINKS

@@ -12,6 +12,9 @@ Easy CloudFormation deployments from PowerShell command line
 ### [Get-PSCFNStackOutputs](Get-PSCFNStackOutputs.md)
 Get the outputs of a stack in various formats
 
+### [New-PSCFNPackage](New-PSCFNPackage.md)
+Packages local artifacts to S3.
+
 ### [New-PSCFNStack](New-PSCFNStack.md)
 Creates a stack.
 

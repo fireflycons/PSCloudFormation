@@ -4,6 +4,10 @@ function New-PSCFNPackage
     .SYNOPSIS
         Create a deployment package a-la aws cloudformation package
 
+    .DESCRIPTION
+        Packages the local artifacts (local paths) that your AWS CloudFormation template references. The command uploads local artifacts, such as source code for an AWS Lambda function or a Swagger file for an AWS API Gateway REST API, to an S3 bucket. The command returns a copy of your template, replacing references to local artifacts with the S3 location where the command uploaded the artifacts.
+        Use this command to quickly upload local artifacts that might be required by your template. After you package your template's artifacts, run one of the *-PSCFNStack cmdlets to deploy the returned template.
+
     .PARAMETER TemplateFile
         The path where your AWS CloudFormation template is located.
 
@@ -32,6 +36,13 @@ function New-PSCFNPackage
 
     .NOTES
         https://github.com/aws/aws-extensions-for-dotnet-cli/blob/master/src/Amazon.Lambda.Tools/LambdaUtilities.cs
+
+    .INPUTS
+        None
+
+    .OUTPUTS
+        [string]
+        If -OutputTemplateFile is not provided, then the output is the converted template.
 #>
     [CmdletBinding()]
     param
