@@ -20,10 +20,11 @@ $thisFile = $MyInvocation.MyCommand.Path
 Describe 'MockS3' {
 
     . (Join-Path $PSScriptRoot MockS3.class.ps1)
+    . (Join-Path $PSScriptRoot TestHelpers.ps1)
 
+    $regionList = Get-TestRegionList
     $mockS3 = [MockS3]::UseS3Mocks()
 
-    $regionList = (Get-AWSRegion).Region
 
     Context 'Bucket' {
 

@@ -23,6 +23,7 @@ class MockS3
         'eu-west-1' = [Amazon.S3.S3Region]::EUW1
         'eu-west-2' = [Amazon.S3.S3Region]::EUW2
         'eu-west-3' = [Amazon.S3.S3Region]::EUW3
+        'me-south-1' = [Amazon.S3.S3Region]::new('me-south-1')
         'sa-east-1' = [Amazon.S3.S3Region]::SAE1
         'us-east-1' = [Amazon.S3.S3Region]::new('us-east-1')
         'us-east-2' = [Amazon.S3.S3Region]::USE2

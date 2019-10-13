@@ -47,6 +47,9 @@ $global:azs = @(
 
 InModuleScope $ModuleName {
 
+    . (Join-Path $PSScriptRoot TestHelpers.ps1)
+    $regionList = Get-TestRegionList
+
     Describe 'Test-IsFileSystemPath' {
 
         It 'Should return true for an absolute Unix path' {
@@ -643,8 +646,6 @@ InModuleScope $ModuleName {
 
         . (Join-Path $PSScriptRoot MockS3.class.ps1)
         $mockS3 = [MockS3]::UseS3Mocks()
-
-        $regionList = (Get-AWSRegion).Region
 
         Mock -CommandName Get-EC2Region -MockWith {
 
