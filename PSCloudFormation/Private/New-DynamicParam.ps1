@@ -24,7 +24,7 @@ function New-DynamicParam
 
             Credit to BM for alias and type parameters and their handling
 
-            Cresit to https://github.com/RamblingCookieMonster/PowerShell for this implementation
+            Credit to https://github.com/RamblingCookieMonster/PowerShell for this implementation
                 Added ValidatePattern argument
 
         .PARAMETER Name

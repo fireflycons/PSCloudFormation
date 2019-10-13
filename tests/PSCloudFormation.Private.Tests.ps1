@@ -670,7 +670,7 @@ InModuleScope $ModuleName {
             Context "Create S3 Cloudformation Bucket: $region" {
 
                 $expectedBucketName = "cf-templates-pscloudformation-$($region)-000000000000"
-                $expectedBucketUrl = [uri]"https://s3.$($region).amazonaws.com/$expectedBucketName"
+                $expectedBucketUrl = [uri]"https://$($expectedBucketName).s3.amazonaws.com"
                 $result = Get-CloudFormationBucket -CredentialArguments @{ Region = $region }
 
                 It 'Should create the bucket' {
@@ -747,7 +747,7 @@ InModuleScope $ModuleName {
                     New-Object DateTime -ArgumentList (2000,1,1,0,0,0,0)
                 }
 
-                $expectedUrl = "https://s3.$region.amazonaws.com/cf-templates-pscloudformation-$region-000000000000/20000101000000000_oversize-stack_oversize.json"
+                $expectedUrl = "https://cf-templates-pscloudformation-$region-000000000000.s3.amazonaws.com/20000101000000000_oversize-stack_oversize.json"
 
                 Copy-OversizeTemplateToS3 -TemplateLocation $tempTemplatePath -CredentialArguments @{ Region = $region } -StackArguments $stackArguments
 
