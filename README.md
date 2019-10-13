@@ -56,6 +56,7 @@ This module provides the following stack modification cmdlets
 ### Other Cmdlets
 
 - `Get-PSCFNStackOutputs` ([Documentation](docs/en-US/Get-PSCFNStackOutputs.md)) Retrieves the outputs of a stack in various useful formats for use in creation of new stack templates that will use or import these values.
+- `New-PSCFNPackage` ([Documentation](docs/en-US/New-PSCFNPackage.md)) Packages local artifacts, like `aws cloudformation package`
 
 ### Template Support
 
