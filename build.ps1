@@ -1,4 +1,8 @@
-param ($Task = 'Default')
+param 
+(
+    [string]$Task = 'Default',
+    [switch]$ImportDependenciesOnly
+)
 
 $currentLocation = Get-Location
 try
@@ -31,7 +35,15 @@ try
         }
     )
 
-    Invoke-PSDepend -Path "$PSScriptRoot\build.requirements.psd1" -Install -Import -Force -Tags $psDependTags
+    if ($ImportDependenciesOnly)
+    {
+        Invoke-PSDepend -Path "$PSScriptRoot\build.requirements.psd1" -Import -Force -Tags $psDependTags
+    }
+    else
+    {
+        Invoke-PSDepend -Path "$PSScriptRoot\build.requirements.psd1" -Install -Import -Force -Tags $psDependTags
+    }
+
 
     Set-BuildEnvironment -ErrorAction SilentlyContinue
 
