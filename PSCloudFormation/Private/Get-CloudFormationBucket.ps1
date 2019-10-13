@@ -25,11 +25,9 @@ function Get-CloudFormationBucket
     {
         Write-CloudFormationBucketTagging -BucketName $bucketName -CredentialArguments $s3Arguments
 
-        $location = Get-S3BucketLocation -BucketName $bucketName @s3Arguments | Select -ExpandProperty Value
-
         return New-Object psobject -Property @{
             BucketName = $bucketName
-            BucketUrl  = [uri]"https://s3.$($location).amazonaws.com/$bucketName"
+            BucketUrl  = [uri]"https://$($bucketName).s3.amazonaws.com"
         }
     }
 
@@ -41,37 +39,9 @@ function Get-CloudFormationBucket
         Write-Host "Created S3 bucket $bucketName to store oversize templates."
         Write-CloudFormationBucketTagging -BucketName $bucketName -CredentialArguments $s3Arguments
 
-        $location = Get-S3BucketLocation -BucketName $bucketName @s3Arguments | Select-Object -ExpandProperty Value
-
-        if ([string]::IsNullOrEmpty($location))
-        {
-            $sb = New-Object System.Text.StringBuilder
-
-            $sb.AppendLine("Unable to get location for bucket $bucketName").
-                Append('  ') | Out-Null
-
-            $s3Arguments.Keys |
-            Foreach-Object {
-                $sb.Append("-($_) ")
-
-                if ($_ -ieq 'SecretKey')
-                {
-                    $sb.Append('**** ')
-                }
-                else
-                {
-                    $sb.Append("$($s3Arguments[$_]) ") | Out-Null
-                }
-            }
-
-            $sb.AppendLine();
-
-            throw $sb.ToString()
-        }
-
         return New-Object psobject -Property @{
             BucketName = $bucketName
-            BucketUrl  = [uri]"https://s3.$($location).amazonaws.com/$bucketName"
+            BucketUrl  = [uri]"https://$($bucketName).s3.amazonaws.com"
         }
     }
 

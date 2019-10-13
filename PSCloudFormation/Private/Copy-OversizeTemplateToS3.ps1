@@ -44,7 +44,7 @@ function Copy-OversizeTemplateToS3
     $key = $dateStamp + '_' + $StackArguments['StackName'] + '_' + [IO.Path]::GetFileName($TemplateLocation)
 
     $ub = New-Object UriBuilder -ArgumentList $bucket.BucketUrl
-    $ub.Path += "/$key"
+    $ub.Path = "/$key"
 
     Write-Host "Copying oversize template to $($ub.Uri.ToString())"
 
