@@ -1,5 +1,11 @@
 # Release Notes
 
+## 1.8.0
+
+* New cmdlet `New-PSCFNPackage`. Packages local artifacts to S3 as per `aws cloudformation package`
+* Change all S3 bucket URLs to virtual host style
+* Major workover to the tests.
+
 ## 1.7.1
 
 * Minor bug fixes on `Reset-PSCFNStack`
