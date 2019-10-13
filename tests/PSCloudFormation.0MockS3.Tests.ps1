@@ -20,6 +20,11 @@ $thisFile = $MyInvocation.MyCommand.Path
 Describe 'MockS3' {
 
     . (Join-Path $PSScriptRoot MockS3.class.ps1)
+    . (Join-Path $PSScriptRoot TestHelpers.ps1)
+
+    $regionList = Get-TestRegionList
+    $mockS3 = [MockS3]::UseS3Mocks()
+
 
     Context 'Bucket' {
 
@@ -68,6 +73,27 @@ Describe 'MockS3' {
             $tags | Should -HaveCount 2
             $tags | Where-Object { $_.Key -eq 'tag1' } | Select-Object -ExpandProperty Value | Should -Be 'value1'
             $tags | Where-Object { $_.Key -eq 'tag2' } | Select-Object -ExpandProperty Value | Should -Be 'value2'
+        }
+    }
+
+    $regionList |
+    ForEach-Object {
+
+        $region = $_
+
+        Context "Regional Bucket: $region" {
+
+            $bucket = New-S3Bucket -BucketName test-bucket -Region $region
+
+            It 'Bucket should be created' {
+
+                Test-Path -Path testdrive:\test-bucket -PathType Container | Should -Be $true
+            }
+
+            It 'Bucket should be in correct S3 region' {
+
+                Get-S3BucketLocation -BucketName test-bucket
+            }
         }
     }
 

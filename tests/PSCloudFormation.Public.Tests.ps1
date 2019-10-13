@@ -58,62 +58,40 @@ Describe "$ModuleName Module - Testing Manifest File (.psd1)" {
     }
 }
 
+# Import MockS3
+. (Join-Path $PSScriptRoot MockS3.class.ps1)
+
 # https://github.com/PowerShell/PowerShell/issues/2408#issuecomment-251140889
 InModuleScope $ModuleName {
-    Describe 'PSCloudFormation - Public Interface' {
+
+    Describe 'New-PSCFNStack' {
+
+        $regionList = (Get-AWSRegion).Region
 
         Mock -CommandName Get-EC2Region -MockWith {
 
-            @(
-                New-Object PSObject -Property @{ RegionName = "ap-south-1" }
-                New-Object PSObject -Property @{ RegionName = "eu-west-3" }
-                New-Object PSObject -Property @{ RegionName = "eu-west-2" }
-                New-Object PSObject -Property @{ RegionName = "eu-west-1" }
-                New-Object PSObject -Property @{ RegionName = "ap-northeast-2" }
-                New-Object PSObject -Property @{ RegionName = "ap-northeast-1" }
-                New-Object PSObject -Property @{ RegionName = "sa-east-1" }
-                New-Object PSObject -Property @{ RegionName = "ca-central-1" }
-                New-Object PSObject -Property @{ RegionName = "ap-southeast-1" }
-                New-Object PSObject -Property @{ RegionName = "ap-southeast-2" }
-                New-Object PSObject -Property @{ RegionName = "eu-central-1" }
-                New-Object PSObject -Property @{ RegionName = "us-east-1" }
-                New-Object PSObject -Property @{ RegionName = "us-east-2" }
-                New-Object PSObject -Property @{ RegionName = "us-west-1" }
-                New-Object PSObject -Property @{ RegionName = "us-west-2" }
-            )
+            $regionList |
+            ForEach-Object {
+
+                New-Object PSObject -Property @{ RegionName = $_ }
+            }
         }
 
-        Mock -CommandName Wait-PSCFNStack -MockWith {
-            $true
+        Mock -CommandName Get-CFNStack -MockWith {
+
+            throw New-Object System.InvalidOperationException ('Stack does not exist')
         }
 
-        Mock -CommandName Write-S3BucketTagging -MockWith {}
+        Mock -CommandName Wait-CFNStack -MockWith {
 
-        Context 'New-PSCFNStack' {
-
-            Mock -CommandName Get-CFNStack -MockWith {
-
-                throw New-Object System.InvalidOperationException ('Stack does not exist')
+            return @{
+                StackStatus = 'CREATE_COMPLETE'
             }
+        }
 
-            Mock -CommandName New-CFNStack -MockWith {
-
-                return $global:TestStackArn
-            }
-
-            Mock -CommandName Wait-CFNStack -MockWith {
-
-                return @{
-                    StackStatus = 'CREATE_COMPLETE'
-                }
-            }
-
-            foreach ($ext in @('json', 'yaml'))
-            {
-                It "Should create stack and return ARN with valid command line arguments ($($ext.ToUpper()))" {
-
-                    New-PSCFNStack -StackName pester -TemplateLocation "$($global:TestStackFilePathWithoutExtension).$($ext)" -Wait -VpcCidr 10.0.0.0/16 | Should Be $TestStackArn
-                }
+        foreach ($ext in @('json', 'yaml'))
+        {
+            Context 'Parameter errors' {
 
                 It "Should throw with invalid CIDR ($($ext.ToUpper()))" {
 
@@ -129,288 +107,399 @@ InModuleScope $ModuleName {
 
                     { New-PSCFNStack -StackName pester -TemplateLocation "$($global:TestStackFilePathWithoutExtension).$($ext)" -VpcCidr 10.0.0.0/16 -Region eu-west-9 } | Should Throw
                 }
+            }
 
-                It "Should not throw with valid region parameter ($($ext.ToUpper()))" {
+            $regionList |
+            Foreach-Object {
+                $region = $_
 
-                    @(
-                        'ap-northeast-1'
-                        'ap-northeast-2'
-                        'ap-south-1'
-                        'ap-southeast-1'
-                        'ap-southeast-2'
-                        'ca-central-1'
-                        'eu-central-1'
-                        'eu-west-1'
-                        'eu-west-2'
-                        'eu-west-3'
-                        'sa-east-1'
-                        'us-east-1'
-                        'us-east-2'
-                        'us-west-1'
-                        'us-west-2'
-                    ) |
-                    ForEach-Object {
+                Context "Successful stack creation - $region" {
 
-                        Write-Host -ForegroundColor DarkGreen "      [?] - Testing region $($_)"
-                        { New-PSCFNStack -StackName pester -TemplateLocation "$($global:TestStackFilePathWithoutExtension).$($ext)" -VpcCidr 10.0.0.0/16 -Region $_ } | Should Not Throw
+                    $expectedArn = "arn:aws:cloudformation:$region:000000000000:stack/pester/00000000-0000-0000-0000-000000000000"
+
+                    Mock -CommandName New-CFNStack -MockWith {
+
+                        return $expectedArn
+                    }
+
+                    $stackArn = New-PSCFNStack -StackName pester -TemplateLocation "$($global:TestStackFilePathWithoutExtension).$($ext)" -VpcCidr 10.0.0.0/16 -Region $region
+
+                    It 'Should have called Get-CFNStack' {
+
+                        Assert-MockCalled -CommandName Get-CFNStack -Times 1 -Scope Context
+                    }
+
+                    It 'Should have called New-CFNStack' {
+
+                        Assert-MockCalled -CommandName Get-CFNStack -Times 1 -Scope Context
+                    }
+
+                    It 'Should return stack ARN' {
+
+                        $stackArn | Should -Be $expectedArn
                     }
                 }
             }
         }
+    }
 
-        Context 'Update-PSCFNStack' {
+    Describe 'Update-PSCFNStack' {
 
-            Mock -CommandName Get-CFNStack -ParameterFilter { $StackName -eq 'DoesNotExist' } -MockWith {
+        $regionList = (Get-AWSRegion).Region
 
-                throw New-Object System.InvalidOperationException ('Stack does not exist')
+        Mock -CommandName Get-EC2Region -MockWith {
+
+            $regionList |
+            ForEach-Object {
+
+                New-Object PSObject -Property @{ RegionName = $_ }
             }
+        }
 
-            Mock -CommandName Get-CFNStack -ParameterFilter { $StackName -eq 'pester' } -MockWith {
+        Mock -CommandName Get-CFNStack -MockWith {
 
+
+            if ($StackName -like '*pester*')
+            {
                 return @{
                     StackParameters = @(
-                        New-Object Amazon.CloudFormation.Model.Parameter |
-                        ForEach-Object {
-                            $_.ParameterKey = 'VpcCidr'
-                            $_.ParameterValue = '10.0.0.0/16'
-                            $_.UsePreviousValue = $true
-                            $_
+                        New-Object Amazon.CloudFormation.Model.Parameter -Property @{
+                            ParameterKey = 'VpcCidr'
+                            ParameterValue = '10.0.0.0/16'
+                            UsePreviousValue = $true
                         }
                     )
                     StackId         = $global:TestStackArn
                 }
             }
-
-            Mock -CommandName Get-CFNStack -ParameterFilter { $StackName -eq 'unchanged' } -MockWith {
-
+            elseif ($StackName -like '*unchanged*')
+            {
                 return @{
                     StackParameters = @(
-                        New-Object Amazon.CloudFormation.Model.Parameter |
-                        ForEach-Object {
-                            $_.ParameterKey = 'VpcCidr'
-                            $_.ParameterValue = '10.0.0.0/16'
-                            $_.UsePreviousValue = $true
-                            $_
+                        New-Object Amazon.CloudFormation.Model.Parameter -Property @{
+                            ParameterKey = 'VpcCidr'
+                            ParameterValue = '10.0.0.0/16'
+                            UsePreviousValue = $true
                         }
                     )
                     StackId         = $global:UnchangedStackArn
                 }
             }
-
-            Mock -CommandName New-CFNChangeSet -MockWith {
-
-                if (-not $TemplateURL -and -not $TemplateBody -and -not $UsePreviousTemplate)
-                {
-                    throw 'New-CFNChangeSet : Either Template URL or Template Body must be specified.'
-                }
-
-                return 'arn:aws:cloudformation:us-east-1:000000000000:changeSet/SampleChangeSet/1a2345b6-0000-00a0-a123-00abc0abc000'
-            }
-
-            Mock -CommandName New-CFNChangeSet -ParameterFilter { $StackName -eq 'unchanged' } -MockWith {
-
-                return 'arn:aws:cloudformation:us-east-1:000000000000:changeSet/Unchanged/1a2345b6-0000-00a0-a123-00abc0abc000'
-            }
-
-            Mock -CommandName Get-CFNChangeSet -MockWith {
-
-                return @{
-                    Status  = 'CREATE_COMPLETE'
-                    Changes = @{
-                        ResourceChange = @(
-                            New-Object PSObject -Property @{
-                                Action             = 'Modify'
-                                LogicalResourceId  = 'Vpc'
-                                PhysicalResourceId = 'vpc-00000000'
-                                ResourceType       = 'AWS::EC2::VPC'
-                            }
-                        )
-                    }
-                }
-            }
-
-            Mock -CommandName Get-CFNChangeSet -ParameterFilter { $ChangeSetName -eq 'arn:aws:cloudformation:us-east-1:000000000000:changeSet/Unchanged/1a2345b6-0000-00a0-a123-00abc0abc000' }  -MockWith {
-
-                return @{
-                    Status       = 'FAILED'
-                    StatusReason = "The submitted information didn't contain changes. Submit different information to create a change set."
-                }
-            }
-
-            Mock -CommandName Start-CFNChangeSet -MockWith { }
-
-            Mock -CommandName Wait-CFNStack -MockWith {
-
-                return @{
-                    StackStatus = 'UPDATE_COMPLETE'
-                }
-            }
-
-            Mock -CommandName Get-CFNTemplate -MockWith {
-
-                Get-Content -Raw "$($global:TestStackFilePathWithoutExtension).json"
-            }
-
-            foreach ($ext in @('json', 'yaml'))
+            else
             {
-                It "Should fail when stack does not exist ($($ext.ToUpper()))" {
-
-                    { Update-PSCFNStack -StackName DoesNotExist -TemplateLocation "$($global:TestStackFilePathWithoutExtension).$($ext)" -Wait -VpcCidr 10.0.0.0/16 } | Should Throw
-                }
-
-                It "Should update when stack exists ($($ext.ToUpper()))" {
-
-                    Update-PSCFNStack -StackName pester -TemplateLocation "$($global:TestStackFilePathWithoutExtension).$($ext)" -Wait -VpcCidr 10.1.0.0/16 -Force
-                }
-
-                It "Should throw with invalid region parameter ($($ext.ToUpper()))" {
-
-                    { Update-PSCFNStack -StackName pester -TemplateLocation "$($global:TestStackFilePathWithoutExtension).$($ext)" -Wait -VpcCidr 10.1.0.0/16 -Region eu-west-9 } | Should Throw
-                }
-
-                It "Should not throw with valid region parameter ($($ext.ToUpper()))" {
-
-                    @(
-                        'ap-northeast-1'
-                        'ap-northeast-2'
-                        'ap-south-1'
-                        'ap-southeast-1'
-                        'ap-southeast-2'
-                        'ca-central-1'
-                        'eu-central-1'
-                        'eu-west-1'
-                        'eu-west-2'
-                        'eu-west-3'
-                        'sa-east-1'
-                        'us-east-1'
-                        'us-east-2'
-                        'us-west-1'
-                        'us-west-2'
-                    ) |
-                    ForEach-Object {
-                        Write-Host -ForegroundColor DarkGreen "      [?] - Testing region $($_)"
-
-                        { Update-PSCFNStack -StackName pester -TemplateLocation "$($global:TestStackFilePathWithoutExtension).$($ext)" -Wait -VpcCidr 10.1.0.0/16 -Region $_ -Force } | Should Not Throw
-                    }
-                }
-
-                It "Should not throw if no changes are detected ($($ext.ToUpper()))" {
-
-                    Update-PSCFNStack -StackName unchanged -TemplateLocation "$($global:TestStackFilePathWithoutExtension).$($ext)" -Wait -VpcCidr 10.0.0.0/16 -Force | Should -Be $global:UnchangedStackArn
-                }
-            }
-
-            It "Should update stack with -UsePreviousTemplate" {
-
-                Update-PSCFNStack -StackName pester -UsePreviousTemplate -Wait -VpcCidr 10.1.0.0/16 -Force
-            }
-        }
-
-        Context 'Remove-PSCFNStack' {
-
-            Mock -CommandName Get-CFNStack -ParameterFilter { $StackName -eq 'DoesNotExist' } -MockWith {
-
                 throw New-Object System.InvalidOperationException ('Stack does not exist')
             }
-
-            Mock -CommandName Get-CFNStack -ParameterFilter { $StackName -eq 'pester' } -MockWith {
-
-                return @{
-                    StackId = $global:TestStackArn
-                }
-            }
-
-            Mock -CommandName Remove-CFNStack { }
-
-            Mock -CommandName Wait-CFNStack -MockWith {
-
-                return @{
-                    StackStatus = 'DELETE_COMPLETE'
-                }
-            }
-
-            It 'Should return nothing if stack does not exist' {
-
-                Remove-PSCFNStack -StackName DoesNotExist -Force | Should BeNullOrEmpty
-            }
-
-            It 'Should return ARN if stack exists' {
-
-                Remove-PSCFNStack -StackName pester -Force | Should Be $global:TestStackArn
-            }
-
-            It 'Should throw with invalid region parameter' {
-
-                { Remove-PSCFNStack -StackName pester -Force -Region eu-west-9 } | Should Throw
-            }
-
-            It 'Should not throw with valid region parameter' {
-
-                @(
-                    'ap-northeast-1'
-                    'ap-northeast-2'
-                    'ap-south-1'
-                    'ap-southeast-1'
-                    'ap-southeast-2'
-                    'ca-central-1'
-                    'eu-central-1'
-                    'eu-west-1'
-                    'eu-west-2'
-                    'eu-west-3'
-                    'sa-east-1'
-                    'us-east-1'
-                    'us-east-2'
-                    'us-west-1'
-                    'us-west-2'
-                ) |
-                ForEach-Object {
-
-                    Write-Host -ForegroundColor DarkGreen "      [?] - Testing region $($_)"
-                    { Remove-PSCFNStack -StackName pester -Force -Region $_ } | Should Not Throw
-                }
-            }
         }
 
-        Context 'Get-PSCFNStackOutputs' {
+        Mock -CommandName Get-CFNStackResourceList -MockWith {}
 
-            Mock -CommandName Get-CFNStack -MockWith {
+        Mock -CommandName New-CFNChangeSet -MockWith {
 
-                return @{
-                    StackId   = $global:TestStackArn
-                    StackName = 'test-stack'
-                    Outputs   = @(
-                        @{
-                            Description = "ID of the new VPC"
-                            ExportName  = "test-stack-VpcId"
-                            OutputKey   = "VpcId"
-                            OutputValue = "vpc-00000000"
+            if (-not $TemplateURL -and -not $TemplateBody -and -not $UsePreviousTemplate)
+            {
+                throw 'New-CFNChangeSet : Either Template URL or Template Body must be specified.'
+            }
+
+            return 'arn:aws:cloudformation:us-east-1:000000000000:changeSet/SampleChangeSet/1a2345b6-0000-00a0-a123-00abc0abc000'
+        }
+
+        Mock -CommandName New-CFNChangeSet -ParameterFilter { $StackName -eq 'unchanged' } -MockWith {
+
+            return 'arn:aws:cloudformation:us-east-1:000000000000:changeSet/Unchanged/1a2345b6-0000-00a0-a123-00abc0abc000'
+        }
+
+        Mock -CommandName Get-CFNChangeSet -MockWith {
+
+            return @{
+                Status  = 'CREATE_COMPLETE'
+                Changes = @{
+                    ResourceChange = @(
+                        New-Object PSObject -Property @{
+                            Action             = 'Modify'
+                            LogicalResourceId  = 'Vpc'
+                            PhysicalResourceId = 'vpc-00000000'
+                            ResourceType       = 'AWS::EC2::VPC'
                         }
                     )
                 }
             }
+        }
 
-            It 'Gets stack outputs as a parameter block' {
+        Mock -CommandName Get-CFNChangeSet -ParameterFilter { $ChangeSetName -eq 'arn:aws:cloudformation:us-east-1:000000000000:changeSet/Unchanged/1a2345b6-0000-00a0-a123-00abc0abc000' }  -MockWith {
 
-                $result = Get-PSCFNStackOutputs -StackName test-stack -AsParameterBlock
+            return @{
+                Status       = 'FAILED'
+                StatusReason = "The submitted information didn't contain changes. Submit different information to create a change set."
+            }
+        }
 
-                $result.VpcId.Description | Should Be "ID of the new VPC"
-                $result.VpcId.Default | Should Be "vpc-00000000"
-                $result.VpcId.Type | Should Be 'AWS::EC2::VPC::Id'
+        Mock -CommandName Start-CFNChangeSet -MockWith { }
+
+        Mock -CommandName Wait-CFNStack -MockWith {
+
+            return @{
+                StackStatus = 'UPDATE_COMPLETE'
+            }
+        }
+
+        Mock -CommandName Wait-PSCFNStack -MockWith {
+
+            $true
+        }
+
+        Mock -CommandName Get-CFNTemplate -MockWith {
+
+            Get-Content -Raw "$($global:TestStackFilePathWithoutExtension).json"
+        }
+
+        $mocks = @('Get-CFNStack', 'Get-CFNStackResourceList', 'New-CFNChangeSet', 'Get-CFNChangeSet', 'Start-CFNChangeSet', 'Wait-CFNStack', 'Get-CFNTemplate' )
+
+        (Get-AWSCmdletName -Service CFN).CmdletName |
+        Where-Object {
+            $mocks -inotcontains $_
+        } |
+        Foreach-Object {
+            $cmdlet = $_
+            try {
+                Mock -CommandName $cmdlet -MockWith { Write-Warning "$cmdlet not implemented" }
+            }
+            catch {
+                Write-Warning "Unable to mock $_"
+            }
+        }
+
+        foreach ($ext in @('json', 'yaml'))
+        {
+            It "Should update when stack exists ($($ext.ToUpper()))" {
+
+                Update-PSCFNStack -StackName pester -TemplateLocation "$($global:TestStackFilePathWithoutExtension).$($ext)" -Wait -VpcCidr 10.1.0.0/16 -Force
             }
 
-            It 'Gets stack outputs as a mapping block' {
+            It "Should fail when stack does not exist ($($ext.ToUpper()))" {
 
-                $result = Get-PSCFNStackOutputs -StackName test-stack -AsMappingBlock
+                { Update-PSCFNStack -StackName DoesNotExist -TemplateLocation "$($global:TestStackFilePathWithoutExtension).$($ext)" -Wait -VpcCidr 10.0.0.0/16 } | Should Throw
+            }
+
+            It "Should throw with invalid region parameter ($($ext.ToUpper()))" {
+
+                { Update-PSCFNStack -StackName pester -TemplateLocation "$($global:TestStackFilePathWithoutExtension).$($ext)" -Wait -VpcCidr 10.1.0.0/16 -Region eu-west-9 } | Should Throw
+            }
+
+            $regionList |
+            ForEach-Object {
+
+                $region = $_
+
+                It "Should not throw with valid region $region ($($ext.ToUpper()))" {
+
+                    { Update-PSCFNStack -StackName pester -TemplateLocation "$($global:TestStackFilePathWithoutExtension).$($ext)" -Wait -VpcCidr 10.1.0.0/16 -Region $region -Force } | Should Not Throw
+                }
+            }
+
+            It "Should not throw if no changes are detected ($($ext.ToUpper()))" {
+
+                Update-PSCFNStack -StackName unchanged -TemplateLocation "$($global:TestStackFilePathWithoutExtension).$($ext)" -Wait -VpcCidr 10.0.0.0/16 -Force | Should -Be $global:UnchangedStackArn
+            }
+        }
+
+        It "Should update stack with -UsePreviousTemplate" {
+
+            Update-PSCFNStack -StackName pester -UsePreviousTemplate -Wait -VpcCidr 10.1.0.0/16 -Force
+        }
+    }
+
+    Describe 'Remove-PSCFNStack' {
+
+        $regionList = (Get-AWSRegion).Region
+
+        Mock -CommandName Get-EC2Region -MockWith {
+
+            $regionList |
+            ForEach-Object {
+
+                New-Object PSObject -Property @{ RegionName = $_ }
+            }
+        }
+
+        Mock -CommandName Get-CFNStack -ParameterFilter { $StackName -eq 'DoesNotExist' } -MockWith {
+
+            throw New-Object System.InvalidOperationException ('Stack does not exist')
+        }
+
+        Mock -CommandName Get-CFNStack -ParameterFilter { $StackName -eq 'pester' } -MockWith {
+
+            return @{
+                StackId = $global:TestStackArn
+            }
+        }
+
+        Mock -CommandName Remove-CFNStack { }
+
+        Mock -CommandName Wait-CFNStack -MockWith {
+
+            return @{
+                StackStatus = 'DELETE_COMPLETE'
+            }
+        }
+
+
+        Mock -CommandName Wait-PSCFNStack -MockWith {
+
+            $true
+        }
+
+        $mocks = @('Get-CFNStack', 'Wait-CFNStack', 'Remove-CFNStack' )
+
+        (Get-AWSCmdletName -Service CFN).CmdletName |
+        Where-Object {
+            $mocks -inotcontains $_
+        } |
+        Foreach-Object {
+            $cmdlet = $_
+            try {
+                Mock -CommandName $cmdlet -MockWith { Write-Warning "$cmdlet not implemented" }
+            }
+            catch {
+                Write-Warning "Unable to mock $_"
+            }
+        }
+
+        It 'Should return nothing if stack does not exist' {
+
+            Remove-PSCFNStack -StackName DoesNotExist -Force | Should BeNullOrEmpty
+        }
+
+        It 'Should return ARN if stack exists' {
+
+            Remove-PSCFNStack -StackName pester -Force | Should Be $global:TestStackArn
+        }
+
+        It 'Should throw with invalid region parameter' {
+
+            { Remove-PSCFNStack -StackName pester -Force -Region eu-west-9 } | Should Throw
+        }
+
+        Context 'Should delete existing stack in valid region' {
+
+            $regionList |
+            ForEach-Object {
+
+                $region = $_
+                $expectedArn = "arn:aws:cloudformation:$($region):000000000000:stack/pester/00000000-0000-0000-0000-000000000000"
+
+                Mock -CommandName Get-CFNStack -ParameterFilter { $StackName -eq 'pester' } -MockWith {
+
+                    return @{
+                        StackId = "arn:aws:cloudformation:$($region):000000000000:stack/pester/00000000-0000-0000-0000-000000000000"
+                    }
+                }
+
+                It "In $region" {
+
+                    Remove-PSCFNStack -StackName pester -Force -Region $region | Should -Be $expectedArn
+                }
+            }
+        }
+    }
+
+    Describe 'Get-PSCFNStackOutputs' {
+
+        $vpcId =  @{
+            Description = "ID of the new VPC"
+            ExportName  = "test-stack-VpcId"
+            OutputKey   = "VpcId"
+            OutputValue = "vpc-00000000"
+        }
+
+        $subnetId =  @{
+            Description = "ID of the new Subnet"
+            OutputKey   = "SubnetId"
+            OutputValue = "subnet-00000000"
+        }
+
+        Mock -CommandName Get-CFNStack -MockWith {
+
+            return @{
+                StackId   = $global:TestStackArn
+                StackName = 'test-stack'
+                Outputs   = @(
+                    $vpcId
+                    $subnetId
+                )
+            }
+        }
+
+        Context 'Gets stack outputs as a parameter block - 2 outputs' {
+
+            $parameters = Get-PSCFNStackOutputs -StackName test-stack -AsParameterBlock
+
+            It 'Should return 2 parameters' {
+
+                $parameters.PSObject.Properties | Measure-Object | Select-Object -ExpandProperty Count | Should -Be 2
+            }
+
+            ('VpcId', 'SubnetId') |
+            Foreach-Object {
+
+                $parameterName = $_
+                $parameterValue = Invoke-Command ([scriptblock]::Create("`$$parameterName"))
+
+                It "Should have declared $parameterName Parameter" {
+
+                    $parameters.PSObject.Properties.Name | Should -Contain $parameterName
+                }
+
+                It "Sets parameter description from output description (parameter $parameterName)" {
+
+                    $parameters.$parameterName.Description | Should -Be $parameterValue.Description
+                }
+
+                It "Sets parameter default from output's value (parameter $parameterName)" {
+
+                    $parameters.$parameterName.Default | Should Be $parameterValue.OutputValue
+                }
+            }
+
+            It 'Should have parsed parameter type correctly (VpcId parameter value is AWS::EC2::VPC::Id)' {
+
+                $parameters.VpcId.Type | Should Be 'AWS::EC2::VPC::Id'
+            }
+
+            It 'Should have parsed parameter type correctly (SubnetId parameter value is AWS::EC2::Subnet::Id)' {
+
+                $parameters.SubnetId.Type | Should Be 'AWS::EC2::Subnet::Id'
+            }
+        }
+
+        Context 'Gets stack outputs as a mapping block' {
+
+            $result = Get-PSCFNStackOutputs -StackName test-stack -AsMappingBlock
+
+            It 'Should get correct value for VpcId' {
 
                 $result.VpcId | Should Be "vpc-00000000"
             }
 
-            It 'Gets stack outputs as a cross-stack reference' {
+            It 'Should get correct value for SubnetId' {
 
-                $result = Get-PSCFNStackOutputs -StackName test-stack -AsCrossStackReferences
+                $result.SubnetId | Should Be "subnet-00000000"
+            }
+        }
+
+        Context 'Gets stack outputs as a cross-stack reference (2 parameters, only one exported' {
+
+            $result = Get-PSCFNStackOutputs -StackName test-stack -AsCrossStackReferences
+
+            It 'Should provide one export' {
+
+                $result.PSObject.Properties | Measure-Object | Select-Object -ExpandProperty Count | Should -Be 1
+            }
+
+            It 'Should export VpcId' {
 
                 $result.VpcId.'Fn::ImportValue'.'Fn::Sub' | Should Be '${TestStackStack}-VpcId'
             }
         }
+
     }
 }

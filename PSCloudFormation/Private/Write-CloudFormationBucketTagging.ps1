@@ -2,7 +2,7 @@ function Write-CloudFormationBucketTagging
 {
 <#
     .SYNOPSIS
-        Write clodformation bucket tags if not present
+        Write cloudformation bucket tags if not present
 
     .PARAMETER BucketName
         Bucket to tag

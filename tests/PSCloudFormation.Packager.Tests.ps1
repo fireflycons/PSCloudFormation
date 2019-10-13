@@ -28,130 +28,77 @@ Import-Module -Name $ManifestFile
 
 InModuleScope $ModuleName {
 
-    function Format-Yaml
-    {
-    <#
-        .SYNOPSIS
-            Pass a YAML template (e.g. from cfn-flip) through YamlDotNet to reformat it
-
-    #>
-        param
-        (
-            [string]$Template
-        )
-
-        $yaml = New-Object YamlDotNet.RepresentationModel.YamlStream
-
-        try
-        {
-            $input = New-Object System.IO.StringReader($Template)
-            $yaml.Load($input)
-        }
-        finally
-        {
-            if ($null -ne $input)
-            {
-                $input.Dispose()
-            }
-        }
-
-        try
-        {
-            $output = New-Object System.IO.StringWriter
-            $yaml.Save($output, $false)
-            $output.ToString()
-        }
-        finally
-        {
-            if ($null -ne $output)
-            {
-                $output.Dispose()
-            }
-        }
-    }
-
-    function Compare-Templates
-    {
-        <#
-            .SYNOPSIS
-                Comae generated template with expected, ignoring blank lines and line endings
-        #>
-        [CmdletBinding()]
-        param
-        (
-            [Parameter(ValueFromPipeline)]
-            [string]$Template,
-
-            [string]$ExpectedOutput
-        )
-
-        end
-        {
-            $templateLines = $Template -split [System.Environment]::NewLine
-            $expectedLines = Get-Content $ExpectedOutput
-
-            $result = Compare-Object -ReferenceObject $templateLines -DifferenceObject $expectedLines |
-            Where-Object {
-                # Ignore blank lines
-                -not [string]::IsNullOrEmpty($_.InputObject)
-            }
-
-            if (($result | Measure-Object).Count -gt 0)
-            {
-                throw "Files are different`nExpected: $($result[0].InputObject)`nGot $($result[1].InputObject)"
-            }
-        }
-    }
+    . (Join-Path $PSScriptRoot TestHelpers.ps1)
 
     Describe 'PSCloudFormation - Packaging' {
 
         . (Join-Path $global:TestRoot MockS3.class.ps1)
 
-        Context 'Lambda' {
+        $mockS3 = [MockS3]::UseS3Mocks()
 
-            ('json', 'yaml') |
-            Foreach-Object {
+        ('json', 'yaml') |
+        Foreach-Object {
 
-                $ext = $_
+            $ext = $_
+
+            Context "Simple Lambda ($ext)" {
+
                 $assetsDir = [IO.Path]::Combine($TestRoot, 'packager', 'lambdafunction')
 
-                It "Should process simple lambda: $_" {
+                $inputFile = Join-Path $assetsDir ('lambdasimple.' + $ext)
+                $expectedOutput = Join-Path $assetsDir "lambdasimple-expected.yaml"
 
-                    $inputFile = Join-Path $assetsDir ('lambdasimple.' + $ext)
-                    $expectedOutput = Join-Path $assetsDir "lambdasimple-expected.yaml"
+                $template = Format-Yaml -Template (New-PSCFNPackage -TemplateFile $inputFile -S3Bucket my-bucket)
 
-                    $template = Format-Yaml -Template (New-PSCFNPackage -TemplateFile $inputFile -S3Bucket my-bucket)
+                It "Zipped package should exist" {
+
                     "TestDrive:/my-bucket/lambdasimple.zip" | Should -Exist
-                    $template | Compare-Templates -ExpectedOutput $expectedOutput
                 }
 
-                It "Should process complex (in a directory) lambda: $_" {
+                It "Processed template should have expected properties" {
 
-                    $inputFile = Join-Path $assetsDir ('lambdacomplex.' + $ext)
-                    $expectedOutput = Join-Path $assetsDir "lambdacomplex-expected.yaml"
-
-                    $template = Format-Yaml -Template (New-PSCFNPackage -TemplateFile $inputFile -S3Bucket my-bucket)
-                    "TestDrive:/my-bucket/lambdacomplex.zip" | Should -Exist
                     $template | Compare-Templates -ExpectedOutput $expectedOutput
                 }
             }
-        }
 
-        Context 'Glue' {
+            Context "Complex Lambda - in a directory ($ext)" {
 
-            ('json', 'yaml') |
-            Foreach-Object {
+                $assetsDir = [IO.Path]::Combine($TestRoot, 'packager', 'lambdafunction')
+
+                $inputFile = Join-Path $assetsDir ('lambdacomplex.' + $ext)
+                $expectedOutput = Join-Path $assetsDir "lambdacomplex-expected.yaml"
+
+                $template = Format-Yaml -Template (New-PSCFNPackage -TemplateFile $inputFile -S3Bucket my-bucket)
+
+                It "Zipped package should exist" {
+
+                    "TestDrive:/my-bucket/lambdacomplex.zip" | Should -Exist
+                }
+
+                It "Processed template should have expected properties" {
+
+                    $template | Compare-Templates -ExpectedOutput $expectedOutput
+                }
+            }
+
+            Context "Glue ($ext)"  {
 
                 $ext = $_
                 $assetsDir = [IO.Path]::Combine($TestRoot, 'packager', 'glue')
 
-                It "Should process glue job: $_" {
+                $inputFile = Join-Path $assetsDir ('glue.' + $ext)
+                $expectedOutput = Join-Path $assetsDir "glue-expected.yaml"
 
-                    $inputFile = Join-Path $assetsDir ('glue.' + $ext)
-                    $expectedOutput = Join-Path $assetsDir "glue-expected.yaml"
+                $template = Format-Yaml -Template (New-PSCFNPackage -TemplateFile $inputFile -S3Bucket my-bucket)
 
-                    $template = Format-Yaml -Template (New-PSCFNPackage -TemplateFile $inputFile -S3Bucket my-bucket)
+
+                It "Zipped package should exist" {
+
                     "TestDrive:/my-bucket/glue.py" | Should -Exist
+                }
+
+                It "Processed template should have expected properties" {
+
                     $template | Compare-Templates -ExpectedOutput $expectedOutput
                 }
             }

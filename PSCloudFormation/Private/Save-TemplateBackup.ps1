@@ -44,18 +44,7 @@ function Save-TemplateBackup
     $encoding = New-Object System.Text.UTF8Encoding($false, $false)
 
     # Determine format
-    $ext = $(
-
-        try
-        {
-            $template | ConvertFrom-Json | Out-Null
-            "json"
-        }
-        catch
-        {
-            "yaml"
-        }
-    )
+    $ext = (Get-TemplateFormat -TemplateBody $template).ToLower()
 
     if (-not (Test-Path -PathType Container -Path $OutputPath))
     {

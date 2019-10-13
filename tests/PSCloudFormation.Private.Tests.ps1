@@ -47,135 +47,146 @@ $global:azs = @(
 
 InModuleScope $ModuleName {
 
-    Describe 'PSCloudFormation - Private Unit' {
+    . (Join-Path $PSScriptRoot TestHelpers.ps1)
+    $regionList = Get-TestRegionList
 
-        Context 'Test-IsFileSystemPath' {
+    Describe 'Test-IsFileSystemPath' {
 
-            It 'Should return true for an absolute Unix path' {
+        It 'Should return true for an absolute Unix path' {
 
-                Test-IsFileSystemPath -PropertyValue '/tmp/path' | Should -Be $true
-            }
+            Test-IsFileSystemPath -PropertyValue '/tmp/path' | Should -BeTrue
+        }
 
-            It 'Should return true for an absolute Windows path' {
+        It 'Should return true for an absolute Windows path' {
 
-                Test-IsFileSystemPath -PropertyValue 'C:\Temp\path' | Should -Be $true
-            }
+            Test-IsFileSystemPath -PropertyValue 'C:\Temp\path' | Should -BeTrue
+        }
 
-            It 'Should return true for a relative Unix path' {
+        It 'Should return true for a relative Unix path' {
 
-                Test-IsFileSystemPath -PropertyValue '../tmp/path' | Should -Be $true
-            }
+            Test-IsFileSystemPath -PropertyValue '../tmp/path' | Should -BeTrue
+        }
 
-            It 'Should return true for a relative Windows path' {
+        It 'Should return true for a relative Windows path' {
 
-                Test-IsFileSystemPath -PropertyValue '..\Temp\path' | Should -Be $true
-            }
+            Test-IsFileSystemPath -PropertyValue '..\Temp\path' | Should -BeTrue
+        }
 
-            It 'Should return false for an https uri' {
+        It 'Should return false for an https uri' {
 
-                Test-IsFileSystemPath -PropertyValue 'https://bucket.s3.amaxonaws.com/prefix' | Should -Be $false            }
+            Test-IsFileSystemPath -PropertyValue 'https://bucket.s3.amaxonaws.com/prefix' | Should -BeFalse            }
 
-            It 'Should return false for a s3 uri' {
+        It 'Should return false for a s3 uri' {
 
-                Test-IsFileSystemPath -PropertyValue 's3://bucket/prefix' | Should -Be $false
-            }
+            Test-IsFileSystemPath -PropertyValue 's3://bucket/prefix' | Should -BeFalse
+        }
 
-            It 'Should return false for an object that looks like inline lambda code' {
+        It 'Should return false for an object that looks like inline lambda code' {
 
-                $code = New-Object PSObject -Property @{
-                    ZipFile = New-Object PSObject -Property @{
-                        "Fn::Join" = @(
-                            "`n",
-                            @(
-                                "import os"
-                                "import json"
-                            )
+            $code = New-Object PSObject -Property @{
+                ZipFile = New-Object PSObject -Property @{
+                    "Fn::Join" = @(
+                        "`n",
+                        @(
+                            "import os"
+                            "import json"
                         )
-                    }
+                    )
                 }
+            }
 
-                Test-IsFileSystemPath -ProperyValue $code | Should -Be $false
+            Test-IsFileSystemPath -ProperyValue $code | Should -BeFalse
+        }
+    }
+
+    Describe 'New-StackOperationArguments' {
+
+        $templateContentHash = (Get-Content -Raw -Path $global:templatePathJson).GetHashCode()
+
+        Context 'Provides -TemplateBody for local file' {
+
+            $arguments = New-StackOperationArguments -StackName 'pester' -TemplateLocation $global:templatePathJson -CredentialArguments @{}
+
+            It 'Stack name should be "pester"' {
+
+                $arguments['StackName'] | Should Be 'pester'
+            }
+
+            It 'TemplateBody should be expected template' {
+
+                $arguments['TemplateBody'].GetHashCode() | Should Be $templateContentHash
+            }
+
+            It 'TemplateURL should be undefined' {
+
+                $arguments['TemplateURL'] | Should BeNullOrEmpty
+            }
+        }
+
+        Context 'Provides -TemplateURL for web URI' {
+
+            $url = 'https://s3-us-east-1.amazonaws.com/bucket/path/to/test-stack.json'
+            $arguments = New-StackOperationArguments -StackName 'pester' -TemplateLocation $url
+
+            It 'Stack name should be "pester"' {
+
+                $arguments['StackName'] | Should Be 'pester'
+            }
+
+            It 'TemplateBody should be undefined' {
+
+                $arguments['TemplateBody'] | Should BeNullOrEmpty
+            }
+
+            It 'TemplateURL should be given URL' {
+
+                $arguments['TemplateURL'] | Should Be $url
+            }
+        }
+
+        Context 'Provides normalised -TemplateURL for S3 URI in known region' {
+
+            Mock -CommandName Get-CurrentRegion -MockWith {
+
+                return 'us-east-1'
+            }
+
+            $uri = 's3://bucket/path/to/test-stack.json'
+            $generatedUrl = 'https://s3-us-east-1.amazonaws.com/bucket/path/to/test-stack.json'
+            $arguments = New-StackOperationArguments -StackName 'pester' -TemplateLocation $uri
+
+            It 'Has called Get-CurrentRegion' {
+
+                Assert-MockCalled -CommandName Get-CurrentRegion -Times 1 -Scope Context
+            }
+
+            It 'Stack name should be "pester"' {
+
+                $arguments['StackName'] | Should Be 'pester'
+            }
+
+            It 'TemplateBody should be undefined' {
+
+                $arguments['TemplateBody'] | Should BeNullOrEmpty
+            }
+
+            It 'TemplateURL should be correct URL for bucket inferred by s3:// ' {
+
+                $arguments['TemplateURL'] | Should Be $generatedUrl
             }
         }
     }
 
-    Describe 'PSCloudFormation - Private 2' {
+    Describe 'AWS Parameter Type detection' {
 
-        Mock -CommandName Get-EC2Region -MockWith {
+        # Parameter type detection is used in formatting output of Get-StackOutputs -AsParameterBlock
 
-            @(
-                New-Object PSObject -Property @{ RegionName = "ap-south-1" }
-                New-Object PSObject -Property @{ RegionName = "eu-west-3" }
-                New-Object PSObject -Property @{ RegionName = "eu-west-2" }
-                New-Object PSObject -Property @{ RegionName = "eu-west-1" }
-                New-Object PSObject -Property @{ RegionName = "ap-northeast-2" }
-                New-Object PSObject -Property @{ RegionName = "ap-northeast-1" }
-                New-Object PSObject -Property @{ RegionName = "sa-east-1" }
-                New-Object PSObject -Property @{ RegionName = "ca-central-1" }
-                New-Object PSObject -Property @{ RegionName = "ap-southeast-1" }
-                New-Object PSObject -Property @{ RegionName = "ap-southeast-2" }
-                New-Object PSObject -Property @{ RegionName = "eu-central-1" }
-                New-Object PSObject -Property @{ RegionName = "us-east-1" }
-                New-Object PSObject -Property @{ RegionName = "us-east-2" }
-                New-Object PSObject -Property @{ RegionName = "us-west-1" }
-                New-Object PSObject -Property @{ RegionName = "us-west-2" }
-            )
+        Mock -CommandName Get-EC2AvailabilityZone -MockWith {
+
+            $global:azs | Where-Object { $_.Region -eq $Region }
         }
 
-        Mock -CommandName Write-S3BucketTagging -MockWith {}
-
-        $templateContentHash = (Get-Content -Raw -Path $global:templatePathJson).GetHashCode()
-
-        Context 'New-StackOperationArguments' {
-
-            # Creates an argument hash of parameters needed by New-CFNStack and Update-CFNStack
-
-            It 'Provides -TemplateBody for local file' {
-
-                $args = New-StackOperationArguments -StackName 'pester' -TemplateLocation $global:templatePathJson -CredentialArguments @{}
-                $args['StackName'] | Should Be 'pester'
-                $args['TemplateBody'].GetHashCode() | Should Be $templateContentHash
-                $args['TemplateURL'] | Should BeNullOrEmpty
-            }
-
-            It 'Provides -TemplateURL for web URI' {
-
-                $url = 'https://s3-us-east-1.amazonaws.com/bucket/path/to/test-stack.json'
-                $args = New-StackOperationArguments -StackName 'pester' -TemplateLocation $url
-
-                $args['StackName'] | Should Be 'pester'
-                $args['TemplateURL'] | Should Be $url
-                $args['TemplateBody'] | Should BeNullOrEmpty
-            }
-
-            It 'Provides normalised -TemplateURL for s3 URI in known region' {
-
-                Mock -CommandName Get-CurrentRegion -MockWith {
-
-                    return 'us-east-1'
-                }
-
-
-                $uri = 's3://bucket/path/to/test-stack.json'
-                $generatedUrl = 'https://s3-us-east-1.amazonaws.com/bucket/path/to/test-stack.json'
-                $args = New-StackOperationArguments -StackName 'pester' -TemplateLocation $uri
-
-                Assert-MockCalled -CommandName Get-CurrentRegion -Times 1
-                $args['StackName'] | Should Be 'pester'
-                $args['TemplateURL'] | Should Be $generatedUrl
-                $args['TemplateBody'] | Should BeNullOrEmpty
-            }
-        }
-
-        Context 'AWS Parameter Type detection' {
-
-            # Parameter type detection is used in formatting output of Get-StackOutputs -AsParameterBlock
-
-            Mock -CommandName Get-EC2AvailabilityZone -MockWith {
-
-                $global:azs | Where-Object { $_.Region -eq $Region }
-            }
-
+        Context 'Resource types' {
             function Get-RandomHexString
             {
                 param
@@ -255,144 +266,259 @@ InModuleScope $ModuleName {
                 }
 
             }
+        }
 
-            It 'Recognises known AZs' {
+        Context 'Recognises known AZs' {
 
-                # This test will take a long time, as AZ info is lazy-loaded due to the time it takes to retrieve.
+            # This test will take a long time, as AZ info is lazy-loaded due to the time it takes to retrieve.
 
-                # At time of writing...
-                $knownAzs = @(
-                    'ap-northeast-1a'
-                    'ap-northeast-1c'
-                    'ap-northeast-1d'
-                    'ap-northeast-2a'
-                    'ap-northeast-2c'
-                    'ap-south-1a'
-                    'ap-south-1b'
-                    'ap-southeast-1a'
-                    'ap-southeast-1b'
-                    'ap-southeast-1c'
-                    'ap-southeast-2a'
-                    'ap-southeast-2b'
-                    'ap-southeast-2c'
-                    'ca-central-1a'
-                    'ca-central-1b'
-                    'eu-central-1a'
-                    'eu-central-1b'
-                    'eu-central-1c'
-                    'eu-west-1a'
-                    'eu-west-1b'
-                    'eu-west-1c'
-                    'eu-west-2a'
-                    'eu-west-2b'
-                    'eu-west-2c'
-                    'eu-west-3a'
-                    'eu-west-3b'
-                    'eu-west-3c'
-                    'sa-east-1a'
-                    'sa-east-1c'
-                    'us-east-1a'
-                    'us-east-1b'
-                    'us-east-1c'
-                    'us-east-1d'
-                    'us-east-1e'
-                    'us-east-1f'
-                    'us-east-2a'
-                    'us-east-2b'
-                    'us-east-2c'
-                    'us-west-1a'
-                    'us-west-1b'
-                    'us-west-2a'
-                    'us-west-2b'
-                    'us-west-2c'
-                )
+            # At time of writing...
+            $knownAzs = @(
+                'ap-northeast-1a'
+                'ap-northeast-1c'
+                'ap-northeast-1d'
+                'ap-northeast-2a'
+                'ap-northeast-2c'
+                'ap-south-1a'
+                'ap-south-1b'
+                'ap-southeast-1a'
+                'ap-southeast-1b'
+                'ap-southeast-1c'
+                'ap-southeast-2a'
+                'ap-southeast-2b'
+                'ap-southeast-2c'
+                'ca-central-1a'
+                'ca-central-1b'
+                'eu-central-1a'
+                'eu-central-1b'
+                'eu-central-1c'
+                'eu-west-1a'
+                'eu-west-1b'
+                'eu-west-1c'
+                'eu-west-2a'
+                'eu-west-2b'
+                'eu-west-2c'
+                'eu-west-3a'
+                'eu-west-3b'
+                'eu-west-3c'
+                'sa-east-1a'
+                'sa-east-1c'
+                'us-east-1a'
+                'us-east-1b'
+                'us-east-1c'
+                'us-east-1d'
+                'us-east-1e'
+                'us-east-1f'
+                'us-east-2a'
+                'us-east-2b'
+                'us-east-2c'
+                'us-west-1a'
+                'us-west-1b'
+                'us-west-2a'
+                'us-west-2b'
+                'us-west-2c'
+            )
 
-                $knownAzs |
-                    ForEach-Object {
+            $knownAzs |
+                ForEach-Object {
 
-                    Get-ParameterTypeFromStringValue -Value $_ | Should Be 'AWS::EC2::AvailabilityZone::Name'
-                }
-            }
+                $az = $_
 
-            It 'Treats invalid AZs as strings' {
+                It "Recognises '$az' as AWS::EC2::AvailabilityZone::Name" {
 
-                @(
-                    'ap-northeast-1y'
-                    'ap-northeast-1z'
-                    'ap-northwest-1a'
-                    'ap-northwest-1b'
-                ) |
-                    ForEach-Object {
-
-                    Get-ParameterTypeFromStringValue -Value $_ | Should Be 'String'
+                    Get-ParameterTypeFromStringValue -Value $az | Should Be 'AWS::EC2::AvailabilityZone::Name'
                 }
             }
         }
 
-        Context 'CommandLineStackParameters' {
+        Context 'Treats invalid/unknown AZs as strings' {
 
-            Mock -CommandName Get-Variable -MockWith {
+            @(
+                'ap-northeast-1y'
+                'ap-northeast-1z'
+                'ap-northwest-1a'
+                'ap-northwest-1b'
+            ) |
+            ForEach-Object {
 
-                @("StackName", "ParameterFile") -icontains $Name
+                $az = $_
+
+                It "Does not recognise '$az' thus treats it as String" {
+
+                    Get-ParameterTypeFromStringValue -Value $az | Should Be 'String'
+                }
+            }
+        }
+    }
+
+    Describe 'CommandLineStackParameters' {
+
+        Mock -CommandName Get-Variable -MockWith {
+
+            @("StackName", "ParameterFile") -icontains $Name
+        }
+
+        Context 'Should return dynamic params as stack parameters (2 parameters given)' {
+
+            $commandLineParams = @{
+                StackName = 'my-stack'
+                Param1 = 'value1'
+                Param2 = 'value2'
             }
 
-            It 'Should return dynamic params as stack parameters' {
+            $params = Get-CommandLineStackParameters -CallerBoundParameters $commandLineParams
 
-                $commandLineParams = @{
-                    StackName = 'my-stack'
-                    Param1 = 'value1'
-                    Param2 = 'Value2'
-                }
-
-                $params = Get-CommandLineStackParameters -CallerBoundParameters $commandLineParams
+            It 'Should have returned 2 parameters' {
 
                 $params.Length | Should Be 2
             }
 
-            It 'Should load parameter file' {
+            It 'Parameters should be of type [Amazon.CloudFormation.Model.Parameter]' {
 
-                $commandLineParams = @{
-                    StackName = 'my-stack'
-                    ParameterFile = $global:paramPath
-                }
-
-                $params = Get-CommandLineStackParameters -CallerBoundParameters $commandLineParams
-
-                $params.Length | Should Be 4
-                $params | Where-Object { $_.ParameterKey -eq 'FileParam1'} | Select-Object -ExpandProperty ParameterValue | Should -Be 'FileValue1'
+                $params[0] | Should BeOfType Amazon.CloudFormation.Model.Parameter
             }
 
-            It 'Should override parameter file when same param is on the command line' {
+            It 'First parameter should have assigned value' {
 
-                $commandLineParams = @{
-                    StackName = 'my-stack'
-                    ParameterFile = $global:paramPath
-                    FileParam1 = 'CommandLineValue1'
-                }
-
-                $params = Get-CommandLineStackParameters -CallerBoundParameters $commandLineParams
-
-                $params.Length | Should Be 4
-                $params | Where-Object { $_.ParameterKey -eq 'FileParam1'} | Select-Object -ExpandProperty ParameterValue | Should -Be 'CommandLineValue1'
-                $params | Where-Object { $_.ParameterKey -eq 'FileParam2'} | Select-Object -ExpandProperty ParameterValue | Should -Be 'FileValue2'
-
+                $params | Where-Object { $_.ParameterKey -eq 'Param1' } | Select-Object -ExpandProperty ParameterValue | Should -Be 'value1'
             }
 
-            It 'Should accept a parameter that matches a defined command line argument from parameter file' {
+            It 'Second parameter should have assigned value' {
 
-                $commandLineParams = @{
-                    StackName = 'my-stack'
-                    ParameterFile = $global:paramPath
-                }
-
-                $params = Get-CommandLineStackParameters -CallerBoundParameters $commandLineParams
-
-                $params | Where-Object { $_.ParameterKey -eq 'RoleARN'} | Select-Object -ExpandProperty ParameterValue | Should -Be 'arn:aws:iam:::matches_a_command_line_argument'
-
+                $params | Where-Object { $_.ParameterKey -eq 'Param2' } | Select-Object -ExpandProperty ParameterValue | Should -Be 'value2'
             }
         }
 
-        Context 'Get-CurrentRegion' {
+        Context 'Cmdlet/Stack parameter name conflict' {
+
+            # Tests that a stack template may contain a parameter that is the same as one of the CmdLet's core parameters
+            # In this case -RoleArn
+            # The only way to resolve a conflict between CmdLet and stack parameter name is to use a parameter file
+
+            $commandLineParams = @{
+                StackName = 'my-stack'
+                ParameterFile = $global:paramPath
+            }
+
+            $params = Get-CommandLineStackParameters -CallerBoundParameters $commandLineParams
+
+            It 'Should accept a parameter that matches one of the CmdLet parameters from parameter file (-RoleArn)' {
+                $params | Where-Object { $_.ParameterKey -eq 'RoleARN'} | Select-Object -ExpandProperty ParameterValue | Should -Be 'arn:aws:iam:::matches_a_command_line_argument'
+            }
+        }
+
+        Context 'Load parameter file (containing 4 parameters)' {
+
+            $commandLineParams = @{
+                StackName = 'my-stack'
+                ParameterFile = $global:paramPath
+            }
+
+            $params = Get-CommandLineStackParameters -CallerBoundParameters $commandLineParams
+
+            It 'Should have returned 4 parameters' {
+
+                $params.Length | Should Be 4
+            }
+
+            # Lazy
+            1..3 |
+            Foreach-Object {
+
+                $paramNo = $_
+
+                It "FileParam$paramNo should be FileValue$paramNo" {
+
+                    $params | Where-Object { $_.ParameterKey -eq "FileParam$paramNo"} | Select-Object -ExpandProperty ParameterValue | Should -Be "FileValue$paramNo"
+                }
+            }
+
+            It 'RoleARN should be arn:aws:iam:::matches_a_command_line_argument' {
+
+                $params | Where-Object { $_.ParameterKey -eq 'RoleARN'} | Select-Object -ExpandProperty ParameterValue | Should -Be 'arn:aws:iam:::matches_a_command_line_argument'
+            }
+        }
+
+        Context 'Should override parameter file when same param is on the command line' {
+
+            $commandLineParams = @{
+                StackName = 'my-stack'
+                ParameterFile = $global:paramPath
+                FileParam1 = 'CommandLineValue1'
+            }
+
+            $params = Get-CommandLineStackParameters -CallerBoundParameters $commandLineParams
+
+            It 'Should have returned 4 parameters' {
+
+                $params.Length | Should Be 4
+            }
+
+            It 'Should have overridden FileParam1 with value CommandLineValue1' {
+
+                $params | Where-Object { $_.ParameterKey -eq 'FileParam1'} | Select-Object -ExpandProperty ParameterValue | Should -Be 'CommandLineValue1'
+            }
+
+            # Lazy
+            2,3 |
+            Foreach-Object {
+
+                $paramNo = $_
+
+                It "FileParam$paramNo should be FileValue$paramNo" {
+
+                    $params | Where-Object { $_.ParameterKey -eq "FileParam$paramNo"} | Select-Object -ExpandProperty ParameterValue | Should -Be "FileValue$paramNo"
+                }
+            }
+
+            It 'RoleARN should be arn:aws:iam:::matches_a_command_line_argument' {
+
+                $params | Where-Object { $_.ParameterKey -eq 'RoleARN'} | Select-Object -ExpandProperty ParameterValue | Should -Be 'arn:aws:iam:::matches_a_command_line_argument'
+            }
+        }
+    }
+
+    Describe 'Region detection - Get-CurrentRegion' {
+
+        $allRegions = (Get-AWSRegion).Region
+
+        Mock -CommandName Get-EC2Region -MockWith {
+
+            (Get-AWSRegion).Region |
+            ForEach-Object {
+
+                New-Object PSObject -Property @{ RegionName = $_ }
+            }
+        }
+
+        It 'Should throw if default region never initialised' {
+
+            if ($null -eq [Amazon.Runtime.FallbackRegionFactory]::GetRegionEndpoint())
+            {
+                { Get-CurrentRegion -CredentialArguments @{} } | Should -Throw
+            }
+            else
+            {
+                Set-ItResult -Inconclusive -Because "You have already initialised a region (should not be the case on AppVeyor)."
+            }
+        }
+
+        Context 'Region passed as command line argument' {
+
+            $allRegions | Foreach-Object {
+
+                $r = $_
+
+                It "Should retun '$r' when given as argument" {
+
+                    $credArgs = @{ Region = $r}
+
+                    Get-CurrentRegion -CredentialArguments $credArgs | Should -Be $r
+                }
+            }
+        }
+
+        Context 'Region set by Set-DefaultAWSRegion' {
 
             BeforeEach {
 
@@ -402,170 +528,210 @@ InModuleScope $ModuleName {
                 }
             }
 
-            It 'Should return region passed in credential arguments' {
+            $allRegions | Foreach-Object {
 
-                $credArgs = @{ Region = 'eu-west-2'}
+                $r = $_
 
-                Get-CurrentRegion -CredentialArguments $credArgs | Should -Be 'eu-west-2'
-            }
+                It "Should return '$r' set by Set-DefaultAWSRegion if no specific region passed" {
 
-            It 'Should throw if default region never initialised' {
-
-                if ($null -eq [Amazon.Runtime.FallbackRegionFactory]::GetRegionEndpoint())
-                {
-                    { Get-CurrentRegion -CredentialArguments @{} } | Should -Throw
-                }
-                else
-                {
-                    Set-ItResult -Inconclusive -Because "you have already initialised a region (should not be the case on AppVeyor)."
+                    Set-DefaultAWSRegion -Region $r
+                    Get-CurrentRegion -CredentialArguments $credArgs | Should -Be $r
                 }
             }
+        }
+    }
 
-            It 'Should return region set by Set-DefaultAWSRegion if no specific region passed' {
+    Describe 'Template Backup' {
 
-                Set-DefaultAWSRegion -Region us-east-2
-                Get-CurrentRegion -CredentialArguments $credArgs | Should -Be 'us-east-2'
+        Mock -CommandName Get-CFNTemplate -MockWith {
+
+            Get-Content -Raw -Path $global:templatePathJson
+        }
+
+        Mock -CommandName Get-CFNStackResourceList -MockWith {}
+
+        Context 'Stack without parameters' {
+
+            Mock -CommandName Get-CFNStack -MockWith {
+
+                New-Object PSObject -Property @{
+
+                    StackName = 'test-stack'
+                    StackId = 'test-stack'
+                    Parameters = @()
+                }
+            }
+
+            $backupPathWithoutExtension = Join-Path $TestDrive "test-stack"
+            Save-TemplateBackup -StackName test-backup -OutputPath $TestDrive
+
+            It 'Should have called Get-CFNStack' {
+
+                Assert-MockCalled -CommandName Get-CFNStack -Times 1 -Scope Context
+            }
+
+            It 'Should have called Get-CFNTemplate' {
+
+                Assert-MockCalled -CommandName Get-CFNTemplate -Times 1 -Scope Context
+            }
+
+            It 'Should have called Get-CFNStackResourceList' {
+
+                Assert-MockCalled -CommandName Get-CFNStackResourceList -Times 1 -Scope Context
+            }
+
+            It 'Should create a template backup at given output path' {
+
+                Test-Path -Path "$($backupPathWithoutExtension).template.bak.json" | Should -BeTrue
+            }
+
+            It 'Should not create a parameter file at given output path' {
+
+                Test-Path -Path "$($backupPathWithoutExtension).parameters.bak.json" | Should -BeFalse
             }
         }
 
-        Context 'Template Backup' {
+        Context 'Stack with parameters' {
 
-            It 'Should create a template backup with parameter file' {
+            Mock -CommandName Get-CFNStack -MockWith {
 
-                Mock -CommandName Get-CFNTemplate -MockWith {
+                New-Object PSObject -Property @{
 
-                    Get-Content -Raw -Path $global:templatePathJson
+                    StackName = 'test-stack'
+                    StackId = 'test-stack'
+                    Parameters = @(
+                        @{
+                            ParameterKey = 'VpcCidr'
+                            ParameterValue = '10.0.0.0/16'
+                        }
+                        @{
+                            ParameterKey = 'DnsSupport'
+                            ParameterValue = 'true'
+                        }
+                    )
                 }
+            }
 
-                Mock -CommandName Get-CFNStackResourceList -MockWith {}
+            $backupPathWithoutExtension = Join-Path $TestDrive "test-stack"
+            Save-TemplateBackup -StackName test-backup -OutputPath $TestDrive
 
-                Mock -CommandName Get-CFNStack -MockWith {
+            It 'Should have called  Get-CFNStack' {
 
-                    New-Object PSObject -Property @{
+                Assert-MockCalled -CommandName Get-CFNStack -Times 1 -Scope Context
+            }
 
-                        StackName = 'test-stack'
-                        StackId = 'test-stack'
-                        Parameters = @(
-                            @{
-                                ParameterKey = 'VpcCidr'
-                                ParameterValue = '10.0.0.0/16'
-                            }
-                            @{
-                                ParameterKey = 'DnsSupport'
-                                ParameterValue = 'true'
-                            }
-                        )
-                    }
-                }
+            It 'Should have called  Get-CFNTemplate' {
 
-                $backupPathWithoutExtension = Join-Path $TestDrive "test-stack"
+                Assert-MockCalled -CommandName Get-CFNTemplate -Times 1 -Scope Context
+            }
 
-                Save-TemplateBackup -StackName test-backup -OutputPath $TestDrive
+            It 'Should have called  Get-CFNStackResourceList' {
 
-                Test-Path -Path "$($backupPathWithoutExtension).template.bak.json" | Should -Be $true
-                Test-Path -Path "$($backupPathWithoutExtension).parameters.bak.json" | Should -Be $true
+                Assert-MockCalled -CommandName Get-CFNStackResourceList -Times 1 -Scope Context
+            }
+
+            It 'Should create a template backup at given output path' {
+
+                Test-Path -Path "$($backupPathWithoutExtension).template.bak.json" | Should -BeTrue
+            }
+
+            It 'Should create a parameter file at given output path' {
+
+                Test-Path -Path "$($backupPathWithoutExtension).parameters.bak.json" | Should -BeTrue
+            }
+        }
+    }
+
+    Describe 'S3 Interaction' {
+
+        . (Join-Path $PSScriptRoot MockS3.class.ps1)
+        $mockS3 = [MockS3]::UseS3Mocks()
+
+        Mock -CommandName Get-EC2Region -MockWith {
+
+            (Get-AWSRegion).Region |
+            ForEach-Object {
+
+                New-Object PSObject -Property @{ RegionName = $_ }
             }
         }
 
-        Context 'S3 Cloudformation Bucket' {
-
-            Mock Get-STSCallerIdentity -MockWith {
-                New-Object PSObject -Property @{
-                    Account = '000000000000'
-                }
+        Mock -CommandName Get-STSCallerIdentity -MockWith {
+            New-Object PSObject -Property @{
+                Account = '000000000000'
             }
+        }
 
-            Mock -CommandName Get-S3BucketLocation -MockWith {
+        $regionList |
+        ForEach-Object {
 
-                New-Object PSObject -Property @{
-                    Value = 'us-east-1'
-                }
-            }
+            $region = $_
 
-            Mock -Command Get-S3BucketTagging -MockWith {}
+            Context "Create S3 Cloudformation Bucket: $region" {
 
-            Mock -Command Write-S3BucketTagging -MockWith {}
-
-            It 'Should return bucket details if bucket exists' {
-
-                $region = 'us-east-1'
                 $expectedBucketName = "cf-templates-pscloudformation-$($region)-000000000000"
                 $expectedBucketUrl = [uri]"https://s3.$($region).amazonaws.com/$expectedBucketName"
-
                 $result = Get-CloudFormationBucket -CredentialArguments @{ Region = $region }
-                Assert-MockCalled -CommandName Get-STSCallerIdentity -Times 1
-                $result.BucketName | Should Be $expectedBucketName
-                $result.BucketUrl | Should Be $expectedBucketUrl
-            }
 
-            It 'Should tag existing bucket if untagged' {
+                It 'Should create the bucket' {
 
-                $region = 'us-east-1'
-                Set-DefaultAWSRegion -Region $region
-
-                Get-CloudFormationBucket -CredentialArguments @{} | Out-Null
-                Assert-MockCalled -CommandName Write-S3BucketTagging -Times 1 -Scope It
-            }
-
-            It 'Should create and tag bucket if bucket does not exist' {
-
-                $region = 'us-east-1'
-                $expectedBucketName = "cf-templates-pscloudformation-$($region)-000000000000"
-                $expectedBucketUrl = [uri]"https://s3.$($region).amazonaws.com/$expectedBucketName"
-                $script:callCount = 0
-
-                Mock -CommandName Get-S3BucketLocation -MockWith {
-
-                    if ($script:callCount++ -eq 0)
-                    {
-                        throw "The specified bucket does not exist"
-                    }
-
-                    New-Object PSObject -Property @{
-                        Value = $region
-                    }
+                    # TODO check with MockS3
+                    Join-Path $TestDrive $expectedBucketName | Should -Exist
                 }
 
-                Mock -CommandName New-S3Bucket -MockWith {
-                    $true
+                It 'Should have expected name' {
+
+                    $result.BucketName | Should Be $expectedBucketName
                 }
 
-                $result = Get-CloudFormationBucket -CredentialArguments @{ Region = $region }
-                $result.BucketName | Should Be $expectedBucketName
-                $result.BucketUrl | Should Be $expectedBucketUrl
+                It 'Should have expected URL' {
 
-                Assert-MockCalled -CommandName Get-S3BucketLocation -Times 2 -Scope It
-                Assert-MockCalled -CommandName New-S3Bucket -Times 1 -Scope It
-                Assert-MockCalled -CommandName Write-S3BucketTagging -Times 1 -Scope It
-            }
-
-            It 'Should not copy template to S3 if size less than 51200' {
-
-                $template = New-Object String -ArgumentList '*', 51119
-                $tempTemplatePath = [IO.Path]::Combine($TestDrive, "not-oversize.json")
-                [IO.File]::WriteAllText($tempTemplatePath, $template, (New-Object System.Text.ASCIIEncoding))
-
-                $stackArguments = @{
-                    TemplateBody = $template
+                    $result.BucketUrl | Should Be $expectedBucketUrl
                 }
 
-                Mock -CommandName Get-CloudFormationBucket -MockWith { }
+                It 'Should be tagged' {
 
-                Mock -CommandName Resolve-Path -MockWith { }
+                    Assert-MockCalled -CommandName Write-S3BucketTagging -Times 1 -Scope COntext
+                }
+            }
+        }
 
-                Mock -CommandName Write-S3Object -MockWith { }
+        Context 'Should not copy template to S3 if size less than 51200' {
 
-                Copy-OversizeTemplateToS3 -TemplateLocation $tempTemplatePath -CredentialArguments @{} -StackArguments $stackArguments
+            Mock -CommandName Get-S3Bucket -MockWith {}
 
-                $stackArguments.ContainsKey('TemplateBody') | Should Be $true
-                $StackArguments.ContainsKey('TemplateURL') | Should Be $false
+            $template = New-Object String -ArgumentList '*', 51119
+            $tempTemplatePath = [IO.Path]::Combine($TestDrive, "not-oversize.json")
+            [IO.File]::WriteAllText($tempTemplatePath, $template, (New-Object System.Text.ASCIIEncoding))
 
-                Assert-MockCalled -CommandName Get-CloudFormationBucket -Times 0
-                Assert-MockCalled -CommandName Resolve-Path -Times 0
-                Assert-MockCalled -CommandName Write-S3Object -Times 0
+            $stackArguments = @{
+                TemplateBody = $template
             }
 
-            It 'Should copy oversize template to S3' {
+            Copy-OversizeTemplateToS3 -TemplateLocation $tempTemplatePath -CredentialArguments @{} -StackArguments $stackArguments
+
+            It 'Should not have called Get-S3Bucket' {
+
+                Assert-MockCalled -CommandName Get-S3Bucket -Times 0
+            }
+
+            It 'Arguments for *-CFNStack should contain TemplateBody' {
+
+                $stackArguments.ContainsKey('TemplateBody') | Should -BeTrue
+            }
+
+            It 'Arguments for *-CFNStack should not contain TemplateURL' {
+
+                $stackArguments.ContainsKey('TemplateURL') | Should -BeFalse
+            }
+        }
+
+        $regionList |
+        ForEach-Object {
+
+            $region = $_
+
+            Context "Should copy oversize template (>= 51200 bytes) to S3: $region" {
 
                 $template = New-Object String -ArgumentList '*', 51200
                 $tempTemplatePath = [IO.Path]::Combine($TestDrive, "oversize.json")
@@ -576,32 +742,34 @@ InModuleScope $ModuleName {
                     TemplateBody = $template
                 }
 
-                Mock -CommandName Get-CloudFormationBucket -MockWith {
-                    New-Object PSObject -Property @{
-                        BucketName = 'test-bucket'
-                        BucketUrl = [uri]'https://s3.us-east-1.amazonaws.com/test-bucket'
-                    }
-                }
-
                 Mock -CommandName Get-Date -MockWith {
 
                     New-Object DateTime -ArgumentList (2000,1,1,0,0,0,0)
                 }
 
-                Mock -CommandName Resolve-Path -MockWith {
+                $expectedUrl = "https://s3.$region.amazonaws.com/cf-templates-pscloudformation-$region-000000000000/20000101000000000_oversize-stack_oversize.json"
 
-                    New-Object PSObject -Property @{
-                        Path = Join-Path ([IO.Path]::GetTempPath()) 'test.json'
-                    }
+                Copy-OversizeTemplateToS3 -TemplateLocation $tempTemplatePath -CredentialArguments @{ Region = $region } -StackArguments $stackArguments
+
+                It 'Should have uploaded the template' {
+
+                    [IO.Path]::Combine($testdrive, "cf-templates-pscloudformation-$region-000000000000", '20000101000000000_oversize-stack_oversize.json') | Should -Exist
                 }
 
-                Mock -CommandName Write-S3Object -MockWith { }
+                It 'Arguments for *-CFNStack should not contain TemplateBody' {
 
-                Copy-OversizeTemplateToS3 -TemplateLocation $tempTemplatePath -CredentialArguments @{} -StackArguments $stackArguments
+                    $stackArguments.ContainsKey('TemplateBody') | Should -BeFalse
+                }
 
-                $stackArguments.ContainsKey('TemplateBody') | Should Be $false
-                $StackArguments.ContainsKey('TemplateURL') | Should Be $true
-                $stackArguments['TemplateURL'] | Should Be "https://s3.us-east-1.amazonaws.com/test-bucket/20000101000000000_oversize-stack_oversize.json"
+                It 'Arguments for *-CFNStack should contain TemplateURL' {
+
+                    $stackArguments.ContainsKey('TemplateURL') | Should -BeTrue
+                }
+
+                It 'TemplateURL should be expected URL' {
+
+                    $stackArguments['TemplateURL'] | Should Be $expectedUrl
+                }
             }
         }
     }
@@ -614,7 +782,7 @@ InModuleScope $ModuleName {
 
             $resolver = New-TemplateResolver -TemplateLocation $global:templatePathJson
 
-            It 'Resolver type should be UsePreviousTemplate' {
+            It 'Resolver type should be File' {
 
                 $resolver.Type | Should Be 'File'
             }
@@ -667,7 +835,7 @@ InModuleScope $ModuleName {
             }
         }
 
-        Context 'Creating URL resolver when AWS region is set in the session context' {
+        Context 'Creating URL resolver from s3://... when AWS region is set in the session context' {
 
             Mock -CommandName Get-CurrentRegion -MockWith {
 
@@ -703,6 +871,56 @@ InModuleScope $ModuleName {
             It 'Resolver S3 key should be expected value' {
 
                 $resolver.Key | Should Be 'path/to/test-stack.json'
+            }
+        }
+
+        Context 'Creating URL resolver from s3://... when AWS region is set on the command line' {
+
+            $uri = 's3://bucket/path/to/test-stack.json'
+            $generatedUrl = 'https://s3-us-west-1.amazonaws.com/bucket/path/to/test-stack.json'
+
+            $resolver = New-TemplateResolver -TemplateLocation $uri -CredentialArguments @{ Region = 'us-west-1' }
+
+            It 'Resolver type should be Url' {
+
+                $resolver.Type | Should Be 'Url'
+            }
+
+            It 'Resolver URL should be expected URL' {
+
+                $resolver.Url | Should Be $generatedUrl
+            }
+
+
+            It 'Resolver S3 bucket should be expected value' {
+
+                $resolver.BucketName | Should Be 'bucket'
+            }
+
+            It 'Resolver S3 key should be expected value' {
+
+                $resolver.Key | Should Be 'path/to/test-stack.json'
+            }
+        }
+
+        Context 'Creating URL resolver from s3://... when no AWS region can be determined' {
+
+            Mock -CommandName Get-CurrentRegion -MockWith {
+
+                throw "Cannot determine AWS Region. Either use Set-DefaultAWSRegion to set in shell, or supply -Region parameter."
+            }
+
+
+            $uri = 's3://bucket/path/to/test-stack.json'
+
+            It 'Should throw because bucket region cannot be detemined' {
+
+                { New-TemplateResolver -TemplateLocation $uri } | Should -Throw
+            }
+
+            It 'Has called Get-CurentRegion' {
+
+                Assert-MockCalled -CommandName Get-CurrentRegion -Times 1 -Scope Context
             }
         }
 
