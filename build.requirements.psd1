@@ -30,12 +30,12 @@
     }
     'AWSPowerShell'         = @{
         DependencyType = 'PSGalleryModule'
-        Version        = '3.3.485.0'
+        Version        = '3.3.618.0'
         Tags           = 'Desktop'
     }
     'AWSPowerShell.netcore' = @{
         DependencyType = 'PSGalleryModule'
-        Version        = '3.3.485.0'
+        Version        = '3.3.618.0'
         Tags           = 'Core'
     }
 }
