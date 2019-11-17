@@ -44,7 +44,7 @@ function Save-TemplateBackup
     $encoding = New-Object System.Text.UTF8Encoding($false, $false)
 
     # Determine format
-    $ext = (Get-TemplateFormat -TemplateBody $template).ToLower()
+    $ext = (Get-FileFormat -TemplateBody $template).ToLower()
 
     if (-not (Test-Path -PathType Container -Path $OutputPath))
     {

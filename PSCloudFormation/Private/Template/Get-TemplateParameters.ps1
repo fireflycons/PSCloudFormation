@@ -18,7 +18,7 @@ function Get-TemplateParameters
 
     $template = $TemplateResolver.ReadTemplate()
 
-    switch (Get-TemplateFormat -TemplateBody $template)
+    switch (Get-FileFormat -TemplateBody $template)
     {
         'JSON'
         {

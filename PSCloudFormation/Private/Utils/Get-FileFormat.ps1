@@ -1,4 +1,4 @@
-function Get-TemplateFormat
+function Get-FileFormat
 {
 <#
     .SYNOPSIS
