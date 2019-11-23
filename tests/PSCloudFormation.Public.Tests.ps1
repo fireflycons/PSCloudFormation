@@ -255,6 +255,9 @@ InModuleScope $ModuleName {
         $mocks = @('Get-CFNStack', 'Get-CFNStackResourceList', 'New-CFNChangeSet', 'Get-CFNChangeSet', 'Start-CFNChangeSet', 'Wait-CFNStack', 'Get-CFNTemplate' )
 
         (Get-AWSCmdletName -Service CFN).CmdletName |
+        ForEach-Object {
+            $_.Replace('CFNCFN', 'CFN')
+        } |
         Where-Object {
             $mocks -inotcontains $_
         } |
@@ -351,6 +354,9 @@ InModuleScope $ModuleName {
         $mocks = @('Get-CFNStack', 'Wait-CFNStack', 'Remove-CFNStack' )
 
         (Get-AWSCmdletName -Service CFN).CmdletName |
+        ForEach-Object {
+            $_.Replace('CFNCFN', 'CFN')
+        } |
         Where-Object {
             $mocks -inotcontains $_
         } |
