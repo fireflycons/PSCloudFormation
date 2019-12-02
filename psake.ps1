@@ -86,7 +86,12 @@ Task Init {
     }
 }
 
-Task Test -Depends Init {
+Task ListModules -Depends Init {
+
+    Get-Module | Out-Host
+}
+
+Task Test -Depends ListModules {
     $lines
     "`n`tSTATUS: Testing with PowerShell $PSVersion"
 
