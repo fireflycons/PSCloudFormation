@@ -16,7 +16,8 @@ Updates a stack.
 Update-PSCFNStack [-StackName] <String> [-TemplateLocation <String>] [-Capabilities <String>]
  [-NotificationARNs <String[]>] [-ResourceType <String[]>] [-RoleARN <String>]
  [-RollbackConfiguration <RollbackConfiguration>] [-Tag <Tag[]>] [-UsePreviousTemplate]
- [-ParameterFile <String>] [-Wait] [-Force] [-BackupTemplate] [<CommonParameters>]
+ [-ParameterFile <String>] [-ResourcesToImport <String>] [-Wait] [-Force] [-BackupTemplate]
+ [<CommonParameters>]
 ```
 
 ## DESCRIPTION
@@ -252,6 +253,22 @@ Accept pipeline input: False
 Accept wildcard characters: False
 ```
 
+### -ResourcesToImport
+Specifices the path to a file (JSON or YAML) that declares existing resources to import into this CloudFormation Stack.
+Requires AWSPowerShell \>= 4.0.1.0
+
+```yaml
+Type: String
+Parameter Sets: (All)
+Aliases:
+
+Required: False
+Position: Named
+Default value: None
+Accept pipeline input: False
+Accept wildcard characters: False
+```
+
 ### -Wait
 If set, wait for stack update to complete before returning.
 
@@ -300,17 +317,19 @@ Accept wildcard characters: False
 ```
 
 ### CommonParameters
-This cmdlet supports the common parameters: -Debug, -ErrorAction, -ErrorVariable, -InformationAction, -InformationVariable, -OutVariable, -OutBuffer, -PipelineVariable, -Verbose, -WarningAction, and -WarningVariable. For more information, see about_CommonParameters (http://go.microsoft.com/fwlink/?LinkID=113216).
+This cmdlet supports the common parameters: -Debug, -ErrorAction, -ErrorVariable, -InformationAction, -InformationVariable, -OutVariable, -OutBuffer, -PipelineVariable, -Verbose, -WarningAction, and -WarningVariable. For more information, see [about_CommonParameters](http://go.microsoft.com/fwlink/?LinkID=113216).
 
 ## INPUTS
 
 ### System.String
-### You can pipe the stack name or ARN to this function
+###     You can pipe the stack name or ARN to this function
 ## OUTPUTS
 
 ### System.String
-### ARN of the stack
+###     ARN of the stack
 ## NOTES
 This cmdlet genenerates additional dynamic command line parameters for all parameters found in the Parameters block of the supplied CloudFormation template
+
+See also https://github.com/fireflycons/PSCloudFormation/blob/master/static/resource-import.md
 
 ## RELATED LINKS

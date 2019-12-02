@@ -45,6 +45,10 @@ function Update-PSCFNStack
         If present, path to a JSON file containing a list of parameter structures as defined for 'aws cloudformation create-stack'. If a parameter of the same name is defined on the command line, the command line takes precedence.
         If your stack has a parameter with the same name as one of the parameters to this cmdlet, then you *must* set the stack parameter via a parameter file.
 
+    .PARAMETER ResourcesToImport
+        Specifices the path to a file (JSON or YAML) that declares existing resources to import into this CloudFormation Stack.
+        Requires AWSPowerShell >= 4.0.1.0
+
     .PARAMETER ResourceType
         The template resource types that you have permissions to work with for this create stack action, such as AWS::EC2::Instance, AWS::EC2::*, or Custom::MyCustomInstance. Use the following syntax to describe template resource types: AWS::* (for all AWS resource), Custom::* (for all custom resources), Custom::logical_ID (for a specific custom resource), AWS::service_name::* (for all resources of a particular AWS service), and AWS::service_name::resource_logical_ID (for a specific AWS resource).If the list of resource types doesn't include a resource that you're creating, the stack creation fails. By default, AWS CloudFormation grants permissions to all resource types. AWS Identity and Access Management (IAM) uses this parameter for AWS CloudFormation-specific condition keys in IAM policies. For more information, see Controlling Access with AWS Identity and Access Management.
 
@@ -113,6 +117,8 @@ function Update-PSCFNStack
 
     .NOTES
         This cmdlet genenerates additional dynamic command line parameters for all parameters found in the Parameters block of the supplied CloudFormation template
+
+        See also https://github.com/fireflycons/PSCloudFormation/blob/master/static/resource-import.md
     #>
 
     [CmdletBinding()]
@@ -140,6 +146,8 @@ function Update-PSCFNStack
         [switch]$UsePreviousTemplate,
 
         [string]$ParameterFile,
+
+        [string]$ResourcesToImport,
 
         [switch]$Wait,
 
@@ -235,12 +243,35 @@ function Update-PSCFNStack
                 }
             }
 
+            $resourcesToImportArguments = @{}
+
+            if (-not ([string]::IsNullOrEmpty($ResourcesToImport)))
+            {
+                # Requires AWSSDK.CloudFormation v3.3.101 - which equates to AWSPowerShell > 4.0.1.0
+                $cf = [System.AppDomain]::CurrentDomain.GetAssemblies() | Where-Object Location -Match "AWSSDK.CloudFormation.dll"
+
+                if (-not ($cf.GetTypes() | Where-Object { $_.Name -ieq 'ResourceToImport' }))
+                {
+                    throw "A newer version of AWSPowerShell (at least 4.0.1.0) is required to support resource import. Please upgrade."
+                }
+
+                if (-not (Test-Path -Path $ResourcesToImport -PathType Leaf))
+                {
+                    throw "File not found: $ResourcesToImport"
+                }
+
+                $resourcesToImportArguments = @{
+                    ChangeSetType = [Amazon.CloudFormation.ChangeSetType]::IMPORT
+                    ResourcesToImport = New-ResourceImports -ResourceFile $ResourcesToImport
+                }
+            }
+
             $changesetName = '{0}-{1}' -f [IO.Path]::GetFileNameWithoutExtension($MyInvocation.MyCommand.Module.Name), [int](([datetime]::UtcNow) - (get-date "1/1/1970")).TotalSeconds
 
             Write-Host "`nCreating change set $changesetName for $StackName"
 
             $stackArgs = New-StackOperationArguments -StackName $StackName -TemplateLocation $TemplateLocation -Capabilities $Capabilities -StackParameters $stackParameters -CredentialArguments $credentialArguments -UsePreviousTemplate ([bool]$UsePreviousTemplate)
-            $csArn = New-CFNChangeSet -ChangeSetName $changesetName @stackArgs @credentialArguments @changeSetPassOnArguments
+            $csArn = New-CFNChangeSet -ChangeSetName $changesetName @stackArgs @credentialArguments @changeSetPassOnArguments @resourcesToImportArguments
             $cs = Get-CFNChangeSet -ChangeSetName $csArn @credentialArguments
 
             while (('CREATE_COMPLETE', 'FAILED') -inotcontains $cs.Status)

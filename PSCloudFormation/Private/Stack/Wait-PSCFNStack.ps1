@@ -44,6 +44,9 @@ function Wait-PSCFNStack
         'UPDATE_COMPLETE'
         'UPDATE_ROLLBACK_COMPLETE'
         'UPDATE_ROLLBACK_FAILED'
+        'IMPORT_COMPLETE'
+        'IMPORT_ROLLBACK_COMPLETE'
+        'IMPORT_ROLLBACK_FAILED'
     )
 
     # Best guess how wide to make stack name column
