@@ -30,13 +30,13 @@ InModuleScope $ModuleName {
 
     . (Join-Path $PSScriptRoot TestHelpers.ps1)
 
-    Describe 'Resource File' {
+    Describe 'Parse Resource Imports file' {
 
         $cf = [System.AppDomain]::CurrentDomain.GetAssemblies() | Where-Object Location -Match "AWSSDK.Core.dll"
 
         if (-not ($cf.GetTypes() | Where-Object { $_.Name -ieq 'AWSPropertyAttribute' }))
         {
-            It 'Inconclusive Test Block' {
+            It 'Is Inconclusive' {
 
                 Set-ItResult -Inconclusive -Because "an incompatible version of AWSSDK.Core.dll was loaded from $($cf.Location) before we could import the correct one."
             }
@@ -53,7 +53,7 @@ InModuleScope $ModuleName {
                     $resouceFile = [IO.Path]::Combine($TestRoot, 'resource-import', "resources.$ext")
                     $resourceImports = New-ResourceImports($resouceFile)
 
-                    It 'Has imported 2 resources' {
+                    It 'Has loaded two resource import decriptions' {
 
                         $resourceImports | Should -HaveCount 2
                     }
