@@ -9,11 +9,11 @@ try
 {
     Set-Location $PSScriptRoot
 
-    $cf = [System.AppDomain]::CurrentDomain.GetAssemblies() | Where-Object Location -Match "AWSSDK.CloudFormation.dll"
+    $cf = [System.AppDomain]::CurrentDomain.GetAssemblies() | Where-Object Location -Match "AWSSDK.Core.dll"
 
     if ($cf)
     {
-        Write-Warning "A version of AWSSDK.CloudFormation.dll is already loaded:"
+        Write-Warning "A version of AWSSDK.Core.dll is already loaded:"
         Write-Warning "Loaded from $($cf.Location)"
     }
 

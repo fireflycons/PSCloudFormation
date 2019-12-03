@@ -32,13 +32,13 @@ InModuleScope $ModuleName {
 
     Describe 'Resource File' {
 
-        $cf = [System.AppDomain]::CurrentDomain.GetAssemblies() | Where-Object Location -Match "AWSSDK.CloudFormation.dll"
+        $cf = [System.AppDomain]::CurrentDomain.GetAssemblies() | Where-Object Location -Match "AWSSDK.Core.dll"
 
-        if (-not ($cf.GetTypes() | Where-Object { $_.Name -ieq 'ResourceToImport' }))
+        if (-not ($cf.GetTypes() | Where-Object { $_.Name -ieq 'AWSPropertyAttribute' }))
         {
             It 'Inconclusive Test Block' {
 
-                Set-ItResult -Inconclusive -Because 'an incompatible version of AWSPowerShell was loaded in AppVeyor environment before we could import the correct one.'
+                Set-ItResult -Inconclusive -Because 'an incompatible version of AWSSDK.Core.dll was loaded in AppVeyor environment before we could import the correct one.'
             }
         }
         else
