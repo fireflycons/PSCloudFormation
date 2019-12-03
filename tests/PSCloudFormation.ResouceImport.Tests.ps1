@@ -38,7 +38,7 @@ InModuleScope $ModuleName {
         {
             It 'Inconclusive Test Block' {
 
-                Set-ItResult -Inconclusive -Because 'an incompatible version of AWSSDK.Core.dll was loaded in AppVeyor environment before we could import the correct one.'
+                Set-ItResult -Inconclusive -Because "an incompatible version of AWSSDK.Core.dll was loaded from $($cf.Location) before we could import the correct one."
             }
         }
         else
