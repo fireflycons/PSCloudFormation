@@ -1,5 +1,10 @@
 # Release Notes
 
+## 2.0.0
+
+* Adds support for stack refactoring - IMPORT operation. Requires AWSPowerShell >= 4.0.1.0 to work.
+* Rearrange project structure.
+
 ## 1.8.0
 
 * New cmdlet `New-PSCFNPackage`. Packages local artifacts to S3 as per `aws cloudformation package`
