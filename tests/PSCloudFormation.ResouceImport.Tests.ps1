@@ -29,57 +29,68 @@ Import-Module -Name $ManifestFile
 InModuleScope $ModuleName {
 
     . (Join-Path $PSScriptRoot TestHelpers.ps1)
-    $regionList = Get-TestRegionList
 
     Describe 'Resource File' {
 
-        ('json', 'yaml') |
-        Foreach-Object {
+        $cf = [System.AppDomain]::CurrentDomain.GetAssemblies() | Where-Object Location -Match "AWSSDK.CloudFormation.dll"
 
-            $ext = $_
+        if (-not ($cf.GetTypes() | Where-Object { $_.Name -ieq 'ResourceToImport' }))
+        {
+            It 'Inconclusive Test Block' {
 
-            Context "Load resource imports ($ext)" {
+                Set-ItResult -Inconclusive -Because 'an incompatible version of AWSPowerShell was loaded in AppVeyor environment before we could import the correct one.'
+            }
+        }
+        else
+        {
+            ('json', 'yaml') |
+            Foreach-Object {
 
-                $resouceFile = [IO.Path]::Combine($TestRoot, 'resource-import', "resources.$ext")
-                $resourceImports = New-ResourceImports($resouceFile)
+                $ext = $_
 
-                It 'Has imported 2 resources' {
+                Context "Load resource imports ($ext)" {
 
-                    $resourceImports | Should -HaveCount 2
-                }
+                    $resouceFile = [IO.Path]::Combine($TestRoot, 'resource-import', "resources.$ext")
+                    $resourceImports = New-ResourceImports($resouceFile)
 
-                $bucketResource = $resourceImports | Where-Object { $_.ResourceType -eq 'AWS::S3::Bucket'}
+                    It 'Has imported 2 resources' {
 
-                It 'Should have imported a bucket resource' {
+                        $resourceImports | Should -HaveCount 2
+                    }
 
-                    $bucketResource | Should -HaveCount 1
-                }
+                    $bucketResource = $resourceImports | Where-Object { $_.ResourceType -eq 'AWS::S3::Bucket'}
 
-                It 'Bucket resource should have expected logical ID' {
+                    It 'Should have imported a bucket resource' {
 
-                    $bucketResource.LogicalResourceId | Should -Be 'ApplicationBucket'
-                }
+                        $bucketResource | Should -HaveCount 1
+                    }
 
-                It 'Bucket resource should have expected BucketName identifier' {
+                    It 'Bucket resource should have expected logical ID' {
 
-                    $bucketResource.ResourceIdentifier['BucketName'] | Should -Be 'MyBucket'
-                }
+                        $bucketResource.LogicalResourceId | Should -Be 'ApplicationBucket'
+                    }
 
-                $securityGroupResource = $resourceImports | Where-Object { $_.ResourceType -eq 'AWS::EC2::SecurityGroup'}
+                    It 'Bucket resource should have expected BucketName identifier' {
 
-                It 'Should have imported a security group resource' {
+                        $bucketResource.ResourceIdentifier['BucketName'] | Should -Be 'MyBucket'
+                    }
 
-                    $securityGroupResource | Should -HaveCount 1
-                }
+                    $securityGroupResource = $resourceImports | Where-Object { $_.ResourceType -eq 'AWS::EC2::SecurityGroup'}
 
-                It 'Security group resource should have expected logical ID' {
+                    It 'Should have imported a security group resource' {
 
-                    $securityGroupResource.LogicalResourceId | Should -Be 'InstanceSecurityGroup'
-                }
+                        $securityGroupResource | Should -HaveCount 1
+                    }
 
-                It 'Security group resource should have expected BucketName identifier' {
+                    It 'Security group resource should have expected logical ID' {
 
-                    $securityGroupResource.ResourceIdentifier['SecurityGroupName'] | Should -Be 'MySg'
+                        $securityGroupResource.LogicalResourceId | Should -Be 'InstanceSecurityGroup'
+                    }
+
+                    It 'Security group resource should have expected BucketName identifier' {
+
+                        $securityGroupResource.ResourceIdentifier['SecurityGroupName'] | Should -Be 'MySg'
+                    }
                 }
             }
         }
