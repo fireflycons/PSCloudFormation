@@ -370,6 +370,10 @@ class MockS3
 
             Get-AWSCmdletName -Service S3 |
             Select-Object -ExpandProperty CmdletName |
+            Foreach-Object {
+                # v4.0.0.0 bug workaround
+                $_.Replace('S3S3', 'S3')
+            } |
             Where-Object {
                 -not [string]::IsNullOrEmpty($_) -and $implemented -inotcontains $_
             } |

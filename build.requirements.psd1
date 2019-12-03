@@ -25,17 +25,17 @@
     }
     'platyps'               = @{
         DependencyType = 'PSGalleryModule'
-        Version        = '0.12.0'
+        Version        = '0.14.0'
         Tags           = 'Desktop'
     }
     'AWSPowerShell'         = @{
         DependencyType = 'PSGalleryModule'
-        Version        = '3.3.485.0'
+        Version        = '4.0.1.1'
         Tags           = 'Desktop'
     }
     'AWSPowerShell.netcore' = @{
         DependencyType = 'PSGalleryModule'
-        Version        = '3.3.485.0'
+        Version        = '4.0.1.1'
         Tags           = 'Core'
     }
 }

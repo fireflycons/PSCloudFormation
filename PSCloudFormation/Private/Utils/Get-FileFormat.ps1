@@ -1,4 +1,4 @@
-function Get-TemplateFormat
+function Get-FileFormat
 {
 <#
     .SYNOPSIS
@@ -12,7 +12,7 @@ function Get-TemplateFormat
 
     $body = $TemplateBody.Trim()
 
-    if ($body.Length -gt 0 -and $body[0] -eq '{')
+    if ($body.Length -gt 0 -and ($body[0] -eq '{' -or $body[0] -eq '['))
     {
         return 'JSON'
     }

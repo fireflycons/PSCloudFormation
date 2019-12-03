@@ -187,7 +187,7 @@ function New-PSCFNPackage
 
             $template = (New-TemplateResolver -TemplateLocation $TemplateFile -credentialParameters $credentialParameters).ReadTemplate()
             $templateObject = $null
-            $templateFormat = Get-TemplateFormat -TemplateBody $template
+            $templateFormat = Get-FileFormat -TemplateBody $template
 
             $modifiedResources = 0
 

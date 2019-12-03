@@ -9,6 +9,14 @@ try
 {
     Set-Location $PSScriptRoot
 
+    $cf = [System.AppDomain]::CurrentDomain.GetAssemblies() | Where-Object Location -Match "AWSSDK.Core.dll"
+
+    if ($cf)
+    {
+        Write-Warning "A version of AWSSDK.Core.dll is already loaded:"
+        Write-Warning "Loaded from $($cf.Location)"
+    }
+
     # Grab nuget bits, install modules, set build variables, start build.
     Write-Host 'Setting up build environment'
 

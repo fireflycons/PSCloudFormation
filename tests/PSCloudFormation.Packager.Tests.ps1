@@ -141,7 +141,7 @@ InModuleScope $ModuleName {
 
                 $inputFile = Join-Path $assetsDir 'base-stack.json'
                 $template = Format-Yaml -Template (New-PSCFNPackage -TemplateFile $inputFile -S3Bucket my-bucket -UseJson)
-                Get-TemplateFormat -TemplateBody $template | Should -Be 'JSON'
+                Get-FileFormat -TemplateBody $template | Should -Be 'JSON'
                 "TestDrive:/my-bucket/nested-1.json" | Should -Exist
                 "TestDrive:/my-bucket/sub-nested-2.json" | Should -Exist
                 "TestDrive:/my-bucket/lambdasimple.zip" | Should -Exist

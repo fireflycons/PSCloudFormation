@@ -1,6 +1,14 @@
 # PSCloudFormation
 [![Build status](https://ci.appveyor.com/api/projects/status/fgt7d0icj7emc6hl/branch/master?svg=true)](https://ci.appveyor.com/project/fireflycons/pscloudformation/branch/master)
 
+## Breaking News
+
+Now supports the new [Resource Import feature](https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/resource-import.html)!
+
+Note that this feature only works with AWSPowerShell 4.0.1.0 or greater. An exception will be thrown if your installed version is insufficient.
+
+See also [PSCloudFormation Resource Import](./static/resource-import.md) documentation.
+
 ## How to Install
 
 The module is published on the PowerShell Gallery and can be installed by following the instructions there.
