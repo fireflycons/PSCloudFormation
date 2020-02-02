@@ -282,7 +282,7 @@ function Update-PSCFNStack
 
             if ($cs.Status -ieq 'FAILED')
             {
-                if ($cs.StatusReason -ilike "*The submitted information didn't contain changes*")
+                if ($cs.StatusReason -ilike "*The submitted information didn't contain changes*" -or $cs.StatusReason -ilike '*No updates are to be performed*')
                 {
                     Write-Warning "Changeset $changesetName failed to create: $($cs.StatusReason)"
                     return $stack.StackId
