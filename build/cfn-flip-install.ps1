@@ -1,6 +1,6 @@
 if ((Get-Variable -Name IsLinux -ErrorAction Ignore) -and $IsLinux)
 {
-    & sudo pip3 install cfn_flip 2>&1
+    & sudo pip install cfn_flip 2>&1
 }
 else
 {

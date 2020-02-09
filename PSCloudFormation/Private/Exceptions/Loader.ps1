@@ -1,6 +1,7 @@
 $referenceAssemblies = [System.AppDomain]::CurrentDomain.GetAssemblies() |
 Where-Object {
     @(
+        'AWSSDK.Core.dll'
         'AWSSDK.CloudFormation.dll'
         'System.Runtime.dll'
         'netstandard.dll'
