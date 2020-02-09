@@ -60,6 +60,9 @@ function New-PSCFNStack
         If present, path to a JSON file containing a list of parameter structures as defined for 'aws cloudformation create-stack'. If a parameter of the same name is defined on the command line, the command line takes precedence.
         If your stack has a parameter with the same name as one of the parameters to this cmdlet, then you *must* set the stack parameter via a parameter file.
 
+    .PARAMETER PassThru
+        If used in conjunction with -Wait, return stack ARN instead of stack status
+
     .PARAMETER ResourceType
         The template resource types that you have permissions to work with for this create stack action, such as AWS::EC2::Instance, AWS::EC2::*, or Custom::MyCustomInstance. Use the following syntax to describe template resource types: AWS::* (for all AWS resource), Custom::* (for all custom resources), Custom::logical_ID (for a specific custom resource), AWS::service_name::* (for all resources of a particular AWS service), and AWS::service_name::resource_logical_ID (for a specific AWS resource).If the list of resource types doesn't include a resource that you're creating, the stack creation fails. By default, AWS CloudFormation grants permissions to all resource types. AWS Identity and Access Management (IAM) uses this parameter for AWS CloudFormation-specific condition keys in IAM policies. For more information, see Controlling Access with AWS Identity and Access Management.
 
@@ -86,15 +89,15 @@ function New-PSCFNStack
         The amount of time that can pass before the stack status becomes CREATE_FAILED; if DisableRollback is not set or is set to false, the stack will be rolled back.
 
     .PARAMETER Wait
-        If set, wait for stack creation to complete before returning.
+        If set, wait for stack creation to complete before returning. Stack status is returned, unless -PassThru is also set
 
     .INPUTS
         System.String
             You can pipe the new stack name to this function
 
     .OUTPUTS
-        System.String
-            ARN of the new stack
+        [System.String] - ARN of the new stack
+        [Amazon.CloudFormation.StackStatus] - Status of last operation.
 
     .NOTES
         This cmdlet genenerates additional dynamic command line parameters for all parameters found in the Parameters block of the supplied CloudFormation template
@@ -164,7 +167,9 @@ function New-PSCFNStack
 
         [string]$ParameterFile,
 
-        [switch]$Wait
+        [switch]$Wait,
+
+        [switch]$PassThru
     )
 
     DynamicParam
@@ -227,9 +232,17 @@ function New-PSCFNStack
             {
                 Write-Host "Waiting for creation to complete"
 
-                if (-not (Wait-PSCFNStack -StackArn $arn -CredentialArguments $credentialArguments -StartTime $startTime))
+                $ok = Wait-PSCFNStack -StackArn $arn -CredentialArguments $credentialArguments -StartTime $startTime
+
+                if (-not $ok)
                 {
-                    throw "Create unsuccessful"
+                    throw (Get-ExceptionForFailedStack -StackArn $arn -CredentialArguments $credentialArguments)
+                }
+
+                if (-not $PassThru)
+                {
+                    # Emit status
+                    return (Get-CFNStack -StackName $arn).StackStatus
                 }
             }
 

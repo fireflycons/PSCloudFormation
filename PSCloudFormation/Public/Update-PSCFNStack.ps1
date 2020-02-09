@@ -45,6 +45,9 @@ function Update-PSCFNStack
         If present, path to a JSON file containing a list of parameter structures as defined for 'aws cloudformation create-stack'. If a parameter of the same name is defined on the command line, the command line takes precedence.
         If your stack has a parameter with the same name as one of the parameters to this cmdlet, then you *must* set the stack parameter via a parameter file.
 
+    .PARAMETER PassThru
+        If used in conjunction with -Wait, return stack ARN instead of stack status
+
     .PARAMETER ResourcesToImport
         Specifices the path to a file (JSON or YAML) that declares existing resources to import into this CloudFormation Stack.
         Requires AWSPowerShell >= 4.0.1.0
@@ -146,6 +149,8 @@ function Update-PSCFNStack
         [switch]$UsePreviousTemplate,
 
         [string]$ParameterFile,
+
+        [switch]$PassThru,
 
         [string]$ResourcesToImport,
 
@@ -285,7 +290,15 @@ function Update-PSCFNStack
                 if ($cs.StatusReason -ilike "*The submitted information didn't contain changes*" -or $cs.StatusReason -ilike '*No updates are to be performed*')
                 {
                     Write-Warning "Changeset $changesetName failed to create: $($cs.StatusReason)"
-                    return $stack.StackId
+
+                    if ($PassThru)
+                    {
+                        return $stack.StackId
+                    }
+                    else
+                    {
+                        return [Amazon.CloudFormation.StackStatus]'NO_CHANGE'
+                    }
                 }
 
                 Write-Host -ForegroundColor Red -BackgroundColor Black "Changeset $changesetName failed to create: $($cs.StatusReason)"
@@ -331,19 +344,22 @@ function Update-PSCFNStack
             {
                 Write-Host "Waiting for update to complete"
 
-                if (-not (Wait-PSCFNStack -StackArn $arn -CredentialArguments $credentialArguments -StartTime $startTime))
+                $ok = Wait-PSCFNStack -StackArn $arn -CredentialArguments $credentialArguments -StartTime $startTime
+
+                if (-not $ok)
                 {
-                    throw "Update unsuccessful"
+                    throw (Get-ExceptionForFailedStack -StackArn $arn -CredentialArguments $credentialArguments)
                 }
 
-                # Emit ARN
-                $arn
+                if (-not $PassThru)
+                {
+                    # Emit status
+                    return (Get-CFNStack -StackName $arn).StackStatus
+                }
             }
-            else
-            {
-                # Emit ARN
-                $arn
-            }
+
+            # Emit ARN
+            $arn
         }
         catch
         {

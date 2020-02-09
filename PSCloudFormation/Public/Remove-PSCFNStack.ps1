@@ -108,7 +108,8 @@ function Remove-PSCFNStack
     begin
     {
         $credentialArguments = Get-CommonCredentialParameters -CallerBoundParameters $PSBoundParameters
-        $deleteErrors = $false
+        $numberOfStacks = 0
+        $exceptions = @()
     }
 
     process
@@ -119,6 +120,7 @@ function Remove-PSCFNStack
         $arns = $StackName |
             ForEach-Object {
 
+            ++$numberOfStacks
             $cancelled = $false
 
             if (Test-StackExists -StackName $_ -CredentialArguments $credentialArguments)
@@ -158,7 +160,7 @@ function Remove-PSCFNStack
                 {
                     Remove-CFNStack -StackName $arn -Force @credentialArguments
 
-                    if ($Sequential -or ($Wait -and ($StackName | Measure-Object).Count -eq 1))
+                    if ($Sequential)
                     {
                         # Wait for this delete to complete before starting the next
                         Write-Host "Waiting for delete: $arn"
@@ -166,7 +168,7 @@ function Remove-PSCFNStack
                         if (-not (Wait-PSCFNStack -StackArn $arn -CredentialArguments $credentialArguments -StartTime $startTime))
                         {
                             Write-Warning "Delete $_ unsuccessful"
-                            $deleteErrors = $true
+                            $exceptions += (Get-ExceptionForFailedStack -StackArn $arn -CredentialArguments $credentialArguments)
                         }
                     }
                     else
@@ -184,20 +186,37 @@ function Remove-PSCFNStack
 
     end
     {
-        if ($Wait -and ($arns | Measure-Object).Count -gt 0)
+        if ($Wait -and -not $Sequential -and ($arns | Measure-Object).Count -gt 0)
         {
-            Write-Host "Waiting for delete:`n$($arns -join "`n")"
+            Write-Host "Waiting for delete:`n$($arns -join "`n - ")"
 
-            Wait-PSCFNStack -StackArn $arns -CredentialArguments $credentialArguments -StartTime $startTime
+            if (-not (Wait-PSCFNStack -StackArn $arns -CredentialArguments $credentialArguments -StartTime $startTime))
+            {
+                $arns |
+                ForEach-Object {
+                    $ex = (Get-ExceptionForFailedStack -StackArn $_ -CredentialArguments $credentialArguments)
+
+                    if ($null -ne $ex)
+                    {
+                        $exceptions += $ex
+                    }
+                }
+            }
         }
         else
         {
             $arns
         }
 
-        if ($deleteErrors)
+        $numExceptions = $exceptions | Measure-Object | Select-Object -ExpandProperty Count
+
+        if ($numExceptions -eq 1)
         {
-            throw "At least one stack failed to delete - see warnings above."
+            throw ($exceptions | Select-Object -First 1)
+        }
+        elseif ($numExceptions -gt 1)
+        {
+            throw (New-Object System.AggregateException -ArgumentList "At least one stack failed to delete", $exceptions)
         }
     }
 }

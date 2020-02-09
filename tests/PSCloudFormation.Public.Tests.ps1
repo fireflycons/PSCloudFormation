@@ -77,18 +77,6 @@ InModuleScope $ModuleName {
             }
         }
 
-        Mock -CommandName Get-CFNStack -MockWith {
-
-            throw New-Object System.InvalidOperationException ('Stack does not exist')
-        }
-
-        Mock -CommandName Wait-CFNStack -MockWith {
-
-            return @{
-                StackStatus = 'CREATE_COMPLETE'
-            }
-        }
-
         foreach ($ext in @('json', 'yaml'))
         {
             Context 'Parameter errors' {
@@ -122,6 +110,19 @@ InModuleScope $ModuleName {
                         return $expectedArn
                     }
 
+
+                    Mock -CommandName Get-CFNStack -MockWith {
+
+                        throw New-Object System.InvalidOperationException ('Stack does not exist')
+                    }
+
+                    Mock -CommandName Wait-CFNStack -MockWith {
+
+                        return @{
+                            StackStatus = 'CREATE_COMPLETE'
+                        }
+                    }
+
                     $stackArn = New-PSCFNStack -StackName pester -TemplateLocation "$($global:TestStackFilePathWithoutExtension).$($ext)" -VpcCidr 10.0.0.0/16 -Region $region
 
                     It 'Should have called Get-CFNStack' {
@@ -139,6 +140,51 @@ InModuleScope $ModuleName {
                         $stackArn | Should -Be $expectedArn
                     }
                 }
+            }
+
+            Context "Unsuccessful stack creation - $region" {
+
+                $global:getCfnStackCounter = 0
+
+                Mock -CommandName New-CFNStack -MockWith {
+
+                    return $expectedArn
+                }
+
+                Mock -CommandName Get-CFNStack -MockWith {
+
+                    if ($global:getCfnStackCounter -eq 0)
+                    {
+                        ++$global:getCfnStackCounter
+                        throw New-Object System.InvalidOperationException ('Stack does not exist')
+                    }
+                    else
+                    {
+                        return @{
+                            StackStatus = [Amazon.CloudFormation.StackStatus]::CREATE_FAILED
+                        }
+                    }
+                }
+
+                Mock -CommandName Wait-PSCFNStack -MockWith {
+
+                    $false
+                }
+
+                try
+                {
+                    New-PSCFNStack -Wait -StackName pester -TemplateLocation "$($global:TestStackFilePathWithoutExtension).$($ext)" -VpcCidr 10.0.0.0/16 -Region $region
+                }
+                catch
+                {
+                    $status = $_.Exception.StackStatus
+                }
+
+                It 'Should throw with status CREATE_FAILED' {
+
+                    $status | Should -Be 'CREATE_FAILED'
+                }
+
             }
         }
     }
@@ -170,6 +216,7 @@ InModuleScope $ModuleName {
                         }
                     )
                     StackId         = $global:TestStackArn
+                    StackStatus     = [Amazon.CloudFormation.StackStatus]::UPDATE_COMPLETE
                 }
             }
             elseif ($StackName -like '*unchanged*')
@@ -183,6 +230,7 @@ InModuleScope $ModuleName {
                         }
                     )
                     StackId         = $global:UnchangedStackArn
+                    StackStatus     = [Amazon.CloudFormation.StackStatus]::UPDATE_COMPLETE
                 }
             }
             else
@@ -275,7 +323,7 @@ InModuleScope $ModuleName {
         {
             It "Should update when stack exists ($($ext.ToUpper()))" {
 
-                Update-PSCFNStack -StackName pester -TemplateLocation "$($global:TestStackFilePathWithoutExtension).$($ext)" -Wait -VpcCidr 10.1.0.0/16 -Force
+                Update-PSCFNStack -StackName pester -TemplateLocation "$($global:TestStackFilePathWithoutExtension).$($ext)" -Wait -VpcCidr 10.1.0.0/16 -Force | Should -Be 'UPDATE_COMPLETE'
             }
 
             It "Should fail when stack does not exist ($($ext.ToUpper()))" {
@@ -299,15 +347,20 @@ InModuleScope $ModuleName {
                 }
             }
 
-            It "Should not throw if no changes are detected ($($ext.ToUpper()))" {
+            It "Should return NO_CHANGE if no changes are detected ($($ext.ToUpper()))" {
 
-                Update-PSCFNStack -StackName unchanged -TemplateLocation "$($global:TestStackFilePathWithoutExtension).$($ext)" -Wait -VpcCidr 10.0.0.0/16 -Force | Should -Be $global:UnchangedStackArn
+                Update-PSCFNStack -StackName unchanged -TemplateLocation "$($global:TestStackFilePathWithoutExtension).$($ext)" -Wait -VpcCidr 10.0.0.0/16 -Force | Should -Be 'NO_CHANGE'
+            }
+
+            It "Should return ARN if no changes are detected and -PassThru ($($ext.ToUpper()))" {
+
+                Update-PSCFNStack -PassThru -StackName unchanged -TemplateLocation "$($global:TestStackFilePathWithoutExtension).$($ext)" -Wait -VpcCidr 10.0.0.0/16 -Force | Should -Be $global:UnchangedStackArn
             }
         }
 
         It "Should update stack with -UsePreviousTemplate" {
 
-            Update-PSCFNStack -StackName pester -UsePreviousTemplate -Wait -VpcCidr 10.1.0.0/16 -Force
+            Update-PSCFNStack -StackName pester -UsePreviousTemplate -Wait -VpcCidr 10.1.0.0/16 -Force | Should -Be 'UPDATE_COMPLETE'
         }
     }
 
