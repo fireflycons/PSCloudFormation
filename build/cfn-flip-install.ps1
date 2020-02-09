@@ -1,6 +1,6 @@
 if ((Get-Variable -Name IsLinux -ErrorAction Ignore) -and $IsLinux)
 {
-    $ sudo apt-get install -y python3-pip
+    & sudo apt-get install -y python3-pip
     & sudo pip3 install cfn_flip 2>&1
 }
 else
