@@ -1,5 +1,10 @@
 # Release Notes
 
+## 2.1.0
+
+* Fix a pipeline leak in the code that waits for and reports progress causing failure detection to break
+* All stack modification operations when run with `-Wait` now return the final status of the stack, e.g. `CREATE_COMPLETE` or the special value `NO_CHANGE` if updating and no change was detected. If an operation fails, then an exception is thrown with properties `Arn` and `Status` describing the stack and the final state. If `-PassThru` is set along with `-Wait` then the arn is returned on success.
+
 ## 2.0.0
 
 * Adds support for stack refactoring - IMPORT operation. Requires AWSPowerShell >= 4.0.1.0 to work.
