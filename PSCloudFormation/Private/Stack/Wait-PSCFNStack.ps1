@@ -122,8 +122,9 @@ function Wait-PSCFNStack
         }
     }
 
-    Write-StackEvents -StackArn $StackArn -EventsAfter $checkTime $CredentialArguments -WriteHeaders $false -StackColumnWidth $stackColumnWidth
+    # Capture return value so it doesn't leak into the pipeline
+    $ts = Write-StackEvents -StackArn $StackArn -EventsAfter $checkTime $CredentialArguments -WriteHeaders $false -StackColumnWidth $stackColumnWidth
 
     # Output boolean - any final state containing ROLLBACK or FAILED indicates operation unsuccessful
-    -not $anyFailed
+    return (-not $anyFailed)
 }
