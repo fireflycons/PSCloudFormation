@@ -79,7 +79,7 @@ InModuleScope $ModuleName {
 
         foreach ($ext in @('json', 'yaml'))
         {
-            Context 'Parameter errors' {
+            Context "Parameter errors ($ext)" {
 
                 It "Should throw with invalid CIDR ($($ext.ToUpper()))" {
 
@@ -101,7 +101,7 @@ InModuleScope $ModuleName {
             Foreach-Object {
                 $region = $_
 
-                Context "Successful stack creation - $region" {
+                Context "Successful stack creation ($ext) - $region" {
 
                     $expectedArn = "arn:aws:cloudformation:$region:000000000000:stack/pester/00000000-0000-0000-0000-000000000000"
 
@@ -142,7 +142,7 @@ InModuleScope $ModuleName {
                 }
             }
 
-            Context "Unsuccessful stack creation - $region" {
+            Context "Unsuccessful stack creation ($ext) - $region" {
 
                 $global:getCfnStackCounter = 0
 
@@ -161,7 +161,7 @@ InModuleScope $ModuleName {
                     else
                     {
                         return @{
-                            StackStatus = [Amazon.CloudFormation.StackStatus]::CREATE_FAILED
+                            StackStatus = [Amazon.CloudFormation.StackStatus]::ROLLBACK_COMPLETE
                         }
                     }
                 }
@@ -180,9 +180,9 @@ InModuleScope $ModuleName {
                     $status = $_.Exception.StackStatus
                 }
 
-                It 'Should throw with status CREATE_FAILED' {
+                It 'Should throw with status ROLLBACK_COMPLETE' {
 
-                    $status | Should -Be 'CREATE_FAILED'
+                    $status | Should -Be 'ROLLBACK_COMPLETE'
                 }
 
             }

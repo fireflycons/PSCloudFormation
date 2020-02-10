@@ -168,7 +168,7 @@ function Remove-PSCFNStack
                         if (-not (Wait-PSCFNStack -StackArn $arn -CredentialArguments $credentialArguments -StartTime $startTime))
                         {
                             Write-Warning "Delete $_ unsuccessful"
-                            $exceptions += (Get-ExceptionForFailedStack -StackArn $arn -CredentialArguments $credentialArguments)
+                            $exceptions += (Get-ExceptionForFailedStack -Operation Delet -StackArn $arn -CredentialArguments $credentialArguments)
                         }
                     }
                     else
@@ -194,7 +194,7 @@ function Remove-PSCFNStack
             {
                 $arns |
                 ForEach-Object {
-                    $ex = (Get-ExceptionForFailedStack -StackArn $_ -CredentialArguments $credentialArguments)
+                    $ex = (Get-ExceptionForFailedStack -Operation Delete -StackArn $_ -CredentialArguments $credentialArguments)
 
                     if ($null -ne $ex)
                     {

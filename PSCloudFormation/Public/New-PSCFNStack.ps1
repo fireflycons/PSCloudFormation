@@ -236,7 +236,7 @@ function New-PSCFNStack
 
                 if (-not $ok)
                 {
-                    throw (Get-ExceptionForFailedStack -StackArn $arn -CredentialArguments $credentialArguments)
+                    throw (Get-ExceptionForFailedStack -Operation Create -StackArn $arn -CredentialArguments $credentialArguments)
                 }
 
                 if (-not $PassThru)

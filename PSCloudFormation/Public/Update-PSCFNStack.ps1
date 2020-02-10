@@ -348,7 +348,7 @@ function Update-PSCFNStack
 
                 if (-not $ok)
                 {
-                    throw (Get-ExceptionForFailedStack -StackArn $arn -CredentialArguments $credentialArguments)
+                    throw (Get-ExceptionForFailedStack -Operation Update -StackArn $arn -CredentialArguments $credentialArguments)
                 }
 
                 if (-not $PassThru)
