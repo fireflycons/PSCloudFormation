@@ -131,8 +131,8 @@ function Reset-PSCFNStack
         [Parameter(Mandatory = $true)]
         [string]$TemplateLocation,
 
-        [ValidateSet('CAPABILITY_IAM', 'CAPABILITY_NAMED_IAM')]
-        [string]$Capabilities,
+        [ValidateSet('CAPABILITY_IAM', 'CAPABILITY_NAMED_IAM', 'CAPABILITY_AUTO_EXPAND')]
+        [string[]]$Capabilities,
 
         [string]$ClientRequestToken,
 

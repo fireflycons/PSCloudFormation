@@ -132,9 +132,9 @@ function New-PSCFNStack
         [Parameter(Mandatory = $true)]
         [string]$TemplateLocation,
 
-        [ValidateSet('CAPABILITY_IAM', 'CAPABILITY_NAMED_IAM')]
+        [ValidateSet('CAPABILITY_IAM', 'CAPABILITY_NAMED_IAM', 'CAPABILITY_AUTO_EXPAND')]
         [Alias('Capability')]
-        [string]$Capabilities,
+        [string[]]$Capabilities,
 
         [string]$ClientRequestToken,
 
