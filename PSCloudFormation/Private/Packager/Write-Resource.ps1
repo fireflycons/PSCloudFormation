@@ -32,7 +32,24 @@ function Write-Resource
         [switch]$Yaml
     )
 
-    $typeUsesBundle = ($ResourceType -eq 'AWS::Lambda::Function' -or $ResourceType -eq 'AWS::ElasticBeanstalk::ApplicationVersion')
+    $bundledTypes = @(
+        'AWS::Lambda::Function'
+        'AWS::ElasticBeanstalk::ApplicationVersion'
+        'AWS::Serverless::Function'
+    )
+
+    $typeUsesBundle = $bundledTypes -contains $ResourceType
+    $bundleType = $(
+
+        if ($ResourceType -eq 'AWS::Serverless::Function')
+        {
+            'ServerlessFunction'
+        }
+        else
+        {
+            'Standard'
+        }
+    )
 
     if (Test-Path -Path $Payload -PathType Leaf)
     {
@@ -44,11 +61,11 @@ function Write-Resource
             $n = $null
             if ($Json)
             {
-                $n = New-S3BundleNode -Json -Bucket $Bucket -Prefix $Prefix -ArtifactZip $zipFile
+                $n = New-S3BundleNode -Json -Bucket $Bucket -Prefix $Prefix -ArtifactZip $zipFile -BundleType $bundleType
             }
             else
             {
-                $n = (New-S3BundleNode -Yaml -Bucket $Bucket -Prefix $Prefix -ArtifactZip $zipFile).MappingNode
+                $n = (New-S3BundleNode -Yaml -Bucket $Bucket -Prefix $Prefix -ArtifactZip $zipFile -BundleType $bundleType).MappingNode
             }
 
             $artifactDetail = New-Object PSObject -Property @{
@@ -78,11 +95,11 @@ function Write-Resource
         {
             if ($Json)
             {
-                $v = New-S3BundleNode -Json -Bucket $Bucket -Prefix $Prefix -ArtifactZip $zipFile
+                $v = New-S3BundleNode -Json -Bucket $Bucket -Prefix $Prefix -ArtifactZip $zipFile -BundleType $bundleType
             }
             else
             {
-                $v = (New-S3BundleNode -Yaml -Bucket $Bucket -Prefix $Prefix -ArtifactZip $zipFile).MappingNode
+                $v = (New-S3BundleNode -Yaml -Bucket $Bucket -Prefix $Prefix -ArtifactZip $zipFile -BundleType $bundleType).MappingNode
             }
         }
         else
