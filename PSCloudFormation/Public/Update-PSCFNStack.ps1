@@ -133,7 +133,7 @@ function Update-PSCFNStack
         [string]$TemplateLocation,
 
         [ValidateSet('CAPABILITY_IAM', 'CAPABILITY_NAMED_IAM', 'CAPABILITY_AUTO_EXPAND')]
-        [string]$Capabilities,
+        [string[]]$Capabilities,
 
         [string[]]$NotificationARNs,
 
