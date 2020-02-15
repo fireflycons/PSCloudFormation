@@ -326,10 +326,10 @@ function New-PSCFNPackage
                             $propName = $_
                             $propObject = Get-ResourcePropertyNode -YamlProperties $propertiesNode -PropertyName $propName
 
-                            Assert-True { $propObject.MappingNode -is [YamlDotNet.RepresentationModel.YamlMappingNode] }
-
                             if ($null -ne $propObject)
                             {
+                                Assert-True { $propObject.MappingNode -is [YamlDotNet.RepresentationModel.YamlMappingNode] }
+
                                 $propObject = $propObject.MappingNode
                                 $k = New-Object YamlDotNet.RepresentationModel.YamlScalarNode(($propName -split '\.') | Select-Object -Last 1)
                                 $v = $propObject.Children[$k].value
