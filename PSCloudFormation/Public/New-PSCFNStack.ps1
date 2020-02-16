@@ -34,6 +34,7 @@ function New-PSCFNStack
         - Path to a local file
         - s3:// URL pointing to template in a bucket
         - https:// URL pointing to template in a bucket
+        This cmdlet can accept pipeline input from New-PSCFNPackage, however there are caveats! See notes section.
 
     .PARAMETER Capabilities
         If the stack requires IAM capabilities, TAB auctocompletes between the capability types.
@@ -92,15 +93,19 @@ function New-PSCFNStack
         If set, wait for stack creation to complete before returning. Stack status is returned, unless -PassThru is also set
 
     .INPUTS
-        System.String
-            You can pipe the new stack name to this function
+        [System.String], [PSCloudFomation.Packager.Package]
+            You can pipe the CloudFormation Template to this command (see Notes).
 
     .OUTPUTS
         [System.String] - ARN of the new stack
         [Amazon.CloudFormation.StackStatus] - Status of last operation.
 
     .NOTES
-        This cmdlet genenerates additional dynamic command line parameters for all parameters found in the Parameters block of the supplied CloudFormation template
+        This cmdlet genenerates additional dynamic command line parameters for all parameters found in the Parameters block of the supplied CloudFormation template,
+        except for when the template is supplied via the pipeline e.g. from New-PSCFNPackage. Due to the complexities of pipleine processing, it is not possible to
+        determine the template details when composing the command. If you need to pass new values for parameters to the stack, then use a parameter file.
+
+        See also https://github.com/fireflycons/PSCloudFormation/blob/master/static/resource-import.md
 
     .EXAMPLE
 
@@ -126,15 +131,15 @@ function New-PSCFNStack
     [CmdletBinding()]
     param
     (
-        [Parameter(Mandatory = $true, ValueFromPipeline = $true)]
+        [Parameter(Mandatory = $true)]
         [string]$StackName,
 
-        [Parameter(Mandatory = $true)]
-        [string]$TemplateLocation,
+        [Parameter(Mandatory = $true, ValueFromPipelineByPropertyName = $true)]
+        [string[]]$TemplateLocation,
 
-        [ValidateSet('CAPABILITY_IAM', 'CAPABILITY_NAMED_IAM')]
+        [ValidateSet('CAPABILITY_IAM', 'CAPABILITY_NAMED_IAM', 'CAPABILITY_AUTO_EXPAND')]
         [Alias('Capability')]
-        [string]$Capabilities,
+        [string[]]$Capabilities,
 
         [string]$ClientRequestToken,
 
@@ -175,9 +180,20 @@ function New-PSCFNStack
     DynamicParam
     {
         #Create the RuntimeDefinedParameterDictionary
-        New-Object System.Management.Automation.RuntimeDefinedParameterDictionary |
-            New-CredentialDynamicParameters |
-            New-TemplateDynamicParameters -TemplateLocation $TemplateLocation -EnforceMandatory -ParameterFile $ParameterFile
+        $runtimeDefinedParameterDictionary = New-Object System.Management.Automation.RuntimeDefinedParameterDictionary | New-CredentialDynamicParameters
+
+        $preparedStackParameters = $false
+
+        if ($TemplateLocation)
+        {
+            # If we know the template location, we can build dynamic parameters for it
+            # If the template location is piped in from e.g. New-PSCFNPackage, then we don't know it yet
+            $runtimeDefinedParameterDictionary = $runtimeDefinedParameterDictionary | New-TemplateDynamicParameters -StackName $StackName -TemplateLocation ($TemplateLocation | Select-Object -First 1)
+            $preparedStackParameters = $true
+        }
+
+        # Emit dynamic parameters
+        $runtimeDefinedParameterDictionary
     }
 
     begin
@@ -210,6 +226,21 @@ function New-PSCFNStack
         }
 
         $disableRollbackSet = ($PSBoundParameters.Keys -icontains 'DisableRollback' -and $DisableRollback)
+        $processIterations = 0
+    }
+
+    process
+    {
+        if (++$processIterations -gt 1)
+        {
+            # Kludgy, but necessary as we have to have a process block to pipe in the template location
+            throw "Cannot process more than one template for a stack"
+        }
+
+        if (-not $preparedStackParameters)
+        {
+            $runtimeDefinedParameterDictionary = $runtimeDefinedParameterDictionary | New-TemplateDynamicParameters -StackName $StackName -TemplateLocation ($TemplateLocation | Select-Object -First 1)
+        }
     }
 
     end
@@ -221,7 +252,7 @@ function New-PSCFNStack
                 throw "Stack already exists: $StackName"
             }
 
-            $stackArgs = New-StackOperationArguments -StackName $StackName -TemplateLocation $TemplateLocation -Capabilities $Capabilities -StackParameters $stackParameters -CredentialArguments $credentialArguments
+            $stackArgs = New-StackOperationArguments -StackName $StackName -TemplateLocation ($TemplateLocation | Select-Object -First 1) -Capabilities $Capabilities -StackParameters $stackParameters -CredentialArguments $credentialArguments
 
             # Issue #14 - Get-CFNStackEvents returns timestamp in local time
             $startTime = [DateTime]::Now

@@ -11,6 +11,7 @@ Select-Object -ExpandProperty Location
 
 @(
     'PSCloudFormation.Exceptions.CloudFormationException.cs'
+    'PSCloudFormation.Packager.Package.cs'
 ) |
 ForEach-Object {
     $className = [IO.Path]::GetFileNameWithoutExtension($_)

@@ -37,7 +37,7 @@ function New-StackOperationArguments
 
         [string]$TemplateLocation,
 
-        [string]$Capabilities,
+        [string[]]$Capabilities,
 
         [object]$StackParameters,
 
@@ -69,9 +69,9 @@ function New-StackOperationArguments
         $stackArgs.Add('TemplateURL', $template.Url)
     }
 
-    if (-not [string]::IsNullOrEmpty($Capabilities))
+    if (($Capabilities | Measure-Object).Count -gt 0)
     {
-        $stackArgs.Add('Capabilities', @($Capabilities))
+        $stackArgs.Add('Capabilities', $Capabilities)
     }
 
     if (($stackParameters | Measure-Object).Count -gt 0)

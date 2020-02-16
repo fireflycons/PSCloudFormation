@@ -48,7 +48,7 @@ InModuleScope $ModuleName {
                 $inputFile = Join-Path $assetsDir ('lambdasimple.' + $ext)
                 $expectedOutput = Join-Path $assetsDir "lambdasimple-expected.yaml"
 
-                $template = Format-Yaml -Template (New-PSCFNPackage -TemplateFile $inputFile -S3Bucket my-bucket)
+                $template = Format-Yaml -Template (New-PSCFNPackage -TemplateFile $inputFile -S3Bucket my-bucket -Console)
 
                 It "Zipped package should exist" {
 
@@ -68,7 +68,7 @@ InModuleScope $ModuleName {
                 $inputFile = Join-Path $assetsDir ('lambdacomplex.' + $ext)
                 $expectedOutput = Join-Path $assetsDir "lambdacomplex-expected.yaml"
 
-                $template = Format-Yaml -Template (New-PSCFNPackage -TemplateFile $inputFile -S3Bucket my-bucket)
+                $template = Format-Yaml -Template (New-PSCFNPackage -TemplateFile $inputFile -S3Bucket my-bucket -Console)
 
                 It "Zipped package should exist" {
 
@@ -89,7 +89,7 @@ InModuleScope $ModuleName {
                 $inputFile = Join-Path $assetsDir ('glue.' + $ext)
                 $expectedOutput = Join-Path $assetsDir "glue-expected.yaml"
 
-                $template = Format-Yaml -Template (New-PSCFNPackage -TemplateFile $inputFile -S3Bucket my-bucket)
+                $template = Format-Yaml -Template (New-PSCFNPackage -TemplateFile $inputFile -S3Bucket my-bucket -Console)
 
 
                 It "Zipped package should exist" {
@@ -111,7 +111,7 @@ InModuleScope $ModuleName {
             It 'Should upload artifacts with metadata' {
 
                 $inputFile = Join-Path $assetsDir 'glue.yaml'
-                New-PSCFNPackage -TemplateFile $inputFile -S3Bucket my-bucket -Metadata @{ 'data1' = 'value1' } | Out-Null
+                New-PSCFNPackage -TemplateFile $inputFile -S3Bucket my-bucket -Metadata @{ 'data1' = 'value1' } -Console | Out-Null
 
                 $response = Get-S3ObjectMetadata -BucketName my-bucket -key glue.py
                 $response.Metadata['x-amz-meta-data1'] | Should -Be 'value1'
@@ -125,7 +125,7 @@ InModuleScope $ModuleName {
             It 'Should process multi-level neested stack' {
 
                 $inputFile = Join-Path $assetsDir 'base-stack.json'
-                $template = Format-Yaml -Template (New-PSCFNPackage -TemplateFile $inputFile -S3Bucket my-bucket)
+                $template = Format-Yaml -Template (New-PSCFNPackage -TemplateFile $inputFile -S3Bucket my-bucket -Console)
                 "TestDrive:/my-bucket/nested-1.yaml" | Should -Exist
                 "TestDrive:/my-bucket/sub-nested-2.yaml" | Should -Exist
                 "TestDrive:/my-bucket/lambdasimple.zip" | Should -Exist
@@ -140,7 +140,7 @@ InModuleScope $ModuleName {
             It 'Should process multi-level neested stack' {
 
                 $inputFile = Join-Path $assetsDir 'base-stack.json'
-                $template = Format-Yaml -Template (New-PSCFNPackage -TemplateFile $inputFile -S3Bucket my-bucket -UseJson)
+                $template = Format-Yaml -Template (New-PSCFNPackage -TemplateFile $inputFile -S3Bucket my-bucket -UseJson -Console)
                 Get-FileFormat -TemplateBody $template | Should -Be 'JSON'
                 "TestDrive:/my-bucket/nested-1.json" | Should -Exist
                 "TestDrive:/my-bucket/sub-nested-2.json" | Should -Exist

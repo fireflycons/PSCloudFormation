@@ -13,17 +13,20 @@ Creates a stack.
 ## SYNTAX
 
 ```
-New-PSCFNStack [-StackName] <String> [-TemplateLocation] <String> [[-Capabilities] <String>]
+New-PSCFNStack [-StackName] <String> [-TemplateLocation] <String[]> [[-Capabilities] <String[]>]
  [[-ClientRequestToken] <String>] [-Force] [[-DisableRollback] <Boolean>]
  [[-EnableTerminationProtection] <Boolean>] [[-NotificationARNs] <String[]>] [[-OnFailure] <OnFailure>]
  [[-ResourceType] <String[]>] [[-RoleARN] <String>] [[-RollbackConfiguration_MonitoringTimeInMinute] <Int32>]
  [[-RollbackConfiguration_RollbackTrigger] <RollbackTrigger[]>] [[-StackPolicyBody] <String>]
  [[-StackPolicyURL] <String>] [[-Tag] <Tag[]>] [[-TimeoutInMinutes] <Int32>] [[-ParameterFile] <String>]
- [-Wait] [-PassThru] [<CommonParameters>]
+ [-Wait] [-PassThru] [-ProfileName <String>] [-EndpointUrl <String>] [-AccessKey <String>]
+ [-SecretKey <String>] [-ProfileLocation <String>] [-SessionToken <String>] [-NetworkCredential <PSCredential>]
+ [-Credential <AWSCredentials>] [-Region <String>] [<CommonParameters>]
 ```
 
 ## DESCRIPTION
 Creates a stack.
+If -Wait is specified, stack events are output to the console including events from any nested stacks.
 
 DYNAMIC PARAMETERS
 
@@ -81,7 +84,7 @@ Aliases:
 Required: True
 Position: 1
 Default value: None
-Accept pipeline input: True (ByValue)
+Accept pipeline input: False
 Accept wildcard characters: False
 ```
 
@@ -91,16 +94,18 @@ This may be
 - Path to a local file
 - s3:// URL pointing to template in a bucket
 - https:// URL pointing to template in a bucket
+This cmdlet can accept pipeline input from New-PSCFNPackage, however there are caveats!
+See notes section.
 
 ```yaml
-Type: String
+Type: String[]
 Parameter Sets: (All)
 Aliases:
 
 Required: True
 Position: 2
 Default value: None
-Accept pipeline input: False
+Accept pipeline input: True (ByPropertyName)
 Accept wildcard characters: False
 ```
 
@@ -108,7 +113,7 @@ Accept wildcard characters: False
 If the stack requires IAM capabilities, TAB auctocompletes between the capability types.
 
 ```yaml
-Type: String
+Type: String[]
 Parameter Sets: (All)
 Aliases: Capability
 
@@ -364,7 +369,8 @@ Accept wildcard characters: False
 ```
 
 ### -ParameterFile
-If present, path to a JSON file containing a list of parameter structures as defined for 'aws cloudformation create-stack'. If a parameter of the same name is defined on the command line, the command line takes precedence.
+If present, path to a JSON file containing a list of parameter structures as defined for 'aws cloudformation create-stack'.
+If a parameter of the same name is defined on the command line, the command line takes precedence.
 If your stack has a parameter with the same name as one of the parameters to this cmdlet, then you *must* set the stack parameter via a parameter file.
 
 ```yaml
@@ -381,6 +387,7 @@ Accept wildcard characters: False
 
 ### -Wait
 If set, wait for stack creation to complete before returning.
+Stack status is returned, unless -PassThru is also set
 
 ```yaml
 Type: SwitchParameter
@@ -409,18 +416,167 @@ Accept pipeline input: False
 Accept wildcard characters: False
 ```
 
+### -AccessKey
+The AWS access key for the user account.
+This can be a temporary access key if the corresponding session token is supplied to the -SessionToken parameter.
+
+```yaml
+Type: String
+Parameter Sets: (All)
+Aliases:
+
+Required: False
+Position: Named
+Default value: None
+Accept pipeline input: False
+Accept wildcard characters: False
+```
+
+### -Credential
+An AWSCredentials object instance containing access and secret key information, and optionally a token for session-based credentials.
+
+```yaml
+Type: AWSCredentials
+Parameter Sets: (All)
+Aliases:
+
+Required: False
+Position: Named
+Default value: None
+Accept pipeline input: False
+Accept wildcard characters: False
+```
+
+### -EndpointUrl
+The endpoint to make the call against.
+
+```yaml
+Type: String
+Parameter Sets: (All)
+Aliases:
+
+Required: False
+Position: Named
+Default value: None
+Accept pipeline input: False
+Accept wildcard characters: False
+```
+
+### -NetworkCredential
+'Used with SAML-based authentication when ProfileName references a SAML role profile.
+Contains the network credentials to be supplied during authentication with the configured identity provider's endpoint.
+This parameter is not required if the user's default network identity can or should be used during authentication.
+
+```yaml
+Type: PSCredential
+Parameter Sets: (All)
+Aliases:
+
+Required: False
+Position: Named
+Default value: None
+Accept pipeline input: False
+Accept wildcard characters: False
+```
+
+### -ProfileLocation
+Used to specify the name and location of the ini-format credential file (shared with the AWS CLI and other AWS SDKs)
+
+```yaml
+Type: String
+Parameter Sets: (All)
+Aliases:
+
+Required: False
+Position: Named
+Default value: None
+Accept pipeline input: False
+Accept wildcard characters: False
+```
+
+### -ProfileName
+The user-defined name of an AWS credentials or SAML-based role profile containing credential information.
+The profile is expected to be found in the secure credential file shared with the AWS SDK for .NET and AWS Toolkit for Visual Studio.
+You can also specify the name of a profile stored in the .ini-format credential file used with the AWS CLI and other AWS SDKs.
+
+```yaml
+Type: String
+Parameter Sets: (All)
+Aliases:
+
+Required: False
+Position: Named
+Default value: None
+Accept pipeline input: False
+Accept wildcard characters: False
+```
+
+### -Region
+The system name of the AWS region in which the operation should be invoked.
+For example, us-east-1, eu-west-1 etc.
+
+```yaml
+Type: String
+Parameter Sets: (All)
+Aliases:
+
+Required: False
+Position: Named
+Default value: None
+Accept pipeline input: False
+Accept wildcard characters: False
+```
+
+### -SecretKey
+The AWS secret key for the user account.
+This can be a temporary secret key if the corresponding session token is supplied to the -SessionToken parameter.
+
+```yaml
+Type: String
+Parameter Sets: (All)
+Aliases:
+
+Required: False
+Position: Named
+Default value: None
+Accept pipeline input: False
+Accept wildcard characters: False
+```
+
+### -SessionToken
+The session token if the access and secret keys are temporary session-based credentials.
+
+```yaml
+Type: String
+Parameter Sets: (All)
+Aliases:
+
+Required: False
+Position: Named
+Default value: None
+Accept pipeline input: False
+Accept wildcard characters: False
+```
+
 ### CommonParameters
-This cmdlet supports the common parameters: -Debug, -ErrorAction, -ErrorVariable, -InformationAction, -InformationVariable, -OutVariable, -OutBuffer, -PipelineVariable, -Verbose, -WarningAction, and -WarningVariable. For more information, see about_CommonParameters (http://go.microsoft.com/fwlink/?LinkID=113216).
+This cmdlet supports the common parameters: -Debug, -ErrorAction, -ErrorVariable, -InformationAction, -InformationVariable, -OutVariable, -OutBuffer, -PipelineVariable, -Verbose, -WarningAction, and -WarningVariable. For more information, see [about_CommonParameters](http://go.microsoft.com/fwlink/?LinkID=113216).
 
 ## INPUTS
 
-### System.String
-### You can pipe the new stack name to this function
+### [System.String], [PSCloudFomation.Packager.Package]
+### You can pipe the CloudFormation Template to this command (see Notes).
 ## OUTPUTS
 
-### System.String
-### ARN of the new stack
+### [System.String] - ARN of the new stack
+### [Amazon.CloudFormation.StackStatus] - Status of last operation.
 ## NOTES
-This cmdlet genenerates additional dynamic command line parameters for all parameters found in the Parameters block of the supplied CloudFormation template
+This cmdlet genenerates additional dynamic command line parameters for all parameters found in the Parameters block of the supplied CloudFormation template,
+except for when the template is supplied via the pipeline e.g.
+from New-PSCFNPackage.
+Due to the complexities of pipleine processing, it is not possible to
+determine the template details when composing the command.
+If you need to pass new values for parameters to the stack, then use a parameter file.
+
+See also https://github.com/fireflycons/PSCloudFormation/blob/master/static/resource-import.md
 
 ## RELATED LINKS
