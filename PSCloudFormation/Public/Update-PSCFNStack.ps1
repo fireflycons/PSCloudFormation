@@ -395,5 +395,15 @@ function Update-PSCFNStack
             Write-Host
             throw
         }
+        finally
+        {
+            # Clean up any temporary file piped from New-PSCFNPackage
+            $template = $TemplateLocation | Select-Object -First 1
+
+            if (Test-IsPackageTempFile -TemplateFile $template)
+            {
+                Remove-Item $template
+            }
+        }
     }
 }

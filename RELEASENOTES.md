@@ -1,5 +1,9 @@
 # Release Notes
 
+## 2.2.1
+
+* Automatically remove temporary template files created by `New-PSCFNPackage` when piped to stack modification cmdlets
+
 ## 2.2.0
 
 * Add support for SAM templates - basically by adding support for CAPABILITY_AUTO_EXPAND.

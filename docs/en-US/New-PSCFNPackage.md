@@ -44,6 +44,9 @@ The command returns a copy of your template, replacing references to local artif
 Use this command to quickly upload local artifacts that might be required by your template.
 After you package your template's artifacts, run one of the *-PSCFNStack cmdlets to deploy the returned template.
 
+You can also pipe this command directly to New-PSCFNStack, Update-PSCFNStack and Delete-PSCFNStack, however due to the complexities of pipeline handling, any stack
+parameters need to be passed using a parameter file.
+
 ## EXAMPLES
 
 ### EXAMPLE 1
