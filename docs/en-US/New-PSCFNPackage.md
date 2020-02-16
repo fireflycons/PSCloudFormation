@@ -12,12 +12,29 @@ Create a deployment package a-la aws cloudformation package
 
 ## SYNTAX
 
+### File (Default)
 ```
-New-PSCFNPackage [-TemplateFile] <String> [-S3Bucket] <String> [[-S3Prefix] <String>] [[-KmsKeyId] <String>]
- [[-OutputTemplateFile] <String>] [-UseJson] [-ForceUpload] [[-Metadata] <Hashtable>] [-ProfileName <String>]
+New-PSCFNPackage -TemplateFile <String> -S3Bucket <String> [-S3Prefix <String>] [-KmsKeyId <String>]
+ -OutputTemplateFile <String> [-UseJson] [-ForceUpload] [-Metadata <Hashtable>] [-ProfileName <String>]
  [-EndpointUrl <String>] [-AccessKey <String>] [-SecretKey <String>] [-ProfileLocation <String>]
  [-SessionToken <String>] [-NetworkCredential <PSCredential>] [-Credential <AWSCredentials>] [-Region <String>]
  [<CommonParameters>]
+```
+
+### PassThru
+```
+New-PSCFNPackage -TemplateFile <String> -S3Bucket <String> [-S3Prefix <String>] [-KmsKeyId <String>] [-UseJson]
+ [-ForceUpload] [-Metadata <Hashtable>] [-PassThru] [-ProfileName <String>] [-EndpointUrl <String>]
+ [-AccessKey <String>] [-SecretKey <String>] [-ProfileLocation <String>] [-SessionToken <String>]
+ [-NetworkCredential <PSCredential>] [-Credential <AWSCredentials>] [-Region <String>] [<CommonParameters>]
+```
+
+### Console
+```
+New-PSCFNPackage -TemplateFile <String> -S3Bucket <String> [-S3Prefix <String>] [-KmsKeyId <String>] [-UseJson]
+ [-ForceUpload] [-Metadata <Hashtable>] [-Console] [-ProfileName <String>] [-EndpointUrl <String>]
+ [-AccessKey <String>] [-SecretKey <String>] [-ProfileLocation <String>] [-SessionToken <String>]
+ [-NetworkCredential <PSCredential>] [-Credential <AWSCredentials>] [-Region <String>] [<CommonParameters>]
 ```
 
 ## DESCRIPTION
@@ -29,12 +46,19 @@ After you package your template's artifacts, run one of the *-PSCFNStack cmdlets
 
 ## EXAMPLES
 
-### Example 1
-```powershell
-PS C:\> {{ Add example code here }}
+### EXAMPLE 1
+```
+New-PSCFNPackage -TemplateFile template.yaml -OutputTemplateFile converted-template.yaml -S3Bucket mybucket -S3Prefix mykey
 ```
 
-{{ Add example description here }}
+Upload code artifacts to specified bucket and key, and write new template to given file
+
+### EXAMPLE 2
+```
+New-PSCFNPackage -TemplateFile template.yaml -OutputTemplateFile converted-template.yaml -S3Bucket mybucket -S3Prefix mykey -PassThru | Update-PSCFNStack -StackName my-stack -Wait
+```
+
+Upload code artifacts to specified bucket and key, and use converted template to update a stack
 
 ## PARAMETERS
 
@@ -47,7 +71,7 @@ Parameter Sets: (All)
 Aliases:
 
 Required: True
-Position: 1
+Position: Named
 Default value: None
 Accept pipeline input: False
 Accept wildcard characters: False
@@ -62,7 +86,7 @@ Parameter Sets: (All)
 Aliases:
 
 Required: True
-Position: 2
+Position: Named
 Default value: None
 Accept pipeline input: False
 Accept wildcard characters: False
@@ -78,7 +102,7 @@ Parameter Sets: (All)
 Aliases:
 
 Required: False
-Position: 3
+Position: Named
 Default value: None
 Accept pipeline input: False
 Accept wildcard characters: False
@@ -93,7 +117,7 @@ Parameter Sets: (All)
 Aliases:
 
 Required: False
-Position: 4
+Position: Named
 Default value: None
 Accept pipeline input: False
 Accept wildcard characters: False
@@ -105,11 +129,11 @@ If you don't specify a path, the command writes the template to the standard out
 
 ```yaml
 Type: String
-Parameter Sets: (All)
+Parameter Sets: File
 Aliases:
 
-Required: False
-Position: 5
+Required: True
+Position: Named
 Default value: None
 Accept pipeline input: False
 Accept wildcard characters: False
@@ -160,8 +184,39 @@ Parameter Sets: (All)
 Aliases:
 
 Required: False
-Position: 6
+Position: Named
 Default value: None
+Accept pipeline input: False
+Accept wildcard characters: False
+```
+
+### -PassThru
+Emits an object pointing to the packaged template which can be piped to stack modification cmdlets in plate of their -TemplateLocation parameter.
+Note that if you need to pass parameters to the stack, then a parameter file must be used.
+
+```yaml
+Type: SwitchParameter
+Parameter Sets: PassThru
+Aliases:
+
+Required: True
+Position: Named
+Default value: False
+Accept pipeline input: False
+Accept wildcard characters: False
+```
+
+### -Console
+{{ Fill Console Description }}
+
+```yaml
+Type: SwitchParameter
+Parameter Sets: Console
+Aliases:
+
+Required: True
+Position: Named
+Default value: False
 Accept pipeline input: False
 Accept wildcard characters: False
 ```
@@ -309,15 +364,15 @@ Accept wildcard characters: False
 ```
 
 ### CommonParameters
-This cmdlet supports the common parameters: -Debug, -ErrorAction, -ErrorVariable, -InformationAction, -InformationVariable, -OutVariable, -OutBuffer, -PipelineVariable, -Verbose, -WarningAction, and -WarningVariable. For more information, see about_CommonParameters (http://go.microsoft.com/fwlink/?LinkID=113216).
+This cmdlet supports the common parameters: -Debug, -ErrorAction, -ErrorVariable, -InformationAction, -InformationVariable, -OutVariable, -OutBuffer, -PipelineVariable, -Verbose, -WarningAction, and -WarningVariable. For more information, see [about_CommonParameters](http://go.microsoft.com/fwlink/?LinkID=113216).
 
 ## INPUTS
 
 ### None
 ## OUTPUTS
 
-### [string]
-### If -OutputTemplateFile is not provided, then the output is the converted template.
+### [string] If -OutputTemplateFile is not provided, then the output is the converted template.
+### [PSCloudFomation.Packager.Package] If -PassThru is used.
 ## NOTES
 https://github.com/aws/aws-extensions-for-dotnet-cli/blob/master/src/Amazon.Lambda.Tools/LambdaUtilities.cs
 

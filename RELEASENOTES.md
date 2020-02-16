@@ -1,5 +1,11 @@
 # Release Notes
 
+## 2.2.0
+
+* Add support for SAM templates - basically by adding support for CAPABILITY_AUTO_EXPAND.
+* Fix a bug in `New-PSCFNPackage` where CodeUri entity incorrectly defined for `AWS::Serverless::Function`
+* Enhance `New-PSCFNPackage` so that a packaged template may be piped directly to the stack modification cmdlets (with caveats - see notes on each cmdlet).
+
 ## 2.1.0
 
 * Fix a pipeline leak in the code that waits for and reports progress causing failure detection to break
