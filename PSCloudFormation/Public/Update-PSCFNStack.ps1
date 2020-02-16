@@ -33,7 +33,7 @@ function Update-PSCFNStack
         - Path to a local file
         - s3:// URL pointing to template in a bucket
         - https:// URL pointing to template in a bucket
-        Conditional: You must specify only TemplateLocationL, or set the UsePreviousTemplate to true.
+        This cmdlet can accept pipeline input from New-PSCFNPackage, however there are caveats! See notes section.
 
     .PARAMETER Capabilities
         If the stack requires IAM capabilities, TAB auctocompletes between the capability types.
@@ -78,12 +78,12 @@ function Update-PSCFNStack
         If set, do not ask for confirmation of the changeset before proceeding.
 
     .INPUTS
-        System.String
-            You can pipe the stack name or ARN to this function
+        [System.String], [PSCloudFomation.Packager.Package]
+            You can pipe the CloudFormation Template to this command (see Notes).
 
     .OUTPUTS
-        System.String
-            ARN of the stack
+        [System.String] - ARN of the new stack
+        [Amazon.CloudFormation.StackStatus] - Status of last operation.
 
     .EXAMPLE
 
@@ -119,7 +119,9 @@ function Update-PSCFNStack
         As per the first example, but it begins the update without you being asked to confirm the change
 
     .NOTES
-        This cmdlet genenerates additional dynamic command line parameters for all parameters found in the Parameters block of the supplied CloudFormation template
+        This cmdlet genenerates additional dynamic command line parameters for all parameters found in the Parameters block of the supplied CloudFormation template,
+        except for when the template is supplied via the pipeline e.g. from New-PSCFNPackage. Due to the complexities of pipleine processing, it is not possible to
+        determine the template details when composing the command. If you need to pass new values for parameters to the stack, then use a parameter file.
 
         See also https://github.com/fireflycons/PSCloudFormation/blob/master/static/resource-import.md
     #>
@@ -127,10 +129,11 @@ function Update-PSCFNStack
     [CmdletBinding()]
     param
     (
-        [Parameter(Mandatory = $true, ValueFromPipeline = $true, ValueFromPipelineByPropertyName = $true, Position = 0)]
+        [Parameter(Mandatory = $true, Position = 0)]
         [string]$StackName,
 
-        [string]$TemplateLocation,
+        [Parameter(ValueFromPipelineByPropertyName = $true, ParameterSetName = 'NewTemplate')]
+        [string[]]$TemplateLocation,
 
         [ValidateSet('CAPABILITY_IAM', 'CAPABILITY_NAMED_IAM', 'CAPABILITY_AUTO_EXPAND')]
         [string[]]$Capabilities,
@@ -146,6 +149,7 @@ function Update-PSCFNStack
         [Alias('Tags')]
         [Amazon.CloudFormation.Model.Tag[]]$Tag,
 
+        [Parameter(ParameterSetName = 'PreviousTemplate')]
         [switch]$UsePreviousTemplate,
 
         [string]$ParameterFile,
@@ -176,14 +180,22 @@ function Update-PSCFNStack
             }
             else
             {
-                $templateArguments.Add($_.Key, $_.Value)
+                $templateArguments.Add($_.Key, ($_.Value | Select-Object -First 1))
             }
         }
 
         # Create the RuntimeDefinedParameterDictionary, storing in a variable for use later on
-        $runtimeDefinedParameterDictionary = New-Object System.Management.Automation.RuntimeDefinedParameterDictionary |
-        New-CredentialDynamicParameters |
-        New-TemplateDynamicParameters @templateArguments
+        $runtimeDefinedParameterDictionary = New-Object System.Management.Automation.RuntimeDefinedParameterDictionary | New-CredentialDynamicParameters
+
+        $preparedStackParameters = $false
+
+        if ($TemplateLocation -or $UsePreviousTemplate)
+        {
+            # If we know the template location, we can build dynamic parameters for it
+            # If the template location is piped in from e.g. New-PSCFNPackage, then we don't know it yet
+            $runtimeDefinedParameterDictionary = $runtimeDefinedParameterDictionary | New-TemplateDynamicParameters @templateArguments
+            $preparedStackParameters = $true
+        }
 
         # Emit dynamic parameters
         $runtimeDefinedParameterDictionary
@@ -191,6 +203,8 @@ function Update-PSCFNStack
 
     begin
     {
+        $processIterations = 0
+
         $stackParameters = Get-CommandLineStackParameters -CallerBoundParameters $PSBoundParameters
         $credentialArguments = Get-CommonCredentialParameters -CallerBoundParameters $PSBoundParameters
         $changeSetPassOnArguments = @{ }
@@ -209,6 +223,20 @@ function Update-PSCFNStack
             $changeSetPassOnArguments.Add($_, $PSBoundParameters[$_])
         }
 
+    }
+
+    process
+    {
+        if (++$processIterations -gt 1)
+        {
+            # Kludgy, but necessary as we have to have a process block to pipe in the template location
+            throw "Cannot process more than one template for a stack"
+        }
+
+        if (-not $preparedStackParameters)
+        {
+            $runtimeDefinedParameterDictionary = $runtimeDefinedParameterDictionary | New-TemplateDynamicParameters -StackName $StackName -TemplateLocation ($TemplateLocation | Select-Object -First 1)
+        }
     }
 
     end
@@ -275,7 +303,7 @@ function Update-PSCFNStack
 
             Write-Host "`nCreating change set $changesetName for $StackName"
 
-            $stackArgs = New-StackOperationArguments -StackName $StackName -TemplateLocation $TemplateLocation -Capabilities $Capabilities -StackParameters $stackParameters -CredentialArguments $credentialArguments -UsePreviousTemplate ([bool]$UsePreviousTemplate)
+            $stackArgs = New-StackOperationArguments -StackName $StackName -TemplateLocation ($TemplateLocation | Select-Object -First 1) -Capabilities $Capabilities -StackParameters $stackParameters -CredentialArguments $credentialArguments -UsePreviousTemplate ([bool]$UsePreviousTemplate)
             $csArn = New-CFNChangeSet -ChangeSetName $changesetName @stackArgs @credentialArguments @changeSetPassOnArguments @resourcesToImportArguments
             $cs = Get-CFNChangeSet -ChangeSetName $csArn @credentialArguments
 

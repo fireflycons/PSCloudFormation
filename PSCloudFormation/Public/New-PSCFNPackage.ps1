@@ -34,6 +34,10 @@ function New-PSCFNPackage
     .PARAMETER Metadata
         A map of metadata to attach to ALL the artifacts that are referenced in your template.
 
+    .PARAMETER PassThru
+        Emits an object pointing to the packaged template which can be piped to stack modification cmdlets in plate of their -TemplateLocation parameter.
+        Note that if you need to pass parameters to the stack, then a parameter file must be used.
+
     .NOTES
         https://github.com/aws/aws-extensions-for-dotnet-cli/blob/master/src/Amazon.Lambda.Tools/LambdaUtilities.cs
 
@@ -41,10 +45,24 @@ function New-PSCFNPackage
         None
 
     .OUTPUTS
-        [string]
-        If -OutputTemplateFile is not provided, then the output is the converted template.
+        [string] If -OutputTemplateFile is not provided, then the output is the converted template.
+        [PSCloudFomation.Packager.Package] If -PassThru is used.
+
+    .EXAMPLE
+
+        New-PSCFNPackage -TemplateFile template.yaml -OutputTemplateFile converted-template.yaml -S3Bucket mybucket -S3Prefix mykey
+
+        Upload code artifacts to specified bucket and key, and write new template to given file
+
+    .EXAMPLE
+
+        New-PSCFNPackage -TemplateFile template.yaml -OutputTemplateFile converted-template.yaml -S3Bucket mybucket -S3Prefix mykey -PassThru | Update-PSCFNStack -StackName my-stack -Wait
+
+        Upload code artifacts to specified bucket and key, and use converted template to update a stack
+
+
 #>
-    [CmdletBinding()]
+    [CmdletBinding(DefaultParameterSetName = 'File')]
     param
     (
         [Parameter(Mandatory)]
@@ -58,13 +76,20 @@ function New-PSCFNPackage
 
         [string]$KmsKeyId,
 
+        [Parameter(ParameterSetName = 'File', Mandatory)]
         [string]$OutputTemplateFile,
 
         [Switch]$UseJson,
 
         [switch]$ForceUpload,
 
-        [hashtable]$Metadata
+        [hashtable]$Metadata,
+
+        [Parameter(ParameterSetName = 'PassThru', Mandatory)]
+        [switch]$PassThru,
+
+        [Parameter(ParameterSetName = 'Console', Mandatory)]
+        [switch]$Console
     )
 
     DynamicParam
@@ -76,6 +101,11 @@ function New-PSCFNPackage
 
     begin
     {
+        if ($PassThru)
+        {
+            $OutputTemplateFile = Join-Path ([IO.Path]::GetTempPath()) "pscloudformation-$([Guid]::NewGuid()).tmp"
+        }
+
         function Assert-True
         {
             param
@@ -372,6 +402,11 @@ function New-PSCFNPackage
                         if ($haveOutputFile)
                         {
                             $renderedTemplate | Out-FileWithoutBOM -FilePath $OutputTemplateFile
+
+                            if ($PassThru)
+                            {
+                                New-Object PSCloudFormation.Packager.Package -Property @{ TemplateLocation = $OutputTemplateFile }
+                            }
                         }
                         else
                         {

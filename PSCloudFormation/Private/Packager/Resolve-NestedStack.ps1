@@ -49,7 +49,7 @@ function Resolve-NestedStack
 
     $CallerBoundParameters.Keys |
     Where-Object {
-        ('OutputTemplateFile', 'TemplateFile') -inotcontains $_
+        ('OutputTemplateFile', 'TemplateFile', 'Console') -inotcontains $_
     } |
     ForEach-Object {
         $argumentHash.Add($_, $CallerBoundParameters[$_])
