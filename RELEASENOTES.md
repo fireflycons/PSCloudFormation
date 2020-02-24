@@ -1,5 +1,9 @@
 # Release Notes
 
+## 2.2.2
+
+* Fix bug in nested stack packaging introduced by change in arguments to `New-PSCFNPackage`
+
 ## 2.2.1
 
 * Automatically remove temporary template files created by `New-PSCFNPackage` when piped to stack modification cmdlets

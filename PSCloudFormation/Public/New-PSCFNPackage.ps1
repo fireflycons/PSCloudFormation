@@ -215,6 +215,16 @@ function New-PSCFNPackage
             $tempFolder = Join-Path ([IO.Path]::GetTempPath()) ([Guid]::NewGuid().ToString())
             New-Item -Path $tempFolder -ItemType Directory | Out-Null
 
+            # Remove any passthru from input parameters
+            $nestedStackArguments = @{}
+            $PSBoundParameters.Keys |
+            Where-Object {
+                $_ -ine 'PassThru'
+            } |
+            Foreach-Object {
+                $nestedStackArguments.Add($_, $PSBoundParameters[$_])
+            }
+
             # Get absolute path to template.
             $TemplateFile = (Resolve-Path -Path $TemplateFile).Path
 
@@ -259,7 +269,7 @@ function New-PSCFNPackage
                                     if ($resource.Type -eq 'AWS::Cloudformation::Stack')
                                     {
                                         # Recurse nested stack.
-                                        $referencedFileSystemObject = Resolve-NestedStack -TempFolder $tempFolder -TemplateFile $referencedFileSystemObject -CallerBoundParameters $PSBoundParameters
+                                        $referencedFileSystemObject = Resolve-NestedStack -TempFolder $tempFolder -TemplateFile $referencedFileSystemObject -CallerBoundParameters $nestedStackArguments
                                     }
 
                                     $node = Write-Resource -TempFolder $tempFolder -Json -Payload $referencedFileSystemObject -ResourceType $resource.Type -Bucket $S3Bucket -Prefix $S3Prefix -Force:$ForceUpload -CredentialArguments $credentialParameters -Metadata $Metadata
@@ -374,7 +384,7 @@ function New-PSCFNPackage
                                     if ($type -eq 'AWS::Cloudformation::Stack')
                                     {
                                         # Recurse nested stack.
-                                        $referencedFileSystemObject  = Resolve-NestedStack -TempFolder $tempFolder -TemplateFile $referencedFileSystemObject -CallerBoundParameters $PSBoundParameters
+                                        $referencedFileSystemObject  = Resolve-NestedStack -TempFolder $tempFolder -TemplateFile $referencedFileSystemObject -CallerBoundParameters $nestedStackArguments
                                     }
 
                                     $node = Write-Resource -TempFolder $tempFolder -Yaml -Payload $referencedFileSystemObject -ResourceType $type -Bucket $S3Bucket -Prefix $S3Prefix -Force:$ForceUpload -CredentialArguments $credentialParameters -Metadata $Metadata
