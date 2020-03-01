@@ -1,20 +1,5 @@
 #Requires -Version 5
 
-#if ($PSVersionTable.PSEdition -ieq 'Core')
-#{
-#    if (-not (Get-Module -Name AWSPowerShell.NetCore))
-#    {
-#        Import-Module AWSPowerShell.NetCore
-#    }
-#}
-#else
-#{
-#    if (-not (Get-Module -Name AWSPowerShell))
-#    {
-#        Import-Module AWSPowerShell
-#    }
-#}
-
 $thisFile = $MyInvocation.MyCommand.Path
 
 Describe 'MockS3' {

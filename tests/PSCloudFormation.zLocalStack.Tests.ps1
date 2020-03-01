@@ -7,16 +7,6 @@
     - Doesn't handle the stack changeset API so we can't run update tests
 
 #>
-#$ModuleName = $(
-#    if ($PSVersionTable.PSEdition -ieq 'Core')
-#    {
-#        'PSCloudFormation.netcore'
-#    }
-#    else
-#    {
-#        'PSCloudFormation'
-#    }
-#)
 
 $ModuleName = 'PSCloudFormation'
 

@@ -16,19 +16,6 @@ install:
 test_script:
   - ps: . ./build.ps1 -Task BuildAppVeyor
 
-#for:
-#-
-#  matrix:
-#    only:
-#      - image: Ubuntu
-#
-#  before_test:
-#    # Run up localstack in docker
-#    - ps: ./launch-localstack.ps1
-#    # Set up for .net core build - Generate a manifest for Core from orignal manifest then rename module directory to fool BuildHelpers.
-#    - ps: ./New-NetCoreManifest.ps1
-#    - mv ./PSCloudFormation ./PSCloudFormation.netcore
-
 # Skip on updates to the readme.
 # We can force this by adding [skip ci] or [ci skip] anywhere in commit message
 skip_commits:
