@@ -22,7 +22,7 @@ skip_commits:
   message: /NO_CI.*|updated readme.*|update readme.*s/
 
 matrix:
-  - fast_finish: true
+  fast_finish: true
 
 # No 'build' phase per-se
 build: false
