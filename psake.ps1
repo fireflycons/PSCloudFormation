@@ -47,11 +47,6 @@ Task Init {
     Get-Item ENV:BH*
     "`n"
 
-    if ($script:IsLinux)
-    {
-        throw "Test fast_finish"
-    }
-
     if ($script:IsWindows)
     {
         "Checking for NuGet"
