@@ -28,14 +28,29 @@
         Version        = '0.14.0'
         Tags           = 'Desktop'
     }
-    'AWSPowerShell'         = @{
+    'AWS.Tools.Common'         = @{
         DependencyType = 'PSGalleryModule'
-        Version        = '4.0.1.1'
-        Tags           = 'Desktop'
+        Version        = '4.0.4.0'
+        Tags           = @('Desktop', 'Core')
     }
-    'AWSPowerShell.netcore' = @{
+    'AWS.Tools.SecurityToken'         = @{
         DependencyType = 'PSGalleryModule'
-        Version        = '4.0.1.1'
-        Tags           = 'Core'
+        Version        = '4.0.4.0'
+        Tags           = @('Desktop', 'Core')
+    }
+    'AWS.Tools.CloudFormation'         = @{
+        DependencyType = 'PSGalleryModule'
+        Version        = '4.0.4.0'
+        Tags           = @('Desktop', 'Core')
+    }
+    'AWS.Tools.EC2'         = @{
+        DependencyType = 'PSGalleryModule'
+        Version        = '4.0.4.0'
+        Tags           = @('Desktop', 'Core')
+    }
+    'AWS.Tools.S3'         = @{
+        DependencyType = 'PSGalleryModule'
+        Version        = '4.0.4.0'
+        Tags           = @('Desktop', 'Core')
     }
 }

@@ -12,7 +12,7 @@
     RootModule        = 'PSCloudFormation.psm1'
 
     # Version number of this module.
-    ModuleVersion     = '2.2.2'
+    ModuleVersion     = '3.0.0'
 
     # Supported PSEditions
     # CompatiblePSEditions = @()
@@ -27,13 +27,23 @@
     CompanyName       = 'Firefly Consulting Ltd.'
 
     # Copyright statement for this module
-    Copyright         = '(c) 2018 Alistair Mackay. All rights reserved.'
+    Copyright         = '(c) 2018-2020 Alistair Mackay. All rights reserved.'
 
     # Description of the functionality provided by this module
-    Description       = 'Wrapper for CloudFormation Deployments'
+    Description       = @'
+PSCloudFormation greatly improves the experience of deploying AWS CloudFormation stacks from the commannd line.
+It combines the features of aws cloudformation deploy and aws cloudformation package into a small set of
+PowerShell cmdlets.
+
+Key Festures:
+- Detection of stack parameters in the template file, presenting them as parameters to the cmdlets.
+- Output of all stack events, including those from nested stacks.
+- Seamless integration of packaging process, using PowerShell pipleline to pass packaged templates to stack modification cmdlets.
+- Supports SAM and the latest CloudFormation enhancements such as resource import.
+'@
 
     # Minimum version of the Windows PowerShell engine required by this module
-    PowerShellVersion = '3.0'
+    PowerShellVersion = '5.1'
 
     # Name of the Windows PowerShell host required by this module
     # PowerShellHostName = ''
@@ -51,7 +61,7 @@
     # ProcessorArchitecture = ''
 
     # Modules that must be imported into the global environment prior to importing this module
-    RequiredModules   = @('AWSPowerShell')
+    RequiredModules   = @('AWS.Tools.Common', 'AWS.Tools.CloudFormation', 'AWS.Tools.EC2', 'AWS.Tools.S3', 'AWS.Tools.SecurityToken')
 
     # Assemblies that must be loaded prior to importing this module
     # RequiredAssemblies = @()
@@ -98,7 +108,7 @@
             Tags                       = @('AWS', 'CloudFormation')
 
             # Required modules not included as part of this one
-            ExternalModuleDependencies = @('AWSPowerShell')
+            ExternalModuleDependencies = @('AWS.Tools.Common', 'AWS.Tools.CloudFormation', 'AWS.Tools.EC2', 'AWS.Tools.S3', 'AWS.Tools.SecurityToken')
 
             # A URL to the license for this module.
             LicenseUri                 = 'https://github.com/fireflycons/PSCloudFormation/blob/master/LICENSE'

@@ -1,13 +1,4 @@
-$ModuleName = $(
-    if ($PSVersionTable.PSEdition -ieq 'Core')
-    {
-        'PSCloudFormation.netcore'
-    }
-    else
-    {
-        'PSCloudFormation'
-    }
-)
+$ModuleName = 'PSCloudFormation'
 
 # http://www.lazywinadmin.com/2016/05/using-pester-to-test-your-manifest-file.html
 # Make sure one or multiple versions of the module are not loaded
