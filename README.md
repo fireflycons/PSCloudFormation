@@ -5,25 +5,20 @@
 
 Now supports the new [Resource Import feature](https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/resource-import.html)!
 
-Note that this feature only works with AWSPowerShell 4.0.1.0 or greater. An exception will be thrown if your installed version is insufficient.
-
 See also [PSCloudFormation Resource Import](./static/resource-import.md) documentation.
 
 ## How to Install
 
 The module is published on the PowerShell Gallery and can be installed by following the instructions there.
 
-### Windows PowerShell
+Up until now, there were two versions of this module published, one for Windows PowerShell and another for PowerShell Core for Linux/Mac. From now on, there is only the one module which works on all platforms.
+
+The module is now built on the modular [AWS.Tools](https://github.com/aws/aws-tools-for-powershell/issues/67), so if upgrading from an earlier version you should remove `AWSPowerShell` and install `AWS.Tools`
+
+### PowerShell (all platforms)
 ![PowerShell Gallery](https://img.shields.io/powershellgallery/v/PSCloudFormation)
 
 https://www.powershellgallery.com/packages/PSCloudFormation
-
-
-### PowerShell Core (Linux)
-![PowerShell Gallery](https://img.shields.io/powershellgallery/v/PSCloudFormation.netcore)
-
-https://www.powershellgallery.com/packages/PSCloudFormation.netcore
-
 
 ## What it isn't
 
