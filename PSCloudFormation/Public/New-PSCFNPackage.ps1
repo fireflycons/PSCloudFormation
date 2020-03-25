@@ -204,6 +204,10 @@ function New-PSCFNPackage
                 Type       = 'AWS::Glue::Job'
                 Properties = @('Command.ScriptLocation')
             }
+            New-Object PSObject -Property @{
+                Type       = 'AWS::Lambda::LayerVersion'
+                Properties = @('Content')
+            }
         )
     }
 

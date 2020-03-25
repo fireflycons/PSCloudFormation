@@ -83,6 +83,27 @@ InModuleScope $ModuleName {
                 }
             }
 
+            Context "Lambda Leyer ($ext)"  {
+
+                $ext = $_
+                $assetsDir = [IO.Path]::Combine($TestRoot, 'packager', 'lambda-layer')
+
+                $inputFile = Join-Path $assetsDir ('lambda-layer.' + $ext)
+                $expectedOutput = Join-Path $assetsDir "lambda-layer-expected.yaml"
+
+                $template = Format-Yaml -Template (New-PSCFNPackage -TemplateFile $inputFile -S3Bucket my-bucket -Console)
+
+                It "Zipped package should exist" {
+
+                    "TestDrive:/my-bucket/site-packages.zip" | Should -Exist
+                }
+
+                It "Processed template should have expected properties" {
+
+                   $template | Compare-Templates -ExpectedOutput $expectedOutput
+                }
+            }
+
             Context "Glue ($ext)"  {
 
                 $ext = $_

@@ -36,6 +36,7 @@ function Write-Resource
         'AWS::Lambda::Function'
         'AWS::ElasticBeanstalk::ApplicationVersion'
         'AWS::Serverless::Function'
+        'AWS::Lambda::LayerVersion'
     )
 
     $typeUsesBundle = $bundledTypes -contains $ResourceType
@@ -120,8 +121,48 @@ function Write-Resource
     # Create zip if needed in a unique temp dir to prevent overwriting anything existing
     if ($artifactDetail.Zip)
     {
+        $directoryPrefix = $null
+
+        if ($ResourceType -eq 'AWS::Lambda::LayerVersion')
+        {
+            # Guess layer language
+            # EXPERIMENTAL - We don't expect mixed languages within a dependency directory structure
+
+            $prevalentFiletype = Get-ChildItem -Path $referencedFileSystemObject -File -Recurse |
+            Group-Object -Property Extension |
+            Select-Object Count, Name |
+            Sort-Object -Descending Count |
+            Select-Object -First 1 |
+            Select-Object -ExpandProperty Name
+
+            $directoryPrefix = Invoke-Command -NoNewScope {
+                if ($prevalentFiletype -imatch '^\.py[cdi]?$')
+                {
+                    'python'
+                }
+                elseif ($prevalentFiletype -ieq '.js')
+                {
+                    'nodejs'
+                }
+                elseif ($prevalentFiletype -ieq '.jar')
+                {
+                    'java'
+                }
+                elseif ($prevalentFileType -ieq '.lib')
+                {
+                    'lib'
+                }
+                else
+                {
+                    'bin'
+                }
+            }
+
+            Write-Host "$($ResourceType): Assuming '$directoryPrefix' from content analysis of '$referencedFileSystemObject'"
+        }
+
         $fileToUpload = Join-Path $TempFolder $artifactDetail.Artifact
-        Compress-UnixZip -ZipFile $fileToUpload -Path $referencedFileSystemObject
+        Compress-UnixZip -ZipFile $fileToUpload -Path $referencedFileSystemObject -DirectoryPrefix $directoryPrefix
     }
 
     # Now write
