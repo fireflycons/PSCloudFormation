@@ -1,6 +1,6 @@
 function New-PSCFNPackage
 {
-<#
+    <#
     .SYNOPSIS
         Create a deployment package a-la aws cloudformation package
 
@@ -99,7 +99,7 @@ function New-PSCFNPackage
     {
         #Create the RuntimeDefinedParameterDictionary
         New-Object System.Management.Automation.RuntimeDefinedParameterDictionary |
-            New-CredentialDynamicParameters
+        New-CredentialDynamicParameters
     }
 
     begin
@@ -165,44 +165,48 @@ function New-PSCFNPackage
 
         $resourceTransforms = @(
             New-Object PSObject -Property @{
-                Type = 'AWS::ApiGateway::RestApi'
+                Type       = 'AWS::ApiGateway::RestApi'
                 Properties = @('BodyS3Location')
             }
             New-Object PSObject -Property @{
-                Type = 'AWS::Lambda::Function'
+                Type       = 'AWS::Lambda::Function'
                 Properties = @('Code')
             }
             New-Object PSObject -Property @{
-                Type = 'AWS::Serverless::Function'
+                Type       = 'AWS::Serverless::Function'
                 Properties = @('CodeUri')
             }
             New-Object PSObject -Property @{
-                Type = 'AWS::AppSync::GraphQLSchema'
+                Type       = 'AWS::AppSync::GraphQLSchema'
                 Properties = @('DefinitionS3Location')
             }
             New-Object PSObject -Property @{
-                Type = 'AWS::AppSync::Resolver'
+                Type       = 'AWS::AppSync::Resolver'
                 Properties = @('RequestMappingTemplateS3Location', 'ResponseMappingTemplateS3Location')
             }
             New-Object PSObject -Property @{
-                Type = 'AWS::Serverless::Api'
+                Type       = 'AWS::Serverless::Api'
                 Properties = @('DefinitionUri')
             }
             New-Object PSObject -Property @{
-                Type = 'AWS::Include'
+                Type       = 'AWS::Include'
                 Properties = @('Location')
             }
             New-Object PSObject -Property @{
-                Type = 'AWS::ElasticBeanstalk::ApplicationVersion'
+                Type       = 'AWS::ElasticBeanstalk::ApplicationVersion'
                 Properties = @('SourceBundle')
             }
             New-Object PSObject -Property @{
-                Type = 'AWS::CloudFormation::Stack'
+                Type       = 'AWS::CloudFormation::Stack'
                 Properties = @('TemplateURL')
             }
             New-Object PSObject -Property @{
-                Type = 'AWS::Glue::Job'
+                Type       = 'AWS::Glue::Job'
                 Properties = @('Command.ScriptLocation')
+            }
+            New-Object PSObject -Property @{
+                Type       = 'AWS::Lambda::LayerVersion'
+                Properties = @('Content')
             }
         )
     }
@@ -216,7 +220,7 @@ function New-PSCFNPackage
             New-Item -Path $tempFolder -ItemType Directory | Out-Null
 
             # Remove any passthru from input parameters
-            $nestedStackArguments = @{}
+            $nestedStackArguments = @{ }
             $PSBoundParameters.Keys |
             Where-Object {
                 $_ -ine 'PassThru'
@@ -384,7 +388,7 @@ function New-PSCFNPackage
                                     if ($type -eq 'AWS::Cloudformation::Stack')
                                     {
                                         # Recurse nested stack.
-                                        $referencedFileSystemObject  = Resolve-NestedStack -TempFolder $tempFolder -TemplateFile $referencedFileSystemObject -CallerBoundParameters $nestedStackArguments
+                                        $referencedFileSystemObject = Resolve-NestedStack -TempFolder $tempFolder -TemplateFile $referencedFileSystemObject -CallerBoundParameters $nestedStackArguments
                                     }
 
                                     $node = Write-Resource -TempFolder $tempFolder -Yaml -Payload $referencedFileSystemObject -ResourceType $type -Bucket $S3Bucket -Prefix $S3Prefix -Force:$ForceUpload -CredentialArguments $credentialParameters -Metadata $Metadata

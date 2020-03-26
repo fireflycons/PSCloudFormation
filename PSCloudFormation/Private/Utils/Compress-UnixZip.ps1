@@ -15,6 +15,10 @@ function Compress-UnixZip
         If this references a single file, it will be zipped.
         If this references a path, then the entire folder structure beneath the path will be zipped.
 
+    .PARAMETER DirectoryPrefix
+        If set, this becomes root directory for the entire zip content
+        Used for creating lambda layers
+
     .PARAMETER PassThru
         If set, the path passed to -ZipFile is returned
 
@@ -27,6 +31,8 @@ function Compress-UnixZip
 
         [Parameter(Mandatory=$true, Position=1)]
         [string]$Path,
+
+        [string]$DirectoryPrefix,
 
         [switch]$PassThru
     )
@@ -61,6 +67,15 @@ function Compress-UnixZip
     # as .NET objects like ZipFile will use OS path
     $osZipPath = $ExecutionContext.SessionState.Path.GetUnresolvedProviderPathFromPSPath($ZipFile)
 
+    if (-not $PSBoundParameters.ContainsKey('DirectoryPrefix') -or $null -eq $DirectoryPrefix)
+    {
+        $DirectoryPrefix = [string]::Empty
+    }
+    elseif ($DirectoryPrefix.Length -gt 0)
+    {
+        $DirectoryPrefix = $DirectoryPrefix.Trim('/', '\') + '/'
+    }
+
     try
     {
         Write-Verbose "Creating: $ZipFile"
@@ -80,6 +95,10 @@ function Compress-UnixZip
             Push-Location (Split-Path -Parent (Resolve-Path $Path).Path)
         }
 
+        $totalFiles = $filesToZip.Length
+        $processedFiles = 0
+
+        Write-Progress -Activity "Creating: $ZipFile" -CurrentOperation "Zipping $Path" -PercentComplete 0
         # Add files to zip
         $filesToZip |
         Foreach-Object {
@@ -87,7 +106,7 @@ function Compress-UnixZip
             $isFile = Test-Path -Path $fullPath -PathType Leaf
 
             # Create zip directory entry name (getting rid of ./)
-            $entryName = $fullPath.Substring(2).Replace('\', '/')
+            $entryName = $DirectoryPrefix + $fullPath.Substring(2).Replace('\', '/')
 
             # Set unix attributes: rwxrwxrwx
             if ($isFile)
@@ -126,7 +145,14 @@ function Compress-UnixZip
                 $entry.LastWriteTime = [System.DateTimeOffset]::Now
                 $entry.ExternalAttributes = (0x41ff -shl 16) -bor [int]([System.IO.FileAttributes]::Directory)
             }
+
+            if (++$processedFiles % 10 -eq 0)
+            {
+                Write-Progress -Activity "Creating: $ZipFile" -CurrentOperation "Zipping $Path" -PercentComplete ($processedFiles * 100 / $totalFiles)
+            }
         }
+
+        Write-Progress -Activity "Creating: $ZipFile" -CurrentOperation "Zipping $Path" -PercentComplete 100 -Completed
     }
     finally
     {
