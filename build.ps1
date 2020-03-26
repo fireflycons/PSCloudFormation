@@ -53,7 +53,7 @@ try
     }
 
 
-    Set-BuildEnvironment -ErrorAction SilentlyContinue
+    Set-BuildEnvironment -ErrorAction SilentlyContinue -WarningAction SilentlyContinue
 
     Invoke-psake -buildFile $ENV:BHProjectPath\psake.ps1 -taskList $Task -nologo
     exit ( [int]( -not $psake.build_success ) )

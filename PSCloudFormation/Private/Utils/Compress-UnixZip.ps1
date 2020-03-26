@@ -19,6 +19,9 @@ function Compress-UnixZip
         If set, this becomes root directory for the entire zip content
         Used for creating lambda layers
 
+    .PARAMETER ExcludePattern
+        List of patterns to exclude from archive
+
     .PARAMETER PassThru
         If set, the path passed to -ZipFile is returned
 
@@ -34,6 +37,8 @@ function Compress-UnixZip
 
         [string]$DirectoryPrefix,
 
+        [string[]]$ExcludePattern,
+
         [switch]$PassThru
     )
 
@@ -47,7 +52,22 @@ function Compress-UnixZip
         }
         elseif (Test-Path -Path $Path -PathType Container)
         {
-            Get-ChildItem -Path $Path -Recurse
+            if ($PSBoundParameters.ContainsKey('ExcludePattern'))
+            {
+                try
+                {
+                    Push-Location $Path
+                    Get-ChildItem -Exclude $ExcludePattern | Get-ChildItem -Recurse
+                }
+                finally
+                {
+                    Pop-Location
+                }
+            }
+            else
+            {
+                Get-ChildItem -Path $Path -Recurse
+            }
             $isFolder = $true
         }
         else

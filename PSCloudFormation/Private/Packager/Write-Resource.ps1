@@ -71,18 +71,18 @@ function Write-Resource
 
             $artifactDetail = New-Object PSObject -Property @{
                 Artifact = $zipFile
-                Zip = $true
-                Value = $n
+                Zip      = $true
+                Value    = $n
                 Uploaded = $false
             }
         }
         else
         {
             # Artifact is a single file - this will be uploaded directly.
-            $artifactDetail =  New-Object PSObject -Property @{
+            $artifactDetail = New-Object PSObject -Property @{
                 Artifact = $Payload
-                Zip = $false
-                Value = New-S3ObjectUrl -Bucket $Bucket -Prefix $Prefix -Artifact $Payload
+                Zip      = $false
+                Value    = New-S3ObjectUrl -Bucket $Bucket -Prefix $Prefix -Artifact $Payload
                 Uploaded = $false
             }
         }
@@ -108,10 +108,10 @@ function Write-Resource
             $v = New-S3ObjectUrl -Bucket $Bucket -Prefix $Prefix -Artifact $zipFile
         }
 
-        $artifactDetail =  New-Object PSObject -Property @{
+        $artifactDetail = New-Object PSObject -Property @{
             Artifact = $zipFile
-            Zip = $true
-            Value = $v
+            Zip      = $true
+            Value    = $v
             Uploaded = $false
         }
     }
@@ -121,12 +121,24 @@ function Write-Resource
     # Create zip if needed in a unique temp dir to prevent overwriting anything existing
     if ($artifactDetail.Zip)
     {
+        $additionalZipArguments = @{ }
+
         $directoryPrefix = $null
 
         if ($ResourceType -eq 'AWS::Lambda::LayerVersion')
         {
             # Guess layer language
             # EXPERIMENTAL - We don't expect mixed languages within a dependency directory structure
+
+            $exludePatterns = @{
+                'python' = @(
+                    'boto*'
+                    'pip*'
+                    'autopep*'
+                    'pycodestyle*'
+                    'docutils*'
+                )
+            }
 
             $prevalentFiletype = Get-ChildItem -Path $referencedFileSystemObject -File -Recurse |
             Group-Object -Property Extension |
@@ -142,11 +154,11 @@ function Write-Resource
                 }
                 elseif ($prevalentFiletype -ieq '.js')
                 {
-                    'nodejs'
+                    'nodejs/node_modules'
                 }
                 elseif ($prevalentFiletype -ieq '.jar')
                 {
-                    'java'
+                    'java/lib'
                 }
                 elseif ($prevalentFileType -ieq '.lib')
                 {
@@ -159,10 +171,17 @@ function Write-Resource
             }
 
             Write-Host "$($ResourceType): Assuming '$directoryPrefix' from content analysis of '$referencedFileSystemObject'"
+
+            $additionalZipArguments.Add('DirectoryPrefix', $directoryPrefix)
+
+            if ($exludePatterns.ContainsKey('directoryPrefix'))
+            {
+                $additionalZipArguments.Add('ExcludePattern', $exludePatterns[$directoryPrefix])
+            }
         }
 
         $fileToUpload = Join-Path $TempFolder $artifactDetail.Artifact
-        Compress-UnixZip -ZipFile $fileToUpload -Path $referencedFileSystemObject -DirectoryPrefix $directoryPrefix
+        Compress-UnixZip -ZipFile $fileToUpload -Path $referencedFileSystemObject @additionalZipArguments
     }
 
     # Now write
