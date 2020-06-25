@@ -1,0 +1,1192 @@
+Description: Proget Server on Docker
+Parameters:
+  LatestAmiId:
+    Type: AWS::SSM::Parameter::Value<AWS::EC2::Image::Id>
+    Default: /rxgt/ps/rx-packer-ami/proget-amzn2
+  InstanceType:
+    Type: String
+    Default: t3.large
+  ProgetTestDBSnapShot:
+    Type: String
+    Description: Indentifier of a snapshot from which to create the upgrade test database.
+    Default: ""
+  ProgetContainerId:
+    Type: AWS::SSM::Parameter::Value<String>
+    Default: /rxgt/ps/build-tools/proget/live-version
+    Description: Version of proget container to deploy live
+#  ProgetDatabaseEndpoint:
+#    Type: AWS::SSM::Parameter::Value<String>
+#    Default: /rxgt/ps/build-tools/proget/db-endpoint
+#    Description: RDS Endpoint of Proget Database
+#  DataVolumeId:
+#    Type: AWS::SSM::Parameter::Value<String>
+#    Default: /rxgt/ps/build-tools/proget/data-volume-id
+#    Description: Volume ID of proget data disk
+#  VolumeSnaphotID:
+#    Type: String
+#    Description: ID of a data volume snapshot to mount to test instance.
+#    Default: ""
+#  ProgetDbUser:
+#    Type: String
+#    Description: User name for Proget Database
+#  ProgetDbPassword:
+#    Type: String
+#    Description: Password for ProgetDBUser
+#    NoEcho: true
+  AlertingWebhookUrl:
+    Type: String
+    Description: Slack Webhook to post alerts to
+    Default: https://hooks.slack.com/services/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
+
+Mappings:
+  General:
+    Network:
+      JumpBoxSecurityGroup: sg-0a79f7fd27a6bff81
+      LoadBalancerSecurityGroup: sg-0825845316f9cd1e3
+      SQLManagementSecurityGroup: sg-00a21322b348bda25    # <- Deployed by rxgtbuild network stack
+      VpcId: vpc-0b608d4c2a9e1596d
+      PublicSubnets:
+        - subnet-024755d73f5ac43fb
+        - subnet-0b2501cb10be2f331
+      PrivateSubnets:
+        - subnet-0298f6f299ea16af1
+        - subnet-06613f3066a4ca179
+    Tags:
+      FinanceActivityId: '8001'
+      FinanceEntityId: '0092'
+      FinanceManagementCentreId: '99450'
+      JiraProjectCode: CSS
+      PmProgramme: digital transformation
+      ServiceName: ProGet
+      PmProjectCode: PRJ0093
+    TestEnvironment:
+      CertificateArn: arn:aws:acm:eu-west-1:061934891466:certificate/75993695-e34c-4d0b-97b4-b60265fcc164
+    LiveEnvironment:
+      CertificateArn: arn:aws:acm:eu-west-1:061934891466:certificate/75993695-e34c-4d0b-97b4-b60265fcc164
+
+Conditions:
+  AttachALB: !Equals
+    - 1
+    - 1
+  DeployTestInstance: !Not
+    - !Equals
+      - !Ref ProgetTestDBSnapShot
+      - ""
+  DeployLiveDatabase: !Equals
+    - 1
+    - 1
+  DeployLiveInstance: !And
+    - !Condition DeployLiveDatabase
+    - !Equals
+      - 1
+      - 0
+  AttachTestALB: !And
+    - !Condition AttachALB
+    - !Condition DeployTestInstance
+  AttachLiveALB: !And
+    - !Condition  AttachALB
+    - !Condition  DeployLiveInstance
+
+Resources:
+
+#region Secrets
+
+  ProgetRDSInstanceSecret:
+    Type: AWS::SecretsManager::Secret
+    Properties:
+      GenerateSecretString:
+        SecretStringTemplate: '{"username": "master"}'
+        GenerateStringKey: "password"
+        PasswordLength: 20
+        ExcludePunctuation: True
+      Tags:
+        - Key: rx:billing:finance-activity-id
+          Value: !FindInMap
+            - General
+            - Tags
+            - FinanceActivityId
+        - Key: rx:billing:finance-entity-id
+          Value: !FindInMap
+            - General
+            - Tags
+            - FinanceEntityId
+        - Key: rx:billing:finance-management-centre-id
+          Value: !FindInMap
+            - General
+            - Tags
+            - FinanceManagementCentreId
+        - Key: rx:billing:jira-project-code
+          Value: !FindInMap
+            - General
+            - Tags
+            - JiraProjectCode
+        - Key: rx:billing:pm-programme
+          Value: !FindInMap
+            - General
+            - Tags
+            - PmProgramme
+        - Key: rx:billing:service-name
+          Value: !FindInMap
+            - General
+            - Tags
+            - ServiceName
+        - Key: rx:billing:pm-project-code
+          Value: !FindInMap
+            - General
+            - Tags
+            - PmProjectCode
+        - Key: rx:billing:environment-name
+          Value: dev
+
+#endregion
+
+#region Storage
+
+  ProgetBucket:
+    Type: AWS::S3::Bucket
+    Properties:
+      BucketName: !Sub 'proget-packages-${AWS::Region}-${AWS::AccountId}'
+      Tags:
+        - Key: rx:billing:finance-activity-id
+          Value: !FindInMap
+            - General
+            - Tags
+            - FinanceActivityId
+        - Key: rx:billing:finance-entity-id
+          Value: !FindInMap
+            - General
+            - Tags
+            - FinanceEntityId
+        - Key: rx:billing:finance-management-centre-id
+          Value: !FindInMap
+            - General
+            - Tags
+            - FinanceManagementCentreId
+        - Key: rx:billing:jira-project-code
+          Value: !FindInMap
+            - General
+            - Tags
+            - JiraProjectCode
+        - Key: rx:billing:pm-programme
+          Value: !FindInMap
+            - General
+            - Tags
+            - PmProgramme
+        - Key: rx:billing:service-name
+          Value: !FindInMap
+            - General
+            - Tags
+            - ServiceName
+        - Key: rx:billing:pm-project-code
+          Value: !FindInMap
+            - General
+            - Tags
+            - PmProjectCode
+        - Key: rx:billing:environment-name
+          Value: dev
+
+#endregion
+
+#region Instance
+
+  #region Shared
+
+  InstanceSecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupName: proget-instance
+      GroupDescription: Proget instance security group
+      SecurityGroupIngress:
+        - FromPort: 22
+          ToPort: 22
+          IpProtocol: tcp
+          SourceSecurityGroupId: !FindInMap
+            - General
+            - Network
+            - JumpBoxSecurityGroup
+        - FromPort: 80
+          ToPort: 81
+          IpProtocol: tcp
+          SourceSecurityGroupId: !FindInMap
+            - General
+            - Network
+            - LoadBalancerSecurityGroup
+      VpcId: !FindInMap
+        - General
+        - Network
+        - VpcId
+
+  InstanceRole:
+    Type: AWS::IAM::Role
+    Properties:
+      Path: /rxgt/ps/build/
+      AssumeRolePolicyDocument:
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service:
+                - ec2.amazonaws.com
+            Action: sts:AssumeRole
+      Policies:
+        - PolicyName: proget-server-policy
+          PolicyDocument:
+            Version: "2012-10-17"
+            Statement:
+              - Effect: Allow
+                Action:
+                  - ec2:DescribeVolumeStatus
+                  - ec2:DescribeVolumes
+                  - ec2:AttachVolume
+                Resource: '*'
+              - Effect: Allow
+                Action:
+                  - ssm:PutParameter
+                Resource: '*'
+              - Effect: Allow
+                Action:
+                  - secretsmanager:GetSecretValue
+                Resource:
+                  - !Ref ProgetRDSInstanceSecret
+              - Effect: Allow
+                Action:
+                  - s3:DeleteObject
+                  - s3:GetObject
+                  - s3:GetObjectAcl
+                  - s3:PutObject
+                  - s3:PutObjectAcl
+                Resource: !Join
+                  - '/'
+                  - - !GetAtt
+                      - ProgetBucket
+                      - Arn
+                    - '*'
+              - Effect: Allow
+                Action:
+                  - s3:ListBucket
+                Resource: !GetAtt
+                  - ProgetBucket
+                  - Arn
+      ManagedPolicyArns:
+        - arn:aws:iam::aws:policy/CloudWatchFullAccess
+        - arn:aws:iam::aws:policy/AmazonSSMManagedInstanceCore
+        - arn:aws:iam::aws:policy/AmazonS3ReadOnlyAccess
+
+  InstanceProfile:
+    Type: AWS::IAM::InstanceProfile
+    Properties:
+      Path: /rxgt/ps/build/
+      Roles:
+        - !Ref InstanceRole
+
+  #endregion
+
+  #region Test Instance
+
+  TestInstanceLaunchConfig:
+    Condition: DeployTestInstance
+    Type: AWS::AutoScaling::LaunchConfiguration
+    Properties:
+      IamInstanceProfile: !Ref InstanceProfile
+      ImageId: !Ref LatestAmiId
+      SecurityGroups:
+        - !Ref InstanceSecurityGroup
+      InstanceType: !Ref InstanceType
+      KeyName: rxgtbuild
+      BlockDeviceMappings:
+        - DeviceName: /dev/xvda
+          Ebs:
+            Encrypted: true
+            DeleteOnTermination: true
+            VolumeSize: 10
+            VolumeType: gp2
+      UserData:
+        Fn::Base64:
+          Fn::Sub:
+            - |
+              #!/bin/bash -ex
+              export AWS_DEFAULT_REGION=${AWS::Region}
+              usermod -a -G docker ec2-user
+
+              mkdir -p /var/proget
+              # Pull latest proget image
+              docker pull inedo/proget
+
+              # Get SHA of the image and put in SSM Parameter Store
+              imageid=$(docker image ls | grep proget | sed 's/  */ /g' | cut -d ' ' -f3)
+              sha=$(docker inspect --format='{{index .RepoDigests 0}}' $imageid)
+              aws ssm put-parameter --name /rxgt/ps/build-tools/proget/test-version --type String --overwrite --value $sha
+
+              # Enable NGiNX proxy
+              systemctl enable nginx
+              systemctl start nginx
+
+              _dbuser=$(aws secretsmanager get-secret-value --secret-id ${ProgetRDSInstanceSecret} --query SecretString --output text | jq -r .username)
+              _dbPassword=$(aws secretsmanager get-secret-value --secret-id ${ProgetRDSInstanceSecret} --query SecretString --output text | jq -r .password)
+
+              #docker run -d \
+              #  -v /var/proget/packages:/var/proget/packages \
+              #  -v /var/proget/extensions:/var/proget/extensions \
+              #  -p 81:80 \
+              #  --name=proget \
+              #  --restart=unless-stopped \
+              #  -e PROGET_DB_TYPE=SqlServer \
+              #  -e PROGET_DATABASE="Server=${TestDataSource};Database=ProGet;User Id=$_dbuser;Password=$_dbPassword" \
+              #  inedo/proget
+
+            - TestDataSource: !GetAtt [ "ProgetTestDBInstance", "Endpoint.Address" ]
+
+  TestAutoScalingGroup:
+    DependsOn: ProgetTestDBInstance
+    Condition: DeployTestInstance
+    Type: AWS::AutoScaling::AutoScalingGroup
+    Properties:
+      LaunchConfigurationName:
+        Ref: TestInstanceLaunchConfig
+      MinSize: !If
+        - DeployTestInstance
+        - '1'
+        - '0'
+      MaxSize: '1'
+      DesiredCapacity: !If
+        - DeployTestInstance
+        - '1'
+        - '0'
+      HealthCheckType: !If
+        - AttachTestALB
+        - ELB
+        - EC2
+      HealthCheckGracePeriod: 120
+      VPCZoneIdentifier:
+        - !Select
+          - 0
+          - !FindInMap
+            - General
+            - Network
+            - PrivateSubnets
+        - !Select
+          - 1
+          - !FindInMap
+            - General
+            - Network
+            - PrivateSubnets
+      TargetGroupARNs:
+        - !If
+          - AttachTestALB
+          - !Ref TestALBTargetGroup
+          - !Ref AWS::NoValue
+      Tags:
+        - Key: Name
+          Value: proget-test
+          PropagateAtLaunch: true
+        - Key: rx:billing:finance-activity-id
+          Value: !FindInMap
+            - General
+            - Tags
+            - FinanceActivityId
+          PropagateAtLaunch: true
+        - Key: rx:billing:finance-entity-id
+          Value: !FindInMap
+            - General
+            - Tags
+            - FinanceEntityId
+          PropagateAtLaunch: true
+        - Key: rx:billing:finance-management-centre-id
+          Value: !FindInMap
+            - General
+            - Tags
+            - FinanceManagementCentreId
+          PropagateAtLaunch: true
+        - Key: rx:billing:jira-project-code
+          Value: !FindInMap
+            - General
+            - Tags
+            - JiraProjectCode
+          PropagateAtLaunch: true
+        - Key: rx:billing:pm-programme
+          Value: !FindInMap
+            - General
+            - Tags
+            - PmProgramme
+          PropagateAtLaunch: true
+        - Key: rx:billing:service-name
+          Value: !FindInMap
+            - General
+            - Tags
+            - ServiceName
+          PropagateAtLaunch: true
+        - Key: rx:billing:pm-project-code
+          Value: !FindInMap
+            - General
+            - Tags
+            - PmProjectCode
+          PropagateAtLaunch: true
+        - Key: rx:billing:environment-name
+          Value: dev
+          PropagateAtLaunch: true
+
+  #endregion
+
+  #region Live Instance
+
+  LiveInstanceLaunchConfig:
+    Type: AWS::AutoScaling::LaunchConfiguration
+    Properties:
+      IamInstanceProfile: !Ref InstanceProfile
+      ImageId: !Ref LatestAmiId
+      SecurityGroups:
+        - !Ref InstanceSecurityGroup
+      InstanceType: !Ref InstanceType
+      KeyName: rxgtbuild
+      BlockDeviceMappings:
+        - DeviceName: /dev/xvda
+          Ebs:
+            Encrypted: true
+            DeleteOnTermination: true
+            VolumeSize: 10
+            VolumeType: gp2
+      UserData:
+        Fn::Base64:
+          Fn::Sub:
+            - |
+              #!/bin/bash
+              sudo usermod -a -G docker ec2-user
+
+              mkdir -p /var/proget/packages
+              mkdir -p /var/proget/extensions
+
+              export AWS_DEFAULT_REGION=${AWS::Region}
+
+              # Enable and start NGiNX proxy
+              logger -p local0.info "PROGET-SETUP: Starting NGiNX"
+              systemctl enable nginx
+              systemctl start nginx
+
+              exit_code=$?
+
+              if [ $exit_code -ne 0 ]
+              then
+                  logger -p local0.err "PROGET-SETUP: NGiNX did not start, exit code $exit_code"
+              fi
+
+              # Get credentials
+              logger -p local0.info "PROGET-SETUP: Reading secret ${ProgetRDSInstanceSecret}"
+              _dbuser=$(aws secretsmanager get-secret-value --secret-id ${ProgetRDSInstanceSecret} --query SecretString --output text | jq -r .username)
+              _dbPassword=$(aws secretsmanager get-secret-value --secret-id ${ProgetRDSInstanceSecret} --query SecretString --output text | jq -r .password)
+
+              if [ -z "$_dbuser" ]
+              then
+                  logger -p local0.err "PROGET-SETUP: Cannot retrieve DB username secret"
+                  exit 1
+              fi
+
+              if [ -z "$_dbPassword" ]
+              then
+                  logger -p local0.err "PROGET-SETUP: Cannot retrieve DB password secret"
+                  exit 1
+              fi
+
+              logger -p local0.info "PROGET-SETUP: DB user: $_dbuser, DB Endpoint: ${DbEndPoint}"
+
+              # Create database if needed
+              logger -p local0.info "PROGET-SETUP: Creating ProGet database if it does not exist"
+
+              cat << EOF > /tmp/createProgetDatabase.sql
+              if not exists(select 1 from master.sys.databases where name = 'ProGet')
+              begin
+                  create database ProGet
+              end
+              go
+              EOF
+
+              sqlcmd -S ${DbEndPoint} -U $_dbuser -P $_dbPassword -i /tmp/createProgetDatabase.sql -b
+
+              logger -p local0.info "PROGET-SETUP: Starting container"
+
+              sudo docker run -d \
+                -v /var/proget/packages:/var/proget/packages \
+                -v /var/proget/extensions:/var/proget/extensions \
+                -p 81:80 \
+                --name=proget \
+                --restart=unless-stopped \
+                -e PROGET_DB_TYPE=SqlServer \
+                -e PROGET_DATABASE="Server=${DbEndPoint};Database=ProGet;User Id=$_dbuser;Password=$_dbPassword" \
+                ${ProgetContainerId}
+
+              exit_code=$?
+
+              if [ $exit_code -ne 0 ]
+              then
+                  logger -p local0.err "PROGET-SETUP: Container did not start, exit code $exit_code"
+              fi
+
+              for x in 1..20
+              do
+                  sleep 5
+                  curl http://localhost:81/health >> /tmp/proget-health
+                  echo " " >> /tmp/proget-health
+              done
+
+              logger -p local0.info "PROGET-SETUP: Complete"
+            - DbEndPoint: !If
+              - DeployLiveInstance
+              - !GetAtt
+                - ProgetLiveDBInstance
+                - Endpoint.Address
+              - ''
+
+  LiveAutoScalingGroup:
+    Type: AWS::AutoScaling::AutoScalingGroup
+    Properties:
+      LaunchConfigurationName:
+        Ref: LiveInstanceLaunchConfig
+      MinSize: !If
+        - DeployLiveInstance
+        - '1'
+        - '0'
+      MaxSize: '1'
+      DesiredCapacity: !If
+        - DeployLiveInstance
+        - '1'
+        - '0'
+      HealthCheckType: !If
+        - DeployLiveInstance
+        - ELB
+        - EC2
+      HealthCheckGracePeriod: 600
+      VPCZoneIdentifier:
+        - !Select
+          - 0
+          - !FindInMap
+            - General
+            - Network
+            - PrivateSubnets
+        - !Select
+          - 1
+          - !FindInMap
+            - General
+            - Network
+            - PrivateSubnets
+      TargetGroupARNs:
+        - !If
+          - AttachLiveALB
+          - !Ref LiveALBTargetGroup
+          - !Ref AWS::NoValue
+      Tags:
+        - Key: Name
+          Value: proget
+          PropagateAtLaunch: true
+        - Key: rx:billing:finance-activity-id
+          Value: !FindInMap
+            - General
+            - Tags
+            - FinanceActivityId
+          PropagateAtLaunch: true
+        - Key: rx:billing:finance-entity-id
+          Value: !FindInMap
+            - General
+            - Tags
+            - FinanceEntityId
+          PropagateAtLaunch: true
+        - Key: rx:billing:finance-management-centre-id
+          Value: !FindInMap
+            - General
+            - Tags
+            - FinanceManagementCentreId
+          PropagateAtLaunch: true
+        - Key: rx:billing:jira-project-code
+          Value: !FindInMap
+            - General
+            - Tags
+            - JiraProjectCode
+          PropagateAtLaunch: true
+        - Key: rx:billing:pm-programme
+          Value: !FindInMap
+            - General
+            - Tags
+            - PmProgramme
+          PropagateAtLaunch: true
+        - Key: rx:billing:service-name
+          Value: !FindInMap
+            - General
+            - Tags
+            - ServiceName
+          PropagateAtLaunch: true
+        - Key: rx:billing:pm-project-code
+          Value: !FindInMap
+            - General
+            - Tags
+            - PmProjectCode
+          PropagateAtLaunch: true
+        - Key: rx:billing:environment-name
+          Value: dev
+          PropagateAtLaunch: true
+
+  #endregion
+
+#endregion
+
+#region Database
+
+  ProgetDbSecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: Only allow access with Proget EC2 Instance Security Group
+      SecurityGroupIngress:
+        - Description: Jump Box
+          IpProtocol: tcp
+          FromPort: 1433
+          ToPort: 1433
+          SourceSecurityGroupId: !Ref InstanceSecurityGroup
+        - Description: SQL Management
+          IpProtocol: tcp
+          FromPort: 1433
+          ToPort: 1433
+          SourceSecurityGroupId: !FindInMap
+            - General
+            - Network
+            - SQLManagementSecurityGroup
+      VpcId: !FindInMap
+        - General
+        - Network
+        - VpcId
+
+  ProgetDbSubnetGroup:
+    Type: AWS::RDS::DBSubnetGroup
+    Properties:
+      DBSubnetGroupDescription: Proget Database
+      SubnetIds:
+        - !Select
+          - 0
+          - !FindInMap
+            - General
+            - Network
+            - PrivateSubnets
+        - !Select
+          - 1
+          - !FindInMap
+            - General
+            - Network
+            - PrivateSubnets
+
+  ProgetTestDBInstance:
+    Condition: DeployTestInstance
+    Type: AWS::RDS::DBInstance
+    Properties:
+      DBInstanceClass: db.t3.medium
+      DeletionProtection: false
+      DeleteAutomatedBackups: true
+      DBSnapshotIdentifier: !Ref ProgetTestDBSnapShot
+      DBSubnetGroupName: !Ref ProgetDbSubnetGroup
+      VPCSecurityGroups:
+        - !Ref ProgetDbSecurityGroup
+      Tags:
+        - Key: Name
+          Value: proget-update-test-database
+        - Key: rx:billing:finance-activity-id
+          Value: !FindInMap
+            - General
+            - Tags
+            - FinanceActivityId
+        - Key: rx:billing:finance-entity-id
+          Value: !FindInMap
+            - General
+            - Tags
+            - FinanceEntityId
+        - Key: rx:billing:finance-management-centre-id
+          Value: !FindInMap
+            - General
+            - Tags
+            - FinanceManagementCentreId
+        - Key: rx:billing:jira-project-code
+          Value: !FindInMap
+            - General
+            - Tags
+            - JiraProjectCode
+        - Key: rx:billing:pm-programme
+          Value: !FindInMap
+            - General
+            - Tags
+            - PmProgramme
+        - Key: rx:billing:service-name
+          Value: !FindInMap
+            - General
+            - Tags
+            - ServiceName
+        - Key: rx:billing:pm-project-code
+          Value: !FindInMap
+            - General
+            - Tags
+            - PmProjectCode
+        - Key: rx:billing:environment-name
+          Value: dev
+
+  ProgetLiveDBInstance:
+    Condition: DeployLiveDatabase
+    Type: AWS::RDS::DBInstance
+    DeletionPolicy: Delete
+    Properties:
+      DBInstanceClass: db.t3.medium
+      Engine: sqlserver-ex
+      DeletionProtection: false
+      DeleteAutomatedBackups: true
+      BackupRetentionPeriod: 7
+      DBSubnetGroupName: !Ref ProgetDbSubnetGroup
+      AllocatedStorage: '20'
+      StorageType:  gp2
+      MasterUsername:
+        !Join [
+          "",
+          [
+            "{{resolve:secretsmanager:",
+            !Ref ProgetRDSInstanceSecret,
+            ":SecretString:username}}",
+          ],
+        ]
+      MasterUserPassword:
+        !Join [
+          "",
+          [
+            "{{resolve:secretsmanager:",
+            !Ref ProgetRDSInstanceSecret,
+            ":SecretString:password}}",
+          ],
+        ]
+      VPCSecurityGroups:
+        - !Ref ProgetDbSecurityGroup
+      Tags:
+        - Key: Name
+          Value: proget-live-database
+        - Key: rx:billing:finance-activity-id
+          Value: !FindInMap
+            - General
+            - Tags
+            - FinanceActivityId
+        - Key: rx:billing:finance-entity-id
+          Value: !FindInMap
+            - General
+            - Tags
+            - FinanceEntityId
+        - Key: rx:billing:finance-management-centre-id
+          Value: !FindInMap
+            - General
+            - Tags
+            - FinanceManagementCentreId
+        - Key: rx:billing:jira-project-code
+          Value: !FindInMap
+            - General
+            - Tags
+            - JiraProjectCode
+        - Key: rx:billing:pm-programme
+          Value: !FindInMap
+            - General
+            - Tags
+            - PmProgramme
+        - Key: rx:billing:service-name
+          Value: !FindInMap
+            - General
+            - Tags
+            - ServiceName
+        - Key: rx:billing:pm-project-code
+          Value: !FindInMap
+            - General
+            - Tags
+            - PmProjectCode
+        - Key: rx:billing:environment-name
+          Value: dev
+
+  LiveDatabaseSecretAttachment:
+    Condition: DeployLiveDatabase
+    Type: AWS::SecretsManager::SecretTargetAttachment
+    Properties:
+      SecretId: !Ref ProgetRDSInstanceSecret
+      TargetType: AWS::RDS::DBInstance
+      TargetId: !Ref ProgetLiveDBInstance
+
+#endregion
+
+#region Load Balancer
+
+  #region Fixed Infra
+
+  ApplicationLoadBalancer:
+    Type: AWS::ElasticLoadBalancingV2::LoadBalancer
+    Properties:
+      Name: proget-alb
+      SecurityGroups:
+        - !FindInMap [ General, Network, LoadBalancerSecurityGroup]
+      Subnets:
+        - !Select
+          - 0
+          - !FindInMap
+            - General
+            - Network
+            - PublicSubnets
+        - !Select
+          - 1
+          - !FindInMap
+            - General
+            - Network
+            - PublicSubnets
+      Tags:
+        - Key: rx:billing:finance-activity-id
+          Value: !FindInMap
+            - General
+            - Tags
+            - FinanceActivityId
+        - Key: rx:billing:finance-entity-id
+          Value: !FindInMap
+            - General
+            - Tags
+            - FinanceEntityId
+        - Key: rx:billing:finance-management-centre-id
+          Value: !FindInMap
+            - General
+            - Tags
+            - FinanceManagementCentreId
+        - Key: rx:billing:jira-project-code
+          Value: !FindInMap
+            - General
+            - Tags
+            - JiraProjectCode
+        - Key: rx:billing:pm-programme
+          Value: !FindInMap
+            - General
+            - Tags
+            - PmProgramme
+        - Key: rx:billing:service-name
+          Value: !FindInMap
+            - General
+            - Tags
+            - ServiceName
+        - Key: rx:billing:pm-project-code
+          Value: !FindInMap
+            - General
+            - Tags
+            - PmProjectCode
+        - Key: rx:billing:environment-name
+          Value: dev
+
+  ALBListener:
+    Type: AWS::ElasticLoadBalancingV2::Listener
+    Properties:
+      DefaultActions:
+        - Type: fixed-response
+          FixedResponseConfig:
+            ContentType: text/html
+            StatusCode: '503'
+            MessageBody: |
+              <html>
+                <head>
+                    <title>Proget LoadBalancer</title>
+                </head>
+                <body>
+                  <p>This environment is not currently deployed. Please refer to <a href="https://reedexpo.atlassian.net/wiki/spaces/RCED/pages/495353943/ProGet">ProGet Upgrade Instructions</a></p>.
+                </body>
+              </html>
+      LoadBalancerArn: !Ref ApplicationLoadBalancer
+      Port: 443
+      Protocol: HTTPS
+      Certificates:
+        - CertificateArn: !FindInMap [ General, LiveEnvironment, CertificateArn ]
+
+  TestDomainCertificate:
+    Type: AWS::ElasticLoadBalancingV2::ListenerCertificate
+    Properties:
+      ListenerArn: !Ref ALBListener
+      Certificates:
+        - CertificateArn: !FindInMap [ General, TestEnvironment, CertificateArn ]
+
+  #endregion
+
+  #region Test Target
+
+  TestListenerRule:
+    Condition: AttachTestALB
+    Type: AWS::ElasticLoadBalancingV2::ListenerRule
+    Properties:
+      ListenerArn: !Ref ALBListener
+      Priority: 20
+      Conditions:
+        - Field: host-header
+          HostHeaderConfig:
+            Values:
+              - proget-test.rxweb-tools.com
+      Actions:
+        - Type: forward
+          TargetGroupArn: !Ref TestALBTargetGroup
+
+  TestALBTargetGroup:
+    Condition: AttachTestALB
+    Type: AWS::ElasticLoadBalancingV2::TargetGroup
+    Properties:
+      HealthCheckIntervalSeconds: 30
+      HealthCheckTimeoutSeconds: 15
+      HealthyThresholdCount: 3
+      UnhealthyThresholdCount: 8
+      Port: 80
+      Protocol: HTTP
+      VpcId: !FindInMap
+        - General
+        - Network
+        - VpcId
+      HealthCheckPath: /health
+      Tags:
+        - Key: rx:billing:finance-activity-id
+          Value: !FindInMap
+            - General
+            - Tags
+            - FinanceActivityId
+        - Key: rx:billing:finance-entity-id
+          Value: !FindInMap
+            - General
+            - Tags
+            - FinanceEntityId
+        - Key: rx:billing:finance-management-centre-id
+          Value: !FindInMap
+            - General
+            - Tags
+            - FinanceManagementCentreId
+        - Key: rx:billing:jira-project-code
+          Value: !FindInMap
+            - General
+            - Tags
+            - JiraProjectCode
+        - Key: rx:billing:pm-programme
+          Value: !FindInMap
+            - General
+            - Tags
+            - PmProgramme
+        - Key: rx:billing:service-name
+          Value: !FindInMap
+            - General
+            - Tags
+            - ServiceName
+        - Key: rx:billing:pm-project-code
+          Value: !FindInMap
+            - General
+            - Tags
+            - PmProjectCode
+        - Key: rx:billing:environment-name
+          Value: dev
+
+  #endregion
+
+  #region Live Target
+
+  LiveListenerRule:
+    Condition: AttachLiveALB
+    Type: AWS::ElasticLoadBalancingV2::ListenerRule
+    Properties:
+      ListenerArn: !Ref ALBListener
+      Priority: 10
+      Conditions:
+        - Field: host-header
+          HostHeaderConfig:
+            Values:
+              - proget.rxweb-tools.com
+      Actions:
+        - Type: forward
+          TargetGroupArn: !Ref LiveALBTargetGroup
+
+  LiveALBTargetGroup:
+    Condition: AttachLiveALB
+    Type: AWS::ElasticLoadBalancingV2::TargetGroup
+    Properties:
+      HealthCheckIntervalSeconds: 30
+      HealthCheckTimeoutSeconds: 15
+      HealthyThresholdCount: 3
+      UnhealthyThresholdCount: 8
+      Port: 80
+      Protocol: HTTP
+      VpcId: !FindInMap
+        - General
+        - Network
+        - VpcId
+      HealthCheckPath: /health
+      Tags:
+        - Key: rx:billing:finance-activity-id
+          Value: !FindInMap
+            - General
+            - Tags
+            - FinanceActivityId
+        - Key: rx:billing:finance-entity-id
+          Value: !FindInMap
+            - General
+            - Tags
+            - FinanceEntityId
+        - Key: rx:billing:finance-management-centre-id
+          Value: !FindInMap
+            - General
+            - Tags
+            - FinanceManagementCentreId
+        - Key: rx:billing:jira-project-code
+          Value: !FindInMap
+            - General
+            - Tags
+            - JiraProjectCode
+        - Key: rx:billing:pm-programme
+          Value: !FindInMap
+            - General
+            - Tags
+            - PmProgramme
+        - Key: rx:billing:service-name
+          Value: !FindInMap
+            - General
+            - Tags
+            - ServiceName
+        - Key: rx:billing:pm-project-code
+          Value: !FindInMap
+            - General
+            - Tags
+            - PmProjectCode
+        - Key: rx:billing:environment-name
+          Value: dev
+
+  #endregion
+
+  #region Alarm Configuration (Live target)
+
+  UnHealthyHostCountAlarmTopic:
+    Condition: AttachLiveALB
+    Type: AWS::SNS::Topic
+    Properties:
+      DisplayName: Proget Unhealthy Host
+      Subscription:
+        - Endpoint: !GetAtt 'AlarmReportingFunction.Arn'
+          Protocol: lambda
+
+  UnHealthyHostCountAlarm:
+    Condition: AttachLiveALB
+    Type: AWS::CloudWatch::Alarm
+    Properties:
+      AlarmName: Proget Host Unhealthy
+      AlarmDescription: Alarms when there is any unhealthy target
+      AlarmActions:
+        - !Ref UnHealthyHostCountAlarmTopic
+      Namespace: AWS/ApplicationELB
+      MetricName: UnHealthyHostCount
+      ComparisonOperator: GreaterThanOrEqualToThreshold
+      Dimensions:
+        - Name: LoadBalancer
+          Value: !GetAtt 'ApplicationLoadBalancer.LoadBalancerFullName'
+        - Name: TargetGroup
+          Value: !GetAtt 'LiveALBTargetGroup.TargetGroupFullName'
+      EvaluationPeriods: 3
+      Period: 60
+      Statistic: Maximum
+      Threshold: 1
+
+  AlarmReportingFunctionRole:
+    Condition: AttachLiveALB
+    Type: AWS::IAM::Role
+    Properties:
+      Path: /rxgt/ps/build/
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service:
+                - lambda.amazonaws.com
+            Action:
+              - sts:AssumeRole
+      ManagedPolicyArns:
+        - arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole
+
+  AlarmReportingFunctionPermission:
+    Condition: AttachLiveALB
+    Type: AWS::Lambda::Permission
+    Properties:
+      FunctionName: !GetAtt 'AlarmReportingFunction.Arn'
+      Action: lambda:InvokeFunction
+      Principal: sns.amazonaws.com
+      SourceArn: !Ref 'UnHealthyHostCountAlarmTopic'
+
+  AlarmReportingFunction:
+    Condition: AttachLiveALB
+    Type: AWS::Lambda::Function
+    Properties:
+      Description: Reports Proget server alarms to Slack
+      Handler: index.lambda_handler
+      MemorySize: 128
+      Timeout: 20
+      Role: !GetAtt 'AlarmReportingFunctionRole.Arn'
+      Runtime: python3.6
+      Environment:
+        Variables:
+          WEBHOOK_URL: !Ref 'AlertingWebhookUrl'
+      Code:
+        ZipFile: |
+          from __future__ import print_function
+          import urllib.parse
+          import urllib.request
+          import json
+          import os
+
+          # Testing
+          dry_run = False
+
+          def lambda_handler(event, context):
+              message = event['Records'][0]['Sns']['Message']
+              print('From SNS: ' + message)
+              message_detail = json.loads(message)
+              print(f"Previous state: {message_detail['OldStateValue']}, New state: {message_detail['NewStateValue']}")
+              if message_detail['OldStateValue'] != message_detail['NewStateValue'] and message_detail['NewStateValue'] == 'ALARM':
+                  send_slack_message(message_detail)
+              return message
+
+          def send_slack_message(alarm):
+              hook = os.environ['WEBHOOK_URL']
+              message = {
+                  'text': '<!here> ProGet load balancer reports instance unhealthy. It may be recycled causing a temporary loss of service.',
+                  'attachments': [
+                      {
+                          'fallback': 'ProGet Unhealthy',
+                          'color': 'warning',
+                          'pretext': 'ProGet Unhealthy',
+                          'title': 'Load Balancer Unhealthy Target Alarm',
+                          'fields': [
+                              {
+                                  'title': 'Alarm Details',
+                                  'value': alarm['NewStateReason'],
+                                  'short': False
+                              }
+                          ]
+                      }
+                  ]
+              }
+
+              # Post to Slack
+              req = urllib.request.Request(hook, json.dumps(message).encode('ascii'), {'Content-Type': 'application/json'})
+              with urllib.request.urlopen(req) as response:
+                  pass
+
+  #endregion
+
+#endregion
+
+Outputs:
+
+  LoadBalancerUrl:
+    Description: URL of load balancer
+    Value: !GetAtt [ApplicationLoadBalancer, DNSName]
+
+  TestDBInstanceIdentifier:
+    Condition: DeployTestInstance
+    Description: DBInstance ID of test infrastructure database copy
+    Value: !Ref ProgetTestDBInstance
+
+  TestDBSourceSnapshotARN:
+    Condition: DeployTestInstance
+    Description: Snapshot used to create test infrastructure database copy
+    Value: !Ref ProgetTestDBSnapShot
+
+  LiveInstanceAutoscalingGroup:
+    Description: Live ASG
+    Value: !Ref LiveAutoScalingGroup
+
+  RDSSecretArn:
+    Condition: DeployLiveDatabase
+    Description: ARN of DB credentials
+    Value: !Ref LiveDatabaseSecretAttachment
+

@@ -1,0 +1,46 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>netstandard2.0</TargetFramework>
+    <CopyLocalLockFileAssemblies>true</CopyLocalLockFileAssemblies>
+    <CurrentUserAwsTools>$(USERPROFILE)\Documents\WindowsPowerShell\Modules\AWS.Tools.Common\4.0.5.0\AWS.Tools.Common.dll</CurrentUserAwsTools>
+    <AllUsersAwsTools>C:\Program Files\WindowsPowerShell\Modules\AWS.Tools.Common\4.0.5.0\AWS.Tools.Common.dll</AllUsersAwsTools>
+    <AwsTools Condition="Exists('$(CurrentUserAwsTools)')">$(CurrentUserAwsTools)</AwsTools>
+    <AwsTools Condition="Exists('$(AllUsersAwsTools)')">$(AllUsersAwsTools)</AwsTools>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Firefly.PowerShell.DynamicParameters" Version="0.2.1" />
+    <PackageReference Include="PowerShellStandard.Library" Version="5.1.0" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\Firefly.CloudFormation\Firefly.CloudFormation.csproj" />
+  </ItemGroup>
+
+
+  <ItemGroup>
+    <Reference Include="AWS.Tools.Common">
+      <HintPath>$(AwsTools)</HintPath>
+    </Reference>
+  </ItemGroup>
+  <!--
+  <ItemGroup>
+    <Reference Include="AWS.Tools.Common">
+      <HintPath>C:\Users\abm\Documents\WindowsPowerShell\Modules\AWS.Tools.Common\4.0.5.0\AWS.Tools.Common.dll</HintPath>
+    </Reference>
+  </ItemGroup>
+  <ItemGroup>
+    <Reference Include="AWS.Tools.Common">
+      <HintPath>C:\Program Files\WindowsPowerShell\Modules\AWS.Tools.Common\4.0.5.0\AWS.Tools.Common.dll</HintPath>
+    </Reference>
+  </ItemGroup>
+  -->
+
+  <ItemGroup>
+    <None Update="debug.ps1">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </None>
+  </ItemGroup>
+
+</Project>

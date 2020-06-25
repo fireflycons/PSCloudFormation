@@ -1,0 +1,8 @@
+﻿- ResourceType: AWS::S3::Bucket
+  LogicalResourceId: ApplicationBucket
+  ResourceIdentifier:
+    BucketName: MyBucket
+- ResourceType: AWS::EC2::SecurityGroup
+  LogicalResourceId: InstanceSecurityGroup
+  ResourceIdentifier:
+    SecurityGroupName: MySg

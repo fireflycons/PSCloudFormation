@@ -1,6 +1,6 @@
 {
     "AWSTemplateFormatVersion": "2010-09-09",
-    "Description": "JSON test stack",
+    "Description": "JSON Template",
     "Parameters": {
         "VpcCidr": {
             "Description": "CIDR block for VPC",

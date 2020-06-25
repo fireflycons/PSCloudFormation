@@ -1,0 +1,12 @@
+{
+    "AWSTemplateFormatVersion": "2010-09-09",
+    "Description": "JSON Template",
+    "Resources": {
+        "NestedStack": {
+            "Type": "AWS::CloudFormation::Stack",
+            "Properties": {
+                "TemplateURL": "https://somewhere.com/stack.json" 
+            } 
+        }
+    }
+}
