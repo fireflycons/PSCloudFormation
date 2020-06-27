@@ -62,6 +62,14 @@
         public InputFileSource Source { get; protected set; }
 
         /// <summary>
+        /// Gets the name of the input file, or "RawString" if the input was a string rather than a file.
+        /// </summary>
+        /// <value>
+        /// The name of the input file.
+        /// </value>
+        public string InputFileName { get; private set;  }
+
+        /// <summary>
         /// Gets the client factory.
         /// </summary>
         /// <value>
@@ -136,6 +144,7 @@
                             key = uri.LocalPath.TrimStart('/');
                         }
 
+                        this.InputFileName = Path.GetFileNameWithoutExtension(key);
                         await this.GetS3ObjectContent(bucketName, key);
 
                         this.ArtifactUrl = uri.AbsoluteUri;
@@ -157,6 +166,8 @@
 
                         // Local file
                         this.Source = InputFileSource.File;
+
+                        this.InputFileName = Path.GetFileNameWithoutExtension(fileLocation);
 
                         if (new FileInfo(fileLocation).Length >= this.MaxFileSize)
                         {
@@ -180,6 +191,7 @@
                 // Value is a string
                 this.FileContent = fileLocation;
                 this.Source = InputFileSource.String;
+                this.InputFileName = "RawString";
 
                 if (Encoding.UTF8.GetByteCount(fileLocation) >= this.MaxFileSize)
                 {
@@ -188,6 +200,16 @@
             }
 
             return this.FileContent;
+        }
+
+        /// <summary>
+        /// Resets the template source if an oversize asset was uploaded to S3.
+        /// </summary>
+        /// <param name="uploadedArtifactUri">The uploaded artifact URI.</param>
+        public void ResetTemplateSource(string uploadedArtifactUri)
+        {
+            this.Source = InputFileSource.S3;
+            this.ArtifactUrl = uploadedArtifactUri;
         }
 
         /// <summary>

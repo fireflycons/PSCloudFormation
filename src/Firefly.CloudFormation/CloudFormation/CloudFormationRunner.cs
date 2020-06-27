@@ -24,6 +24,15 @@ namespace Firefly.CloudFormation.CloudFormation
         /// <summary>Tag name to use for naming the stack</summary>
         private const string StackTagName = "Name";
 
+        /// <summary>
+        /// Messages that can be returned by change set creation if the stack is unchanged.
+        /// </summary>
+        private static readonly string[] NoChangeMessages =
+            {
+                "The submitted information didn't contain changes", 
+                "No updates are to be performed"
+            };
+
         /// <summary>The stack capabilities</summary>
         private readonly IEnumerable<Capability> capabilities = new List<Capability>();
 
@@ -266,7 +275,7 @@ namespace Firefly.CloudFormation.CloudFormation
             // Get parameters and description from supplied template if any
             this.templateResolver = new TemplateResolver(this.clientFactory, this.stackName, this.usePreviousTemplate);
 
-            this.templateResolver.ResolveFileAsync(this.templateLocation).Wait();
+            this.ResolveTemplateOrPolicyInput(this.templateResolver, this.templateLocation, out var url, out var body);
 
             if (this.templateResolver.Source != InputFileSource.None)
             {
@@ -276,7 +285,7 @@ namespace Firefly.CloudFormation.CloudFormation
 
                 // Adds base stack name + 10 chars to each nested stack to estimate logical resource ID of each nested stack
                 this.context.Logger.SetStackNameColumnWidth(
-                    parser.GetNestedStackNames().Select(s => this.stackName + "-" + s.PadRight(10)).Concat(new[] { this.stackName })
+                    parser.GetNestedStackNames(this.stackName).Concat(new[] { this.stackName })
                         .Max(s => s.Length));
 
                 this.context.Logger.SetResourceNameColumnWidth(parser.GetLogicalResourceNames(this.stackName).Max(r => r.Length));
@@ -376,10 +385,10 @@ namespace Firefly.CloudFormation.CloudFormation
             
             var parser = TemplateParser.CreateParser(this.templateResolver.FileContent);
             this.templateDescription = parser.GetTemplateDescription();
-            
+
             // Adds base stack name + 10 chars to each nested stack to estimate logical resource ID of each nested stack
             this.context.Logger.SetStackNameColumnWidth(
-                parser.GetNestedStackNames().Select(s => this.stackName + "-" + s.PadRight(10)).Concat(new[] { this.stackName })
+                parser.GetNestedStackNames(this.stackName).Concat(new[] { this.stackName })
                     .Max(s => s.Length));
             this.context.Logger.SetResourceNameColumnWidth(parser.GetLogicalResourceNames(this.stackName).Max(r => r.Length));
 
@@ -445,6 +454,7 @@ namespace Firefly.CloudFormation.CloudFormation
             // Check stack state first
             var operationalState = await this.stackOperations.GetStackOperationalStateAsync(stack.StackId);
 
+            // ReSharper disable once SwitchStatementMissingSomeEnumCasesNoDefault
             switch (operationalState)
             {
                 case StackOperationalState.Deleting:
@@ -511,7 +521,7 @@ namespace Firefly.CloudFormation.CloudFormation
                                            TemplateBody = this.templateResolver.ArtifactContent,
                                            TemplateURL =
                                                this.usePreviousTemplate ? null : this.templateResolver.ArtifactUrl,
-                                           UsePreviousTemplate = this.usePreviousTemplate,
+                                           UsePreviousTemplate = this.usePreviousTemplate
                                        };
 
             this.context.Logger.LogInformation($"Creating changeset {changeSetName} for {this.GetStackNameWithDescription()}");
@@ -535,23 +545,23 @@ namespace Firefly.CloudFormation.CloudFormation
                 // ReSharper disable once PossibleNullReferenceException - we will go round the above loop at least once
                 var reason = response.StatusReason;
 
-                if (reason.StartsWith("The submitted information didn't contain changes")
-                    || reason.StartsWith("No updates are to be performed"))
+                if (!NoChangeMessages.Any(msg => reason.StartsWith(msg)))
                 {
-                    this.context.Logger.LogInformation("No changes to stack were detected.");
-
-                    if (this.deleteNoopChangeSet)
-                    {
-                        await this.client.DeleteChangeSetAsync(
-                            new DeleteChangeSetRequest { ChangeSetName = changesetArn });
-
-                        this.context.Logger.LogInformation($"Deleted changeset {changeSetName}");
-                    }
-
-                    return StackOperationResult.NoChange;
+                    throw new StackOperationException($"Unable to create changeset: {reason}");
                 }
 
-                throw new StackOperationException($"Unable to create changeset: {reason}");
+                this.context.Logger.LogInformation("No changes to stack were detected.");
+
+                if (this.deleteNoopChangeSet)
+                {
+                    await this.client.DeleteChangeSetAsync(
+                        new DeleteChangeSetRequest { ChangeSetName = changesetArn });
+
+                    this.context.Logger.LogInformation($"Deleted changeset {changeSetName}");
+                }
+
+                return StackOperationResult.NoChange;
+
             }
 
             // If we get here, emit details, then apply the changeset.

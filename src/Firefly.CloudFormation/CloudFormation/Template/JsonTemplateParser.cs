@@ -93,14 +93,15 @@
         }
 
         /// <summary>
-        /// Gets logical resource names of nested stacks declared in the given template
+        /// Gets logical resource names of nested stacks declared in the given template, accounting for how CLoudFormation will name them when the template runs.
         /// Does not recurse these.
         /// </summary>
+        /// <param name="baseStackName">Name of the base stack</param>
         /// <returns>
         /// List of nested stack logical resource names, if any.
         /// </returns>
         /// <exception cref="FormatException">Resource {resource.Name} has no Type property</exception>
-        public override IEnumerable<string> GetNestedStackNames()
+        public override IEnumerable<string> GetNestedStackNames(string baseStackName)
         {
             var nestedStacks = new List<string>();
 
@@ -115,7 +116,14 @@
 
                 if (type.Value<string>() == NestedStackType)
                 {
-                    nestedStacks.Add(resource.Name);
+                    if (!string.IsNullOrEmpty(baseStackName))
+                    {
+                        nestedStacks.Add(baseStackName + "-" + resource.Name + string.Empty.PadRight(NestedStackPadWidth));
+                    }
+                    else
+                    {
+                        nestedStacks.Add(resource.Name);
+                    }
                 }
             }
 
@@ -145,7 +153,7 @@
 
                 if (type.Value<string>() == NestedStackType)
                 {
-                    resourceNames.Add(stackName + "_" + resource.Name.PadRight(10));
+                    resourceNames.Add(stackName + "-" + resource.Name + string.Empty.PadRight(NestedStackPadWidth));
                 }
                 else
                 {

@@ -76,6 +76,7 @@
             sb.AppendLine()
                 .Append("Template source: ");
 
+            // ReSharper disable once SwitchStatementHandlesSomeKnownEnumValuesWithDefault
             switch (this.templateResolver.Source & ~InputFileSource.Oversize)
             {
                 case InputFileSource.UsePreviousTemplate:
@@ -186,10 +187,12 @@
 
             if ((resolver.Source & InputFileSource.Oversize) != 0)
             {
-                requestUrl = this.UploadStringToS3Async(resolver.ArtifactContent, fileType).Result;
+                requestUrl = this.UploadStringToS3Async(resolver.ArtifactContent, resolver.InputFileName, fileType).Result;
+                resolver.ResetTemplateSource(requestUrl);
             }
             else
             {
+                // ReSharper disable once SwitchStatementMissingSomeEnumCasesNoDefault
                 switch (resolver.Source)
                 {
                     case InputFileSource.S3:
@@ -210,16 +213,17 @@
         /// Uploads the file to s3 asynchronous.
         /// </summary>
         /// <param name="body">Body of text to upload.</param>
+        /// <param name="keySuffix">Suffix to append to S3 key</param>
         /// <param name="fileType">Type of the file.</param>
         /// <returns>URL of uploaded template</returns>
-        private async Task<string> UploadStringToS3Async(string body, UploadFileType fileType)
+        private async Task<string> UploadStringToS3Async(string body, string keySuffix, UploadFileType fileType)
         {
             using (var s3 = this.clientFactory.CreateS3Client())
             {
                 using (var sts = this.clientFactory.CreateSTSClient())
                 {
                     var ops = new CloudFormationBucketOperations(s3, sts, this.context);
-                    return (await ops.UploadStringToS3(this.stackName, body, fileType)).AbsoluteUri;
+                    return (await ops.UploadStringToS3(this.stackName, body, keySuffix, fileType)).AbsoluteUri;
                 }
             }
         }

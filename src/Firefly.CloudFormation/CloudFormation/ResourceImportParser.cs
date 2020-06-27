@@ -28,6 +28,7 @@
         /// <exception cref="InvalidDataException">Resource import file is empty</exception>
         public static ResourceImportParser CreateParser(string fileContent)
         {
+            // ReSharper disable once SwitchStatementHandlesSomeKnownEnumValuesWithDefault
             switch (InputFileParser.GetInputFileFormat(fileContent))
             {
                 case InputFileFormat.Json:

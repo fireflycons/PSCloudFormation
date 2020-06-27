@@ -57,7 +57,7 @@
         {
             if (text.Length > maxLen)
             {
-                return text.Substring(0, maxLen - 4) + "...";
+                return text.Substring(0, maxLen - 3) + "...";
             }
 
             return text;

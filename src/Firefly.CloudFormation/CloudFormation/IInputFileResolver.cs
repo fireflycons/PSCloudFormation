@@ -40,10 +40,24 @@
         InputFileSource Source { get; }
 
         /// <summary>
+        /// Gets the name of the input file, or "RawString" if the input was a string rather than a file.
+        /// </summary>
+        /// <value>
+        /// The name of the input file.
+        /// </value>
+        string InputFileName { get; }
+
+        /// <summary>
         /// Resolves and loads the given file from the specified location
         /// </summary>
         /// <param name="fileLocation">The file location.</param>
         /// <returns>The file content</returns>
         Task<string> ResolveFileAsync(string fileLocation);
+
+        /// <summary>
+        /// Resets the template source if an oversize asset was uploaded to S3.
+        /// </summary>
+        /// <param name="uploadedArtifactUri">The uploaded artifact URI.</param>
+        void ResetTemplateSource(string uploadedArtifactUri);
     }
 }

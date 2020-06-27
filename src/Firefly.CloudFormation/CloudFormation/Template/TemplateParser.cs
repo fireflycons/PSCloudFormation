@@ -9,6 +9,11 @@
     public abstract class TemplateParser : InputFileParser
     {
         /// <summary>
+        /// Amount of padding to add to resource names to include random chars added by CloudFormation
+        /// </summary>
+        protected const int NestedStackPadWidth = 14;
+
+        /// <summary>
         /// The parameter key name
         /// </summary>
         protected const string ParameterKeyName = "Parameters";
@@ -45,6 +50,7 @@
         /// <exception cref="InvalidDataException">Template body is empty</exception>
         public static TemplateParser CreateParser(string templateBody)
         {
+            // ReSharper disable once SwitchStatementHandlesSomeKnownEnumValuesWithDefault
             switch (InputFileParser.GetInputFileFormat(templateBody))
             {
                 case InputFileFormat.Json:
@@ -78,7 +84,18 @@
         /// Does not recurse these.
         /// </summary>
         /// <returns>List of nested stack logical resource names, if any.</returns>
-        public abstract IEnumerable<string> GetNestedStackNames();
+        public IEnumerable<string> GetNestedStackNames()
+        {
+            return this.GetNestedStackNames(string.Empty);
+        }
+
+        /// <summary>
+        /// Gets logical resource names of nested stacks declared in the given template, accounting for how CloudFormation will name them when the template runs.
+        /// Does not recurse these.
+        /// </summary>
+        /// <param name="baseStackName">Name of the base stack</param>
+        /// <returns>List of nested stack logical resource names, if any.</returns>
+        public abstract IEnumerable<string> GetNestedStackNames(string baseStackName);
 
         /// <summary>
         /// Gets the logical resource names.

@@ -123,13 +123,15 @@
         }
 
         /// <summary>
-        /// Gets logical resource names of nested stacks declared in the given template
+        /// Gets logical resource names of nested stacks declared in the given template, accounting for how CloudFormation will name them when the template runs.
         /// Does not recurse these.
         /// </summary>
+        /// <param name="baseStackName">Name of the base stack</param>
         /// <returns>
         /// List of nested stack logical resource names, if any.
         /// </returns>
-        public override IEnumerable<string> GetNestedStackNames()
+        /// <exception cref="FormatException">Resource {resourceName} has no Type property</exception>
+        public override IEnumerable<string> GetNestedStackNames(string baseStackName)
         {
             var nestedStacks = new List<string>();
 
@@ -149,7 +151,14 @@
 
                 if (type.Value == NestedStackType)
                 {
-                    nestedStacks.Add(resourceName);
+                    if (!string.IsNullOrEmpty(baseStackName))
+                    {
+                        nestedStacks.Add(baseStackName + "-" + resourceName + string.Empty.PadRight(NestedStackPadWidth));
+                    }
+                    else
+                    {
+                        nestedStacks.Add(resourceName);
+                    }
                 }
             }
 
@@ -184,7 +193,7 @@
 
                 if (type.Value == NestedStackType)
                 {
-                    resourceNames.Add(stackName + "_" + resourceName.PadRight(10));
+                    resourceNames.Add(stackName + "-" + resourceName + string.Empty.PadRight(NestedStackPadWidth));
                 }
                 else
                 {

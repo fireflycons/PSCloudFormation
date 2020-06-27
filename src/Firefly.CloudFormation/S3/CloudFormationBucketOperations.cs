@@ -157,20 +157,25 @@
         /// </summary>
         /// <param name="stackName">Name of the stack.</param>
         /// <param name="body">String content to be uploaded.</param>
+        /// <param name="keySuffix">Suffix to append to S3 key</param>
         /// <param name="uploadFileType">Type of file (template or policy).</param>
         /// <returns>URI of uploaded template, or <c>null</c> if the file did not require upload.</returns>
-        public async Task<Uri> UploadStringToS3(string stackName, string body, UploadFileType uploadFileType)
+        public async Task<Uri> UploadStringToS3(
+            string stackName,
+            string body,
+            string keySuffix,
+            UploadFileType uploadFileType)
         {
             var bucket = await this.GetCloudFormationBucketAsync();
             var key = uploadFileType == UploadFileType.Template
                           ? this.timestampGenerator.GenerateTimestamp() + $"_{stackName}_template_"
-                                                                        + Path.GetFileName(body)
+                                                                        + keySuffix
                           : this.timestampGenerator.GenerateTimestamp() + $"_{stackName}_policy_"
-                                                                        + Path.GetFileName(body);
+                                                                        + keySuffix;
 
             var ub = new UriBuilder(bucket.BucketUri) { Path = $"/{key}" };
 
-            this.context.Logger.LogInformation($"Copying oversize {uploadFileType.ToString().ToLower()} to {bucket.BucketUri}");
+            this.context.Logger.LogInformation($"Copying oversize {uploadFileType.ToString().ToLower()} to {ub.Uri}");
 
             var ms = new MemoryStream(new UTF8Encoding().GetBytes(body ?? throw new ArgumentNullException(nameof(body))));
 
