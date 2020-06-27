@@ -2,6 +2,7 @@
 {
     using System;
     using System.Collections.ObjectModel;
+    using System.Linq;
     using System.Management.Automation;
     using System.Management.Automation.Host;
     using System.Security.Authentication;
@@ -196,16 +197,45 @@
             this.ClientFactory = new PSAwsClientFactory(
                 this.CreateClient(this._CurrentCredentials, this._RegionEndpoint),
                 this.CreateCloudFormationContext());
-            
-            var task = this.OnProcessRecord();
-            task.Wait();
 
-            if (task.Result != null)
+            try
             {
-                this.WriteObject(task.Result);
-            }
+                var task = this.OnProcessRecord();
 
-            this.ClientFactory?.Dispose();
+                try
+                {
+                    task.Wait();
+                }
+                catch (Exception ex)
+                {
+                    Exception resolvedException;
+
+                    switch (ex)
+                    {
+                        case AggregateException aex:
+
+                            resolvedException = aex.InnerExceptions?.First() ?? aex;
+                            break;
+
+                        default:
+
+                            resolvedException = ex;
+                            break;
+                    }
+
+                    this.ThrowExecutionError(ex.Message, this, resolvedException.InnerException);
+                    return;
+                }
+
+                if (task.Result != null)
+                {
+                    this.WriteObject(task.Result);
+                }
+            }
+            finally
+            {
+                this.ClientFactory?.Dispose();
+            }
         }
 
         /// <summary>
