@@ -73,19 +73,20 @@
                                                                                         };
 
         /// <summary>
-        /// <c>true</c> if updating and using the previous template
+        /// The stack operation
         /// </summary>
-        private readonly bool usePreviousTemplate;
+        private readonly StackOperation stackOperation;
 
         /// <summary>
         /// Initializes a new instance of the <see cref="TemplateManager"/> class.
         /// </summary>
         /// <param name="templateResolver">The template resolver.</param>
-        public TemplateManager(IInputFileResolver templateResolver)
+        /// <param name="stackOperation">Stack operation being performed</param>
+        public TemplateManager(IInputFileResolver templateResolver, StackOperation stackOperation)
         {
+            this.stackOperation = stackOperation;
             this.TemplateParameters =
                 TemplateParser.CreateParser(templateResolver.FileContent).GetParameters().ToList();
-            this.usePreviousTemplate = templateResolver.Source == InputFileSource.UsePreviousTemplate;
         }
 
         /// <summary>
@@ -108,9 +109,9 @@
             {
                 var builder = new RuntimeDefinedParameterBuilder(param.Name, GetClrTypeFromAwsType(param.Type));
 
-                if (param.Default == null && !this.usePreviousTemplate)
+                if (param.Default == null && this.stackOperation == StackOperation.Create)
                 {
-                    // Only make parameter mandatory when not using previous template
+                    // Only make parameter mandatory when creating.
                     builder.WithMandatory();
                 }
 

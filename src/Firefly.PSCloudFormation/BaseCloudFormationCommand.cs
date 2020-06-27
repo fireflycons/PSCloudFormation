@@ -2,19 +2,15 @@
 {
     using System;
     using System.Collections.ObjectModel;
-    using System.Linq;
     using System.Management.Automation;
     using System.Management.Automation.Host;
-    using System.Reflection;
     using System.Security.Authentication;
     using System.Threading.Tasks;
 
     using Amazon;
     using Amazon.CloudFormation;
-    using Amazon.PowerShell.Common;
     using Amazon.PowerShell.Utils;
     using Amazon.Runtime;
-    using Amazon.Runtime.CredentialManagement;
 
     using Firefly.CloudFormation;
     using Firefly.CloudFormation.CloudFormation;
@@ -25,7 +21,6 @@
     /// Contains parameters common to all commands that work with CloudFormation stacks.
     /// </summary>
     public abstract class BaseCloudFormationCommand : CloudFormationServiceCommand
-        //: ServiceCmdlet
     {
         /// <summary>
         /// Gets or sets the client request token.
@@ -82,6 +77,8 @@
         /// The role arn.
         /// </value>
         [Parameter(ValueFromPipelineByPropertyName = true)]
+        // ReSharper disable once InconsistentNaming
+        // ReSharper disable once StyleCop.SA1650
         public string RoleARN { get; set; }
 
         /// <summary>
@@ -122,6 +119,8 @@
         /// The STS endpoint URL.
         /// </value>
         [Parameter(ValueFromPipelineByPropertyName = true)]
+        // ReSharper disable once InconsistentNaming
+        // ReSharper disable once StyleCop.SA1650
         public string STSEndpointUrl { get; set; }
 
         /// <summary>
@@ -228,6 +227,23 @@
             else
             {
                 throw new AuthenticationException("Cannot determine credentials");
+            }
+
+            if (this._CurrentRegion == null)
+            {
+                this.TryGetRegion(string.IsNullOrEmpty(this._DefaultRegion), out var region, this.SessionState);
+                this._RegionEndpoint = region;
+
+                if (this._RegionEndpoint == null)
+                {
+                    if (string.IsNullOrEmpty(this._DefaultRegion))
+                    {
+                        this.ThrowExecutionError("No region specified or obtained from persisted/shell defaults.", this, null);
+                        return null;
+                    }
+
+                    this._RegionEndpoint = RegionEndpoint.GetBySystemName(this._DefaultRegion);
+                }
             }
 
             this.Logger = new PSLogger(this);

@@ -18,7 +18,7 @@
     /// </summary>
     /// <seealso cref="Firefly.PSCloudFormation.StackParameterCloudFormationCommand" />
     [Cmdlet(VerbsCommon.New, "PSCFNStack1")]
-    public class NewStackCommand : StackParameterCloudFormationCommand
+    public class NewStackCommand : StackParameterCloudFormationCommand, INewStackArguments
     {
         /// <summary>
         /// Gets or sets the disable rollback.
@@ -60,6 +60,14 @@
         public OnFailure OnFailure { get; set; }
 
         /// <summary>
+        /// Gets the stack operation.
+        /// </summary>
+        /// <value>
+        /// The stack operation.
+        /// </value>
+        protected override StackOperation StackOperation { get; } = StackOperation.Create;
+
+        /// <summary>
         /// Gets the builder for <see cref="CloudFormationRunner" /> and populates the fields pertinent to this level.
         /// </summary>
         /// <returns>
@@ -83,10 +91,10 @@
         {
             await base.OnProcessRecord();
 
-            var runner = this.GetBuilder()
-                .Build();
-
-            return await runner.CreateStackAsync();
+            using (var runner = this.GetBuilder().Build())
+            {
+                return await runner.CreateStackAsync();
+            }
         }
     }
 }

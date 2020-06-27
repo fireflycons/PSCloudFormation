@@ -1,6 +1,5 @@
 ﻿namespace Firefly.PSCloudFormation
 {
-    using System;
     using System.Management.Automation;
     using System.Threading.Tasks;
 
@@ -17,7 +16,7 @@
     /// </summary>
     /// <seealso cref="Firefly.PSCloudFormation.BaseCloudFormationCommand" />
     [Cmdlet(VerbsCommon.Remove, "PSCFNStack1")]
-    public class RemoveStackCommand : BaseCloudFormationCommand
+    public class RemoveStackCommand : BaseCloudFormationCommand, IRemoveStackArguments
     {
         /// <summary>
         /// Gets or sets the retain resource.
@@ -54,14 +53,21 @@
         /// </returns>
         protected override async Task<object> OnProcessRecord()
         {
-            var runner = this.GetBuilder().WithRetainResource(this.RetainResource).Build();
+            using (var runner = this.GetBuilder().Build())
+            {
+                if (!this.Force && this.AskYesNo(
+                        $"Delete {this.StackName} now?",
+                        null,
+                        ChoiceResponse.No,
+                        "Delete now.",
+                        "Cancel operation.") == ChoiceResponse.No)
+                {
+                    this.Logger.LogWarning($"Delete {this.StackName} cancelled");
+                    return StackOperationResult.NoChange;
+                }
 
-            if (!this.Force && this.AskYesNo($"Delete {this.StackName} now?", null, ChoiceResponse.No, "Delete now.", "Cancel operation.") == ChoiceResponse.No)
-            { 
-                this.Logger.LogWarning($"Delete {this.StackName} cancelled");
+                return await runner.DeleteStackAsync();
             }
-
-            return await runner.DeleteStackAsync();
         }
     }
 }

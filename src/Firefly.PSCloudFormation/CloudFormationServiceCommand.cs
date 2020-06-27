@@ -1,6 +1,7 @@
 ﻿// ReSharper disable StyleCop.SA1126
 // ReSharper disable StyleCop.SA1305
 // ReSharper disable InconsistentNaming
+
 namespace Firefly.PSCloudFormation
 {
     using System;
@@ -13,52 +14,83 @@ namespace Firefly.PSCloudFormation
     using Amazon.PowerShell.Common;
     using Amazon.Runtime;
     using Amazon.Runtime.CredentialManagement;
+    using Amazon.Util;
 
+    using AWSRegion = Amazon.PowerShell.Common.AWSRegion;
+
+    /// <summary>
+    /// <para>
+    /// Service level base class. Contains much of the implementation for determining credentials and region from AWS.Tools.Common
+    /// This was re-implemented here rather than just inheriting from AWS <see cref="ServiceCmdlet"/> as they don't do this evaluation until the pipeline is being processed.
+    /// We need this information earlier in order to be able to process dynamic parameters when updating with Use Previous Template, i.e. we need to be able to retrieve
+    /// existing template from CloudFormation.
+    /// </para>
+    /// <para>
+    /// WARNING: May cause issues if the credential arguments are being read from an object in the pipeline, as in the object may not yet be resolved.
+    /// </para>
+    /// </summary>
+    /// <seealso cref="System.Management.Automation.PSCmdlet" />
     public class CloudFormationServiceCommand : PSCmdlet
     {
         /// <summary>
+        /// Gets or sets the access key.
+        /// <para type="description">
         /// The AWS access key for the user account. This can be a temporary access key
         /// if the corresponding session token is supplied to the -SessionToken parameter.
+        /// </para>
         /// </summary>
-        [Alias(new string[] { "AK" })]
+        [Alias("AK")]
         [Parameter(ValueFromPipelineByPropertyName = true)]
         public string AccessKey { get; set; }
 
         /// <summary>
+        /// Gets or sets the credential.
+        /// <para type="description">
         /// An AWSCredentials object instance containing access and secret key information,
         /// and optionally a token for session-based credentials.
+        /// </para>
         /// </summary>
         [Parameter(ValueFromPipeline = true, ValueFromPipelineByPropertyName = true)]
         public AWSCredentials Credential { get; set; }
 
+        /// <summary>
+        /// Gets or sets the endpoint URL.
+        /// </summary>
+        /// <value>
+        /// The endpoint URL.
+        /// </value>
         [Parameter(ValueFromPipelineByPropertyName = true)]
         public string EndpointUrl { get; set; }
 
         /// <summary>
+        /// Gets or sets the network credential.
+        /// <para type="description">
         /// Used with SAML-based authentication when ProfileName references a SAML role profile. 
         /// Contains the network credentials to be supplied during authentication with the 
         /// configured identity provider's endpoint. This parameter is not required if the
         /// user's default network identity can or should be used during authentication.
+        /// </para>
         /// </summary>
         [Parameter(ValueFromPipeline = true, ValueFromPipelineByPropertyName = true)]
         public PSCredential NetworkCredential { get; set; }
 
         /// <summary>
-        /// <para>
+        /// Gets or sets the profile location.
+        /// <para type="description">
         /// Used to specify the name and location of the ini-format credential file (shared with
         /// the AWS CLI and other AWS SDKs)
         /// </para>
-        /// <para>
+        /// <para type="description">
         /// If this optional parameter is omitted this cmdlet will search the encrypted credential
         /// file used by the AWS SDK for .NET and AWS Toolkit for Visual Studio first.
         /// If the profile is not found then the cmdlet will search in the ini-format credential
         /// file at the default location: (user's home directory)\.aws\credentials.
         /// </para>
-        /// <para>
+        /// <para type="description">
         /// If this parameter is specified then this cmdlet will only search the ini-format credential
         /// file at the location given.
         /// </para>
-        /// <para>
+        /// <para type="description">
         /// As the current folder can vary in a shell or during script execution it is advised
         /// that you use specify a fully qualified path instead of a relative path.
         /// </para>
@@ -72,37 +104,49 @@ namespace Firefly.PSCloudFormation
         public string ProfileLocation { get; set; }
 
         /// <summary>
+        /// Gets or sets the profile name.
+        /// <para type="description">
         /// The user-defined name of an AWS credentials or SAML-based role profile containing
         /// credential information. The profile is expected to be found in the secure credential
         /// file shared with the AWS SDK for .NET and AWS Toolkit for Visual Studio. You can also
         /// specify the name of a profile stored in the .ini-format credential file used with 
         /// the AWS CLI and other AWS SDKs.
+        /// </para>
         /// </summary>
         [Parameter(ValueFromPipelineByPropertyName = true)]
-        [Alias(new string[] { "StoredCredentials", "AWSProfileName" })]
+        [Alias("StoredCredentials", "AWSProfileName")]
         public string ProfileName { get; set; }
 
         /// <summary>
+        /// Gets or sets the region.
+        /// <para type="description">
         /// The system name of an AWS region or an AWSRegion instance. This governs
         /// the endpoint that will be used when calling service operations. Note that 
         /// the AWS resources referenced in a call are usually region-specific.
+        /// </para>
         /// </summary>
         [Parameter(Mandatory = false, ValueFromPipelineByPropertyName = true)]
-        [Alias(new string[] { "RegionToCall" })]
+        [Alias("RegionToCall")]
         public object Region { get; set; }
 
         /// <summary>
+        /// Gets or sets the secret key
+        /// <para type="description">
         /// The AWS secret key for the user account. This can be a temporary secret key
         /// if the corresponding session token is supplied to the -SessionToken parameter.
+        /// </para>
         /// </summary>
-        [Alias(new string[] { "SK", "SecretAccessKey" })]
+        [Alias("SK", "SecretAccessKey")]
         [Parameter(ValueFromPipelineByPropertyName = true)]
         public string SecretKey { get; set; }
 
         /// <summary>
+        /// Gets or sets the session token
+        /// <para type="description">
         /// The session token if the access and secret keys are temporary session-based credentials.
+        /// </para>
         /// </summary>
-        [Alias(new string[] { "ST" })]
+        [Alias("ST")]
         [Parameter(ValueFromPipelineByPropertyName = true)]
         public string SessionToken { get; set; }
 
@@ -113,6 +157,22 @@ namespace Firefly.PSCloudFormation
         /// The current credentials.
         /// </value>
         protected AWSCredentials _CurrentCredentials { get; set; }
+
+        /// <summary>
+        /// Gets or sets the current region.
+        /// </summary>
+        /// <value>
+        /// The current region.
+        /// </value>
+        protected RegionEndpoint _CurrentRegion { get; set; }
+
+        /// <summary>
+        /// Gets the default region.
+        /// </summary>
+        /// <value>
+        /// The default region.
+        /// </value>
+        protected virtual string _DefaultRegion => null;
 
         /// <summary>
         /// Gets or sets the region endpoint.
@@ -168,6 +228,17 @@ namespace Firefly.PSCloudFormation
         }
 
         /// <summary>
+        /// Helper to throw an error occuring during service execution
+        /// </summary>
+        /// <param name="message">The message to emit to the error record</param>
+        /// <param name="errorSource">The source (parameter or cmdlet) reporting the error</param>
+        /// <param name="innerException">The exception that was caught, if any</param>
+        protected void ThrowExecutionError(string message, object errorSource, Exception innerException)
+        {
+            this.ThrowTerminatingError(new ErrorRecord(new InvalidOperationException(message, innerException), innerException == null ? "InvalidOperationException" : innerException.GetType().ToString(), ErrorCategory.InvalidOperation, errorSource));
+        }
+
+        /// <summary>
         /// Asks for the user's MFA code.
         /// </summary>
         /// <returns>Code input by user.</returns>
@@ -177,7 +248,7 @@ namespace Firefly.PSCloudFormation
             var text = string.Empty;
             while (true)
             {
-                var consoleKeyInfo = Console.ReadKey(intercept: true);
+                var consoleKeyInfo = Console.ReadKey(true);
                 if (consoleKeyInfo.Key == ConsoleKey.Backspace)
                 {
                     if (text.Length > 0)
@@ -366,9 +437,7 @@ namespace Firefly.PSCloudFormation
         /// <returns>User's network credentials</returns>
         protected NetworkCredential UserCredentialCallbackHandler(CredentialRequestCallbackArgs callbackArguments)
         {
-            var sAMLCredentialCallbackState = callbackArguments.CustomState as SAMLCredentialCallbackState;
-
-            if (sAMLCredentialCallbackState == null)
+            if (!(callbackArguments.CustomState is SAMLCredentialCallbackState sAMLCredentialCallbackState))
             {
                 return null;
             }
@@ -410,6 +479,126 @@ namespace Firefly.PSCloudFormation
             }
 
             return psCredential?.GetNetworkCredential();
+        }
+
+        /// <summary>
+        /// Try to determine user's current region from available sources
+        /// </summary>
+        /// <param name="useInstanceMetadata">if set to <c>true</c> [use instance metadata].</param>
+        /// <param name="region">The region.</param>
+        /// <param name="sessionState">State of the session.</param>
+        /// <returns><c>true</c> if region was determined; else <c>false</c>.</returns>
+        /// <exception cref="ArgumentException">Unsupported parameter type; Region must be a string containing the system name for a region, or an AWSRegion instance</exception>
+        /// <exception cref="ArgumentOutOfRangeException"></exception>
+        protected bool TryGetRegion(bool useInstanceMetadata, out RegionEndpoint region, SessionState sessionState)
+        {
+            region = null;
+            var source = RegionSource.Unknown;
+
+            if (this.Region != null)
+            {
+                var regionSystemName = string.Empty;
+
+                switch (this.Region)
+                {
+                    case PSObject psobject:
+                        regionSystemName = !(psobject.BaseObject is AWSRegion) ? psobject.BaseObject as string : (psobject.BaseObject as AWSRegion)?.Region;
+                        break;
+
+                    case string s:
+                        regionSystemName = s;
+                        break;
+                }
+
+                if (string.IsNullOrEmpty(regionSystemName))
+                {
+                    throw new ArgumentException("Unsupported parameter type; Region must be a string containing the system name for a region, or an AWSRegion instance");
+                }
+
+                try
+                {
+                    region = RegionEndpoint.GetBySystemName(regionSystemName);
+                    source = RegionSource.String;
+                }
+                catch (Exception ex)
+                {
+                    throw new ArgumentOutOfRangeException($"Unsupported Region value. Supported values: {string.Join(", ", RegionEndpoint.EnumerableAllRegions)}", ex);
+                }
+            }
+
+            if (region == null && sessionState != null)
+            {
+                var value = sessionState.PSVariable.GetValue("StoredAWSRegion");
+
+                if (value is string s)
+                {
+                    region = RegionEndpoint.GetBySystemName(s);
+                    source = RegionSource.Session;
+                }
+            }
+
+            if (region == null && !TryLoadRegionFromProfile("default", this.ProfileLocation, ref region, ref source))
+            {
+                TryLoadRegionFromProfile("AWS PS Default", this.ProfileLocation, ref region, ref source);
+            }
+
+            if (region == null)
+            {
+                try
+                {
+                    // Throws if environment variable undefined
+                    var environmentVariableAWSRegion = new EnvironmentVariableAWSRegion();
+                    region = environmentVariableAWSRegion.Region;
+                    source = RegionSource.Environment;
+                }
+                catch
+                {
+                    // Do nothing
+                }
+            }
+
+            if (region == null && useInstanceMetadata)
+            {
+                try
+                {
+                    region = EC2InstanceMetadata.Region;
+                    if (region != null)
+                    {
+                        source = RegionSource.InstanceMetadata;
+                    }
+                }
+                catch
+                {
+                    // Do nothing
+                }
+            }
+
+            if (region != null)
+            {
+                return source != RegionSource.Unknown;
+            }
+
+            return false;
+        }
+
+        /// <summary>
+        /// Tries the load region from profile.
+        /// </summary>
+        /// <param name="name">The name.</param>
+        /// <param name="profileLocation">The profile location.</param>
+        /// <param name="region">The region.</param>
+        /// <param name="source">The source.</param>
+        /// <returns></returns>
+        private static bool TryLoadRegionFromProfile(string name, string profileLocation, ref RegionEndpoint region, ref RegionSource source)
+        {
+            if (SettingsStore.TryGetProfile(name, profileLocation, out var profile) && profile.Region != null)
+            {
+                region = profile.Region;
+                source = RegionSource.Saved;
+                return true;
+            }
+
+            return false;
         }
 
         /// <summary>

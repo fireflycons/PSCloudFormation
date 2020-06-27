@@ -14,6 +14,7 @@
     /// Concrete logger implementation for PowerShell
     /// </summary>
     /// <seealso cref="Firefly.CloudFormation.Utils.ILogger" />
+
     // ReSharper disable once InconsistentNaming
     public class PSLogger : BaseLogger
     {
@@ -48,14 +49,14 @@
         {
             var columnWidths = base.LogChangeset(changes);
             var foregroundColorMap = new Dictionary<string, ConsoleColor>
-                                          {
-                                              { "Add", ConsoleColor.Green },
-                                              { "Remove", ConsoleColor.Red },
-                                              { "Modify", ConsoleColor.Yellow },
-                                              { "False", ConsoleColor.Green },
-                                              { "True", ConsoleColor.Red },
-                                              { "Conditional", ConsoleColor.Yellow }
-                                          };
+                                         {
+                                             { "Add", ConsoleColor.Green },
+                                             { "Remove", ConsoleColor.Red },
+                                             { "Modify", ConsoleColor.Yellow },
+                                             { "False", ConsoleColor.Green },
+                                             { "True", ConsoleColor.Red },
+                                             { "Conditional", ConsoleColor.Yellow }
+                                         };
 
             var ui = this.cmdlet.Host.UI;
             var bg = ui.RawUI.BackgroundColor;
@@ -83,9 +84,8 @@
             this.LogInformation(changeFormatString, "Action", "Logical ID", "Type", "Replacement", "Physical ID");
             this.LogInformation(changeFormatString, "------", "----------", "----", "-----------", "-----------");
 
-            foreach (var change in changes.Changes)
+            foreach (var r in changes.Changes.Select(change => change.ResourceChange))
             {
-                var r = change.ResourceChange;
                 ui.Write(foregroundColorMap[r.Action.Value], bg, r.Action.Value.PadRight(actionColWidth + 1));
                 ui.Write(r.LogicalResourceId.PadRight(logicalResourceIdColWidth + 1));
                 ui.Write(r.ResourceType.PadRight(resourceTypeColWidth + 1));
@@ -156,9 +156,9 @@
         /// <param name="event">The event.</param>
         public override void LogStackEvent(StackEvent @event)
         {
+            const int TimeColWidth = 8;
             var stackColWidth = Math.Max(9, Math.Min(this.StackNameColumnWidth, 40));
             var resourceColWidth = Math.Max(11, Math.Min(this.ResourceNameColumnWidth, 40));
-            var timeColWidth = 8;
 
             var ui = this.cmdlet.Host.UI;
             var bg = ui.RawUI.BackgroundColor;
@@ -166,7 +166,7 @@
             if (this.isFirstEvent)
             {
                 var eventFormatString =
-                    $"{{0,-{timeColWidth}}} {{1,-{stackColWidth}}} {{2,-{resourceColWidth}}} {{3,-{this.StatusColumnWidth}}} {{4}}";
+                    $"{{0,-{TimeColWidth}}} {{1,-{stackColWidth}}} {{2,-{resourceColWidth}}} {{3,-{this.StatusColumnWidth}}} {{4}}";
 
                 // Resize window to be wide enough for a reasonable amount of description per line
                 this.ResizeWindow(
@@ -178,7 +178,7 @@
             }
 
             var leftIndent = GetLeftMarginForLastColumn(
-                timeColWidth,
+                TimeColWidth,
                 stackColWidth,
                 resourceColWidth,
                 this.StatusColumnWidth);

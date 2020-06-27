@@ -345,3 +345,4 @@ PSCloudFormation/PSCloudFormation.netcore.psd1
 .vscode/
 test-output/
 PSCloudFormation/en-US/PSCloudFormation-help.xml
+*.linq

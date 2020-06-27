@@ -74,6 +74,14 @@
         public string ResourcesToImport { get; set; }
 
         /// <summary>
+        /// Gets the stack operation.
+        /// </summary>
+        /// <value>
+        /// The stack operation.
+        /// </value>
+        protected override StackOperation StackOperation { get; } = StackOperation.Update;
+
+        /// <summary>
         /// Gets the builder for <see cref="CloudFormationRunner" /> and populates the fields pertinent to this level.
         /// </summary>
         /// <returns>
@@ -95,13 +103,12 @@
         {
             await base.OnProcessRecord();
 
-            var runner = this.GetBuilder()
-                .WithStackPolicyDuringUpdate(this.StackPolicyDuringUpdateLocation)
-                .WithUsePreviousTemplate(this.UsePreviousTemplateFlag)
-                .WithResourceImports(this.ResourcesToImport)
-                .Build();
-
-            return await runner.UpdateStackAsync(this.AcceptChangeset);
+            using (var runner = this.GetBuilder().WithStackPolicyDuringUpdate(this.StackPolicyDuringUpdateLocation)
+                .WithUsePreviousTemplate(this.UsePreviousTemplateFlag).WithResourceImports(this.ResourcesToImport)
+                .Build())
+            {
+                return await runner.UpdateStackAsync(this.AcceptChangeset);
+            }
         }
 
         /// <summary>

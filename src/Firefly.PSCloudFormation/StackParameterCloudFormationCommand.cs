@@ -72,6 +72,7 @@
         /// The notification ARNs.
         /// </value>
         [Parameter(ValueFromPipelineByPropertyName = true)]
+        // ReSharper disable once InconsistentNaming
         public string[] NotificationARNs { get; set; }
 
         /// <summary>
@@ -118,7 +119,8 @@
         /// </value>
         [Parameter(ValueFromPipelineByPropertyName = true)]
         [ValidateRange(0, int.MaxValue)]
-        [Alias(("RollbackConfiguration_MonitoringTimeInMinutes"))]
+        [Alias("RollbackConfiguration_MonitoringTimeInMinutes")]
+        // ReSharper disable once InconsistentNaming
         public int RollbackConfiguration_MonitoringTimeInMinute { get; set; }
 
         /// <summary>
@@ -132,6 +134,7 @@
         /// The rollback configuration rollback trigger.
         /// </value>
         [Parameter(ValueFromPipelineByPropertyName = true)]
+        // ReSharper disable once InconsistentNaming
         public RollbackTrigger[] RollbackConfiguration_RollbackTrigger { get; set; }
 
         /// <summary>
@@ -176,6 +179,14 @@
         public string TemplateLocation { get; set; }
 
         /// <summary>
+        /// Gets the stack operation.
+        /// </summary>
+        /// <value>
+        /// The stack operation.
+        /// </value>
+        protected abstract StackOperation StackOperation { get;  }
+
+        /// <summary>
         /// Gets the list of parameters that will be passed to CloudFormation.
         /// </summary>
         /// <value>
@@ -215,7 +226,7 @@
             var task = templateResolver.ResolveFileAsync(this.TemplateLocation);
             task.Wait();
 
-            var templateManager = new TemplateManager(templateResolver);
+            var templateManager = new TemplateManager(templateResolver, this.StackOperation);
 
             var paramsDictionary = templateManager.GetStackDynamicParameters();
 

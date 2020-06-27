@@ -19,7 +19,7 @@ namespace Firefly.PSCloudFormation.Tests.Unit
             var mockTemplateResolver = new Mock<IInputFileResolver>();
 
             mockTemplateResolver.Setup(r => r.FileContent).Returns(templateBody);
-            var templateManager = new TemplateManager(mockTemplateResolver.Object);
+            var templateManager = new TemplateManager(mockTemplateResolver.Object, StackOperation.Create);
             this.ParameterDictionary = templateManager.GetStackDynamicParameters();
         }
 
