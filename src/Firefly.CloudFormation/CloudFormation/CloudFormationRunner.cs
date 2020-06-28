@@ -70,9 +70,6 @@ namespace Firefly.CloudFormation.CloudFormation
         /// </summary>
         private readonly string resourcesToImportLocation;
 
-        /// <summary>If set to <c>true</c>, do not create default tags.</summary>
-        private readonly bool noDefaultTags;
-
         /// <summary>
         /// SNS notification ARNs
         /// </summary>
@@ -180,7 +177,6 @@ namespace Firefly.CloudFormation.CloudFormation
         /// <param name="waitForInProgressUpdate">if set to <c>true</c> [wait for in progress update].</param>
         /// <param name="deleteNoopChangeSet">if set to <c>true</c> [delete no-op change set].</param>
         /// <param name="changesetOnly">if set to <c>true</c> only create change set without updating.</param>
-        /// <param name="noDefaultTags">If set to <c>true</c>, do not create default tags.</param>
         /// <param name="resourcesToImportLocation">Resources to import</param>
         /// <param name="roleArn">Role to assume</param>
         /// <param name="clientToken">Client token</param>
@@ -207,7 +203,6 @@ namespace Firefly.CloudFormation.CloudFormation
             bool waitForInProgressUpdate,
             bool deleteNoopChangeSet,
             bool changesetOnly,
-            bool noDefaultTags,
             string resourcesToImportLocation,
             string roleArn,
             string clientToken,
@@ -239,7 +234,6 @@ namespace Firefly.CloudFormation.CloudFormation
             this.roleArn = roleArn;
             this.resourcesToImportLocation = resourcesToImportLocation;
             this.clientFactory = clientFactory;
-            this.noDefaultTags = noDefaultTags;
             this.context = context;
             this.changesetOnly = changesetOnly;
             this.templateLocation = templateLocation;
@@ -332,7 +326,7 @@ namespace Firefly.CloudFormation.CloudFormation
                               RollbackConfiguration = this.rollbackConfiguration,
                               RoleARN = this.roleArn,
                               StackName = this.stackName,
-                              Tags = this.GetStackTags(),
+                              Tags = this.tags,
                               TemplateBody = this.templateResolver.ArtifactContent,
                               TemplateURL = this.templateResolver.ArtifactUrl
                           };
@@ -517,7 +511,6 @@ namespace Firefly.CloudFormation.CloudFormation
             // If we get here, stack is in Ready state
             var changeSetName = CreateChangeSetName();
             var stackParameters = this.GetStackParametersForUpdate(this.templateResolver, stack);
-            var tagsToApply = this.GetStackTags();
             var resourcesToImport = await this.GetResourcesToImport();
 
             var changeSetRequest = new CreateChangeSetRequest
@@ -532,7 +525,7 @@ namespace Firefly.CloudFormation.CloudFormation
                                            NotificationARNs = this.notificationARNs,
                                            RollbackConfiguration = this.rollbackConfiguration,
                                            ResourceTypes = this.resourceType,
-                                           Tags = tagsToApply,
+                                           Tags = this.tags,
                                            ResourcesToImport = resourcesToImport,
                                            TemplateBody = this.templateResolver.ArtifactContent,
                                            TemplateURL =

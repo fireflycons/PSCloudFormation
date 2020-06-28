@@ -144,26 +144,6 @@
             return stackParameters;
         }
 
-        /// <summary>Gets the stack tags.</summary>
-        /// <returns>List of AWS stack tags</returns>
-        private List<Tag> GetStackTags()
-        {
-            var stackTags = new List<Tag>();
-
-            if (this.tags != null)
-            {
-                stackTags.AddRange(this.tags);
-            }
-
-            // Always add stack name as a tag, unless added already or suppressed
-            if (!this.noDefaultTags && (this.tags == null || this.tags.All(t => t.Key != StackTagName)))
-            {
-                stackTags.Add(new Tag { Key = StackTagName, Value = this.stackName });
-            }
-
-            return stackTags;
-        }
-
         /// <summary>
         /// Resolves the template or policy input.
         /// </summary>

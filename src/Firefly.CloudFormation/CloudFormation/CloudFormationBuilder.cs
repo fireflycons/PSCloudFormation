@@ -45,11 +45,6 @@ namespace Firefly.CloudFormation.CloudFormation
         private string _resourceImportsLocation;
 
         /// <summary>
-        /// If set, don't add default tags (GBS always add Name = name of CF stack).
-        /// </summary>
-        private bool _noDefaultTags;
-
-        /// <summary>
         /// The notification ARNs
         /// </summary>
         private List<string> _notificationARNs = new List<string>();
@@ -155,7 +150,6 @@ namespace Firefly.CloudFormation.CloudFormation
                 this._waitForInProgressUpdate,
                 this._deleteNoopChangeset,
                 this._changesetOnly,
-                this._noDefaultTags,
                 this._resourceImportsLocation,
                 this._roleARN,
                 this._clientToken,
@@ -184,7 +178,7 @@ namespace Firefly.CloudFormation.CloudFormation
         /// <summary>
         /// Set whether to create change set only without performing update.
         /// </summary>
-        /// <param name="enable">If <c>true</c> (default), execute changeset only.</param>
+        /// <param name="enable">If <c>true</c> (default), execute change set only.</param>
         /// <returns>The builder</returns>
         public CloudFormationBuilder WithChangesetOnly(bool enable = true)
         {
@@ -214,23 +208,15 @@ namespace Firefly.CloudFormation.CloudFormation
             return this;
         }
 
-        /// <summary>Set whether to auto-delete change sets that return no change.</summary>
+        /// <summary>
+        /// Set whether to auto-delete change sets that return no change.
+        /// The default for this is <c>true</c>, so call this method with <c>false</c> to retain change set for future inspection.
+        /// </summary>
         /// <param name="delete">if set to <c>true</c> [delete].</param>
         /// <returns>The builder</returns>
         public CloudFormationBuilder WithDeleteNoopChangeset(bool delete)
         {
             this._deleteNoopChangeset = delete;
-            return this;
-        }
-
-        /// <summary>
-        /// Set whether to add default tags to stack
-        /// </summary>
-        /// <param name="enable">If <c>true</c> (default), do not add default tags (currently <c>Name</c>) to the stack.</param>
-        /// <returns>The builder.</returns>
-        public CloudFormationBuilder WithNoDefaultTags(bool enable = true)
-        {
-            this._noDefaultTags = enable;
             return this;
         }
 
