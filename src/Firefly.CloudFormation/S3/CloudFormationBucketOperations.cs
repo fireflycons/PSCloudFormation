@@ -75,17 +75,19 @@
         {
             if (this.cloudFormationBucket == null)
             {
-                if ((await PollyHelper.ExecuteWithPolly(() => this.client.ListBucketsAsync(new ListBucketsRequest())))
+                if ((await this.client.ListBucketsAsync(new ListBucketsRequest()))
                     .Buckets.FirstOrDefault(b => b.BucketName == this.cloudFormationBucketName) == null)
                 {
                     // Create bucket
-                    await PollyHelper.ExecuteWithPolly(
-                        () => this.client.PutBucketAsync(
-                            new PutBucketRequest { BucketName = this.cloudFormationBucketName }));
+                    this.context.Logger.LogInformation($"Creating bucket '{this.cloudFormationBucketName}' to store oversize templates.");
+                    await this.client.PutBucketAsync(
+                            new PutBucketRequest { BucketName = this.cloudFormationBucketName });
 
-                    // Add a lifecycle configuration to prevent buildup of old templates.
-                    await PollyHelper.ExecuteWithPolly(
-                        () => this.client.PutLifecycleConfigurationAsync(
+                    try
+                    {
+                        // Add a lifecycle configuration to prevent buildup of old templates.
+                        this.context.Logger.LogInformation("Adding lifecycle rule to purge temporary uploads after 7 days");
+                        await this.client.PutLifecycleConfigurationAsync(
                             new PutLifecycleConfigurationRequest
                                 {
                                     BucketName = this.cloudFormationBucketName,
@@ -95,6 +97,20 @@
                                                                         {
                                                                             new LifecycleRule
                                                                                 {
+                                                                                    Id = "delete-after-one-week",
+                                                                                    Filter = new LifecycleFilter
+                                                                                                 {
+                                                                                                     LifecycleFilterPredicate
+                                                                                                         = new
+                                                                                                           LifecyclePrefixPredicate
+                                                                                                               {
+                                                                                                                   Prefix
+                                                                                                                       = string
+                                                                                                                           .Empty
+                                                                                                               }
+                                                                                                 },
+                                                                                    Status =
+                                                                                        LifecycleRuleStatus.Enabled,
                                                                                     Expiration =
                                                                                         new LifecycleRuleExpiration
                                                                                             {
@@ -103,10 +119,12 @@
                                                                                 }
                                                                         }
                                                         }
-                                }));
-
-                    this.context.Logger.LogInformation(
-                        $"Created S3 bucket {this.cloudFormationBucketName} to store oversize templates.");
+                                });
+                    }
+                    catch (Exception ex)
+                    {
+                        this.context.Logger.LogWarning($"Unable to add lifecycle rule to new bucket. Old temporary uploads will not be automatically purged. Exception was\n{ex.Message}");
+                    }
                 }
 
                 this.cloudFormationBucket = new CloudFormationBucket
