@@ -55,7 +55,7 @@
         /// <summary>
         /// Gets or sets the pass thru.
         /// <para type="description">
-        /// If used in conjunction with -Wait, return stack ARN instead of stack status
+        /// If set, return the stack ARN instead of the stack operation result.
         /// </para>
         /// </summary>
         /// <value>
@@ -229,7 +229,8 @@
 
                 if (task.Result != null)
                 {
-                    this.WriteObject(task.Result);
+                    var stackResult = (CloudFormationResult)task.Result;
+                    this.WriteObject(this.PassThru ? (object)stackResult.StackArn : stackResult.StackOperationResult);
                 }
             }
             finally
