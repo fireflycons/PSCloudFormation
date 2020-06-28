@@ -60,6 +60,17 @@
         public OnFailure OnFailure { get; set; }
 
         /// <summary>
+        /// Gets or sets the timeout in minutes.
+        /// <para type="description">
+        /// The amount of time that can pass before the stack status becomes CREATE_FAILED; if <c>DisableRollback</c> is not set or is set to <c>false</c>, the stack will be rolled back.
+        /// </para>
+        /// </summary>
+        /// <value>
+        /// The timeout in minutes.
+        /// </value>
+        public int TimeoutInMinutes { get; set; }
+
+        /// <summary>
         /// Gets the stack operation.
         /// </summary>
         /// <value>
@@ -78,7 +89,8 @@
             return base.GetBuilder()
                 .WithDisableRollback(this.DisableRollback)
                 .WithOnFailure(this.OnFailure)
-                .WithTerminationProtection(this.EnableTerminationProtection);
+                .WithTerminationProtection(this.EnableTerminationProtection)
+                .WithTimeoutInMinutes(this.TimeoutInMinutes);
         }
 
         /// <summary>

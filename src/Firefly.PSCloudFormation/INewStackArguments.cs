@@ -44,5 +44,17 @@
         /// The on failure.
         /// </value>
         OnFailure OnFailure { get; set; }
+
+        /// <summary>
+        /// Gets or sets the timeout in minutes.
+        /// <para type="description">
+        /// The amount of time that can pass before the stack status becomes CREATE_FAILED; if <c>DisableRollback</c> is not set or is set to <c>false</c>, the stack will be rolled back.
+        /// </para>
+        /// </summary>
+        /// <value>
+        /// The timeout in minutes.
+        /// </value>
+        [Parameter(ValueFromPipelineByPropertyName = true)]
+        int TimeoutInMinutes { get; set; }
     }
 }

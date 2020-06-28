@@ -56,6 +56,17 @@
         public OnFailure OnFailure { get; set; }
 
         /// <summary>
+        /// Gets or sets the timeout in minutes.
+        /// <para type="description">
+        /// The amount of time that can pass before the stack status becomes CREATE_FAILED; if <c>DisableRollback</c> is not set or is set to <c>false</c>, the stack will be rolled back.
+        /// </para>
+        /// </summary>
+        /// <value>
+        /// The timeout in minutes.
+        /// </value>
+        public int TimeoutInMinutes { get; set; }
+
+        /// <summary>
         /// Gets or sets the retain resource.
         /// <para type="description">
         /// For stacks in the <c>DELETE_FAILED</c> state, a list of resource logical IDs that are associated with the resources you want to retain.
@@ -105,9 +116,12 @@
             }
 
             // Now recreate
-            using (var runner = this.GetBuilder().WithDisableRollback(this.DisableRollback)
-                .WithOnFailure(this.OnFailure).WithTerminationProtection(this.EnableTerminationProtection)
-                .WithWaitForInProgressUpdate(this.Wait).Build())
+            using (var runner = this.GetBuilder()
+                .WithDisableRollback(this.DisableRollback)
+                .WithOnFailure(this.OnFailure)
+                .WithTerminationProtection(this.EnableTerminationProtection)
+                .WithWaitForInProgressUpdate(this.Wait)
+                .WithTimeoutInMinutes(this.TimeoutInMinutes).Build())
             {
                 return await runner.CreateStackAsync();
             }
