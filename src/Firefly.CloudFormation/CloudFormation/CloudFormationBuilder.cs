@@ -214,6 +214,7 @@ namespace Firefly.CloudFormation.CloudFormation
         /// </summary>
         /// <param name="delete">if set to <c>true</c> [delete].</param>
         /// <returns>The builder</returns>
+        // ReSharper disable once UnusedMember.Global
         public CloudFormationBuilder WithDeleteNoopChangeset(bool delete)
         {
             this._deleteNoopChangeset = delete;

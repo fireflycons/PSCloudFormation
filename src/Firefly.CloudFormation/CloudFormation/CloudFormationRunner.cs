@@ -21,9 +21,6 @@ namespace Firefly.CloudFormation.CloudFormation
     {
         #region Fields
 
-        /// <summary>Tag name to use for naming the stack</summary>
-        private const string StackTagName = "Name";
-
         /// <summary>
         /// Messages that can be returned by change set creation if the stack is unchanged.
         /// </summary>
@@ -424,6 +421,7 @@ namespace Firefly.CloudFormation.CloudFormation
         /// Resets a stack by deleting and recreating it.
         /// </summary>
         /// <returns>Operation result.</returns>
+        // ReSharper disable once UnusedMember.Global - Public API
         public async Task<CloudFormationResult> ResetStackAsync()
         {
             var previousWaitSetting = this.waitForInProgressUpdate;
