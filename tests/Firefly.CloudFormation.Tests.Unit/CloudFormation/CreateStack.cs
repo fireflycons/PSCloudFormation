@@ -102,7 +102,7 @@
                 .WithTemplateLocation(template.Path)
                 .Build();
 
-            (await runner.CreateStackAsync()).Should().Be(StackOperationResult.StackCreated);
+            (await runner.CreateStackAsync()).StackOperationResult.Should().Be(StackOperationResult.StackCreated);
             logger.StackEvents.Count.Should().BeGreaterThan(0);
         }
 
@@ -128,7 +128,7 @@
                 .WithTemplateLocation(template.Path)
                 .Build();
 
-            Func<Task<StackOperationResult>> action = async () => await runner.CreateStackAsync();
+            Func<Task<CloudFormationResult>> action = async () => await runner.CreateStackAsync();
 
             action.Should().Throw<StackOperationException>().WithMessage($"Stack {StackName} already exists");
         }

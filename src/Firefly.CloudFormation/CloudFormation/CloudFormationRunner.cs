@@ -309,7 +309,7 @@ namespace Firefly.CloudFormation.CloudFormation
 
         /// <summary>Creates a new stack.</summary>
         /// <returns><see cref="Task"/> object so we can await task return.</returns>
-        public async Task<StackOperationResult> CreateStackAsync()
+        public async Task<CloudFormationResult> CreateStackAsync()
         {
             if (await this.stackOperations.StackExistsAsync(this.stackName))
             {
@@ -358,15 +358,21 @@ namespace Firefly.CloudFormation.CloudFormation
             if (this.waitForInProgressUpdate)
             {
                 await this.WaitStackOperationAsync(stackId, true);
-                return StackOperationResult.StackCreated;
+                return new CloudFormationResult
+                           {
+                               StackArn = stackId, StackOperationResult = StackOperationResult.StackCreated
+                           };
             }
 
-            return StackOperationResult.StackCreateInProgress;
+            return new CloudFormationResult
+                       {
+                           StackArn = stackId, StackOperationResult = StackOperationResult.StackCreateInProgress
+                       };
         }
 
         /// <summary>Deletes a stack.</summary>
         /// <returns>Operation result.</returns>
-        public async Task<StackOperationResult> DeleteStackAsync()
+        public async Task<CloudFormationResult> DeleteStackAsync()
         {
             var stack = await this.stackOperations.GetStackAsync(this.stackName);
             var operationalState = await this.stackOperations.GetStackOperationalStateAsync(stack.StackId);
@@ -408,17 +414,23 @@ namespace Firefly.CloudFormation.CloudFormation
             if (this.waitForInProgressUpdate)
             {
                 await this.WaitStackOperationAsync(stack.StackId, true);
-                return StackOperationResult.StackDeleted;
+                return new CloudFormationResult
+                           {
+                               StackArn = stack.StackId, StackOperationResult = StackOperationResult.StackDeleted
+                           };
             }
 
-            return StackOperationResult.StackDeleteInProgress;
+            return new CloudFormationResult
+                       {
+                           StackArn = stack.StackId, StackOperationResult = StackOperationResult.StackDeleteInProgress
+                       };
         }
 
         /// <summary>
         /// Resets a stack by deleting and recreating it.
         /// </summary>
         /// <returns>Operation result.</returns>
-        public async Task<StackOperationResult> ResetStackAsync()
+        public async Task<CloudFormationResult> ResetStackAsync()
         {
             var previousWaitSetting = this.waitForInProgressUpdate;
 
@@ -432,10 +444,14 @@ namespace Firefly.CloudFormation.CloudFormation
 
                 await this.DeleteStackAsync();
                 this.waitForInProgressUpdate = previousWaitSetting;
-                await this.CreateStackAsync();
-                return this.waitForInProgressUpdate
-                           ? StackOperationResult.StackReplaced
-                           : StackOperationResult.StackCreateInProgress;
+                var result = await this.CreateStackAsync();
+
+                if (result.StackOperationResult == StackOperationResult.StackCreated)
+                {
+                    result.StackOperationResult = StackOperationResult.StackReplaced;
+                }
+
+                return result;
             }
             finally
             {
@@ -447,7 +463,7 @@ namespace Firefly.CloudFormation.CloudFormation
         /// <param name="confirmationFunc">A callback that should return <c>true</c> or <c>false</c> as to whether to continue with the stack update.</param>
         /// <exception cref="StackOperationException">Change set creation failed for reasons other than 'no change'</exception>
         /// <returns>Operation result.</returns>
-        public async Task<StackOperationResult> UpdateStackAsync(Func<DescribeChangeSetResponse, bool> confirmationFunc)
+        public async Task<CloudFormationResult> UpdateStackAsync(Func<DescribeChangeSetResponse, bool> confirmationFunc)
         {
             var stack = await this.stackOperations.GetStackAsync(this.stackName);
 
@@ -560,8 +576,11 @@ namespace Firefly.CloudFormation.CloudFormation
                     this.context.Logger.LogInformation($"Deleted changeset {changeSetName}");
                 }
 
-                return StackOperationResult.NoChange;
-
+                return new CloudFormationResult
+                           {
+                               StackArn = stack.StackId,
+                               StackOperationResult = StackOperationResult.NoChange
+                           };
             }
 
             // If we get here, emit details, then apply the changeset.
@@ -574,7 +593,11 @@ namespace Firefly.CloudFormation.CloudFormation
                     // ReSharper disable once PossibleNullReferenceException - 'response' cannot be null. DescribeChangeSetAsync has been called at least once to make it here.
                     $"Changeset {response.ChangeSetName} created for stack {stack.StackName}");
                 this.context.Logger.LogInformation("Not updating stack since CreateChangesetOnly = true");
-                return StackOperationResult.NoChange;
+                return new CloudFormationResult
+                           {
+                               StackArn = stack.StackId,
+                               StackOperationResult = StackOperationResult.NoChange
+                           };
             }
 
             if (confirmationFunc != null)
@@ -582,7 +605,11 @@ namespace Firefly.CloudFormation.CloudFormation
                 // Confirm the changeset before proceeding
                 if (!confirmationFunc(response))
                 {
-                    return StackOperationResult.NoChange;
+                    return new CloudFormationResult
+                               {
+                                   StackArn = stack.StackId,
+                                   StackOperationResult = StackOperationResult.NoChange
+                               };
                 }
             }
 
@@ -610,10 +637,18 @@ namespace Firefly.CloudFormation.CloudFormation
             if (this.waitForInProgressUpdate)
             {
                 await this.WaitStackOperationAsync(stack.StackId, true);
-                return StackOperationResult.StackUpdated;
+                return new CloudFormationResult
+                           {
+                               StackArn = stack.StackId,
+                               StackOperationResult = StackOperationResult.StackUpdated
+                           };
             }
 
-            return StackOperationResult.StackUpdateInProgress;
+            return new CloudFormationResult
+                       {
+                           StackArn = stack.StackId,
+                           StackOperationResult = StackOperationResult.StackUpdateInProgress
+                       };
         }
     }
 }

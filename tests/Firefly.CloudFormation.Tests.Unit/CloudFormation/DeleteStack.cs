@@ -159,7 +159,7 @@
                 .WithWaitForInProgressUpdate()
                 .Build();
 
-            (await runner.DeleteStackAsync()).Should().Be(StackOperationResult.StackDeleted);
+            (await runner.DeleteStackAsync()).StackOperationResult.Should().Be(StackOperationResult.StackDeleted);
             logger.StackEvents.Count.Should().BeGreaterThan(0);
         }
 
@@ -184,7 +184,7 @@
                 .WithWaitForInProgressUpdate()
                 .Build();
 
-            Func<Task<StackOperationResult>> action = async () => await runner.DeleteStackAsync();
+            Func<Task<CloudFormationResult>> action = async () => await runner.DeleteStackAsync();
 
             action.Should().Throw<StackOperationException>().WithMessage($"Stack with id {StackName} does not exist");
         }
@@ -246,7 +246,7 @@
                 .WithClientFactory(mockClientFactory.Object)
                 .Build();
 
-            Func<Task<StackOperationResult>> action = async () => await runner.DeleteStackAsync();
+            Func<Task<CloudFormationResult>> action = async () => await runner.DeleteStackAsync();
 
             action.Should().Throw<StackOperationException>().WithMessage(expectedMessage);
         }

@@ -111,7 +111,7 @@ namespace Firefly.CloudFormation.Tests.Unit.CloudFormation
             var runner = CloudFormationRunner.Builder(mockContext.Object, StackName)
                 .WithClientFactory(mockClientFactory.Object).WithTemplateLocation(template.Path).Build();
 
-            Func<Task<StackOperationResult>> action = async () => await runner.UpdateStackAsync(null);
+            Func<Task<CloudFormationResult>> action = async () => await runner.UpdateStackAsync(null);
 
             action.Should().Throw<StackOperationException>().WithMessage($"Stack with id {StackName} does not exist");
         }
@@ -164,7 +164,7 @@ namespace Firefly.CloudFormation.Tests.Unit.CloudFormation
             var runner = CloudFormationRunner.Builder(mockContext.Object, StackName)
                 .WithClientFactory(mockClientFactory.Object).WithTemplateLocation(template.Path).Build();
 
-            Func<Task<StackOperationResult>> action = async () => await runner.UpdateStackAsync(null);
+            Func<Task<CloudFormationResult>> action = async () => await runner.UpdateStackAsync(null);
 
             action.Should().Throw<StackOperationException>().WithMessage(expectedMessage);
         }
@@ -221,7 +221,7 @@ namespace Firefly.CloudFormation.Tests.Unit.CloudFormation
             var runner = CloudFormationRunner.Builder(mockContext.Object, StackName)
                 .WithClientFactory(mockClientFactory.Object).WithTemplateLocation(template.Path).Build();
 
-            Func<Task<StackOperationResult>> action = async () => await runner.UpdateStackAsync(null);
+            Func<Task<CloudFormationResult>> action = async () => await runner.UpdateStackAsync(null);
 
             action.Should().Throw<StackOperationException>().WithMessage(expectedMessage);
         }
@@ -268,7 +268,7 @@ namespace Firefly.CloudFormation.Tests.Unit.CloudFormation
             var runner = CloudFormationRunner.Builder(mockContext.Object, StackName)
                 .WithClientFactory(mockClientFactory.Object).WithTemplateLocation(template.Path).Build();
 
-            Func<Task<StackOperationResult>> action = async () => await runner.UpdateStackAsync(null);
+            Func<Task<CloudFormationResult>> action = async () => await runner.UpdateStackAsync(null);
 
             action.Should().Throw<StackOperationException>().WithMessage(expectedMessage);
         }
@@ -306,7 +306,7 @@ namespace Firefly.CloudFormation.Tests.Unit.CloudFormation
             var runner = CloudFormationRunner.Builder(mockContext.Object, StackName)
                 .WithClientFactory(mockClientFactory.Object).WithTemplateLocation(template.Path).Build();
 
-            (await runner.UpdateStackAsync(null)).Should().Be(StackOperationResult.NoChange);
+            (await runner.UpdateStackAsync(null)).StackOperationResult.Should().Be(StackOperationResult.NoChange);
             logger.ChangeSets.Count.Should().Be(0);
         }
 
@@ -344,7 +344,7 @@ namespace Firefly.CloudFormation.Tests.Unit.CloudFormation
             var runner = CloudFormationRunner.Builder(mockContext.Object, StackName)
                 .WithClientFactory(mockClientFactory.Object).WithTemplateLocation(template.Path).WithChangesetOnly().Build();
 
-            (await runner.UpdateStackAsync(null)).Should().Be(StackOperationResult.NoChange);
+            (await runner.UpdateStackAsync(null)).StackOperationResult.Should().Be(StackOperationResult.NoChange);
             logger.InfoMessages.Last().Should().Be("Not updating stack since CreateChangesetOnly = true");
             logger.ChangeSets.Count.Should().BeGreaterThan(0);
         }
@@ -383,7 +383,7 @@ namespace Firefly.CloudFormation.Tests.Unit.CloudFormation
             var runner = CloudFormationRunner.Builder(mockContext.Object, StackName)
                 .WithClientFactory(mockClientFactory.Object).WithTemplateLocation(template.Path).Build();
 
-            (await runner.UpdateStackAsync(_ => false)).Should().Be(StackOperationResult.NoChange);
+            (await runner.UpdateStackAsync(_ => false)).StackOperationResult.Should().Be(StackOperationResult.NoChange);
             logger.ChangeSets.Count.Should().BeGreaterThan(0);
         }
 
@@ -439,7 +439,7 @@ namespace Firefly.CloudFormation.Tests.Unit.CloudFormation
             var runner = CloudFormationRunner.Builder(mockContext.Object, StackName)
                 .WithClientFactory(mockClientFactory.Object).WithTemplateLocation(template.Path).Build();
 
-            (await runner.UpdateStackAsync(_ => true)).Should().Be(StackOperationResult.StackUpdateInProgress);
+            (await runner.UpdateStackAsync(_ => true)).StackOperationResult.Should().Be(StackOperationResult.StackUpdateInProgress);
             logger.ChangeSets.Count.Should().BeGreaterThan(0);
             logger.InfoMessages.Any(i => i.Contains($"Updating stack '{StackName}'")).Should().BeTrue();
         }
@@ -490,7 +490,7 @@ namespace Firefly.CloudFormation.Tests.Unit.CloudFormation
             var runner = CloudFormationRunner.Builder(mockContext.Object, StackName)
                 .WithClientFactory(mockClientFactory.Object).WithTemplateLocation(template.Path).Build();
 
-            Func<Task<StackOperationResult>> action = async() => await runner.UpdateStackAsync(_ => true);
+            Func<Task<CloudFormationResult>> action = async() => await runner.UpdateStackAsync(_ => true);
 
             action.Should().Throw<StackOperationException>().WithMessage("Stack is being modified by another process.");
             logger.ChangeSets.Count.Should().BeGreaterThan(0);
@@ -579,7 +579,7 @@ namespace Firefly.CloudFormation.Tests.Unit.CloudFormation
             var runner = CloudFormationRunner.Builder(mockContext.Object, StackName)
                 .WithClientFactory(mockClientFactory.Object).WithTemplateLocation(template.Path).WithWaitForInProgressUpdate().Build();
 
-            (await runner.UpdateStackAsync(_ => true)).Should().Be(StackOperationResult.StackUpdated);
+            (await runner.UpdateStackAsync(_ => true)).StackOperationResult.Should().Be(StackOperationResult.StackUpdated);
             logger.ChangeSets.Count.Should().BeGreaterThan(0);
             logger.InfoMessages.Any(i => i.Contains($"Updating stack '{StackName}'")).Should().BeTrue();
             logger.StackEvents.Count.Should().BeGreaterThan(0);
@@ -682,7 +682,7 @@ namespace Firefly.CloudFormation.Tests.Unit.CloudFormation
             var runner = CloudFormationRunner.Builder(mockContext.Object, StackName)
                 .WithClientFactory(mockClientFactory.Object).WithTemplateLocation(template.Path).WithWaitForInProgressUpdate().Build();
 
-            Func<Task<StackOperationResult>> action = async () => await runner.UpdateStackAsync(_ => true);
+            Func<Task<CloudFormationResult>> action = async () => await runner.UpdateStackAsync(_ => true);
 
             action.Should().Throw<StackOperationException>().WithMessage($"Stack '{StackName}': Operation failed. Status is {finalState}");
             logger.ChangeSets.Count.Should().BeGreaterThan(0);
