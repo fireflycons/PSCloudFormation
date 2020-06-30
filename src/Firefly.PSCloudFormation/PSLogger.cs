@@ -104,6 +104,12 @@
 
                 List<string> lines;
 
+                if (r.PhysicalResourceId == null)
+                {
+                    ui.WriteLine();
+                    continue;
+                }
+
                 if (r.PhysicalResourceId.Contains(' '))
                 {
                     var charCount = 0;
@@ -120,9 +126,9 @@
 
                 ui.WriteLine(lines.First());
 
-                foreach (var line in lines.Skip(1))
+                foreach (var line in lines.Skip(1).Where(l => !string.IsNullOrWhiteSpace(l)))
                 {
-                    ui.WriteLine(string.Empty.PadRight(leftIndent) + line);
+                    ui.WriteLine(new string(' ', leftIndent) + line);
                 }
             }
 
@@ -225,7 +231,7 @@
 
                 foreach (var line in lines.Skip(1))
                 {
-                    ui.WriteLine(fg, bg, string.Empty.PadRight(leftIndent) + line);
+                    ui.WriteLine(fg, bg, new string(' ', leftIndent) + line);
                 }
             }
         }
