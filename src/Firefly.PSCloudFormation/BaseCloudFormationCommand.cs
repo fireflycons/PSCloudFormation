@@ -188,7 +188,7 @@
                             break;
                     }
 
-                    this.ThrowExecutionError(ex.Message, this, resolvedException.InnerException);
+                    this.ThrowExecutionError(resolvedException.Message, this, resolvedException.InnerException);
                     return;
                 }
 
