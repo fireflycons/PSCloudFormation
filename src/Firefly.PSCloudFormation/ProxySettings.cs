@@ -6,32 +6,6 @@
     using System.Net;
 
     /// <summary>
-    /// PowerShell variable scopes
-    /// </summary>
-    public enum VariableScope
-    {
-        /// <summary>
-        /// The global
-        /// </summary>
-        Global = -1,
-
-        /// <summary>
-        /// The local
-        /// </summary>
-        Local = -2,
-
-        /// <summary>
-        /// The script
-        /// </summary>
-        Script = -3,
-
-        /// <summary>
-        /// The private
-        /// </summary>
-        Private = -4
-    }
-
-    /// <summary>
     /// Settings for web proxies
     /// </summary>
     public class ProxySettings

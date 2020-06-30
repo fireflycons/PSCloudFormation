@@ -1,9 +1,8 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Text;
-
-namespace Firefly.CloudFormation.Tests.Unit.CloudFormation.Parsers
+﻿namespace Firefly.CloudFormation.Tests.Unit.CloudFormation.Parsers
 {
+    using System;
+    using System.Collections.Generic;
+
     using Amazon.CloudFormation.Model;
 
     using Firefly.CloudFormation.Tests.Unit.resources;
@@ -12,8 +11,12 @@ namespace Firefly.CloudFormation.Tests.Unit.CloudFormation.Parsers
     {
         public ResourceImportParserFixture()
         {
-            var jsonParser = Firefly.CloudFormation.CloudFormation.ResourceImportParser.CreateParser(EmbeddedResourceManager.GetResourceString("test-imports.json"));
-            var yamlParser = Firefly.CloudFormation.CloudFormation.ResourceImportParser.CreateParser(EmbeddedResourceManager.GetResourceString("test-imports.yaml"));
+            var jsonParser =
+                Firefly.CloudFormation.CloudFormation.ResourceImportParser.CreateParser(
+                    EmbeddedResourceManager.GetResourceString("test-imports.json"));
+            var yamlParser =
+                Firefly.CloudFormation.CloudFormation.ResourceImportParser.CreateParser(
+                    EmbeddedResourceManager.GetResourceString("test-imports.yaml"));
 
             this.JsonResources = jsonParser.GetResourcesToImport();
             this.YamlResources = yamlParser.GetResourcesToImport();
@@ -22,7 +25,6 @@ namespace Firefly.CloudFormation.Tests.Unit.CloudFormation.Parsers
         internal List<ResourceToImport> JsonResources { get; }
 
         internal List<ResourceToImport> YamlResources { get; }
-
 
         public void Dispose()
         {

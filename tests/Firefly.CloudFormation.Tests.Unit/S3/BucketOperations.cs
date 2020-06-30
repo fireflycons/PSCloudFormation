@@ -37,7 +37,7 @@
 
             bucket.BucketName.Should().Be(expectedBucketName);
             logger.InfoMessages.First().Should().Be(
-                $"Created S3 bucket {expectedBucketName} to store oversize templates.");
+                $"Creating bucket '{expectedBucketName}' to store oversize templates.");
         }
 
         [Fact]
