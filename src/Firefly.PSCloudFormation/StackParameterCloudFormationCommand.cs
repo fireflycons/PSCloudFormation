@@ -28,6 +28,16 @@
         private List<string> stackParameterNames = new List<string>();
 
         /// <summary>
+        /// The template location
+        /// </summary>
+        private string templateLocation;
+
+        /// <summary>
+        /// The stack policy location
+        /// </summary>
+        private string stackPolicyLocation;
+
+        /// <summary>
         /// Gets or sets the capabilities.
         /// <para type="description">
         /// In some cases, you must explicitly acknowledge that your stack template contains certain capabilities in order for AWS CloudFormation to create the stack.
@@ -72,6 +82,7 @@
         /// The notification ARNs.
         /// </value>
         [Parameter(ValueFromPipelineByPropertyName = true)]
+
         // ReSharper disable once InconsistentNaming
         public string[] NotificationARNs { get; set; }
 
@@ -120,6 +131,7 @@
         [Parameter(ValueFromPipelineByPropertyName = true)]
         [ValidateRange(0, int.MaxValue)]
         [Alias("RollbackConfiguration_MonitoringTimeInMinutes")]
+
         // ReSharper disable once InconsistentNaming
         public int RollbackConfiguration_MonitoringTimeInMinute { get; set; }
 
@@ -134,6 +146,7 @@
         /// The rollback configuration rollback trigger.
         /// </value>
         [Parameter(ValueFromPipelineByPropertyName = true)]
+
         // ReSharper disable once InconsistentNaming
         public RollbackTrigger[] RollbackConfiguration_RollbackTrigger { get; set; }
 
@@ -149,7 +162,11 @@
         /// </value>
         [Parameter(ValueFromPipelineByPropertyName = true)]
         [Alias("StackPolicyBody", "StackPolicyURL")]
-        public string StackPolicyLocation { get; set; }
+        public string StackPolicyLocation
+        {
+            get => this.stackPolicyLocation; 
+            set => this.stackPolicyLocation = this.ResolvePath(value);
+        }
 
         /// <summary>
         /// Gets or sets the tags.
@@ -176,7 +193,13 @@
         /// </value>
         [Parameter(ValueFromPipelineByPropertyName = true)]
         [Alias("TemplateBody", "TemplateURL")]
-        public string TemplateLocation { get; set; }
+        public string TemplateLocation
+        {
+            get => this.templateLocation;
+
+            // Try to resolve as a path through the file system provider. PS and .NET may have different ideas about the current directory.
+            set => this.templateLocation = this.ResolvePath(value);
+        }
 
         /// <summary>
         /// Gets the stack operation.
@@ -184,7 +207,7 @@
         /// <value>
         /// The stack operation.
         /// </value>
-        protected abstract StackOperation StackOperation { get;  }
+        protected abstract StackOperation StackOperation { get; }
 
         /// <summary>
         /// Gets the list of parameters that will be passed to CloudFormation.
@@ -226,7 +249,7 @@
             var task = templateResolver.ResolveFileAsync(this.TemplateLocation);
             task.Wait();
 
-            var templateManager = new TemplateManager(templateResolver, this.StackOperation);
+            var templateManager = new TemplateManager(templateResolver, this.StackOperation, new PSLogger(this));
 
             var paramsDictionary = templateManager.GetStackDynamicParameters();
 
@@ -236,7 +259,7 @@
             // Names of parameters entered by the user.
             this.stackParameterNames = paramsDictionary.Keys.ToList();
 
-            return templateManager.GetStackDynamicParameters();
+            return paramsDictionary;
         }
 
         /// <summary>
@@ -279,15 +302,11 @@
             }
 
             // Can't add parameters till dynamic parameters have been resolved.
-            return base.GetBuilder()
-                .WithTemplateLocation(this.TemplateLocation)
-                .WithTags(this.Tag)
+            return base.GetBuilder().WithTemplateLocation(this.TemplateLocation).WithTags(this.Tag)
                 .WithNotificationARNs(this.NotificationARNs)
                 .WithCapabilities(this.Capabilities?.Select(Capability.FindValue))
-                .WithRollbackConfiguration(rollbackConfiguration)
-                .WithResourceType(this.ResourceType)
-                .WithStackPolicy(this.StackPolicyLocation)
-                .WithParameters(this.StackParameters);
+                .WithRollbackConfiguration(rollbackConfiguration).WithResourceType(this.ResourceType)
+                .WithStackPolicy(this.StackPolicyLocation).WithParameters(this.StackParameters);
         }
 
         /// <summary>
@@ -317,6 +336,35 @@
                     });
 
             return null;
+        }
+
+        /// <summary>
+        /// Resolve a PowerShell path to a .NET path
+        /// </summary>
+        /// <remarks>
+        /// Try to resolve as a path through the file system provider. PS and .NET may have different ideas about the current directory.
+        /// </remarks>
+        /// <param name="path">The path.</param>
+        /// <returns>Absolute path of the artifact if it could be resolved; else the input.</returns>
+        protected string ResolvePath(string path)
+        {
+            // ReSharper disable once NotAccessedVariable
+            ProviderInfo provider;
+
+            // ReSharper disable once NotAccessedVariable
+            PSDriveInfo drive;
+            string resolved = null;
+
+            try
+            {
+                resolved = this.SessionState.Path.GetUnresolvedProviderPathFromPSPath(path, out provider, out drive);
+            }
+            catch
+            {
+                // do nothing
+            }
+
+            return resolved ?? path;
         }
     }
 }

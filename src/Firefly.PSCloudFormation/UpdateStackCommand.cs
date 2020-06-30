@@ -22,6 +22,11 @@
     public class UpdateStackCommand : StackParameterCloudFormationCommand
     {
         /// <summary>
+        /// The stack policy during update location
+        /// </summary>
+        private string stackPolicyDuringUpdateLocation;
+
+        /// <summary>
         /// Gets or sets the stack policy during update location.
         /// <para type="description">
         /// Structure containing the temporary overriding stack policy body. For more information, go to Prevent Updates to Stack Resources in the AWS CloudFormation User Guide.
@@ -34,7 +39,11 @@
         /// </value>
         [Parameter(ValueFromPipelineByPropertyName = true)]
         [Alias("StackPolicyDuringUpdateBody", "StackPolicyDuringUpdateURL")]
-        public string StackPolicyDuringUpdateLocation { get; set; }
+        public string StackPolicyDuringUpdateLocation
+        {
+            get => this.stackPolicyDuringUpdateLocation;
+            set => this.stackPolicyDuringUpdateLocation = this.ResolvePath(value);
+        }
 
         /// <summary>
         /// Gets or sets the use previous template.

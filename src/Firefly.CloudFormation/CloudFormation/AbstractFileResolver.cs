@@ -106,7 +106,11 @@
                 return null;
             }
 
-            if (Uri.TryCreate(fileLocation, UriKind.Absolute, out var uri))
+            if (File.Exists(fileLocation))
+            {
+                this.GetFileContent(fileLocation);
+            }
+            else if (Uri.TryCreate(fileLocation, UriKind.Absolute, out var uri))
             {
                 string bucketName;
                 string key;
@@ -162,25 +166,6 @@
 
                         break;
 
-                    case "file":
-
-                        // Local file
-                        this.Source = InputFileSource.File;
-
-                        this.InputFileName = Path.GetFileNameWithoutExtension(fileLocation);
-
-                        if (new FileInfo(fileLocation).Length >= this.MaxFileSize)
-                        {
-                            this.Source |= InputFileSource.Oversize;
-                        }
-
-                        using (var sr = new StreamReader(File.OpenRead(fileLocation)))
-                        {
-                            this.FileContent = sr.ReadToEnd();
-                        }
-
-                        break;
-
                     default:
 
                         throw new ArgumentException($"Unsupported URI scheme '{uri.Scheme}");
@@ -200,6 +185,28 @@
             }
 
             return this.FileContent;
+        }
+
+        /// <summary>
+        /// Gets the content of the file.
+        /// </summary>
+        /// <param name="fileLocation">The file location.</param>
+        private void GetFileContent(string fileLocation)
+        {
+            this.Source = InputFileSource.File;
+
+            this.InputFileName = Path.GetFileNameWithoutExtension(fileLocation);
+
+            // ReSharper disable once AssignNullToNotNullAttribute - Existence is verified by the caller
+            if (new FileInfo(fileLocation).Length >= this.MaxFileSize)
+            {
+                this.Source |= InputFileSource.Oversize;
+            }
+
+            using (var sr = new StreamReader(File.OpenRead(fileLocation)))
+            {
+                this.FileContent = sr.ReadToEnd();
+            }
         }
 
         /// <summary>

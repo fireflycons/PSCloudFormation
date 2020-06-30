@@ -8,6 +8,7 @@
 
     using Firefly.CloudFormation.CloudFormation;
     using Firefly.CloudFormation.CloudFormation.Template;
+    using Firefly.CloudFormation.Utils;
     using Firefly.PowerShell.DynamicParameters;
 
     /// <summary>
@@ -78,15 +79,32 @@
         private readonly StackOperation stackOperation;
 
         /// <summary>
+        /// The logger
+        /// </summary>
+        private readonly ILogger logger;
+
+        /// <summary>
         /// Initializes a new instance of the <see cref="TemplateManager"/> class.
         /// </summary>
         /// <param name="templateResolver">The template resolver.</param>
         /// <param name="stackOperation">Stack operation being performed</param>
-        public TemplateManager(IInputFileResolver templateResolver, StackOperation stackOperation)
+        /// <param name="logger">Logger to send error messages to.</param>
+        public TemplateManager(IInputFileResolver templateResolver, StackOperation stackOperation, ILogger logger)
         {
+            this.logger = logger;
             this.stackOperation = stackOperation;
-            this.TemplateParameters =
-                TemplateParser.CreateParser(templateResolver.FileContent).GetParameters().ToList();
+
+            try
+            {
+                this.TemplateParameters =
+                    TemplateParser.CreateParser(templateResolver.FileContent).GetParameters().ToList();
+            }
+            catch (Exception e)
+            {
+                this.logger?.LogError($"Error parsing CloudFormation Template: {e.Message}");
+                this.logger?.LogError(e.StackTrace);
+                throw;
+            }
         }
 
         /// <summary>
@@ -105,65 +123,95 @@
         {
             var dynamicParams = new RuntimeDefinedParameterDictionaryHelper();
 
-            foreach (var param in this.TemplateParameters.Where(p => !p.IsSsmParameter))
+            try
             {
-                var builder = new RuntimeDefinedParameterBuilder(param.Name, GetClrTypeFromAwsType(param.Type));
-
-                if (param.Default == null && this.stackOperation == StackOperation.Create)
+                foreach (var param in this.TemplateParameters.Where(p => !p.IsSsmParameter))
                 {
-                    // Only make parameter mandatory when creating.
-                    builder.WithMandatory();
-                }
+                    var builder = new RuntimeDefinedParameterBuilder(param.Name, GetClrTypeFromAwsType(param.Type));
 
-                if (!string.IsNullOrEmpty(param.Description))
-                {
-                    builder.WithHelpMessage(param.Description);
-                }
-
-                if (param.Type.Contains("AWS::"))
-                {
-                    // Set a ValidatePattern for the given AWS type
-                    var baseType = param.Type;
-                    if (param.Type.StartsWith("List<"))
+                    if (param.Default == null && this.stackOperation == StackOperation.Create)
                     {
-                        baseType = Regex.Match(param.Type, @"List<(?<baseType>.*)>").Groups["baseType"].Value;
+                        // Only make parameter mandatory when creating.
+                        builder.WithMandatory();
                     }
 
-                    builder.WithValidatePattern(AwsParameterTypeRegexes[baseType]);
-                }
-                else
-                {
-                    if (param.AllowedValues != null && param.AllowedValues.Any())
+                    if (!string.IsNullOrEmpty(param.Description))
                     {
-                        builder.WithValidateSet(param.AllowedValues);
+                        builder.WithHelpMessage(param.Description);
                     }
 
-                    if (param.Type == "String")
+                    if (param.Type.Contains("AWS::"))
                     {
-                        if (param.AllowedPattern != null)
+                        // Set a ValidatePattern for the given AWS type
+                        var baseType = param.Type;
+                        if (param.Type.StartsWith("List<"))
                         {
-                            builder.WithValidatePattern(param.AllowedPattern);
+                            baseType = Regex.Match(param.Type, @"List<(?<baseType>.*)>").Groups["baseType"].Value;
                         }
 
-                        if (param.HasMaxLength)
+                        builder.WithValidatePattern(AwsParameterTypeRegexes[baseType]);
+                    }
+                    else
+                    {
+                        if (param.AllowedValues != null && param.AllowedValues.Any())
                         {
-                            builder.WithValidateLength(param.MinLength, param.MaxLength);
+                            builder.WithValidateSet(param.AllowedValues);
+                        }
+
+                        if (param.Type == "String")
+                        {
+                            if (param.AllowedPattern != null)
+                            {
+                                builder.WithValidatePattern(param.AllowedPattern);
+                            }
+
+                            if (param.HasMaxLength)
+                            {
+                                builder.WithValidateLength(param.MinLength, param.MaxLength);
+                            }
+                        }
+
+                        if ((param.Type == "Number" || param.Type == "List<Number>") && param.HasMaxValue)
+                        {
+                            builder.WithValidateRange(param.MinValue, param.MaxValue);
                         }
                     }
 
-                    if ((param.Type == "Number" || param.Type == "List<Number>") && param.HasMaxValue)
-                    {
-                        builder.WithValidateRange(param.MinValue, param.MaxValue);
-                    }
+                    var dynamicParameter = builder.Build();
+
+                    dynamicParams.Add(dynamicParameter);
                 }
-
-                var dynamicParameter = builder.Build();
-
-                dynamicParams.Add(dynamicParameter);
+            }
+            catch (Exception e)
+            {
+                this.logger?.LogError($"Error creating dynamic parameters: {e.Message}");
+                this.logger?.LogError(e.StackTrace);
+                throw;
             }
 
             return (RuntimeDefinedParameterDictionary)dynamicParams;
         }
+
+        /// <summary>
+        /// Gets an AWS parameter type from a string value.
+        /// </summary>
+        /// <param name="stringValue">The string value.</param>
+        /// <returns>The AWS Parameter type</returns>
+        public static string GetParameterTypeFromStringValue(string stringValue)
+        {
+            // Filter out regexes that match strings that are too general
+            var filter = new[] { "AWS::EC2::KeyPair::KeyName", "AWS::EC2::SecurityGroup::GroupName" };
+            var filteredTypes = AwsParameterTypeRegexes.Where(kv => !filter.Contains(kv.Key))
+                .ToDictionary(kv => kv.Key, kv => kv.Value);
+
+            foreach (var kv in filteredTypes.Where(kv => kv.Value.IsMatch(stringValue)))
+            {
+                return kv.Key;
+            }
+
+            return "String";
+        }
+
 
         /// <summary>
         /// Gets the CLR type for a parameter given the type specified for it in the template.
