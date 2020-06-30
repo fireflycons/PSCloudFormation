@@ -5,18 +5,10 @@
     using System.Linq;
     using System.Management.Automation;
     using System.Management.Automation.Host;
-    using System.Security.Authentication;
     using System.Threading.Tasks;
-
-    using Amazon;
-    using Amazon.CloudFormation;
-    using Amazon.PowerShell.Utils;
-    using Amazon.Runtime;
 
     using Firefly.CloudFormation;
     using Firefly.CloudFormation.CloudFormation;
-
-    using AWSRegion = Amazon.PowerShell.Common.AWSRegion;
 
     /// <summary>
     /// Contains parameters common to all commands that work with CloudFormation stacks.
@@ -78,23 +70,10 @@
         /// The role arn.
         /// </value>
         [Parameter(ValueFromPipelineByPropertyName = true)]
+
         // ReSharper disable once InconsistentNaming
         // ReSharper disable once StyleCop.SA1650
         public string RoleARN { get; set; }
-
-        /// <summary>
-        /// Gets or sets the s3 endpoint URL.
-        /// <para type="description">
-        /// The endpoint to make S3 calls against.Note: This parameter is primarily for internal AWS use and is not required/should not be specified for normal usage.
-        /// The cmdlets normally determine which endpoint to call based on the region specified to the -Region parameter or set as default in the shell (via Set-DefaultAWSRegion).
-        /// Only specify this parameter if you must direct the call to a specific custom endpoint.
-        /// </para>
-        /// </summary>
-        /// <value>
-        /// The s3 endpoint URL.
-        /// </value>
-        [Parameter(ValueFromPipelineByPropertyName = true)]
-        public string S3EndpointUrl { get; set; }
 
         /// <summary>
         /// Gets or sets the name of the stack.
@@ -109,20 +88,6 @@
         [Parameter(Position = 0, ValueFromPipelineByPropertyName = true, ValueFromPipeline = true, Mandatory = true)]
         [ValidatePattern(@"[A-Za-z][A-Za-z0-9\-]{0,127}")]
         public string StackName { get; set; }
-
-        /// <summary>
-        /// Gets or sets the STS endpoint URL.
-        /// The endpoint to make STS calls against.Note: This parameter is primarily for internal AWS use and is not required/should not be specified for normal usage.
-        /// The cmdlets normally determine which endpoint to call based on the region specified to the -Region parameter or set as default in the shell (via Set-DefaultAWSRegion).
-        /// Only specify this parameter if you must direct the call to a specific custom endpoint.
-        /// </summary>
-        /// <value>
-        /// The STS endpoint URL.
-        /// </value>
-        [Parameter(ValueFromPipelineByPropertyName = true)]
-        // ReSharper disable once InconsistentNaming
-        // ReSharper disable once StyleCop.SA1650
-        public string STSEndpointUrl { get; set; }
 
         /// <summary>
         /// Gets or sets the wait.
@@ -145,29 +110,30 @@
         protected PSAwsClientFactory ClientFactory { get; set; }
 
         /// <summary>
-        /// Gets or sets the logger.
+        /// Asks a yes/no question.
         /// </summary>
-        /// <value>
-        /// The logger.
-        /// </value>
-        protected PSLogger Logger { get; set; }
-
-        /// <summary>
-        /// Creates the CloudFormation client using AWS Tools library.
-        /// </summary>
-        /// <param name="credentials">The credentials.</param>
-        /// <param name="region">The region.</param>
-        /// <returns>CloudFormation client.</returns>
-        protected IAmazonCloudFormation CreateClient(AWSCredentials credentials, RegionEndpoint region)
+        /// <param name="caption">The caption.</param>
+        /// <param name="message">The message.</param>
+        /// <param name="defaultResponse">The default response.</param>
+        /// <param name="helpYes">Help message for Yes response</param>
+        /// <param name="helpNo">Help message for No response</param>
+        /// <returns>User choice</returns>
+        protected ChoiceResponse AskYesNo(
+            string caption,
+            string message,
+            ChoiceResponse defaultResponse,
+            string helpYes,
+            string helpNo)
         {
-            var amazonCloudFormationConfig =
-                new AmazonCloudFormationConfig { RegionEndpoint = region };
-
-            Common.PopulateConfig(this, amazonCloudFormationConfig);
-            this.CustomizeClientConfig(amazonCloudFormationConfig);
-            var amazonCloudFormationClient =
-                new AmazonCloudFormationClient(credentials, amazonCloudFormationConfig);
-            return amazonCloudFormationClient;
+            return (ChoiceResponse)this.Host.UI.PromptForChoice(
+                caption,
+                message,
+                new Collection<ChoiceDescription>
+                    {
+                        new ChoiceDescription($"&{ChoiceResponse.Yes}", helpYes),
+                        new ChoiceDescription($"&{ChoiceResponse.No}", helpNo)
+                    },
+                (int)defaultResponse);
         }
 
         /// <summary>
@@ -177,8 +143,7 @@
         protected virtual CloudFormationBuilder GetBuilder()
         {
             return CloudFormationRunner.Builder(this.CreateCloudFormationContext(), this.StackName)
-                .WithClientToken(this.ClientRequestToken)
-                .WithRoleArn(this.RoleARN)
+                .WithClientToken(this.ClientRequestToken).WithRoleArn(this.RoleARN)
                 .WithWaitForInProgressUpdate(this.Wait);
         }
 
@@ -214,7 +179,7 @@
                     {
                         case AggregateException aex:
 
-                            resolvedException = aex.InnerExceptions?.First() ?? aex;
+                            resolvedException = aex.InnerExceptions.First();
                             break;
 
                         default:
@@ -237,81 +202,6 @@
             {
                 this.ClientFactory?.Dispose();
             }
-        }
-
-        /// <summary>
-        /// Creates the cloud formation context.
-        /// </summary>
-        /// <returns>New <see cref="ICloudFormationContext"/></returns>
-        protected ICloudFormationContext CreateCloudFormationContext()
-        {
-            AWSCredentials credentials;
-
-            if (this._CurrentCredentials != null)
-            {
-                credentials = this._CurrentCredentials;
-            }
-            else if (this.TryGetCredentials(this.Host, this.SessionState))
-            {
-                credentials = this._CurrentCredentials;
-            }
-            else
-            {
-                throw new AuthenticationException("Cannot determine credentials");
-            }
-
-            if (this._CurrentRegion == null)
-            {
-                this.TryGetRegion(string.IsNullOrEmpty(this._DefaultRegion), out var region, this.SessionState);
-                this._RegionEndpoint = region;
-
-                if (this._RegionEndpoint == null)
-                {
-                    if (string.IsNullOrEmpty(this._DefaultRegion))
-                    {
-                        this.ThrowExecutionError("No region specified or obtained from persisted/shell defaults.", this, null);
-                        return null;
-                    }
-
-                    this._RegionEndpoint = RegionEndpoint.GetBySystemName(this._DefaultRegion);
-                }
-            }
-
-            this.Logger = new PSLogger(this);
-
-            return new PSCloudFormationContext
-                       {
-                           Region = this._RegionEndpoint,
-                           Credentials = credentials,
-                           S3EndpointUrl =
-                               string.IsNullOrEmpty(this.S3EndpointUrl) ? null : new Uri(this.S3EndpointUrl),
-                           STSEndpointUrl = string.IsNullOrEmpty(this.STSEndpointUrl)
-                                                ? null
-                                                : new Uri(this.S3EndpointUrl),
-                           Logger = this.Logger
-                       };
-        }
-
-        /// <summary>
-        /// Asks a yes/no question.
-        /// </summary>
-        /// <param name="caption">The caption.</param>
-        /// <param name="message">The message.</param>
-        /// <param name="defaultResponse">The default response.</param>
-        /// <param name="helpYes">Help message for Yes response</param>
-        /// <param name="helpNo">Help message for No response</param>
-        /// <returns>User choice</returns>
-        protected ChoiceResponse AskYesNo(string caption, string message, ChoiceResponse defaultResponse, string helpYes, string helpNo)
-        {
-            return (ChoiceResponse)this.Host.UI.PromptForChoice(
-                caption,
-                message,
-                new Collection<ChoiceDescription>
-                    {
-                        new ChoiceDescription($"&{ChoiceResponse.Yes}", helpYes),
-                        new ChoiceDescription($"&{ChoiceResponse.No}", helpNo)
-                    },
-                (int)defaultResponse);
         }
     }
 }

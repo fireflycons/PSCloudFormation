@@ -11,10 +11,14 @@ namespace Firefly.PSCloudFormation
     using System.Reflection;
 
     using Amazon;
+    using Amazon.CloudFormation;
     using Amazon.PowerShell.Common;
+    using Amazon.PowerShell.Utils;
     using Amazon.Runtime;
     using Amazon.Runtime.CredentialManagement;
     using Amazon.Util;
+
+    using Firefly.CloudFormation;
 
     using AWSRegion = Amazon.PowerShell.Common.AWSRegion;
 
@@ -130,6 +134,20 @@ namespace Firefly.PSCloudFormation
         public object Region { get; set; }
 
         /// <summary>
+        /// Gets or sets the s3 endpoint URL.
+        /// <para type="description">
+        /// The endpoint to make S3 calls against.Note: This parameter is primarily for internal AWS use and is not required/should not be specified for normal usage.
+        /// The cmdlets normally determine which endpoint to call based on the region specified to the -Region parameter or set as default in the shell (via Set-DefaultAWSRegion).
+        /// Only specify this parameter if you must direct the call to a specific custom endpoint.
+        /// </para>
+        /// </summary>
+        /// <value>
+        /// The s3 endpoint URL.
+        /// </value>
+        [Parameter(ValueFromPipelineByPropertyName = true)]
+        public string S3EndpointUrl { get; set; }
+
+        /// <summary>
         /// Gets or sets the secret key
         /// <para type="description">
         /// The AWS secret key for the user account. This can be a temporary secret key
@@ -149,6 +167,21 @@ namespace Firefly.PSCloudFormation
         [Alias("ST")]
         [Parameter(ValueFromPipelineByPropertyName = true)]
         public string SessionToken { get; set; }
+
+        /// <summary>
+        /// Gets or sets the STS endpoint URL.
+        /// The endpoint to make STS calls against.Note: This parameter is primarily for internal AWS use and is not required/should not be specified for normal usage.
+        /// The cmdlets normally determine which endpoint to call based on the region specified to the -Region parameter or set as default in the shell (via Set-DefaultAWSRegion).
+        /// Only specify this parameter if you must direct the call to a specific custom endpoint.
+        /// </summary>
+        /// <value>
+        /// The STS endpoint URL.
+        /// </value>
+        [Parameter(ValueFromPipelineByPropertyName = true)]
+
+        // ReSharper disable once InconsistentNaming
+        // ReSharper disable once StyleCop.SA1650
+        public string STSEndpointUrl { get; set; }
 
         /// <summary>
         /// Gets or sets the current credentials.
@@ -183,6 +216,14 @@ namespace Firefly.PSCloudFormation
         protected RegionEndpoint _RegionEndpoint { get; set; }
 
         /// <summary>
+        /// Gets or sets the logger.
+        /// </summary>
+        /// <value>
+        /// The logger.
+        /// </value>
+        protected PSLogger Logger { get; set; }
+
+        /// <summary>
         /// Gets the credential profile options.
         /// </summary>
         /// <returns>Access key credential options as a struct</returns>
@@ -191,6 +232,82 @@ namespace Firefly.PSCloudFormation
             return new CredentialProfileOptions
                        {
                            AccessKey = this.AccessKey, SecretKey = this.SecretKey, Token = this.SessionToken
+                       };
+        }
+
+        /// <summary>
+        /// Creates the CloudFormation client using AWS Tools library.
+        /// </summary>
+        /// <param name="credentials">The credentials.</param>
+        /// <param name="region">The region.</param>
+        /// <returns>CloudFormation client.</returns>
+        protected IAmazonCloudFormation CreateClient(AWSCredentials credentials, RegionEndpoint region)
+        {
+            var amazonCloudFormationConfig = new AmazonCloudFormationConfig { RegionEndpoint = region };
+
+            Common.PopulateConfig(this, amazonCloudFormationConfig);
+            this.CustomizeClientConfig(amazonCloudFormationConfig);
+            var amazonCloudFormationClient = new AmazonCloudFormationClient(credentials, amazonCloudFormationConfig);
+            return amazonCloudFormationClient;
+        }
+
+        /// <summary>
+        /// Creates the cloud formation context.
+        /// </summary>
+        /// <returns>New <see cref="ICloudFormationContext"/></returns>
+        protected ICloudFormationContext CreateCloudFormationContext()
+        {
+            AWSCredentials credentials;
+
+            if (this._CurrentCredentials != null)
+            {
+                credentials = this._CurrentCredentials;
+            }
+            else if (this.TryGetCredentials(this.Host, this.SessionState))
+            {
+                credentials = this._CurrentCredentials;
+            }
+            else
+            {
+                this.ThrowExecutionError(
+                    "No credentials specified or obtained from persisted/shell defaults.",
+                    this,
+                    null);
+                return null;
+            }
+
+            if (this._CurrentRegion == null)
+            {
+                this.TryGetRegion(string.IsNullOrEmpty(this._DefaultRegion), out var region, this.SessionState);
+                this._RegionEndpoint = region;
+
+                if (this._RegionEndpoint == null)
+                {
+                    if (string.IsNullOrEmpty(this._DefaultRegion))
+                    {
+                        this.ThrowExecutionError(
+                            "No region specified or obtained from persisted/shell defaults.",
+                            this,
+                            null);
+                        return null;
+                    }
+
+                    this._RegionEndpoint = RegionEndpoint.GetBySystemName(this._DefaultRegion);
+                }
+            }
+
+            this.Logger = new PSLogger(this);
+
+            return new PSCloudFormationContext
+                       {
+                           Region = this._RegionEndpoint,
+                           Credentials = credentials,
+                           S3EndpointUrl =
+                               string.IsNullOrEmpty(this.S3EndpointUrl) ? null : new Uri(this.S3EndpointUrl),
+                           STSEndpointUrl = string.IsNullOrEmpty(this.STSEndpointUrl)
+                                                ? null
+                                                : new Uri(this.S3EndpointUrl),
+                           Logger = this.Logger
                        };
         }
 
@@ -225,17 +342,6 @@ namespace Firefly.PSCloudFormation
         protected bool ParameterWasBound(string parameterName)
         {
             return this.MyInvocation.BoundParameters.ContainsKey(parameterName);
-        }
-
-        /// <summary>
-        /// Helper to throw an error occuring during service execution
-        /// </summary>
-        /// <param name="message">The message to emit to the error record</param>
-        /// <param name="errorSource">The source (parameter or cmdlet) reporting the error</param>
-        /// <param name="innerException">The exception that was caught, if any</param>
-        protected void ThrowExecutionError(string message, object errorSource, Exception innerException)
-        {
-            this.ThrowTerminatingError(new ErrorRecord(new InvalidOperationException(message, innerException), innerException == null ? "InvalidOperationException" : innerException.GetType().ToString(), ErrorCategory.InvalidOperation, errorSource));
         }
 
         /// <summary>
@@ -324,6 +430,22 @@ namespace Firefly.PSCloudFormation
                 federatedAWSCredentials.Options.CustomCallbackState = customCallbackState;
                 federatedAWSCredentials.Options.ProxySettings = this.GetWebProxy(sessionState);
             }
+        }
+
+        /// <summary>
+        /// Helper to throw an error occuring during service execution
+        /// </summary>
+        /// <param name="message">The message to emit to the error record</param>
+        /// <param name="errorSource">The source (parameter or cmdlet) reporting the error</param>
+        /// <param name="innerException">The exception that was caught, if any</param>
+        protected void ThrowExecutionError(string message, object errorSource, Exception innerException)
+        {
+            this.ThrowTerminatingError(
+                new ErrorRecord(
+                    new InvalidOperationException(message, innerException),
+                    innerException == null ? "InvalidOperationException" : innerException.GetType().ToString(),
+                    ErrorCategory.InvalidOperation,
+                    errorSource));
         }
 
         /// <summary>
@@ -431,57 +553,6 @@ namespace Firefly.PSCloudFormation
         }
 
         /// <summary>
-        /// Callback handler for SAML authentication.
-        /// </summary>
-        /// <param name="callbackArguments">The callback arguments.</param>
-        /// <returns>User's network credentials</returns>
-        protected NetworkCredential UserCredentialCallbackHandler(CredentialRequestCallbackArgs callbackArguments)
-        {
-            if (!(callbackArguments.CustomState is SAMLCredentialCallbackState sAMLCredentialCallbackState))
-            {
-                return null;
-            }
-
-            PSCredential psCredential = null;
-            string message = null;
-            if (!callbackArguments.PreviousAuthenticationFailed)
-            {
-                if (sAMLCredentialCallbackState.CmdletNetworkCredentialParameter != null)
-                {
-                    psCredential = sAMLCredentialCallbackState.CmdletNetworkCredentialParameter;
-                    sAMLCredentialCallbackState.CmdletNetworkCredentialParameter = null;
-                }
-                else if (sAMLCredentialCallbackState.ShellNetworkCredentialParameter != null)
-                {
-                    psCredential = sAMLCredentialCallbackState.ShellNetworkCredentialParameter;
-                }
-                else
-                {
-                    message =
-                        $"Enter your credentials to authenticate and obtain AWS role credentials for the profile '{callbackArguments.ProfileName}'";
-                }
-            }
-            else
-            {
-                message = $"Authentication failed. Enter the password for '{callbackArguments.UserIdentity}' to try again.";
-            }
-
-            var userName = string.IsNullOrEmpty(callbackArguments.UserIdentity)
-                               ? null
-                               : callbackArguments.UserIdentity.TrimStart('\\');
-            if (psCredential == null)
-            {
-                psCredential = sAMLCredentialCallbackState.Host.UI.PromptForCredential(
-                    "Authenticating for AWS Role Credentials",
-                    message,
-                    userName,
-                    string.Empty);
-            }
-
-            return psCredential?.GetNetworkCredential();
-        }
-
-        /// <summary>
         /// Try to determine user's current region from available sources
         /// </summary>
         /// <param name="useInstanceMetadata">if set to <c>true</c> [use instance metadata].</param>
@@ -502,7 +573,9 @@ namespace Firefly.PSCloudFormation
                 switch (this.Region)
                 {
                     case PSObject psobject:
-                        regionSystemName = !(psobject.BaseObject is AWSRegion) ? psobject.BaseObject as string : (psobject.BaseObject as AWSRegion)?.Region;
+                        regionSystemName = !(psobject.BaseObject is AWSRegion)
+                                               ? psobject.BaseObject as string
+                                               : (psobject.BaseObject as AWSRegion)?.Region;
                         break;
 
                     case string s:
@@ -512,7 +585,8 @@ namespace Firefly.PSCloudFormation
 
                 if (string.IsNullOrEmpty(regionSystemName))
                 {
-                    throw new ArgumentException("Unsupported parameter type; Region must be a string containing the system name for a region, or an AWSRegion instance");
+                    throw new ArgumentException(
+                        "Unsupported parameter type; Region must be a string containing the system name for a region, or an AWSRegion instance");
                 }
 
                 try
@@ -522,7 +596,9 @@ namespace Firefly.PSCloudFormation
                 }
                 catch (Exception ex)
                 {
-                    throw new ArgumentOutOfRangeException($"Unsupported Region value. Supported values: {string.Join(", ", RegionEndpoint.EnumerableAllRegions)}", ex);
+                    throw new ArgumentOutOfRangeException(
+                        $"Unsupported Region value. Supported values: {string.Join(", ", RegionEndpoint.EnumerableAllRegions)}",
+                        ex);
                 }
             }
 
@@ -582,23 +658,55 @@ namespace Firefly.PSCloudFormation
         }
 
         /// <summary>
-        /// Tries the load region from profile.
+        /// Callback handler for SAML authentication.
         /// </summary>
-        /// <param name="name">The name.</param>
-        /// <param name="profileLocation">The profile location.</param>
-        /// <param name="region">The region.</param>
-        /// <param name="source">The source.</param>
-        /// <returns></returns>
-        private static bool TryLoadRegionFromProfile(string name, string profileLocation, ref RegionEndpoint region, ref RegionSource source)
+        /// <param name="callbackArguments">The callback arguments.</param>
+        /// <returns>User's network credentials</returns>
+        protected NetworkCredential UserCredentialCallbackHandler(CredentialRequestCallbackArgs callbackArguments)
         {
-            if (SettingsStore.TryGetProfile(name, profileLocation, out var profile) && profile.Region != null)
+            if (!(callbackArguments.CustomState is SAMLCredentialCallbackState sAMLCredentialCallbackState))
             {
-                region = profile.Region;
-                source = RegionSource.Saved;
-                return true;
+                return null;
             }
 
-            return false;
+            PSCredential psCredential = null;
+            string message = null;
+            if (!callbackArguments.PreviousAuthenticationFailed)
+            {
+                if (sAMLCredentialCallbackState.CmdletNetworkCredentialParameter != null)
+                {
+                    psCredential = sAMLCredentialCallbackState.CmdletNetworkCredentialParameter;
+                    sAMLCredentialCallbackState.CmdletNetworkCredentialParameter = null;
+                }
+                else if (sAMLCredentialCallbackState.ShellNetworkCredentialParameter != null)
+                {
+                    psCredential = sAMLCredentialCallbackState.ShellNetworkCredentialParameter;
+                }
+                else
+                {
+                    message =
+                        $"Enter your credentials to authenticate and obtain AWS role credentials for the profile '{callbackArguments.ProfileName}'";
+                }
+            }
+            else
+            {
+                message =
+                    $"Authentication failed. Enter the password for '{callbackArguments.UserIdentity}' to try again.";
+            }
+
+            var userName = string.IsNullOrEmpty(callbackArguments.UserIdentity)
+                               ? null
+                               : callbackArguments.UserIdentity.TrimStart('\\');
+            if (psCredential == null)
+            {
+                psCredential = sAMLCredentialCallbackState.Host.UI.PromptForCredential(
+                    "Authenticating for AWS Role Credentials",
+                    message,
+                    userName,
+                    string.Empty);
+            }
+
+            return psCredential?.GetNetworkCredential();
         }
 
         /// <summary>
@@ -619,6 +727,30 @@ namespace Firefly.PSCloudFormation
             }
 
             throw new InvalidOperationException($"Property 'Credentials' not found on {typeof(AWSPSCredentials).Name}");
+        }
+
+        /// <summary>
+        /// Tries the load region from profile.
+        /// </summary>
+        /// <param name="name">The name.</param>
+        /// <param name="profileLocation">The profile location.</param>
+        /// <param name="region">The region.</param>
+        /// <param name="source">The source.</param>
+        /// <returns></returns>
+        private static bool TryLoadRegionFromProfile(
+            string name,
+            string profileLocation,
+            ref RegionEndpoint region,
+            ref RegionSource source)
+        {
+            if (SettingsStore.TryGetProfile(name, profileLocation, out var profile) && profile.Region != null)
+            {
+                region = profile.Region;
+                source = RegionSource.Saved;
+                return true;
+            }
+
+            return false;
         }
 
         /// <summary>
