@@ -491,6 +491,7 @@ namespace Firefly.CloudFormation.CloudFormation
                     throw new StackOperationException(stack, "Stack is being deleted by another process.");
 
                 case StackOperationalState.Broken:
+                case StackOperationalState.DeleteFailed:
 
                     throw new StackOperationException(
                         stack,
