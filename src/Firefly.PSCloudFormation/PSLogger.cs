@@ -86,7 +86,7 @@
                 replacementColWidth);
             var maxLineLength = ui.RawUI.WindowSize.Width - leftIndent;
 
-            this.LogInformation("Changes to be made...");
+            this.LogInformation("Changes to be made...\n");
             this.LogInformation(changeFormatString, "Action", "Logical ID", "Type", "Replacement", "Physical ID");
             this.LogInformation(changeFormatString, "------", "----------", "----", "-----------", "-----------");
 

@@ -454,9 +454,6 @@ namespace Firefly.CloudFormation.CloudFormation
 
             try
             {
-                // Time from which to start polling events
-                this.lastEventTime = DateTime.Now;
-
                 await this.DeleteStackAsync();
                 this.waitForInProgressUpdate = previousWaitSetting;
                 var result = await this.CreateStackAsync();
@@ -506,16 +503,17 @@ namespace Firefly.CloudFormation.CloudFormation
                         // Track stack until update completes
                         // Wait for previous update to complete
                         // Time from which to start polling events
-                        this.lastEventTime = DateTime.Now;
+                        this.lastEventTime = await this.GetMostRecentStackEvent(stack.StackId);
 
                         this.context.Logger.LogInformation(
                             "Stack {0} is currently being updated by another process",
                             stack.StackName);
-                        this.context.Logger.LogInformation("Following its progress while waiting...");
+                        this.context.Logger.LogInformation("Following its progress while waiting...\n");
                         stack = await this.WaitStackOperationAsync(stack.StackId, false);
+                        this.context.Logger.LogInformation(string.Empty);
 
                         if (await this.stackOperations.GetStackOperationalStateAsync(stack.StackId)
-                            == StackOperationalState.Broken)
+                            != StackOperationalState.Ready)
                         {
                             throw new StackOperationException(
                                 stack,
