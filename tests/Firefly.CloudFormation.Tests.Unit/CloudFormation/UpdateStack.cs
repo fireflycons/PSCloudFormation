@@ -128,7 +128,7 @@ namespace Firefly.CloudFormation.Tests.Unit.CloudFormation
         [InlineData("UPDATE_ROLLBACK_FAILED")]
         public void ShouldFailIfStackIsBroken(string stackStatus)
         {
-            var expectedMessage = $"Cannot update stack: Current state: Broken ({stackStatus})";
+            var expectedMessage = $"Cannot update stack: Current state: * ({stackStatus})";
             var logger = new TestLogger(this.output);
             var mockClientFactory = TestHelpers.GetClientFactoryMock();
             var mockContext = TestHelpers.GetContextMock(logger);

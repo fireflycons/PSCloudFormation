@@ -195,7 +195,6 @@
         /// <param name="stackStatus">The stack status.</param>
         [Theory]
         [InlineData("CREATE_FAILED")]
-        [InlineData("DELETE_FAILED")]
         [InlineData("IMPORT_ROLLBACK_FAILED")]
         [InlineData("ROLLBACK_FAILED")]
         [InlineData("UPDATE_ROLLBACK_FAILED")]

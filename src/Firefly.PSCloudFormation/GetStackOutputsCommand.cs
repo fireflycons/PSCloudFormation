@@ -133,7 +133,6 @@
         /// <returns>Object containing outputs in selected format.</returns>
         internal async Task<object> GetStackOutputs(ICloudFormationContext context, IAwsClientFactory clientFactory, string parameterSetName)
         {
-            var format = (SerializationFormat)Enum.Parse(typeof(SerializationFormat), this.Format, true);
             var ops = new CloudFormationOperations(clientFactory, context);
 
             var stackOutputs = (await ops.GetStackAsync(this.StackName)).Outputs;
@@ -171,7 +170,7 @@
                             {
                                 { "Parameters", parameters }
                             },
-                        format);
+                        (SerializationFormat)Enum.Parse(typeof(SerializationFormat), this.Format, true));
 
                 case ImportsParameterSet:
 
@@ -195,7 +194,7 @@
                                                  }
                                          }
                                      }).ToList(),
-                        format);
+                        (SerializationFormat)Enum.Parse(typeof(SerializationFormat), this.Format, true));
 
                 default:
 
