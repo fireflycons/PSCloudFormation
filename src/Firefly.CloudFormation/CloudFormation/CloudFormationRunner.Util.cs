@@ -81,17 +81,17 @@
             {
                 case InputFileSource.UsePreviousTemplate:
 
-                    sb.AppendLine("Template associated with existing stack");
+                    sb.Append("Template associated with existing stack");
                     break;
 
                 case InputFileSource.String:
 
-                    sb.AppendLine("Input String");
+                    sb.Append("Input String");
                     break;
 
                 default:
 
-                    sb.AppendLine(this.templateLocation);
+                    sb.Append(this.templateLocation);
                     break;
             }
 

@@ -19,6 +19,11 @@
     public class PSLogger : BaseLogger
     {
         /// <summary>
+        /// 30 chars whitespace for padding.
+        /// </summary>
+        private static string padding30 = new string(' ', 30);
+
+        /// <summary>
         /// The <see cref="PSCmdlet"/> object.
         /// </summary>
         private readonly PSCmdlet cmdlet;
@@ -72,7 +77,7 @@
                 $"{{0,-{actionColWidth}}} {{1,-{logicalResourceIdColWidth}}} {{2,-{resourceTypeColWidth}}} {{3,-{replacementColWidth}}} {{4}}";
 
             // Resize window to be wide enough for a reasonable amount of Physical ID per line
-            this.ResizeWindow(string.Format(changeFormatString, "x", "x", "x", "x", string.Empty.PadLeft(30)).Length);
+            this.ResizeWindow(string.Format(changeFormatString, "x", "x", "x", "x", padding30).Length);
 
             var leftIndent = GetLeftMarginForLastColumn(
                 actionColWidth,
@@ -177,7 +182,7 @@
 
                 // Resize window to be wide enough for a reasonable amount of description per line
                 this.ResizeWindow(
-                    string.Format(eventFormatString, "x", "x", "x", "x", string.Empty.PadLeft(30)).Length);
+                    string.Format(eventFormatString, "x", "x", "x", "x", padding30).Length);
 
                 this.isFirstEvent = false;
                 this.LogInformation(eventFormatString, "Time", "StackName", "Logical ID", "Status", "Status Reason");

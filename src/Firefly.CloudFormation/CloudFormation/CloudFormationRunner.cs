@@ -342,7 +342,7 @@ namespace Firefly.CloudFormation.CloudFormation
             req.StackPolicyBody = body;
             req.StackPolicyURL = url;
 
-            this.context.Logger.LogInformation($"Creating {this.GetStackNameWithDescription()}");
+            this.context.Logger.LogInformation($"Creating {this.GetStackNameWithDescription()}\n");
 
             var stackId = (await this.client.CreateStackAsync(req)).StackId;
 
@@ -411,6 +411,8 @@ namespace Firefly.CloudFormation.CloudFormation
             {
                 this.context.Logger.LogInformation($"Retaining resources: {string.Join(", ", this.retainResource)}");
             }
+
+            this.context.Logger.LogInformation(string.Empty);
 
             this.lastEventTime = await this.GetMostRecentStackEvent(stack.StackId);
 
@@ -635,7 +637,7 @@ namespace Firefly.CloudFormation.CloudFormation
             // Time from which to start polling events
             this.lastEventTime = await this.GetMostRecentStackEvent(stack.StackId);
 
-            this.context.Logger.LogInformation($"Updating {this.GetStackNameWithDescription()}");
+            this.context.Logger.LogInformation($"Updating {this.GetStackNameWithDescription()}\n");
 
             if (resourcesToImport != null)
             {
