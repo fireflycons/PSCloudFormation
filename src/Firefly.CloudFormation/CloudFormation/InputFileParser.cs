@@ -27,16 +27,16 @@
         /// </summary>
         /// <param name="fileContent">The file content to guess the format of.</param>
         /// <returns>The input file format</returns>
-        protected static InputFileFormat GetInputFileFormat(string fileContent)
+        protected static SerializationFormat GetInputFileFormat(string fileContent)
         {
             var body = fileContent.Trim();
 
             if (body.Length == 0)
             {
-                return InputFileFormat.Empty;
+                return SerializationFormat.Unknown;
             }
 
-            return body[0] == '[' || body[0] == '{' ? InputFileFormat.Json : InputFileFormat.Yaml;
+            return body[0] == '[' || body[0] == '{' ? SerializationFormat.Json : SerializationFormat.Yaml;
         }
     }
 }

@@ -1,4 +1,4 @@
-﻿namespace Firefly.CloudFormation.CloudFormation
+﻿namespace Firefly.CloudFormation.CloudFormation.Parsers
 {
     using System.Collections.Generic;
     using System.IO;
@@ -10,7 +10,7 @@
     /// <summary>
     /// Concrete resource import parser for YAML
     /// </summary>
-    /// <seealso cref="Firefly.CloudFormation.CloudFormation.ResourceImportParser" />
+    /// <seealso cref="ResourceImportParser" />
     internal class YamlResourceImportParser : ResourceImportParser
     {
         /// <summary>

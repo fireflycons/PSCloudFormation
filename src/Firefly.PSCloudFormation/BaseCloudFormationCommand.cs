@@ -5,6 +5,7 @@
     using System.Linq;
     using System.Management.Automation;
     using System.Management.Automation.Host;
+    using System.Reflection;
     using System.Threading.Tasks;
 
     using Firefly.CloudFormation;
@@ -202,6 +203,20 @@
             {
                 this.ClientFactory?.Dispose();
             }
+        }
+
+        /// <summary>
+        /// Callback method for delete stack if retain resources were given, but stack is not DELETE_FAILED
+        /// </summary>
+        /// <returns><c>true</c> if delete should proceed; else <c>false</c></returns>
+        protected bool AcceptDeleteWithNoRetainResource()
+        {
+            return this.AskYesNo(
+                       "Resources to retain were given, but stack is not DELETE_FAILED. All resources will be deleted.",
+                       "Continue?",
+                       ChoiceResponse.No,
+                       "Continue with delete.",
+                       "Cancel operation.") == ChoiceResponse.Yes;
         }
     }
 }

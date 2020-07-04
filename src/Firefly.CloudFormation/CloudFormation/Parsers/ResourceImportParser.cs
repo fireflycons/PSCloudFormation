@@ -1,4 +1,4 @@
-﻿namespace Firefly.CloudFormation.CloudFormation
+﻿namespace Firefly.CloudFormation.CloudFormation.Parsers
 {
     using System.Collections.Generic;
     using System.IO;
@@ -31,11 +31,11 @@
             // ReSharper disable once SwitchStatementHandlesSomeKnownEnumValuesWithDefault
             switch (InputFileParser.GetInputFileFormat(fileContent))
             {
-                case InputFileFormat.Json:
+                case SerializationFormat.Json:
 
                     return new JsonResourceImportParser(fileContent);
 
-                case InputFileFormat.Yaml:
+                case SerializationFormat.Yaml:
 
                     return new YamlResourceImportParser(fileContent);
 

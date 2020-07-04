@@ -99,6 +99,11 @@
                     return StackOperationalState.Ready;
                 }
 
+                if (status == StackStatus.DELETE_FAILED)
+                {
+                    return StackOperationalState.DeleteFailed;
+                }
+
                 return status.Value.EndsWith("FAILED") ? StackOperationalState.Broken : StackOperationalState.Busy;
             }
             catch (Exception ex)

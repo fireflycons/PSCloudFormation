@@ -4,8 +4,7 @@
     using System.Collections.Generic;
     using System.Linq;
 
-    using Firefly.CloudFormation.CloudFormation.Template;
-    using Firefly.CloudFormation.Tests.Unit.resources;
+    using Firefly.CloudFormation.CloudFormation.Parsers;
 
     using FluentAssertions;
 
@@ -56,6 +55,14 @@
         /// The parameters.
         /// </value>
         public List<TemplateFileParameter> Parameters { get; private set; }
+
+        /// <summary>
+        /// Gets the resources.
+        /// </summary>
+        /// <value>
+        /// The resources.
+        /// </value>
+        public IEnumerable<TemplateResource> Resources { get; private set; }
 
         /// <summary>
         /// Gets the template description.
@@ -167,16 +174,33 @@
             this.Arrange(format);
             this.NestedStacks.Count.Should().Be(1);
             this.NestedStacks.First().Should().Be(ExpectedStackName);
-
         }
 
-        [Fact]
-        public void Test()
+        [Theory]
+        [InlineData(Json)]
+        [InlineData(Yaml)]
+        public void ShouldBeOneResourceInTemplate(string format)
         {
-            var yamlParser = Firefly.CloudFormation.CloudFormation.Template.TemplateParser.CreateParser(EmbeddedResourceManager.GetResourceString("progetDockerCloudFormation.yaml"));
-            var param = yamlParser.GetParameters();
-            var nested = yamlParser.GetNestedStackNames();
-            var resourceNames = yamlParser.GetLogicalResourceNames("stack");
+            this.Arrange(format);
+            this.Resources.Count().Should().Be(1);
+        }
+
+        [Theory]
+        [InlineData(Json)]
+        [InlineData(Yaml)]
+        public void ShoudHaveVpcResource(string format)
+        {
+            this.Arrange(format);
+            this.Resources.First().ResourceType.Should().Be("AWS::EC2::VPC");
+        }
+
+        [Theory]
+        [InlineData(Json)]
+        [InlineData(Yaml)]
+        public void ShoudHaveResourceNamedVpc(string format)
+        {
+            this.Arrange(format);
+            this.Resources.First().LogicalName.Should().Be("Vpc");
         }
 
         /// <summary>
@@ -194,6 +218,7 @@
                     this.Parameters = this.fixture.JsonParameters;
                     this.TemplateDescription = this.fixture.JsonTemplateDescription;
                     this.NestedStacks = this.fixture.JsonNestedStacks.ToList();
+                    this.Resources = this.fixture.JsonResources;
                     break;
 
                 case "YAML":
@@ -201,6 +226,8 @@
                     this.Parameters = this.fixture.YamlParameters;
                     this.TemplateDescription = this.fixture.YamlTemplateDescription;
                     this.NestedStacks = this.fixture.YamlNestedStacks.ToList();
+                    this.Resources = this.fixture.YamlResources;
+
                     break;
             }
         }

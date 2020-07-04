@@ -1,10 +1,11 @@
-﻿namespace Firefly.CloudFormation.CloudFormation.Template
+﻿namespace Firefly.CloudFormation.CloudFormation.Parsers
 {
     using System;
     using System.Collections.Generic;
     using System.Globalization;
     using System.IO;
     using System.Linq;
+    using System.Text;
     using System.Text.RegularExpressions;
 
     using YamlDotNet.RepresentationModel;
@@ -202,6 +203,48 @@
             }
 
             return resourceNames;
+        }
+
+        /// <summary>
+        /// Gets the template resources.
+        /// </summary>
+        /// <returns>
+        /// Enumerable of resources found in template
+        /// </returns>
+        public override IEnumerable<TemplateResource> GetResources()
+        {
+            var resources = new List<TemplateResource>();
+            var resourceBlock = (YamlMappingNode)this.rootNode.Children[this.propertyKeys[ResourceKeyName]];
+
+            foreach (var resourceNode in resourceBlock.Children)
+            {
+                var resourceName = ((YamlScalarNode)resourceNode.Key).Value;
+                var resource = ((YamlMappingNode)resourceNode.Value).Children;
+
+                if (!resource.ContainsKey(this.propertyKeys["Type"]))
+                {
+                    throw new FormatException($"Resource {resourceName} has no Type property");
+                }
+
+                var type = (YamlScalarNode)resource[this.propertyKeys["Type"]];
+
+                resources.Add(new TemplateResource(resourceNode.Value, SerializationFormat.Yaml, resourceName, type.Value));
+            }
+
+            return resources;
+        }
+
+        /// <summary>
+        /// Saves the template to the specified path.
+        /// </summary>
+        /// <param name="path">The path.</param>
+        public override void Save(string path)
+        {
+            using (var sw = new StringWriter())
+            {
+                this.yaml.Save(sw, false);
+                File.WriteAllText(path, sw.ToString(), new UTF8Encoding(false));
+            }
         }
 
         /// <summary>

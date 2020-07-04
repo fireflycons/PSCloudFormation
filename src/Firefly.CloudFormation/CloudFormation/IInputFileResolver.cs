@@ -50,9 +50,9 @@
         /// <summary>
         /// Resolves and loads the given file from the specified location
         /// </summary>
-        /// <param name="fileLocation">The file location.</param>
+        /// <param name="objectLocation">The file location.</param>
         /// <returns>The file content</returns>
-        Task<string> ResolveFileAsync(string fileLocation);
+        Task<string> ResolveFileAsync(string objectLocation);
 
         /// <summary>
         /// Resets the template source if an oversize asset was uploaded to S3.

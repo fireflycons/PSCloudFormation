@@ -58,11 +58,11 @@
         /// <summary>
         /// Resolves and loads the given file from the specified location
         /// </summary>
-        /// <param name="fileLocation">The file location.</param>
+        /// <param name="objectLocation">The file location.</param>
         /// <returns>
         /// The file content
         /// </returns>
-        public override async Task<string> ResolveFileAsync(string fileLocation)
+        public override async Task<string> ResolveFileAsync(string objectLocation)
         {
             if (this.usePreviousTemplate)
             {
@@ -75,7 +75,7 @@
             }
             else
             {
-                await base.ResolveFileAsync(fileLocation);
+                await base.ResolveFileAsync(objectLocation);
             }
 
             return this.FileContent;

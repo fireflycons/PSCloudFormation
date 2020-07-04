@@ -133,7 +133,6 @@
         /// <returns>A <see cref="Task"/></returns>
         [Theory]
         [InlineData("CREATE_FAILED")]
-        [InlineData("DELETE_FAILED")]
         [InlineData("IMPORT_ROLLBACK_FAILED")]
         [InlineData("ROLLBACK_FAILED")]
         [InlineData("UPDATE_ROLLBACK_FAILED")]
@@ -142,6 +141,18 @@
             var operations = this.SetupCloudFormationOperations(stackStatus);
 
             (await operations.GetStackOperationalStateAsync(StackName)).Should().Be(StackOperationalState.Broken);
+        }
+
+        /// <summary>
+        /// Tests the stack should be delete failed when previous stack delete failed.
+        /// </summary>
+        /// <returns>A <see cref="Task"/></returns>
+        [Fact]
+        public async Task ShouldBeDeleteFailedWhenPreviousStackDeleteFailed()
+        {
+            var operations = this.SetupCloudFormationOperations("DELETE_FAILED");
+
+            (await operations.GetStackOperationalStateAsync(StackName)).Should().Be(StackOperationalState.DeleteFailed);
         }
 
         /// <summary>

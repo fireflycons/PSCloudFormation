@@ -29,7 +29,8 @@
         /// <value>
         /// The retain resource.
         /// </value>
-        [Parameter]
+        [Parameter(ValueFromPipelineByPropertyName = true)]
+        [Alias("RetainResources")]
         public string[] RetainResource { get; set; }
 
         /// <summary>
@@ -66,7 +67,7 @@
                     return StackOperationResult.NoChange;
                 }
 
-                return await runner.DeleteStackAsync();
+                return await runner.DeleteStackAsync(this.AcceptDeleteWithNoRetainResource);
             }
         }
     }

@@ -1,7 +1,11 @@
-﻿namespace Firefly.CloudFormation.CloudFormation.Template
+﻿namespace Firefly.CloudFormation.CloudFormation.Parsers
 {
     using System.Collections.Generic;
     using System.IO;
+
+    using Newtonsoft.Json;
+
+    using YamlDotNet.Serialization;
 
     /// <summary>
     /// Base class for CLoudFormation template parsers.
@@ -9,9 +13,19 @@
     public abstract class TemplateParser : InputFileParser
     {
         /// <summary>
+        /// The description key name
+        /// </summary>
+        protected const string DescriptionKeyName = "Description";
+
+        /// <summary>
         /// Amount of padding to add to resource names to include random chars added by CloudFormation
         /// </summary>
         protected const int NestedStackPadWidth = 14;
+
+        /// <summary>
+        /// The nested stack type
+        /// </summary>
+        protected const string NestedStackType = "AWS::CloudFormation::Stack";
 
         /// <summary>
         /// The parameter key name
@@ -19,19 +33,9 @@
         protected const string ParameterKeyName = "Parameters";
 
         /// <summary>
-        /// The description key name
-        /// </summary>
-        protected const string DescriptionKeyName = "Description";
-
-        /// <summary>
         /// The resource key name
         /// </summary>
         protected const string ResourceKeyName = "Resources";
-
-        /// <summary>
-        /// The nested stack type
-        /// </summary>
-        protected const string NestedStackType = "AWS::CloudFormation::Stack";
 
         /// <summary>
         /// Initializes a new instance of the <see cref="TemplateParser"/> class.
@@ -51,13 +55,13 @@
         public static TemplateParser CreateParser(string templateBody)
         {
             // ReSharper disable once SwitchStatementHandlesSomeKnownEnumValuesWithDefault
-            switch (InputFileParser.GetInputFileFormat(templateBody))
+            switch (GetInputFileFormat(templateBody))
             {
-                case InputFileFormat.Json:
+                case SerializationFormat.Json:
 
                     return new JsonTemplateParser(templateBody);
 
-                case InputFileFormat.Yaml:
+                case SerializationFormat.Yaml:
 
                     return new YamlTemplateParser(templateBody);
 
@@ -68,16 +72,35 @@
         }
 
         /// <summary>
-        /// Gets the parameters.
+        /// Serializes an object graph to JSON or YAML string
         /// </summary>
-        /// <returns>List of <see cref="TemplateFileParameter"/></returns>
-        public abstract IEnumerable<TemplateFileParameter> GetParameters();
+        /// <param name="objectGraph">The object graph.</param>
+        /// <param name="format">The required serialization format.</param>
+        /// <returns>Object graph serialized to string in requested format.</returns>
+        public static string SerializeObjectGraph(object objectGraph, SerializationFormat format)
+        {
+            switch (format)
+            {
+                case SerializationFormat.Json:
+
+                    return JsonConvert.SerializeObject(objectGraph, Formatting.Indented);
+
+                case SerializationFormat.Yaml:
+
+                    return new SerializerBuilder().Build().Serialize(objectGraph);
+
+                default:
+
+                    throw new System.InvalidOperationException($"Unsupported format: {format}");
+            }
+        }
 
         /// <summary>
-        /// Gets the template description.
+        /// Gets the logical resource names.
         /// </summary>
-        /// <returns>Content of description property from template</returns>
-        public abstract string GetTemplateDescription();
+        /// <param name="stackName">Name of the parent stack. Used to prefix nested stack resources</param>
+        /// <returns>List of resource names.</returns>
+        public abstract IEnumerable<string> GetLogicalResourceNames(string stackName);
 
         /// <summary>
         /// Gets logical resource names of nested stacks declared in the given template
@@ -98,10 +121,27 @@
         public abstract IEnumerable<string> GetNestedStackNames(string baseStackName);
 
         /// <summary>
-        /// Gets the logical resource names.
+        /// Gets the parameters.
         /// </summary>
-        /// <param name="stackName">Name of the parent stack. Used to prefix nested stack resources</param>
-        /// <returns>List of resource names.</returns>
-        public abstract IEnumerable<string> GetLogicalResourceNames(string stackName);
+        /// <returns>List of <see cref="TemplateFileParameter"/></returns>
+        public abstract IEnumerable<TemplateFileParameter> GetParameters();
+
+        /// <summary>
+        /// Gets the template resources.
+        /// </summary>
+        /// <returns>Enumerable of resources found in template</returns>
+        public abstract IEnumerable<TemplateResource> GetResources();
+
+        /// <summary>
+        /// Gets the template description.
+        /// </summary>
+        /// <returns>Content of description property from template</returns>
+        public abstract string GetTemplateDescription();
+
+        /// <summary>
+        /// Saves the template to the specified path.
+        /// </summary>
+        /// <param name="path">The path.</param>
+        public abstract void Save(string path);
     }
 }

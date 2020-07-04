@@ -1,10 +1,12 @@
-﻿namespace Firefly.CloudFormation.CloudFormation.Template
+﻿namespace Firefly.CloudFormation.CloudFormation.Parsers
 {
     using System;
     using System.Collections.Generic;
+    using System.IO;
     using System.Linq;
     using System.Text.RegularExpressions;
 
+    using Newtonsoft.Json;
     using Newtonsoft.Json.Linq;
 
     /// <summary>
@@ -27,7 +29,7 @@
         {
             this.template = JObject.Parse(this.FileContent);
 
-            if (!this.template.ContainsKey(ResourceKeyName))
+            if (!this.template.ContainsKey(TemplateParser.ResourceKeyName))
             {
                 throw new FormatException("Illegal template: No Resources block found.");
             }
@@ -44,7 +46,7 @@
         {
             var parameters = new List<TemplateFileParameter>();
 
-            if (!this.template.ContainsKey(ParameterKeyName))
+            if (!this.template.ContainsKey(TemplateParser.ParameterKeyName))
             {
                 return parameters;
             }
@@ -89,7 +91,7 @@
         /// </returns>
         public override string GetTemplateDescription()
         {
-            return !this.template.ContainsKey(DescriptionKeyName) ? string.Empty : this.template[DescriptionKeyName].Value<string>();
+            return !this.template.ContainsKey(TemplateParser.DescriptionKeyName) ? string.Empty : this.template[DescriptionKeyName].Value<string>();
         }
 
         /// <summary>
@@ -114,11 +116,11 @@
                     throw new FormatException($"Resource {resource.Name} has no Type property");
                 }
 
-                if (type.Value<string>() == NestedStackType)
+                if (type.Value<string>() == TemplateParser.NestedStackType)
                 {
                     if (!string.IsNullOrEmpty(baseStackName))
                     {
-                        nestedStacks.Add(baseStackName + "-" + resource.Name + string.Empty.PadRight(NestedStackPadWidth));
+                        nestedStacks.Add(baseStackName + "-" + resource.Name + string.Empty.PadRight(TemplateParser.NestedStackPadWidth));
                     }
                     else
                     {
@@ -151,9 +153,9 @@
                     throw new FormatException($"Resource {resource.Name} has no Type property");
                 }
 
-                if (type.Value<string>() == NestedStackType)
+                if (type.Value<string>() == TemplateParser.NestedStackType)
                 {
-                    resourceNames.Add(stackName + "-" + resource.Name + string.Empty.PadRight(NestedStackPadWidth));
+                    resourceNames.Add(stackName + "-" + resource.Name + string.Empty.PadRight(TemplateParser.NestedStackPadWidth));
                 }
                 else
                 {
@@ -162,6 +164,49 @@
             }
 
             return resourceNames;
+        }
+
+        /// <summary>
+        /// Gets the template resources.
+        /// </summary>
+        /// <returns>
+        /// Enumerable of resources found in template
+        /// </returns>
+        public override IEnumerable<TemplateResource> GetResources()
+        {
+            var resources = new List<TemplateResource>();
+
+            foreach (var resource in this.template[ResourceKeyName].Cast<JProperty>())
+            {
+                var type = resource.Children()["Type"].FirstOrDefault();
+                var name = resource.Name;
+
+                if (type == null)
+                {
+                    throw new FormatException($"Resource {name} has no Type property");
+                }
+
+                resources.Add(new TemplateResource(resource, SerializationFormat.Json, name, type.Value<string>()));
+            }
+
+            return resources;
+        }
+
+        /// <summary>
+        /// Saves the template to the specified path.
+        /// </summary>
+        /// <param name="path">The path.</param>
+        public override void Save(string path)
+        {
+            using (var sw = File.CreateText(path))
+            {
+                using (var jw = new JsonTextWriter(sw))
+                {
+                    jw.Formatting = Formatting.Indented;
+
+                    this.template.WriteTo(jw);
+                }
+            }
         }
 
         /// <summary>

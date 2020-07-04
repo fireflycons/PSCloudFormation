@@ -10,7 +10,7 @@
     using Amazon.CloudFormation.Model;
 
     using Firefly.CloudFormation.CloudFormation;
-    using Firefly.CloudFormation.CloudFormation.Template;
+    using Firefly.CloudFormation.CloudFormation.Parsers;
 
     using Newtonsoft.Json;
     using Newtonsoft.Json.Linq;
@@ -302,7 +302,8 @@
             }
 
             // Can't add parameters till dynamic parameters have been resolved.
-            return base.GetBuilder().WithTemplateLocation(this.TemplateLocation).WithTags(this.Tag)
+            return base.GetBuilder().WithTemplateLocation(this.TemplateLocation)
+                .WithTags(this.Tag)
                 .WithNotificationARNs(this.NotificationARNs)
                 .WithCapabilities(this.Capabilities?.Select(Capability.FindValue))
                 .WithRollbackConfiguration(rollbackConfiguration).WithResourceType(this.ResourceType)

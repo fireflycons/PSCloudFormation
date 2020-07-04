@@ -4,24 +4,27 @@
     using System.Collections.Generic;
     using System.Linq;
 
-    using Firefly.CloudFormation.CloudFormation.Template;
+    using Firefly.CloudFormation.CloudFormation.Parsers;
     using Firefly.CloudFormation.Tests.Unit.resources;
 
     public class TemplateParserFixture : IDisposable
     {
         public TemplateParserFixture()
         {
-            var jsonParser = Firefly.CloudFormation.CloudFormation.Template.TemplateParser.CreateParser(EmbeddedResourceManager.GetResourceString("test-stack.json"));
-            var yamlParser = Firefly.CloudFormation.CloudFormation.Template.TemplateParser.CreateParser(EmbeddedResourceManager.GetResourceString("test-stack.yaml"));
+            var jsonParser = Firefly.CloudFormation.CloudFormation.Parsers.TemplateParser.CreateParser(EmbeddedResourceManager.GetResourceString("test-stack.json"));
+            var yamlParser = Firefly.CloudFormation.CloudFormation.Parsers.TemplateParser.CreateParser(EmbeddedResourceManager.GetResourceString("test-stack.yaml"));
 
             this.JsonParameters = jsonParser.GetParameters().ToList();
             this.JsonTemplateDescription = jsonParser.GetTemplateDescription();
 
+            this.JsonResources = jsonParser.GetResources();
+            this.YamlResources = yamlParser.GetResources();
+
             this.YamlParameters = yamlParser.GetParameters().ToList();
             this.YamlTemplateDescription = yamlParser.GetTemplateDescription();
 
-            jsonParser = Firefly.CloudFormation.CloudFormation.Template.TemplateParser.CreateParser(EmbeddedResourceManager.GetResourceString("test-nested-stack.json"));
-            yamlParser = Firefly.CloudFormation.CloudFormation.Template.TemplateParser.CreateParser(EmbeddedResourceManager.GetResourceString("test-nested-stack.yaml"));
+            jsonParser = Firefly.CloudFormation.CloudFormation.Parsers.TemplateParser.CreateParser(EmbeddedResourceManager.GetResourceString("test-nested-stack.json"));
+            yamlParser = Firefly.CloudFormation.CloudFormation.Parsers.TemplateParser.CreateParser(EmbeddedResourceManager.GetResourceString("test-nested-stack.yaml"));
 
             this.JsonNestedStacks = jsonParser.GetNestedStackNames();
             this.YamlNestedStacks = yamlParser.GetNestedStackNames();
@@ -38,6 +41,10 @@
         internal IEnumerable<string> JsonNestedStacks { get; }
 
         internal IEnumerable<string> YamlNestedStacks { get; }
+
+        internal IEnumerable<TemplateResource> JsonResources { get; }
+
+        internal IEnumerable<TemplateResource> YamlResources { get; }
 
         public void Dispose()
         {

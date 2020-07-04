@@ -89,7 +89,7 @@
         /// <summary>
         /// Resolves and loads the given file from the specified location
         /// </summary>
-        /// <param name="fileLocation">The file location.</param>
+        /// <param name="objectLocation">The file location.</param>
         /// <returns>
         /// The file content
         /// </returns>
@@ -98,19 +98,24 @@
         /// or
         /// 'Virtual Host' style S3 URLs must have at least 1 path segment (key)
         /// </exception>
-        public virtual async Task<string> ResolveFileAsync(string fileLocation)
+        public virtual async Task<string> ResolveFileAsync(string objectLocation)
         {
-            if (string.IsNullOrEmpty(fileLocation))
+            if (string.IsNullOrEmpty(objectLocation))
             {
                 this.Source = InputFileSource.None;
                 return null;
             }
 
-            if (File.Exists(fileLocation))
+            if (objectLocation.Contains("\r") || objectLocation.Contains("\n"))
             {
-                this.GetFileContent(fileLocation);
+                // Definitely a string
+                this.GetStringContent(objectLocation);
             }
-            else if (Uri.TryCreate(fileLocation, UriKind.Absolute, out var uri))
+            else if (File.Exists(objectLocation))
+            {
+                this.GetFileContent(objectLocation);
+            }
+            else if (Uri.TryCreate(objectLocation, UriKind.Absolute, out var uri))
             {
                 string bucketName;
                 string key;
@@ -174,17 +179,22 @@
             else
             {
                 // Value is a string
-                this.FileContent = fileLocation;
-                this.Source = InputFileSource.String;
-                this.InputFileName = "RawString";
-
-                if (Encoding.UTF8.GetByteCount(fileLocation) >= this.MaxFileSize)
-                {
-                    this.Source |= InputFileSource.Oversize;
-                }
+                this.GetStringContent(objectLocation);
             }
 
             return this.FileContent;
+        }
+
+        private void GetStringContent(string fileLocation)
+        {
+            this.FileContent = fileLocation;
+            this.Source = InputFileSource.String;
+            this.InputFileName = "RawString";
+
+            if (Encoding.UTF8.GetByteCount(fileLocation) >= this.MaxFileSize)
+            {
+                this.Source |= InputFileSource.Oversize;
+            }
         }
 
         /// <summary>

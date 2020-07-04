@@ -13,7 +13,7 @@ namespace Firefly.CloudFormation.CloudFormation
     using Amazon.CloudFormation;
     using Amazon.CloudFormation.Model;
 
-    using Firefly.CloudFormation.CloudFormation.Template;
+    using Firefly.CloudFormation.CloudFormation.Parsers;
     using Firefly.CloudFormation.Utils;
 
     /// <summary>Class to manage all stack operations</summary>
@@ -87,11 +87,6 @@ namespace Firefly.CloudFormation.CloudFormation
         private readonly List<string> resourceType;
 
         /// <summary>
-        /// The retain resource
-        /// </summary>
-        private readonly List<string> retainResource;
-
-        /// <summary>
         /// ARN of ole to assume during CF operations
         /// </summary>
         private readonly string roleArn;
@@ -142,6 +137,11 @@ namespace Firefly.CloudFormation.CloudFormation
 
         /// <summary>  How long to wait between polls for events</summary>
         private readonly int waitPollTime = 5000;
+
+        /// <summary>
+        /// The retain resource
+        /// </summary>
+        private List<string> retainResource;
 
         /// <summary>
         /// The template resolver
@@ -362,18 +362,34 @@ namespace Firefly.CloudFormation.CloudFormation
         }
 
         /// <summary>Deletes a stack.</summary>
+        /// <param name="invalidRetentionConfirmationFunc">Function to confirm delete if user passed resources to retain in an invalid manner</param>
         /// <returns>Operation result.</returns>
-        public async Task<CloudFormationResult> DeleteStackAsync()
+        public async Task<CloudFormationResult> DeleteStackAsync(Func<bool> invalidRetentionConfirmationFunc = null)
         {
             var stack = await this.stackOperations.GetStackAsync(this.stackName);
             var operationalState = await this.stackOperations.GetStackOperationalStateAsync(stack.StackId);
+            var haveRetainResources = this.retainResource != null && this.retainResource.Any();
 
             // Only permit delete if stack is in Ready state
-            if (operationalState != StackOperationalState.Ready)
+            if (operationalState != StackOperationalState.Ready && operationalState != StackOperationalState.DeleteFailed)
             {
                 throw new StackOperationException(
                     stack,
                     $"Cannot delete stack: Current state: {operationalState} ({stack.StackStatus.Value})");
+            }
+
+            if (operationalState != StackOperationalState.DeleteFailed && haveRetainResources && invalidRetentionConfirmationFunc != null)
+            {
+                if (!invalidRetentionConfirmationFunc())
+                {
+                    return new CloudFormationResult
+                               {
+                                   StackArn = stack.StackId,
+                                   StackOperationResult = StackOperationResult.NoChange
+                    };
+                }
+
+                this.retainResource = null;
             }
 
             // Resolve template from CloudFormation to get description if any
@@ -390,6 +406,11 @@ namespace Firefly.CloudFormation.CloudFormation
             this.context.Logger.SetResourceNameColumnWidth(parser.GetLogicalResourceNames(this.stackName).Max(r => r.Length));
 
             this.context.Logger.LogInformation($"Deleting {this.GetStackNameWithDescription()}");
+
+            if (this.retainResource != null && this.retainResource.Any())
+            {
+                this.context.Logger.LogInformation($"Retaining resources: {string.Join(", ", this.retainResource)}");
+            }
 
             this.lastEventTime = await this.GetMostRecentStackEvent(stack.StackId);
 

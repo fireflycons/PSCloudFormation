@@ -29,6 +29,7 @@
         /// <value>
         /// The disable rollback.
         /// </value>
+        [Parameter(ValueFromPipelineByPropertyName = true)]
         public SwitchParameter DisableRollback { get; set; }
 
         /// <summary>
@@ -42,6 +43,7 @@
         /// <value>
         /// The enable termination protection.
         /// </value>
+        [Parameter(ValueFromPipelineByPropertyName = true)]
         public SwitchParameter EnableTerminationProtection { get; set; }
 
         /// <summary>
@@ -53,6 +55,7 @@
         /// <value>
         /// The on failure.
         /// </value>
+        [Parameter(ValueFromPipelineByPropertyName = true)]
         public OnFailure OnFailure { get; set; }
 
         /// <summary>
@@ -64,6 +67,7 @@
         /// <value>
         /// The timeout in minutes.
         /// </value>
+        [Parameter(ValueFromPipelineByPropertyName = true)]
         public int TimeoutInMinutes { get; set; }
 
         /// <summary>
@@ -77,6 +81,8 @@
         /// <value>
         /// The retain resource.
         /// </value>
+        [Parameter(ValueFromPipelineByPropertyName = true)]
+        [Alias("RetainResources")]
         public string[] RetainResource { get; set; }
 
         /// <summary>
@@ -112,7 +118,7 @@
                     return StackOperationResult.NoChange;
                 }
 
-                await runner.DeleteStackAsync();
+                await runner.DeleteStackAsync(this.AcceptDeleteWithNoRetainResource);
             }
 
             // Now recreate

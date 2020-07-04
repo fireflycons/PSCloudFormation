@@ -7,7 +7,7 @@
     using System.Text.RegularExpressions;
 
     using Firefly.CloudFormation.CloudFormation;
-    using Firefly.CloudFormation.CloudFormation.Template;
+    using Firefly.CloudFormation.CloudFormation.Parsers;
     using Firefly.CloudFormation.Utils;
     using Firefly.PowerShell.DynamicParameters;
 

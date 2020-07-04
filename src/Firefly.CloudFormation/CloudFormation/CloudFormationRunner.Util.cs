@@ -10,7 +10,7 @@
 
     using Amazon.CloudFormation.Model;
 
-    using Firefly.CloudFormation.CloudFormation.Template;
+    using Firefly.CloudFormation.CloudFormation.Parsers;
     using Firefly.CloudFormation.S3;
     using Firefly.CloudFormation.Utils;
 

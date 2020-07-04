@@ -51,8 +51,9 @@
             var foregroundColorMap = new Dictionary<string, ConsoleColor>
                                          {
                                              { "Add", ConsoleColor.Green },
-                                             { "Remove", ConsoleColor.Red },
+                                             { "Import", ConsoleColor.Cyan },
                                              { "Modify", ConsoleColor.Yellow },
+                                             { "Remove", ConsoleColor.Red },
                                              { "False", ConsoleColor.Green },
                                              { "True", ConsoleColor.Red },
                                              { "Conditional", ConsoleColor.Yellow }

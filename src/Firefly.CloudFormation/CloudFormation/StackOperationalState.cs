@@ -26,6 +26,11 @@
         Deleting,
 
         /// <summary>
+        /// A previous delete failed, however in this state delete may be retried.
+        /// </summary>
+        DeleteFailed,
+
+        /// <summary>
         /// Stack is broken - e.g. a rollback failed
         /// </summary>
         Broken

@@ -27,6 +27,11 @@
         private string stackPolicyDuringUpdateLocation;
 
         /// <summary>
+        /// The resources to import
+        /// </summary>
+        private string resourcesToImport;
+
+        /// <summary>
         /// Gets or sets the stack policy during update location.
         /// <para type="description">
         /// Structure containing the temporary overriding stack policy body. For more information, go to Prevent Updates to Stack Resources in the AWS CloudFormation User Guide.
@@ -80,7 +85,11 @@
         /// The resources to import.
         /// </value>
         [Parameter(ValueFromPipelineByPropertyName = true)]
-        public string ResourcesToImport { get; set; }
+        public string ResourcesToImport
+        {
+            get => this.resourcesToImport; 
+            set => this.resourcesToImport = this.ResolvePath(value);
+        }
 
         /// <summary>
         /// Gets the stack operation.

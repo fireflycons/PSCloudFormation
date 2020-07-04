@@ -1,4 +1,4 @@
-﻿namespace Firefly.CloudFormation.CloudFormation
+﻿namespace Firefly.CloudFormation.CloudFormation.Parsers
 {
     using System.Collections.Generic;
 
@@ -9,7 +9,7 @@
     /// <summary>
     /// Concrete resource import parser for JSON
     /// </summary>
-    /// <seealso cref="Firefly.CloudFormation.CloudFormation.ResourceImportParser" />
+    /// <seealso cref="ResourceImportParser" />
     internal class JsonResourceImportParser : ResourceImportParser
     {
         /// <summary>
