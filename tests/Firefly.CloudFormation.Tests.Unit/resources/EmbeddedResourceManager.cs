@@ -11,7 +11,14 @@
 
         public static Stream GetResourceStream(string name)
         {
-            var s =  ThisAssembly.GetManifestResourceStream($"{ResourceNamespace}.{name}");
+            var resource = $"{ResourceNamespace}.{name}";
+            var s =  ThisAssembly.GetManifestResourceStream(resource);
+
+            if (s == null)
+            {
+                throw new FileNotFoundException($"Resource '{resource}' not found. Did you set it to embedded resource?");
+            }
+
             return s;
         }
 

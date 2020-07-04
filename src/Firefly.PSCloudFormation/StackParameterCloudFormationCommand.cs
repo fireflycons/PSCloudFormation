@@ -38,6 +38,11 @@
         private string stackPolicyLocation;
 
         /// <summary>
+        /// The parameter file location
+        /// </summary>
+        private string parameterFileLocation;
+
+        /// <summary>
         /// Gets or sets the capabilities.
         /// <para type="description">
         /// In some cases, you must explicitly acknowledge that your stack template contains certain capabilities in order for AWS CloudFormation to create the stack.
@@ -89,15 +94,27 @@
         /// <summary>
         /// Gets or sets the parameter file.
         /// <para type="description">
-        /// If present, path to a JSON file containing a list of parameter structures as defined for 'aws cloudformation create-stack'. If a parameter of the same name is defined on the command line, the command line takes precedence.
+        /// If present, location of a list of stack parameters to apply.
+        /// This is a JSON or YAML list of parameter structures with fields <c>ParameterKey</c> and <c>ParameterValue</c>.
+        /// This is similar to <c>aws cloudformation create-stack</c>  except the other fields defined for that are ignored here.
+        /// Parameters not supplied to an update operation are assumed to be <c>UsePreviousValue</c>.
+        /// If a parameter of the same name is defined on the command line, the command line takes precedence.
         /// If your stack has a parameter with the same name as one of the parameters to this cmdlet, then you *must* set the stack parameter via a parameter file.
+        /// </para>
+        /// <para type="description">
+        /// You can specify either a string, path to a file, or URL of a object in S3 that contains the parameters.
         /// </para>
         /// </summary>
         /// <value>
         /// The parameter file.
         /// </value>
         [Parameter(ValueFromPipelineByPropertyName = true)]
-        public string ParameterFile { get; set; }
+        [Alias("ParameterFile")]
+        public string ParameterFileLocation
+        {
+            get => this.parameterFileLocation; 
+            set => this.parameterFileLocation = this.ResolvePath(value);
+        }
 
         /// <summary>
         /// Gets or sets the type of the resource.
@@ -266,19 +283,18 @@
         /// Reads a file containing values for template parameters..
         /// </summary>
         /// <returns>Dictionary of parameter key/parameter value.</returns>
-        internal Dictionary<string, string> ReadParameterFile()
+        internal IDictionary<string, string> ReadParameterFile()
         {
-            if (string.IsNullOrEmpty(this.ParameterFile))
+            if (string.IsNullOrEmpty(this.ParameterFileLocation))
             {
                 return new Dictionary<string, string>();
             }
 
-            using (var reader = File.OpenText(this.ParameterFile))
-            {
-                return ((JArray)JToken.ReadFrom(new JsonTextReader(reader))).Cast<JObject>().ToDictionary(
-                    o => o["ParameterKey"].ToString(),
-                    o => o["ParameterValue"].ToString());
-            }
+            // Template resolver will do to resolve location of parameter file
+            var resolver = new TemplateResolver(this.ClientFactory, this.StackName, false);
+            var parser = ParameterFileParser.CreateParser(resolver.ResolveFileAsync(this.ParameterFileLocation).Result);
+
+            return parser.ParseParameterFile();
         }
 
         /// <summary>
@@ -349,16 +365,11 @@
         /// <returns>Absolute path of the artifact if it could be resolved; else the input.</returns>
         protected string ResolvePath(string path)
         {
-            // ReSharper disable once NotAccessedVariable
-            ProviderInfo provider;
-
-            // ReSharper disable once NotAccessedVariable
-            PSDriveInfo drive;
             string resolved = null;
 
             try
             {
-                resolved = this.SessionState.Path.GetUnresolvedProviderPathFromPSPath(path, out provider, out drive);
+                resolved = this.SessionState.Path.GetUnresolvedProviderPathFromPSPath(path, out var provider, out var drive);
             }
             catch
             {
