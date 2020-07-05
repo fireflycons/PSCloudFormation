@@ -21,7 +21,7 @@ namespace Firefly.PSCloudFormation.Tests.Unit
 
             mockTemplateResolver.Setup(r => r.FileContent).Returns(templateBody);
             var templateManager = new TemplateManager(mockTemplateResolver.Object, StackOperation.Create, null);
-            this.ParameterDictionary = templateManager.GetStackDynamicParameters();
+            this.ParameterDictionary = templateManager.GetStackDynamicParameters(new Dictionary<string, string>());
         }
 
         public RuntimeDefinedParameterDictionary ParameterDictionary { get; }

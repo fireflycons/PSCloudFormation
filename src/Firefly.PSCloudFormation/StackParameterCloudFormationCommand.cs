@@ -258,6 +258,14 @@
         /// <returns>A <see cref="RuntimeDefinedParameterDictionary"/></returns>
         public object GetDynamicParameters()
         {
+            if (this.TemplateLocation == null && !this.UsePreviousTemplateFlag)
+            {
+                // We can also get called when user is tab-completing the cmdlet name.
+                // Clearly we have no arguments yet.
+                // However if we are completing arguments, and -UsePreviousTemplate is set then we do need to run.
+                return null;
+            }
+
             var templateResolver = new TemplateResolver(
                 this.CreateCloudFormationContext(),
                 this.StackName,
@@ -268,7 +276,7 @@
 
             var templateManager = new TemplateManager(templateResolver, this.StackOperation, new PSLogger(this));
 
-            var paramsDictionary = templateManager.GetStackDynamicParameters();
+            var paramsDictionary = templateManager.GetStackDynamicParameters(this.ReadParameterFile());
 
             // All parameters parsed from the template
             this.TemplateParameters = templateManager.TemplateParameters;
@@ -340,6 +348,11 @@
                         // Read parameter file, if any
                         var fileParameters = this.ReadParameterFile();
 
+                        if (fileParameters.Any())
+                        {
+                            this.Logger.LogVerbose($"Parameters from file: {string.Join(", ", fileParameters.Keys)}");
+                        }
+
                         // Resolve dynamic parameters to stack parameters
                         var userParameters = this.MyInvocation.BoundParameters
                             .Where(p => this.stackParameterNames.Contains(p.Key)).ToDictionary(
@@ -350,6 +363,11 @@
                         this.StackParameters = userParameters
                             .Concat(fileParameters.Where(kvp => !userParameters.ContainsKey(kvp.Key)))
                             .ToDictionary(kvp => kvp.Key, kvp => kvp.Value);
+
+                        if (this.StackParameters.Any())
+                        {
+                            this.Logger.LogVerbose($"Parameters to pass to stack: {string.Join(", ", this.StackParameters.Keys)}");
+                        }
                     });
 
             return null;
@@ -359,24 +377,36 @@
         /// Resolve a PowerShell path to a .NET path
         /// </summary>
         /// <remarks>
-        /// Try to resolve as a path through the file system provider. PS and .NET may have different ideas about the current directory.
+        /// <para>
+        /// Try to resolve as a path through the file system provider. PS and .NET have different ideas about the current directory.
+        /// .NET path will be whatever the current directory was when PowerShell started, and within PowerShell, it is controlled by
+        /// file system provider.
+        /// </para>
+        /// <para>
+        /// If the path was entered as a quoted literal string then those quotes are retained on the argument, so we have to remove them here
+        /// </para>
         /// </remarks>
         /// <param name="path">The path.</param>
         /// <returns>Absolute path of the artifact if it could be resolved; else the input.</returns>
         protected string ResolvePath(string path)
         {
+            if (path == null)
+            {
+                return null;
+            }
+
             string resolved = null;
 
             try
             {
-                resolved = this.SessionState.Path.GetUnresolvedProviderPathFromPSPath(path, out var provider, out var drive);
+                resolved = this.SessionState.Path.GetUnresolvedProviderPathFromPSPath(path.Unquote(), out var provider, out var drive);
             }
             catch
             {
                 // do nothing
             }
 
-            return resolved ?? path;
+            return resolved ?? path.Unquote();
         }
     }
 }

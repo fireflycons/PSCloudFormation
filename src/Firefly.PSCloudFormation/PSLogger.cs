@@ -249,7 +249,10 @@
         /// <param name="args">The arguments.</param>
         public override void LogVerbose(string message, params object[] args)
         {
-            this.cmdlet.Host.UI.WriteVerboseLine(string.Format(message, args));
+            if (this.cmdlet.MyInvocation.BoundParameters.Keys.Any(k => string.Compare(k, "Verbose", StringComparison.OrdinalIgnoreCase) == 0))
+            {
+                this.cmdlet.Host.UI.WriteVerboseLine(string.Format(message, args));
+            }
         }
 
         /// <summary>

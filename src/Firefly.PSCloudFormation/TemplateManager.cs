@@ -118,8 +118,9 @@
         /// <summary>
         /// Gets the stack dynamic parameters.
         /// </summary>
+        /// <param name="fileParameters">Parameters read from parameter file, if any.</param>
         /// <returns>A <see cref="RuntimeDefinedParameterDictionary"/> containing all non-SSM template parameters</returns>
-        public RuntimeDefinedParameterDictionary GetStackDynamicParameters()
+        public RuntimeDefinedParameterDictionary GetStackDynamicParameters(IDictionary<string, string> fileParameters)
         {
             var dynamicParams = new RuntimeDefinedParameterDictionaryHelper();
 
@@ -129,9 +130,9 @@
                 {
                     var builder = new RuntimeDefinedParameterBuilder(param.Name, GetClrTypeFromAwsType(param.Type));
 
-                    if (param.Default == null && this.stackOperation == StackOperation.Create)
+                    if (param.Default == null && this.stackOperation == StackOperation.Create && !fileParameters.ContainsKey(param.Name))
                     {
-                        // Only make parameter mandatory when creating.
+                        // Only make parameter mandatory when creating, and the parameter isn't defined in a parameter file
                         builder.WithMandatory();
                     }
 

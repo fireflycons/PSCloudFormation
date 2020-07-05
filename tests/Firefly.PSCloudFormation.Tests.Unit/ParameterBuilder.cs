@@ -1,6 +1,7 @@
 namespace Firefly.PSCloudFormation.Tests.Unit
 {
     using System;
+    using System.Collections.Generic;
     using System.Linq;
     using System.Management.Automation;
 
@@ -69,7 +70,7 @@ namespace Firefly.PSCloudFormation.Tests.Unit
             mockTemplateResolver.Setup(r => r.FileContent).Returns(templateBody);
             var templateManager = new TemplateManager(mockTemplateResolver.Object, StackOperation.Create, null);
 
-            var yamlDict = templateManager.GetStackDynamicParameters();
+            var yamlDict = templateManager.GetStackDynamicParameters(new Dictionary<string, string>());
 
             yamlDict.Should().BeEquivalentTo(
                 this.fixture.ParameterDictionary,
