@@ -1,7 +1,6 @@
 ﻿namespace Firefly.PSCloudFormation
 {
     using System.Collections.Generic;
-    using System.IO;
     using System.Linq;
     using System.Management.Automation;
     using System.Threading.Tasks;
@@ -11,9 +10,6 @@
 
     using Firefly.CloudFormation.CloudFormation;
     using Firefly.CloudFormation.CloudFormation.Parsers;
-
-    using Newtonsoft.Json;
-    using Newtonsoft.Json.Linq;
 
     /// <summary>
     /// Base class for Create/Update operations

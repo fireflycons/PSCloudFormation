@@ -5,7 +5,6 @@
     using System.Linq;
     using System.Management.Automation;
     using System.Management.Automation.Host;
-    using System.Reflection;
     using System.Threading.Tasks;
 
     using Firefly.CloudFormation;

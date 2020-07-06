@@ -1,6 +1,5 @@
 ﻿namespace Firefly.CloudFormation.CloudFormation.Parsers
 {
-    using System;
     using System.Collections.Generic;
     using System.IO;
     using System.Linq;

@@ -1,6 +1,7 @@
 ﻿namespace Firefly.CloudFormation.CloudFormation
 {
     using System;
+    using System.Linq;
 
     /// <summary>
     /// String extensions
@@ -27,12 +28,9 @@
 
             var temp = self.Trim();
 
-            foreach (var q in Quotes)
+            if (Quotes.Any(q => temp.StartsWith(q) && temp.EndsWith(q)))
             {
-                if (temp.StartsWith(q) && temp.EndsWith(q))
-                {
-                    return temp.Substring(1, temp.Length - 2);
-                }
+                return temp.Substring(1, temp.Length - 2);
             }
 
             return temp;

@@ -181,7 +181,7 @@
             var newPropertyValue =
                 (YamlNode)TemplateParser.SerializeObjectGraphToRepresentationModel(newValue, SerializationFormat.Yaml);
 
-            var propertyToSet = (YamlNode)resourceProperties;
+            var propertyToSet = resourceProperties;
             YamlMappingNode parentNode = null;
 
             // Walk to requested property

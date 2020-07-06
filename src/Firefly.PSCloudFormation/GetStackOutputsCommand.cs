@@ -44,22 +44,6 @@
         internal const string ParameterBlockParameterSet = "Parameters";
 
         /// <summary>
-        /// Output format for template fragment outputs
-        /// </summary>
-        private enum OutputFormat
-        {
-            /// <summary>
-            /// Output format JSON
-            /// </summary>
-            Json,
-
-            /// <summary>
-            /// Output format YAML
-            /// </summary>
-            Yaml
-        }
-
-        /// <summary>
         /// Gets or sets as cross stack references.
         /// <para type="description">
         ///  If set, returned object is formatted as a set of <c>Fn::ImportValue statements</c>, with any text matching the

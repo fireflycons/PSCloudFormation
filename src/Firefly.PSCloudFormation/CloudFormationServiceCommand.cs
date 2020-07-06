@@ -782,6 +782,7 @@ namespace Firefly.PSCloudFormation
             /// be found in SelfNetworkCredentialParameter. This value is retained after 
             /// use.
             /// </value>
+            // ReSharper disable once UnusedAutoPropertyAccessor.Local
             public PSCredential ShellNetworkCredentialParameter { get; set; }
         }
     }
