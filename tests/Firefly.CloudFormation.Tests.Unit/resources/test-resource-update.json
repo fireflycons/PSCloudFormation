@@ -1,0 +1,51 @@
+{
+    "AWSTemplateFormatVersion": "2010-09-09",
+    "Resources": {
+        "iamRole": {
+            "Type": "AWS::IAM::Role",
+            "Properties": {
+                "AssumeRolePolicyDocument": {},
+                "Path": "/",
+                "Policies": []
+            }
+        },
+        "lambdaFunction": {
+            "Type": "AWS::Lambda::Function",
+            "Properties": {
+                "Code": "index.py",
+                "Handler": "",
+                "FunctionName": "",
+                "MemorySize": 128,
+                "Timeout": 5,
+                "KmsKeyArn": "",
+                "Role": {
+                    "Fn::GetAtt": [
+                        "iamRole",
+                        "Arn"
+                    ]
+                },
+                "Runtime": "python3.6"
+            }
+        },
+        "MyJob": {
+            "Type": "AWS::Glue::Job",
+            "Properties": {
+                "Command": {
+                    "Name": "glueetl",
+                    "ScriptLocation": "job.etl"
+                },
+                "DefaultArguments": {
+                    "--job-bookmark-option": "job-bookmark-enable"
+                },
+                "ExecutionProperty": {
+                    "MaxConcurrentRuns": 2
+                },
+                "MaxRetries": 0,
+                "Name": "cf-job1",
+                "Role": {
+                    "Ref": "MyJobRole"
+                }
+            }
+        }
+    }
+}

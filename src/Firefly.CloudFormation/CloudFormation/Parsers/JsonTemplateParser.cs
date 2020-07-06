@@ -199,13 +199,30 @@
         public override void Save(string path)
         {
             using (var sw = File.CreateText(path))
+            using (var jw = new JsonTextWriter(sw))
             {
-                using (var jw = new JsonTextWriter(sw))
-                {
-                    jw.Formatting = Formatting.Indented;
+                jw.Formatting = Formatting.Indented;
 
-                    this.template.WriteTo(jw);
-                }
+                this.template.WriteTo(jw);
+            }
+        }
+
+        /// <summary>
+        /// Gets the template by re-serializing the current state of the representation model.
+        /// </summary>
+        /// <returns>
+        /// Template body as string
+        /// </returns>
+        public override string GetTemplate()
+        {
+            using (var sw = new StringWriter())
+            using (var jw = new JsonTextWriter(sw))
+            {
+                jw.Formatting = Formatting.Indented;
+
+                this.template.WriteTo(jw);
+
+                return sw.ToString();
             }
         }
 

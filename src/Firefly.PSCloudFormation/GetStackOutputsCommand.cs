@@ -165,7 +165,7 @@
                         parameters.Add(p.OutputKey, parameterProps);
                     }
 
-                    return TemplateParser.SerializeObjectGraph(
+                    return TemplateParser.SerializeObjectGraphToString(
                         new Dictionary<string, Dictionary<string, Dictionary<string, string>>>
                             {
                                 { "Parameters", parameters }
@@ -179,7 +179,7 @@
                         string.Empty,
                         this.StackName.Split('-', '_').Select(s => ti.TextInfo.ToTitleCase(s)));
 
-                    return TemplateParser.SerializeObjectGraph(
+                    return TemplateParser.SerializeObjectGraphToString(
                         stackOutputs.Where(o => !string.IsNullOrEmpty(o.ExportName)).Select(
                             p => new Dictionary<string, Dictionary<string, string>>
                                      {

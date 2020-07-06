@@ -43,7 +43,11 @@
         public YamlTemplateParser(string templateBody)
             : base(templateBody)
         {
-            this.yaml.Load(new StringReader(this.FileContent));
+            using (var sr = new StringReader(this.FileContent))
+            {
+                this.yaml.Load(sr);
+            }
+
             this.rootNode = (YamlMappingNode)this.yaml.Documents[0].RootNode;
 
             if (this.rootNode == null)
@@ -244,6 +248,21 @@
             {
                 this.yaml.Save(sw, false);
                 File.WriteAllText(path, sw.ToString(), new UTF8Encoding(false));
+            }
+        }
+
+        /// <summary>
+        /// Gets the template by re-serializing the current state of the representation model.
+        /// </summary>
+        /// <returns>
+        /// Template body as string
+        /// </returns>
+        public override string GetTemplate()
+        {
+            using (var sw = new StringWriter())
+            {
+                this.yaml.Save(sw, false);
+                return sw.ToString();
             }
         }
 
