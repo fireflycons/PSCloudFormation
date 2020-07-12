@@ -43,7 +43,7 @@
 
             bucket.BucketName.Should().Be(expectedBucketName);
             logger.InfoMessages.First().Should().Be(
-                $"Creating bucket '{expectedBucketName}' to store oversize templates.");
+                $"Creating bucket '{expectedBucketName}' to store uploaded templates.");
         }
 
         [Fact]
