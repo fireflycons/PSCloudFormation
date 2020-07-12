@@ -1,7 +1,5 @@
 ﻿namespace Firefly.CloudFormation.Model
 {
-    using Firefly.CloudFormation.CloudFormation;
-
     /// <summary>
     /// Returned by run method of <see cref="CloudFormationRunner"/>
     /// </summary>

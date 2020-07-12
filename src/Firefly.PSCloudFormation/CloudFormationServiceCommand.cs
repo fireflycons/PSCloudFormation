@@ -19,7 +19,6 @@ namespace Firefly.PSCloudFormation
     using Amazon.Util;
 
     using Firefly.CloudFormation;
-    using Firefly.CloudFormation.CloudFormation;
     using Firefly.CloudFormation.Utils;
 
     using AWSRegion = Amazon.PowerShell.Common.AWSRegion;

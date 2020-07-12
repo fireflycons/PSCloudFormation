@@ -5,7 +5,8 @@
 
     using Amazon.CloudFormation.Model;
 
-    using Firefly.CloudFormation.CloudFormation;
+    using Firefly.CloudFormation;
+    using Firefly.CloudFormation.Model;
 
     /// <summary>
     /// <para type="synpopsis">Calls the AWS CloudFormation UpdateStack API operation. </para>

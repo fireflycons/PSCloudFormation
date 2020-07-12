@@ -1,7 +1,7 @@
 ﻿// ReSharper disable InconsistentNaming
 // ReSharper disable StyleCop.SA1309
 
-namespace Firefly.CloudFormation.CloudFormation
+namespace Firefly.CloudFormation.Model
 {
     using System;
     using System.Collections.Generic;

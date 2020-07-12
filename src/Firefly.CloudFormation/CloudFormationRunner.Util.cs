@@ -1,4 +1,4 @@
-﻿namespace Firefly.CloudFormation.CloudFormation
+﻿namespace Firefly.CloudFormation
 {
     using System;
     using System.Collections.Generic;
@@ -13,7 +13,6 @@
     using Firefly.CloudFormation.Model;
     using Firefly.CloudFormation.Parsers;
     using Firefly.CloudFormation.Resolvers;
-    using Firefly.CloudFormation.S3;
     using Firefly.CloudFormation.Utils;
 
     /// <summary>Class to manage all stack operations</summary>

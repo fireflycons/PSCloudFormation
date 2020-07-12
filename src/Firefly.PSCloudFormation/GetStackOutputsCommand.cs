@@ -9,7 +9,6 @@
     using System.Threading.Tasks;
 
     using Firefly.CloudFormation;
-    using Firefly.CloudFormation.CloudFormation;
     using Firefly.CloudFormation.Model;
     using Firefly.CloudFormation.Parsers;
     using Firefly.CloudFormation.Utils;

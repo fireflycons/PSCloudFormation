@@ -1,6 +1,5 @@
 ﻿namespace Firefly.CloudFormation.Model
 {
-    using Firefly.CloudFormation.CloudFormation;
     using Firefly.CloudFormation.Resolvers;
 
     /// <summary>

@@ -9,8 +9,6 @@
     using Amazon.CloudFormation;
     using Amazon.CloudFormation.Model;
 
-    using Firefly.CloudFormation.CloudFormation;
-
     /// <summary>
     /// Extension methods for <see cref="ILogger"/>
     /// </summary>

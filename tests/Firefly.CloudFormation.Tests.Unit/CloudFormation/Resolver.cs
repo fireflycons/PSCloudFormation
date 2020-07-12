@@ -8,7 +8,6 @@
     using Amazon.S3;
     using Amazon.S3.Model;
 
-    using Firefly.CloudFormation.CloudFormation;
     using Firefly.CloudFormation.Model;
     using Firefly.CloudFormation.Resolvers;
     using Firefly.CloudFormation.Tests.Unit.resources;

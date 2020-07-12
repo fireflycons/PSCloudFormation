@@ -10,7 +10,6 @@ namespace Firefly.CloudFormation.Tests.Unit.CloudFormation
     using Amazon.CloudFormation;
     using Amazon.CloudFormation.Model;
 
-    using Firefly.CloudFormation.CloudFormation;
     using Firefly.CloudFormation.Tests.Unit.Utils;
 
     using FluentAssertions;

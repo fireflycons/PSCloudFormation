@@ -8,7 +8,6 @@
     using System.Threading.Tasks;
 
     using Firefly.CloudFormation;
-    using Firefly.CloudFormation.CloudFormation;
     using Firefly.CloudFormation.Model;
 
     /// <summary>

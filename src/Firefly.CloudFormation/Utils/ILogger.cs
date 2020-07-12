@@ -4,8 +4,6 @@
 
     using Amazon.CloudFormation.Model;
 
-    using Firefly.CloudFormation.CloudFormation;
-
     /// <summary>
     /// Interface to which all messages and stack events are sent.
     /// </summary>

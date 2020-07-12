@@ -2,7 +2,7 @@
 [assembly: System.Runtime.CompilerServices.InternalsVisibleTo("ReedExpo.Cake.AWS.CloudFormation.Tests.Unit")]
 [assembly: System.Runtime.CompilerServices.InternalsVisibleTo("ReedExpo.Cake.AWS.CloudFormation.Tests.Integration")]
 
-namespace Firefly.CloudFormation.CloudFormation
+namespace Firefly.CloudFormation
 {
     using System;
     using System.Collections.Generic;

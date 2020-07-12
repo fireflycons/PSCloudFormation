@@ -8,7 +8,8 @@
     using Amazon.CloudFormation;
     using Amazon.CloudFormation.Model;
 
-    using Firefly.CloudFormation.CloudFormation;
+    using Firefly.CloudFormation;
+    using Firefly.CloudFormation.Model;
     using Firefly.CloudFormation.Parsers;
     using Firefly.CloudFormation.Resolvers;
 
