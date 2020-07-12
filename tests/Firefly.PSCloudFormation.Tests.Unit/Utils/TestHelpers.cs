@@ -78,7 +78,6 @@
 
             mock.Setup(f => f.CreateS3Client()).Returns(GetS3ClientWithBucketMock().Object);
             mock.Setup(f => f.CreateSTSClient()).Returns(GetSTSMock().Object);
-
             return mock;
         }
     }

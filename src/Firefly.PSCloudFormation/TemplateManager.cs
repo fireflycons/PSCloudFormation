@@ -97,7 +97,7 @@
             try
             {
                 this.TemplateParameters =
-                    TemplateParser.CreateParser(templateResolver.FileContent).GetParameters().ToList();
+                    TemplateParser.Create(templateResolver.FileContent).GetParameters().ToList();
             }
             catch (Exception e)
             {

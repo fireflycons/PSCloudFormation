@@ -12,7 +12,16 @@
     using Firefly.CloudFormation.CloudFormation.Parsers;
 
     /// <summary>
+    /// <para>
     /// Base class for Create/Update operations
+    /// </para>
+    /// <para>
+    /// This class provides all the common cmdlet arguments for commands that create or change stacks,
+    /// and is the point where PowerShell dynamic parameters are introduced.
+    /// Dynamic parameters are created for each CloudFormation parameter found in the <c>Parameters</c>
+    /// section of the given CloudFormation template, with the exception of SSM parameter types which
+    /// are not user-supplied.
+    /// </para>
     /// </summary>
     /// <seealso cref="Firefly.PSCloudFormation.BaseCloudFormationCommand" />
     /// <seealso cref="System.Management.Automation.IDynamicParameters" />
@@ -198,13 +207,18 @@
         /// Gets or sets the template location.
         /// <para type="description">
         /// Structure containing the template body. For more information, go to Template Anatomy in the AWS CloudFormation User Guide.
+        /// </para>
+        /// <para type="description">
+        /// You can pipe a template body to this command, e.g. from the output of the <c>New-PSCFNPackage</c> command.
+        /// </para>
+        /// <para type="description">
         /// You can specify either a string, path to a file, or URL of a object in S3 that contains the template body.
         /// </para>
         /// </summary>
         /// <value>
         /// The template location.
         /// </value>
-        [Parameter(ValueFromPipelineByPropertyName = true)]
+        [Parameter(ValueFromPipelineByPropertyName = true, ValueFromPipeline = true)]
         [Alias("TemplateBody", "TemplateURL")]
         public string TemplateLocation
         {
@@ -231,7 +245,7 @@
         protected IDictionary<string, string> StackParameters { get; private set; } = new Dictionary<string, string>();
 
         /// <summary>
-        /// Gets all parameters as defined by the template.
+        /// Gets all non-SSM parameters as defined by the template.
         /// </summary>
         /// <value>
         /// The template parameters.
@@ -240,11 +254,10 @@
             new List<TemplateFileParameter>();
 
         /// <summary>
-        /// Gets or sets a value indicating whether [use previous template flag].
-        /// This is overridden by Update commands
+        /// Gets or sets a value indicating whether <c>-UsePreviousTemplate</c> switch was set by the <c>Update-PSCFNStack</c> cmdlet.
         /// </summary>
         /// <value>
-        ///   <c>true</c> if [use previous template flag]; otherwise, <c>false</c>.
+        ///   <c>true</c> if <c>-UsePreviousTemplate</c> was set; otherwise, <c>false</c>.
         /// </value>
         protected bool UsePreviousTemplateFlag { get; set; }
 
@@ -367,42 +380,6 @@
                     });
 
             return null;
-        }
-
-        /// <summary>
-        /// Resolve a PowerShell path to a .NET path
-        /// </summary>
-        /// <remarks>
-        /// <para>
-        /// Try to resolve as a path through the file system provider. PS and .NET have different ideas about the current directory.
-        /// .NET path will be whatever the current directory was when PowerShell started, and within PowerShell, it is controlled by
-        /// file system provider.
-        /// </para>
-        /// <para>
-        /// If the path was entered as a quoted literal string then those quotes are retained on the argument, so we have to remove them here
-        /// </para>
-        /// </remarks>
-        /// <param name="path">The path.</param>
-        /// <returns>Absolute path of the artifact if it could be resolved; else the input.</returns>
-        protected string ResolvePath(string path)
-        {
-            if (path == null)
-            {
-                return null;
-            }
-
-            string resolved = null;
-
-            try
-            {
-                resolved = this.SessionState.Path.GetUnresolvedProviderPathFromPSPath(path.Unquote(), out var provider, out var drive);
-            }
-            catch
-            {
-                // do nothing
-            }
-
-            return resolved ?? path.Unquote();
         }
     }
 }

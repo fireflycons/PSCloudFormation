@@ -19,6 +19,8 @@ namespace Firefly.PSCloudFormation
     using Amazon.Util;
 
     using Firefly.CloudFormation;
+    using Firefly.CloudFormation.CloudFormation;
+    using Firefly.CloudFormation.Utils;
 
     using AWSRegion = Amazon.PowerShell.Common.AWSRegion;
 
@@ -184,6 +186,14 @@ namespace Firefly.PSCloudFormation
         public string STSEndpointUrl { get; set; }
 
         /// <summary>
+        /// Gets or sets the logger.
+        /// </summary>
+        /// <value>
+        /// The logger.
+        /// </value>
+        internal ILogger Logger { get; set; }
+
+        /// <summary>
         /// Gets or sets the current credentials.
         /// </summary>
         /// <value>
@@ -214,14 +224,6 @@ namespace Firefly.PSCloudFormation
         /// The region endpoint.
         /// </value>
         protected RegionEndpoint _RegionEndpoint { get; set; }
-
-        /// <summary>
-        /// Gets or sets the logger.
-        /// </summary>
-        /// <value>
-        /// The logger.
-        /// </value>
-        protected PSLogger Logger { get; set; }
 
         /// <summary>
         /// Gets the credential profile options.
@@ -380,6 +382,45 @@ namespace Firefly.PSCloudFormation
 
             Console.WriteLine();
             return text;
+        }
+
+        /// <summary>
+        /// Resolve a PowerShell path to a .NET path
+        /// </summary>
+        /// <remarks>
+        /// <para>
+        /// Try to resolve as a path through the file system provider. PS and .NET have different ideas about the current directory.
+        /// .NET path will be whatever the current directory was when PowerShell started, and within PowerShell, it is controlled by
+        /// file system provider.
+        /// </para>
+        /// <para>
+        /// If the path was entered as a quoted literal string then those quotes are retained on the argument, so we have to remove them here
+        /// </para>
+        /// </remarks>
+        /// <param name="path">The path.</param>
+        /// <returns>Absolute path of the artifact if it could be resolved; else the input.</returns>
+        protected string ResolvePath(string path)
+        {
+            if (path == null)
+            {
+                return null;
+            }
+
+            string resolved = null;
+
+            try
+            {
+                resolved = this.SessionState.Path.GetUnresolvedProviderPathFromPSPath(
+                    path.Unquote(),
+                    out var provider,
+                    out var drive);
+            }
+            catch
+            {
+                // do nothing
+            }
+
+            return resolved ?? path.Unquote();
         }
 
         /// <summary>
@@ -782,6 +823,7 @@ namespace Firefly.PSCloudFormation
             /// be found in SelfNetworkCredentialParameter. This value is retained after 
             /// use.
             /// </value>
+
             // ReSharper disable once UnusedAutoPropertyAccessor.Local
             public PSCredential ShellNetworkCredentialParameter { get; set; }
         }

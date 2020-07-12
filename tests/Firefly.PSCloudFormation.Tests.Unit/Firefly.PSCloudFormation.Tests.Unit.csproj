@@ -7,12 +7,22 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <None Remove="Resources\DeepNestedStack\base-stack.json" />
+    <None Remove="Resources\DeepNestedStack\lambdacomplex\index.js" />
+    <None Remove="Resources\DeepNestedStack\lambdacomplex\other.js" />
+    <None Remove="Resources\DeepNestedStack\nested-1.json" />
+    <None Remove="Resources\DeepNestedStack\sub-nested-2.json" />
     <None Remove="Resources\ParameterTest.json" />
     <None Remove="Resources\ParameterTest.yaml" />
     <None Remove="Resources\progetDockerCloudFormation.yaml" />
   </ItemGroup>
 
   <ItemGroup>
+    <EmbeddedResource Include="Resources\DeepNestedStack\base-stack.json" />
+    <EmbeddedResource Include="Resources\DeepNestedStack\lambdacomplex\index.js" />
+    <EmbeddedResource Include="Resources\DeepNestedStack\lambdacomplex\other.js" />
+    <EmbeddedResource Include="Resources\DeepNestedStack\nested-1.json" />
+    <EmbeddedResource Include="Resources\DeepNestedStack\sub-nested-2.json" />
     <EmbeddedResource Include="Resources\ParameterTest.json" />
     <EmbeddedResource Include="Resources\ParameterTest.yaml" />
   </ItemGroup>
@@ -28,6 +38,10 @@
 
   <ItemGroup>
     <ProjectReference Include="..\..\src\Firefly.PSCloudFormation\Firefly.PSCloudFormation.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Folder Include="Resources\DeepNestedStack\js\" />
   </ItemGroup>
 
 </Project>

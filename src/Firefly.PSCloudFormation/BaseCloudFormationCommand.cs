@@ -85,7 +85,7 @@
         /// <value>
         /// The name of the stack.
         /// </value>
-        [Parameter(Position = 0, ValueFromPipelineByPropertyName = true, ValueFromPipeline = true, Mandatory = true)]
+        [Parameter(Position = 0, ValueFromPipelineByPropertyName = true, Mandatory = true)]
         [ValidatePattern(@"[A-Za-z][A-Za-z0-9\-]{0,127}")]
         public string StackName { get; set; }
 

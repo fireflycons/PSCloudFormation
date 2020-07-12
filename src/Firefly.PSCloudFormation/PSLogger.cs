@@ -14,6 +14,7 @@
     /// Concrete logger implementation for PowerShell
     /// </summary>
     /// <seealso cref="Firefly.CloudFormation.Utils.ILogger" />
+
     // ReSharper disable once InconsistentNaming
     public class PSLogger : BaseLogger
     {
@@ -142,6 +143,20 @@
         }
 
         /// <summary>
+        /// Logs a debug message.
+        /// </summary>
+        /// <param name="message">The message.</param>
+        /// <param name="args">The arguments.</param>
+        public override void LogDebug(string message, params object[] args)
+        {
+            if (this.cmdlet.MyInvocation.BoundParameters.Keys.Any(
+                k => string.Compare(k, "Debug", StringComparison.OrdinalIgnoreCase) == 0))
+            {
+                this.cmdlet.Host.UI.WriteDebugLine(string.Format(message, args));
+            }
+        }
+
+        /// <summary>
         /// Log an error.
         /// </summary>
         /// <param name="message">The message.</param>
@@ -180,8 +195,7 @@
                     $"{{0,-{TimeColWidth}}} {{1,-{stackColWidth}}} {{2,-{resourceColWidth}}} {{3,-{this.StatusColumnWidth}}} {{4}}";
 
                 // Resize window to be wide enough for a reasonable amount of description per line
-                this.ResizeWindow(
-                    string.Format(eventFormatString, "x", "x", "x", "x", Padding30).Length);
+                this.ResizeWindow(string.Format(eventFormatString, "x", "x", "x", "x", Padding30).Length);
 
                 this.isFirstEvent = false;
                 this.LogInformation(eventFormatString, "Time", "StackName", "Logical ID", "Status", "Status Reason");
@@ -204,7 +218,7 @@
 
             if (status.EndsWith("IN_PROGRESS"))
             {
-                fg = ConsoleColor.Yellow;
+                fg = ConsoleColor.Cyan;
             }
             else if (ErrorStatus.IsMatch(status))
             {
@@ -248,7 +262,8 @@
         /// <param name="args">The arguments.</param>
         public override void LogVerbose(string message, params object[] args)
         {
-            if (this.cmdlet.MyInvocation.BoundParameters.Keys.Any(k => string.Compare(k, "Verbose", StringComparison.OrdinalIgnoreCase) == 0))
+            if (this.cmdlet.MyInvocation.BoundParameters.Keys.Any(
+                k => string.Compare(k, "Verbose", StringComparison.OrdinalIgnoreCase) == 0))
             {
                 this.cmdlet.Host.UI.WriteVerboseLine(string.Format(message, args));
             }

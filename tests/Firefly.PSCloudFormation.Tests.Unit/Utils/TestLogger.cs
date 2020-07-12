@@ -61,6 +61,17 @@
         public List<StackEvent> StackEvents { get; } = new List<StackEvent>();
 
         /// <summary>
+        /// Logs a debug message.
+        /// </summary>
+        /// <param name="message">The message.</param>
+        /// <param name="args">The arguments.</param>
+        public override void LogDebug(string message, params object[] args)
+        {
+            var msg = string.Format(message, args);
+            this.output.WriteLine($"DEBUG: {msg}");
+        }
+
+        /// <summary>
         /// Log an error.
         /// </summary>
         /// <param name="message">The message.</param>
@@ -70,7 +81,7 @@
             var msg = string.Format(message, args);
             this.ErrorMessages.Add(msg);
 
-            this.output.WriteLine("ERROR: " + message);
+            this.output.WriteLine($"ERROR: {msg}");
         }
 
         /// <summary>
@@ -83,7 +94,7 @@
             var msg = string.Format(message, args);
             this.InfoMessages.Add(msg);
 
-            this.output.WriteLine($"INFO:  {msg}");
+            this.output.WriteLine($"INFO: {msg}");
         }
 
         /// <summary>
@@ -116,7 +127,7 @@
         public override void LogVerbose(string message, params object[] args)
         {
             var msg = string.Format(message, args);
-            this.output.WriteLine("VERBOSE:  " + msg);
+            this.output.WriteLine($"VERBOSE: {msg}");
         }
     }
 }

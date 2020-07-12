@@ -5,6 +5,14 @@ param
 
 import-module (Join-Path $PSScriptRoot 'PSCloudFormation.psd1')
 
+<#
+New-PSCFNPackage1 -TemplateFile "H:\Dev\Git\PSCloudFormation\tests\packager\complex-nested-stacks\base-stack.json"
+
+
+Read-Host -Prompt "Press Enter" | Out-Null
+exit 0
+#>
+
 $stackName = 'test-stack-CDF37043'
 
 # Random names for resources to create
