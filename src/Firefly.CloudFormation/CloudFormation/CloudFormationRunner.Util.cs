@@ -12,6 +12,7 @@
 
     using Firefly.CloudFormation.Model;
     using Firefly.CloudFormation.Parsers;
+    using Firefly.CloudFormation.Resolvers;
     using Firefly.CloudFormation.S3;
     using Firefly.CloudFormation.Utils;
 

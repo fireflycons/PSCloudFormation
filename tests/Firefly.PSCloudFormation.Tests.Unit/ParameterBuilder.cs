@@ -6,6 +6,7 @@ namespace Firefly.PSCloudFormation.Tests.Unit
     using System.Management.Automation;
 
     using Firefly.CloudFormation.CloudFormation;
+    using Firefly.CloudFormation.Resolvers;
     using Firefly.PSCloudFormation.Tests.Unit.Resources;
 
     using FluentAssertions;

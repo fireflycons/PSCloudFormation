@@ -1,4 +1,4 @@
-﻿namespace Firefly.CloudFormation.CloudFormation
+﻿namespace Firefly.CloudFormation.Utils
 {
     using System;
     using System.Linq;

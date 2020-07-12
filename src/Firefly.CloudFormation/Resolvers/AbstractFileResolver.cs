@@ -1,4 +1,4 @@
-﻿namespace Firefly.CloudFormation.CloudFormation
+﻿namespace Firefly.CloudFormation.Resolvers
 {
     using System;
     using System.IO;
@@ -16,7 +16,7 @@
     /// <summary>
     /// Abstract file resolver class for resolving template or policy content from file, S3 or string body
     /// </summary>
-    /// <seealso cref="Firefly.CloudFormation.CloudFormation.IInputFileResolver" />
+    /// <seealso cref="IInputFileResolver" />
     public abstract class AbstractFileResolver : IInputFileResolver
     {
         /// <summary>

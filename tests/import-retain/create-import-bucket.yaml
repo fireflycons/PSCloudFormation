@@ -1,0 +1,13 @@
+AWSTemplateFormatVersion: 2010-09-09
+Description: Set up a bucket so it can be filled and cause a DELETE_FAILED
+
+Parameters:
+  BucketName:
+    Type: String
+
+Resources:
+
+  Bucket:
+    Type: AWS::S3::Bucket
+    Properties:
+      BucketName: !Ref BucketName

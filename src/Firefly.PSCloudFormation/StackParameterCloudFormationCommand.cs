@@ -10,6 +10,7 @@
 
     using Firefly.CloudFormation.CloudFormation;
     using Firefly.CloudFormation.Parsers;
+    using Firefly.CloudFormation.Resolvers;
 
     /// <summary>
     /// <para>

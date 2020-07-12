@@ -1,11 +1,11 @@
-﻿namespace Firefly.CloudFormation.CloudFormation
+﻿namespace Firefly.CloudFormation.Resolvers
 {
     using Firefly.CloudFormation.Utils;
 
     /// <summary>
     /// Concrete file resolver implementation for stack policy files.
     /// </summary>
-    /// <seealso cref="Firefly.CloudFormation.CloudFormation.AbstractFileResolver" />
+    /// <seealso cref="AbstractFileResolver" />
     public class StackPolicyResolver : AbstractFileResolver
     {
         /// <summary>

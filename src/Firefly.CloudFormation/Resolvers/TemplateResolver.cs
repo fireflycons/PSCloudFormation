@@ -1,4 +1,4 @@
-﻿namespace Firefly.CloudFormation.CloudFormation
+﻿namespace Firefly.CloudFormation.Resolvers
 {
     using System.Threading.Tasks;
 
@@ -10,7 +10,7 @@
     /// <summary>
     /// Concrete file resolver implementation for CloudFormation template.
     /// </summary>
-    /// <seealso cref="Firefly.CloudFormation.CloudFormation.AbstractFileResolver" />
+    /// <seealso cref="AbstractFileResolver" />
     public class TemplateResolver : AbstractFileResolver
     {
         /// <summary>

@@ -1,4 +1,4 @@
-﻿namespace Firefly.CloudFormation.CloudFormation
+﻿namespace Firefly.CloudFormation.Resolvers
 {
     using System.Threading.Tasks;
 

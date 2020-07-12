@@ -8,6 +8,7 @@
 
     using Firefly.CloudFormation.CloudFormation;
     using Firefly.CloudFormation.Parsers;
+    using Firefly.CloudFormation.Resolvers;
     using Firefly.CloudFormation.Utils;
     using Firefly.PowerShell.DynamicParameters;
 
