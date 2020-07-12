@@ -17,31 +17,39 @@
         [Fact]
         public void UpdateJsonResource()
         {
-            var parser = Firefly.CloudFormation.CloudFormation.Parsers.TemplateParser.CreateParser(
+            const string S3Location = "s3://bucket/job.etl";
+
+            var parser = Firefly.CloudFormation.CloudFormation.Parsers.TemplateParser.Create(
                 EmbeddedResourceManager.GetResourceString("test-resource-update.json"));
             var resources = parser.GetResources();
 
             var resource = resources.First(r => r.LogicalName == "MyJob");
 
             // resource.UpdateResourceProperty("Code", new { S3Bucket = "bucket-name", S3Key = "code/lambda.zip" });
-            resource.UpdateResourceProperty("Command/ScriptLocation", "s3://bucket/job.etl");
+            resource.UpdateResourceProperty("Command.ScriptLocation", S3Location);
             var modifiedTemplate = parser.GetTemplate();
 
-            modifiedTemplate.Should().Contain("\"ScriptLocation\": \"s3://bucket/job.etl\"");
+            modifiedTemplate.Should().Contain($"\"ScriptLocation\": \"{S3Location}\"");
+            resource.GetResourcePropertyValue("Command.ScriptLocation").Should().Be(S3Location);
         }
 
         [Fact]
         public void UpdateYamlResource()
         {
-            var parser = Firefly.CloudFormation.CloudFormation.Parsers.TemplateParser.CreateParser(
+            const string S3Bucket = "bucket-name";
+            const string S3Key = "code/lambda.zip";
+
+            var parser = Firefly.CloudFormation.CloudFormation.Parsers.TemplateParser.Create(
                 EmbeddedResourceManager.GetResourceString("test-resource-update.yaml"));
             var resources = parser.GetResources();
 
             var resource = resources.First(r => r.LogicalName == "lambdaFunction");
 
-            resource.UpdateResourceProperty("Code", new { S3Bucket = "bucket-name", S3Key = "code/lambda.zip" });
+            resource.UpdateResourceProperty("Code", new { S3Bucket, S3Key });
             var modifiedTemplate = parser.GetTemplate();
-            modifiedTemplate.Should().Contain("S3Bucket: bucket-name").And.Contain("S3Key: code/lambda.zip");
+            modifiedTemplate.Should().Contain($"S3Bucket: {S3Bucket}").And.Contain($"S3Key: {S3Key}");
+            resource.GetResourcePropertyValue("Code.S3Bucket").Should().Be(S3Bucket);
+            resource.GetResourcePropertyValue("Code.S3Key").Should().Be(S3Key);
         }
     }
 }

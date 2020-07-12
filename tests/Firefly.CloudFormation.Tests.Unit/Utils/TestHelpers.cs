@@ -48,6 +48,9 @@
                                       }
                     });
 
+            mock.Setup(s3 => s3.PutObjectAsync(It.IsAny<PutObjectRequest>(), default))
+                .ReturnsAsync(new PutObjectResponse());
+
             return mock;
         }
 
