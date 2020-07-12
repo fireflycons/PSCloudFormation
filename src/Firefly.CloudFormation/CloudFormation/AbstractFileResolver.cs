@@ -9,6 +9,7 @@
 
     using Amazon.S3.Model;
 
+    using Firefly.CloudFormation.S3;
     using Firefly.CloudFormation.Utils;
 
     /// <summary>
@@ -185,13 +186,71 @@
             return this.FileContent;
         }
 
-        private void GetStringContent(string fileLocation)
+        /// <summary>
+        /// Resolves the given artifact location (template or policy) from text input
+        /// uploading it to S3 if the object is larger than the maximum size for
+        /// body text supported by the CloudFormation API.
+        /// </summary>
+        /// <param name="context">The context for logging.</param>
+        /// <param name="objectToResolve">The object to resolve.</param>
+        /// <param name="stackName">Name of the stack.</param>
+        /// <returns>
+        /// Result of the resolution.
+        /// </returns>
+        public async Task<ResolutionResult> ResolveArtifactLocationAsync(
+            ICloudFormationContext context,
+            string objectToResolve,
+            string stackName)
         {
-            this.FileContent = fileLocation;
+            var result = new ResolutionResult();
+
+            // Nasty, but really want out arguments here.
+            this.ResolveFileAsync(objectToResolve).Wait();
+
+            var fileType = this is TemplateResolver ? UploadFileType.Template : UploadFileType.Policy;
+
+            if ((this.Source & InputFileSource.Oversize) != 0)
+            {
+                result.ArtifactUrl = (await new CloudFormationBucketOperations(this.ClientFactory, context).UploadCloudFormationArtifactToS3(
+                    stackName,
+                    this.ArtifactContent,
+                    this.InputFileName,
+                    fileType)).AbsoluteUri;
+
+                this.ResetTemplateSource(result.ArtifactUrl);
+            }
+            else
+            {
+                // ReSharper disable once SwitchStatementMissingSomeEnumCasesNoDefault
+                switch (this.Source)
+                {
+                    case InputFileSource.S3:
+
+                        result.ArtifactUrl = this.ArtifactUrl;
+                        break;
+
+                    case InputFileSource.File:
+                    case InputFileSource.String:
+
+                        result.ArtifactBody = this.ArtifactContent;
+                        break;
+                }
+            }
+
+            return result;
+        }
+
+        /// <summary>
+        /// Resolves an artifact passed to the command as a raw string, checking its length for being oversize.
+        /// </summary>
+        /// <param name="stringContent">Content of the string.</param>
+        private void GetStringContent(string stringContent)
+        {
+            this.FileContent = stringContent;
             this.Source = InputFileSource.String;
             this.InputFileName = "RawString";
 
-            if (Encoding.UTF8.GetByteCount(fileLocation) >= this.MaxFileSize)
+            if (Encoding.UTF8.GetByteCount(stringContent) >= this.MaxFileSize)
             {
                 this.Source |= InputFileSource.Oversize;
             }

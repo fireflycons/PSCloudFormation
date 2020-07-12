@@ -186,7 +186,7 @@
                     throw new FormatException($"Resource {name} has no Type property");
                 }
 
-                resources.Add(new TemplateResource(resource, SerializationFormat.Json, name, type.Value<string>()));
+                resources.Add(TemplateResource.Create(resource, name, type.Value<string>()));
             }
 
             return resources;

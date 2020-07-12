@@ -110,7 +110,7 @@
             var stackParameters = new List<Parameter>();
 
             // First, get the parameter names that are declared in the stack we are updating.
-            var declaredParameterKeys = TemplateParser.CreateParser(resolver.FileContent).GetParameters().ToList();
+            var declaredParameterKeys = TemplateParser.Create(resolver.FileContent).GetParameters().ToList();
 
             // We can only pass in parameters for keys declared in the template we are pushing
             foreach (var parameter in declaredParameterKeys)
@@ -142,70 +142,6 @@
             }
 
             return stackParameters;
-        }
-
-        /// <summary>
-        /// Resolves the template or policy input.
-        /// </summary>
-        /// <param name="resolver">The resolver.</param>
-        /// <param name="objectToResolve">The object to resolve.</param>
-        /// <param name="requestUrl">The request URL.</param>
-        /// <param name="requestBody">The request body.</param>
-        private void ResolveTemplateOrPolicyInput(
-            IInputFileResolver resolver,
-            string objectToResolve,
-            out string requestUrl,
-            out string requestBody)
-        {
-            requestBody = null;
-            requestUrl = null;
-
-            // Nasty, but really want out arguments here.
-            resolver.ResolveFileAsync(objectToResolve).Wait();
-
-            var fileType = resolver is TemplateResolver ? UploadFileType.Template : UploadFileType.Policy;
-
-            if ((resolver.Source & InputFileSource.Oversize) != 0)
-            {
-                requestUrl = this.UploadStringToS3Async(resolver.ArtifactContent, resolver.InputFileName, fileType).Result;
-                resolver.ResetTemplateSource(requestUrl);
-            }
-            else
-            {
-                // ReSharper disable once SwitchStatementMissingSomeEnumCasesNoDefault
-                switch (resolver.Source)
-                {
-                    case InputFileSource.S3:
-
-                        requestUrl = resolver.ArtifactUrl;
-                        break;
-
-                    case InputFileSource.File:
-                    case InputFileSource.String:
-
-                        requestBody = resolver.ArtifactContent;
-                        break;
-                }
-            }
-        }
-
-        /// <summary>
-        /// Uploads the file to s3 asynchronous.
-        /// </summary>
-        /// <param name="body">Body of text to upload.</param>
-        /// <param name="keySuffix">Suffix to append to S3 key</param>
-        /// <param name="fileType">Type of the file.</param>
-        /// <returns>URL of uploaded template</returns>
-        private async Task<string> UploadStringToS3Async(string body, string keySuffix, UploadFileType fileType)
-        {
-            using (var s3 = this.clientFactory.CreateS3Client())
-            {
-                using (var sts = this.clientFactory.CreateSTSClient())
-                {
-                    var ops = new CloudFormationBucketOperations(s3, sts, this.context);
-                    return (await ops.UploadStringToS3(this.stackName, body, keySuffix, fileType)).AbsoluteUri;
-                }
-            }
         }
 
         /// <summary>Waits for a stack operation. to compete, sending stack event messages to the log.</summary>
@@ -293,7 +229,7 @@
         /// Gets the resources to import.
         /// </summary>
         /// <returns>List of <see cref="ResourceToImport"/> or null if no input</returns>
-        private async Task<List<ResourceToImport>> GetResourcesToImport()
+        private async Task<List<ResourceToImport>> GetResourcesToImportAsync()
         {
             if (string.IsNullOrEmpty(this.resourcesToImportLocation))
             {
@@ -301,7 +237,7 @@
             }
 
             // TemplateResolver is good enough for our purposes here
-            return ResourceImportParser.CreateParser(
+            return ResourceImportParser.Create(
                 await new TemplateResolver(this.clientFactory, this.stackName, false)
                     .ResolveFileAsync(this.resourcesToImportLocation))
                 .GetResourcesToImport();
@@ -312,21 +248,19 @@
         /// </summary>
         /// <param name="changeSetRequest">The change set request.</param>
         /// <returns>New <see cref="UpdateStackRequest"/></returns>
-        private UpdateStackRequest GetUpdateRequestWithPolicyFromChangesetRequest(CreateChangeSetRequest changeSetRequest)
+        private async Task<UpdateStackRequest> GetUpdateRequestWithPolicyFromChangesetRequestAsync(CreateChangeSetRequest changeSetRequest)
         {
             var policyResolver = new StackPolicyResolver(this.clientFactory);
 
-            this.ResolveTemplateOrPolicyInput(
-                policyResolver,
-                this.stackPolicyLocation,
-                out var policyUrl,
-                out var policyBody);
+            var policy = await policyResolver.ResolveArtifactLocationAsync(
+                             this.context,
+                             this.stackPolicyLocation,
+                             this.stackName);
 
-            this.ResolveTemplateOrPolicyInput(
-                policyResolver,
-                this.stackPolicyDuringUpdateLocation,
-                out var updatePolicyUrl,
-                out var updatePolicyBody);
+            var updatePolicy = await policyResolver.ResolveArtifactLocationAsync(
+                                   this.context,
+                                   this.stackPolicyDuringUpdateLocation,
+                                   this.stackName);
 
             return new UpdateStackRequest
                                     {
@@ -338,10 +272,10 @@
                                         NotificationARNs = changeSetRequest.NotificationARNs,
                                         RollbackConfiguration = changeSetRequest.RollbackConfiguration,
                                         ResourceTypes = changeSetRequest.ResourceTypes,
-                                        StackPolicyBody = policyBody,
-                                        StackPolicyURL = policyUrl,
-                                        StackPolicyDuringUpdateBody = updatePolicyBody,
-                                        StackPolicyDuringUpdateURL = updatePolicyUrl,
+                                        StackPolicyBody = policy.ArtifactBody,
+                                        StackPolicyURL = policy.ArtifactUrl,
+                                        StackPolicyDuringUpdateBody = updatePolicy.ArtifactBody,
+                                        StackPolicyDuringUpdateURL = updatePolicy.ArtifactUrl,
                                         Tags = changeSetRequest.Tags,
                                         TemplateBody = changeSetRequest.TemplateBody,
                                         TemplateURL = changeSetRequest.TemplateURL,

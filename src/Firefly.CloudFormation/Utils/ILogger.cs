@@ -46,6 +46,13 @@
         void LogVerbose(string message, params object[] args);
 
         /// <summary>
+        /// Logs a debug message.
+        /// </summary>
+        /// <param name="message">The message.</param>
+        /// <param name="args">The arguments.</param>
+        void LogDebug(string message, params object[] args);
+
+        /// <summary>
         /// Logs a change set.
         /// The base implementation merely calculates column widths that a concrete implementation can use to render the change set details.
         /// </summary>

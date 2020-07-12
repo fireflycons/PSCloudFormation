@@ -1,7 +1,7 @@
 ﻿namespace Firefly.CloudFormation.CloudFormation.Parsers
 {
     using System;
-    using System.Linq;
+    using System.IO;
 
     using Newtonsoft.Json.Linq;
 
@@ -11,13 +11,8 @@
     /// Represents a resource stanza read from a template.
     /// A reference to the resource is included so that it can be directly modified.
     /// </summary>
-    public class TemplateResource
+    public abstract class TemplateResource
     {
-        /// <summary>
-        /// Reference to the raw resource
-        /// </summary>
-        private readonly object rawResource;
-
         /// <summary>
         /// Initializes a new instance of the <see cref="TemplateResource"/> class.
         /// </summary>
@@ -25,9 +20,13 @@
         /// <param name="format">The format.</param>
         /// <param name="logicalName">Name of the logical.</param>
         /// <param name="resourceType">Type of the resource.</param>
-        internal TemplateResource(object rawResource, SerializationFormat format, string logicalName, string resourceType)
+        protected TemplateResource(
+            object rawResource,
+            SerializationFormat format,
+            string logicalName,
+            string resourceType)
         {
-            this.rawResource = rawResource;
+            this.RawResource = rawResource;
             this.Format = format;
             this.LogicalName = logicalName;
             this.ResourceType = resourceType;
@@ -58,6 +57,14 @@
         public string ResourceType { get; }
 
         /// <summary>
+        /// Gets the raw resource.
+        /// </summary>
+        /// <value>
+        /// The raw resource.
+        /// </value>
+        protected object RawResource { get; }
+
+        /// <summary>
         /// Casts the resource as a <see cref="JObject"/>. The call will fail if the input template was YAML
         /// </summary>
         /// <exception cref="FormatException">Cannot cast YAML resource to JSON</exception>
@@ -66,7 +73,7 @@
         {
             if (this.Format == SerializationFormat.Json)
             {
-                return (JProperty)this.rawResource;
+                return (JProperty)this.RawResource;
             }
 
             throw new FormatException("Cannot cast YAML resource to JSON");
@@ -83,11 +90,18 @@
         {
             if (this.Format == SerializationFormat.Yaml)
             {
-                return (YamlMappingNode)this.rawResource;
+                return (YamlMappingNode)this.RawResource;
             }
 
             throw new FormatException("Cannot cast JSON resource to YAML");
         }
+
+        /// <summary>
+        /// Gets a resource property value. Currently only leaf nodes (string values) are supported.
+        /// </summary>
+        /// <param name="propertyPath">The property path.</param>
+        /// <returns>The value of the property; else <c>null</c> if the property path did not resolve to a leaf node.</returns>
+        public abstract string GetResourcePropertyValue(string propertyPath);
 
         /// <summary>
         /// <para>
@@ -103,122 +117,30 @@
         /// </param>
         /// <param name="newValue">The new value.</param>
         /// <exception cref="FormatException">Resource format is unknown (not JSON or YAML)</exception>
-        public void UpdateResourceProperty(string propertyPath, object newValue)
-        {
-            switch (this.Format)
-            {
-                case SerializationFormat.Json:
-
-                    this.UpdateJsonResourceProperty(propertyPath, newValue);
-                    break;
-
-                case SerializationFormat.Yaml:
-
-                    this.UpdateYamlResourceProperty(propertyPath, newValue);
-                    break;
-
-                default:
-
-                    throw new FormatException("Resource format is unknown (not JSON or YAML)");
-            }
-        }
+        public abstract void UpdateResourceProperty(string propertyPath, object newValue);
 
         /// <summary>
-        /// <c>UpdateResourceProperty</c> implementation for JSON templates
+        /// Creates a representation of the template resource that can be used to modify that resource.
         /// </summary>
-        /// <param name="propertyPath">The property path.</param>
-        /// <param name="newValue">The new value.</param>
-        private void UpdateJsonResourceProperty(string propertyPath, object newValue)
+        /// <param name="rawResource">The raw resource.</param>
+        /// <param name="logicalName">Name of the logical.</param>
+        /// <param name="resourceType">Type of the resource.</param>
+        /// <returns>Subclass of <see cref="TemplateResource"/> according to the type of <paramref name="rawResource"/></returns>
+        /// <exception cref="InvalidDataException">Cannot parse CloudFormation resource from object of type {rawResource.GetType().FullName}</exception>
+        internal static TemplateResource Create(object rawResource, string logicalName, string resourceType)
         {
-            if (propertyPath == null)
+            if (rawResource is JToken)
             {
-                throw new ArgumentNullException(nameof(propertyPath));
+                return new JsonTemplateResource(rawResource, logicalName, resourceType);
             }
 
-            var resourceProperties = this.AsJson().Children<JObject>()["Properties"].First();
-            var pathSegments = propertyPath.Split('/');
-            var newPropertyValue =
-                (JToken)TemplateParser.SerializeObjectGraphToRepresentationModel(newValue, SerializationFormat.Json);
-
-            var propertyToSet = resourceProperties;
-            JObject parent = null;
-
-            // Walk to requested property
-            foreach (var segment in pathSegments)
+            if (rawResource is YamlNode)
             {
-                // This will ultimately get the JValue associated with the property we want to change
-                parent = (JObject)propertyToSet;
-                propertyToSet = propertyToSet[segment];
-
-                if (propertyToSet == null)
-                {
-                    throw new FormatException($"Cannot find resource property {propertyPath} in resource {this.LogicalName}");
-                }
+                return new YamlTemplateResource(rawResource, logicalName, resourceType);
             }
 
-            JToken newToken = new JProperty(pathSegments.Last(), newPropertyValue);
-
-            propertyToSet.Parent.Remove();
-
-            // ReSharper disable once PossibleNullReferenceException - Can't be null because the above foreach will iterate at least once.
-            parent.Add(newToken);
-        }
-
-        /// <summary>
-            /// <c>UpdateResourceProperty</c> implementation for YAML templates
-            /// </summary>
-            /// <param name="propertyPath">The property path.</param>
-            /// <param name="newValue">The new value.</param>
-            /// <exception cref="FormatException">
-            /// Cannot find resource property {propertyPath} in resource {this.LogicalName}
-            /// or
-            /// Cannot find resource property {propertyPath} in resource {this.LogicalName}
-            /// </exception>
-            private void UpdateYamlResourceProperty(string propertyPath, object newValue)
-        {
-            var resourceProperties = this.AsYaml().Children[new YamlScalarNode("Properties")];
-            var pathSegments = propertyPath.Split('/');
-            var newPropertyValue =
-                (YamlNode)TemplateParser.SerializeObjectGraphToRepresentationModel(newValue, SerializationFormat.Yaml);
-
-            var propertyToSet = resourceProperties;
-            YamlMappingNode parentNode = null;
-
-            // Walk to requested property
-            foreach (var segment in pathSegments)
-            {
-                var nodeName = new YamlScalarNode(segment);
-
-                if (propertyToSet is YamlMappingNode mappingNode)
-                {
-                    if (mappingNode.Children.ContainsKey(nodeName))
-                    {
-                        parentNode = mappingNode;
-                        propertyToSet = mappingNode.Children[nodeName];
-                    }
-                    else
-                    {
-                        throw new FormatException($"Cannot find resource property {propertyPath} in resource {this.LogicalName}");
-                    }
-                }
-            }
-
-            if (parentNode == null)
-            {
-                throw new FormatException($"Cannot find resource property {propertyPath} in resource {this.LogicalName}");
-            }
-
-            if (newPropertyValue is YamlScalarNode node && propertyToSet is YamlScalarNode scalarNode)
-            {
-                scalarNode.Value = node.Value;
-            }
-            else if (newPropertyValue.NodeType != propertyToSet.NodeType)
-            {
-                // We need to remove and replace the node
-                var nodeToReplace = new YamlScalarNode(pathSegments.Last());
-                parentNode.Children.Remove(nodeToReplace);
-                parentNode.Children.Add(nodeToReplace, newPropertyValue);
-            }
+            throw new InvalidDataException(
+                $"Cannot parse CloudFormation resource from object of type {rawResource.GetType().FullName}");
         }
     }
 }

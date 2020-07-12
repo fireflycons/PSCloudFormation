@@ -59,5 +59,19 @@
         /// </summary>
         /// <param name="uploadedArtifactUri">The uploaded artifact URI.</param>
         void ResetTemplateSource(string uploadedArtifactUri);
+
+        /// <summary>
+        /// Resolves the given artifact location (template or policy) from text input
+        /// uploading it to S3 if the object is larger than the maximum size for
+        /// body text supported by the CloudFormation API.
+        /// </summary>
+        /// <param name="context">The context for logging.</param>
+        /// <param name="objectToResolve">The object to resolve.</param>
+        /// <param name="stackName">Name of the stack.</param>
+        /// <returns>Result of the resolution.</returns>
+        Task<ResolutionResult> ResolveArtifactLocationAsync(
+            ICloudFormationContext context,
+            string objectToResolve,
+            string stackName);
     }
 }

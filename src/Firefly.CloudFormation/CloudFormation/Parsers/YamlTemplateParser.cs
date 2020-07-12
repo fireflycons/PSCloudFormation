@@ -232,7 +232,7 @@
 
                 var type = (YamlScalarNode)resource[this.propertyKeys["Type"]];
 
-                resources.Add(new TemplateResource(resourceNode.Value, SerializationFormat.Yaml, resourceName, type.Value));
+                resources.Add(TemplateResource.Create(resourceNode.Value, resourceName, type.Value));
             }
 
             return resources;

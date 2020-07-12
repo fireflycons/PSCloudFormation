@@ -26,7 +26,7 @@
         /// <param name="fileContent">Content of the file.</param>
         /// <returns>A new <see cref="ResourceImportParser"/>.</returns>
         /// <exception cref="InvalidDataException">Resource import file is empty</exception>
-        public static ResourceImportParser CreateParser(string fileContent)
+        public static ResourceImportParser Create(string fileContent)
         {
             // ReSharper disable once SwitchStatementHandlesSomeKnownEnumValuesWithDefault
             switch (InputFileParser.GetInputFileFormat(fileContent))

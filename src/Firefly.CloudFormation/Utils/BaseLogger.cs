@@ -140,6 +140,13 @@
         public abstract void LogVerbose(string message, params object[] args);
 
         /// <summary>
+        /// Logs a debug message.
+        /// </summary>
+        /// <param name="message">The message.</param>
+        /// <param name="args">The arguments.</param>
+        public abstract void LogDebug(string message, params object[] args);
+
+        /// <summary>
         /// Gets the change set column widths.
         /// </summary>
         /// <param name="changes">The changes.</param>

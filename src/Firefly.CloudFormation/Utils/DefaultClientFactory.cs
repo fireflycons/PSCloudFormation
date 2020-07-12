@@ -65,14 +65,14 @@
 
             return new AmazonS3Client(this.context.Credentials, config);
         }
-
+        
         /// <summary>
         /// <para>
         /// Creates an STS client.
         /// </para>
         /// <para>
         /// Principally used to determine the AWS account ID to ensure uniqueness of S3 bucket name. The following permissions are required
-        /// <list type="bullet"><item><term>sts:GetCallerIdentity</term><description>To get the account ID for the caller's account.</description></item></list></para>
+        /// <list type="bullet"><item><term><c>sts:GetCallerIdentity</c></term><description>To get the account ID for the caller's account.</description></item></list></para>
         /// </summary>
         /// <returns>
         /// A Security Token Service client.

@@ -54,7 +54,7 @@
         /// <param name="templateBody">The template body.</param>
         /// <returns>A new <see cref="TemplateParser"/></returns>
         /// <exception cref="InvalidDataException">Template body is empty</exception>
-        public static TemplateParser CreateParser(string templateBody)
+        public static TemplateParser Create(string templateBody)
         {
             // ReSharper disable once SwitchStatementHandlesSomeKnownEnumValuesWithDefault
             switch (GetInputFileFormat(templateBody))
@@ -127,7 +127,6 @@
                     }
 
                     return yaml.Documents[0].RootNode;
-
 
                 default:
 

@@ -22,5 +22,13 @@
         /// The bucket URI.
         /// </value>
         public Uri BucketUri { get; set; }
+
+        /// <summary>
+        /// Gets or sets a value indicating whether this <see cref="CloudFormationBucket"/> is initialized.
+        /// </summary>
+        /// <value>
+        ///   <c>true</c> if initialized; otherwise, <c>false</c>.
+        /// </value>
+        public bool Initialized { get; set; }
     }
 }

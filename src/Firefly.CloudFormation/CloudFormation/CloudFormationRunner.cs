@@ -266,11 +266,12 @@ namespace Firefly.CloudFormation.CloudFormation
             // Get parameters and description from supplied template if any
             this.templateResolver = new TemplateResolver(this.clientFactory, this.stackName, this.usePreviousTemplate);
 
-            this.ResolveTemplateOrPolicyInput(this.templateResolver, this.templateLocation, out var url, out var body);
+            this.templateResolver.ResolveArtifactLocationAsync(this.context, this.templateLocation, this.stackName)
+                .Wait();
 
             if (this.templateResolver.Source != InputFileSource.None)
             {
-                var parser = TemplateParser.CreateParser(this.templateResolver.FileContent);
+                var parser = TemplateParser.Create(this.templateResolver.FileContent);
 
                 this.templateDescription = parser.GetTemplateDescription();
 
@@ -333,14 +334,13 @@ namespace Firefly.CloudFormation.CloudFormation
                 req.TimeoutInMinutes = this.timeoutInMinutes;
             }
 
-            this.ResolveTemplateOrPolicyInput(
-                new StackPolicyResolver(this.clientFactory),
+            var resolved = await new StackPolicyResolver(this.clientFactory).ResolveArtifactLocationAsync(
+                this.context,
                 this.stackPolicyLocation,
-                out var url,
-                out var body);
+                this.stackName);
 
-            req.StackPolicyBody = body;
-            req.StackPolicyURL = url;
+            req.StackPolicyBody = resolved.ArtifactBody;
+            req.StackPolicyURL = resolved.ArtifactUrl;
 
             this.context.Logger.LogInformation($"Creating {this.GetStackNameWithDescription()}\n");
 
@@ -396,7 +396,7 @@ namespace Firefly.CloudFormation.CloudFormation
             this.templateResolver = new TemplateResolver(this.clientFactory, this.stackName, true);
             await this.templateResolver.ResolveFileAsync(null);
             
-            var parser = TemplateParser.CreateParser(this.templateResolver.FileContent);
+            var parser = TemplateParser.Create(this.templateResolver.FileContent);
             this.templateDescription = parser.GetTemplateDescription();
 
             // Adds base stack name + 10 chars to each nested stack to estimate logical resource ID of each nested stack
@@ -531,7 +531,7 @@ namespace Firefly.CloudFormation.CloudFormation
             // If we get here, stack is in Ready state
             var changeSetName = CreateChangeSetName();
             var stackParameters = this.GetStackParametersForUpdate(this.templateResolver, stack);
-            var resourcesToImport = await this.GetResourcesToImport();
+            var resourcesToImport = await this.GetResourcesToImportAsync();
 
             var changeSetRequest = new CreateChangeSetRequest
                                        {
@@ -644,7 +644,7 @@ namespace Firefly.CloudFormation.CloudFormation
             }
             else
             {
-                await this.client.UpdateStackAsync(this.GetUpdateRequestWithPolicyFromChangesetRequest(changeSetRequest));
+                await this.client.UpdateStackAsync(await this.GetUpdateRequestWithPolicyFromChangesetRequestAsync(changeSetRequest));
             }
 
             if (this.waitForInProgressUpdate)
