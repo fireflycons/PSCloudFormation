@@ -212,7 +212,7 @@
 
             if ((this.Source & InputFileSource.Oversize) != 0)
             {
-                result.ArtifactUrl = (await new CloudFormationBucketOperations(this.ClientFactory, context).UploadCloudFormationArtifactToS3(
+                result.ArtifactUrl = (await new BucketOperations(this.ClientFactory, context).UploadCloudFormationArtifactToS3(
                     stackName,
                     this.ArtifactContent,
                     this.InputFileName,

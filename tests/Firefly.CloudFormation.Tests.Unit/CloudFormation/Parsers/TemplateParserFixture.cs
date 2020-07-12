@@ -4,15 +4,15 @@
     using System.Collections.Generic;
     using System.Linq;
 
-    using Firefly.CloudFormation.CloudFormation.Parsers;
+    using Firefly.CloudFormation.Parsers;
     using Firefly.CloudFormation.Tests.Unit.resources;
 
     public class TemplateParserFixture : IDisposable
     {
         public TemplateParserFixture()
         {
-            var jsonParser = Firefly.CloudFormation.CloudFormation.Parsers.TemplateParser.Create(EmbeddedResourceManager.GetResourceString("test-stack.json"));
-            var yamlParser = Firefly.CloudFormation.CloudFormation.Parsers.TemplateParser.Create(EmbeddedResourceManager.GetResourceString("test-stack.yaml"));
+            var jsonParser = Firefly.CloudFormation.Parsers.TemplateParser.Create(EmbeddedResourceManager.GetResourceString("test-stack.json"));
+            var yamlParser = Firefly.CloudFormation.Parsers.TemplateParser.Create(EmbeddedResourceManager.GetResourceString("test-stack.yaml"));
 
             this.JsonParameters = jsonParser.GetParameters().ToList();
             this.JsonTemplateDescription = jsonParser.GetTemplateDescription();
@@ -23,8 +23,8 @@
             this.YamlParameters = yamlParser.GetParameters().ToList();
             this.YamlTemplateDescription = yamlParser.GetTemplateDescription();
 
-            jsonParser = Firefly.CloudFormation.CloudFormation.Parsers.TemplateParser.Create(EmbeddedResourceManager.GetResourceString("test-nested-stack.json"));
-            yamlParser = Firefly.CloudFormation.CloudFormation.Parsers.TemplateParser.Create(EmbeddedResourceManager.GetResourceString("test-nested-stack.yaml"));
+            jsonParser = Firefly.CloudFormation.Parsers.TemplateParser.Create(EmbeddedResourceManager.GetResourceString("test-nested-stack.json"));
+            yamlParser = Firefly.CloudFormation.Parsers.TemplateParser.Create(EmbeddedResourceManager.GetResourceString("test-nested-stack.yaml"));
 
             this.JsonNestedStacks = jsonParser.GetNestedStackNames();
             this.YamlNestedStacks = yamlParser.GetNestedStackNames();

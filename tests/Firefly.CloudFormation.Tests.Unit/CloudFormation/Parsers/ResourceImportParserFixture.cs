@@ -12,10 +12,10 @@
         public ResourceImportParserFixture()
         {
             var jsonParser =
-                Firefly.CloudFormation.CloudFormation.Parsers.ResourceImportParser.Create(
+                Firefly.CloudFormation.Parsers.ResourceImportParser.Create(
                     EmbeddedResourceManager.GetResourceString("test-imports.json"));
             var yamlParser =
-                Firefly.CloudFormation.CloudFormation.Parsers.ResourceImportParser.Create(
+                Firefly.CloudFormation.Parsers.ResourceImportParser.Create(
                     EmbeddedResourceManager.GetResourceString("test-imports.yaml"));
 
             this.JsonResources = jsonParser.GetResourcesToImport();

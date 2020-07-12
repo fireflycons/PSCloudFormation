@@ -11,10 +11,10 @@ namespace Firefly.CloudFormation.Tests.Unit.CloudFormation.Parsers
         public ParameterFileParserFixture()
         {
             var jsonParser =
-                Firefly.CloudFormation.CloudFormation.Parsers.ParameterFileParser.CreateParser(
+                Firefly.CloudFormation.Parsers.ParameterFileParser.CreateParser(
                     EmbeddedResourceManager.GetResourceString("parameter-file.json"));
             var yamlParser =
-                Firefly.CloudFormation.CloudFormation.Parsers.ParameterFileParser.CreateParser(
+                Firefly.CloudFormation.Parsers.ParameterFileParser.CreateParser(
                     EmbeddedResourceManager.GetResourceString("parameter-file.yaml"));
 
             this.JsonParameters = jsonParser.ParseParameterFile();

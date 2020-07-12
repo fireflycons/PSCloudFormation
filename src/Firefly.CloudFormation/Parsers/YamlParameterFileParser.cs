@@ -1,4 +1,4 @@
-﻿namespace Firefly.CloudFormation.CloudFormation.Parsers
+﻿namespace Firefly.CloudFormation.Parsers
 {
     using System.Collections.Generic;
     using System.Linq;
@@ -6,7 +6,7 @@
     /// <summary>
     /// Parser for YAML parameter files
     /// </summary>
-    /// <seealso cref="Firefly.CloudFormation.CloudFormation.Parsers.ParameterFileParser" />
+    /// <seealso cref="ParameterFileParser" />
     public class YamlParameterFileParser : ParameterFileParser
     {
         /// <summary>

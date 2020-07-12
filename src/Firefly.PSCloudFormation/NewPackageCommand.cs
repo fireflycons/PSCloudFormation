@@ -9,7 +9,7 @@
     using System.Reflection;
     using System.Threading.Tasks;
 
-    using Firefly.CloudFormation.CloudFormation.Parsers;
+    using Firefly.CloudFormation.Parsers;
     using Firefly.CloudFormation.S3;
     using Firefly.CrossPlatformZip;
 
@@ -194,7 +194,7 @@
         /// <summary>
         /// The bucket operations instance for S3 uploads
         /// </summary>
-        internal CloudFormationBucketOperations BucketOperations { get; set; }
+        internal BucketOperations BucketOperations { get; set; }
 
         /// <summary>
         /// Instance of PowerShell implementation of path resolver using provider intrinsic
@@ -472,7 +472,7 @@
             var clientFactory = new PSAwsClientFactory(
                 this.CreateClient(this._CurrentCredentials, this._RegionEndpoint),
                 context);
-            this.BucketOperations = new CloudFormationBucketOperations(clientFactory, context, this.S3Bucket);
+            this.BucketOperations = new BucketOperations(clientFactory, context, this.S3Bucket);
             var processedTemplatePath = this.ProcessTemplate(this.TemplateFile).Result;
 
             // The base stack template was changed

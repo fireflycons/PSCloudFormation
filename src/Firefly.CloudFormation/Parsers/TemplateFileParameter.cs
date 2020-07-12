@@ -1,4 +1,4 @@
-﻿namespace Firefly.CloudFormation.CloudFormation.Parsers
+﻿namespace Firefly.CloudFormation.Parsers
 {
     using System.Diagnostics;
     using System.Text.RegularExpressions;

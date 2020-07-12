@@ -1,4 +1,4 @@
-﻿namespace Firefly.CloudFormation.CloudFormation.Parsers
+﻿namespace Firefly.CloudFormation.Parsers
 {
     using System.Collections.Generic;
     using System.IO;
@@ -10,7 +10,7 @@
     /// <summary>
     /// Base class for Resource Import file parsers
     /// </summary>
-    /// <seealso cref="Firefly.CloudFormation.CloudFormation.InputFileParser" />
+    /// <seealso cref="InputFileParser" />
     public abstract class ResourceImportParser : InputFileParser
     {
         /// <summary>

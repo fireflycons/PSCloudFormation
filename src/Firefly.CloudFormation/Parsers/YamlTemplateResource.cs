@@ -1,4 +1,4 @@
-﻿namespace Firefly.CloudFormation.CloudFormation.Parsers
+﻿namespace Firefly.CloudFormation.Parsers
 {
     using System;
     using System.Linq;
@@ -10,7 +10,7 @@
     /// <summary>
     /// Concrete <see cref="TemplateResource"/> for YAML templates
     /// </summary>
-    /// <seealso cref="Firefly.CloudFormation.CloudFormation.Parsers.TemplateResource" />
+    /// <seealso cref="TemplateResource" />
     public class YamlTemplateResource : TemplateResource
     {
         /// <summary>

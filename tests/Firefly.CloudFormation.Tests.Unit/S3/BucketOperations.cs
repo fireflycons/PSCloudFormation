@@ -35,7 +35,7 @@
             mockClientFactory.Setup(f => f.CreateSTSClient()).Returns(TestHelpers.GetSTSMock().Object);
             mockClientFactory.Setup(f => f.CreateS3Client()).Returns(TestHelpers.GetS3ClientWithoutBucketMock().Object);
 
-            var ops = new CloudFormationBucketOperations(
+            var ops = new Firefly.CloudFormation.S3.BucketOperations(
                 mockClientFactory.Object,
                 TestHelpers.GetContextMock(logger).Object);
 
@@ -56,7 +56,7 @@
             mockClientFactory.Setup(f => f.CreateSTSClient()).Returns(TestHelpers.GetSTSMock().Object);
             mockClientFactory.Setup(f => f.CreateS3Client()).Returns(TestHelpers.GetS3ClientWithBucketMock().Object);
 
-            var ops = new CloudFormationBucketOperations(
+            var ops = new Firefly.CloudFormation.S3.BucketOperations(
                 mockClientFactory.Object,
                 TestHelpers.GetContextMock(logger).Object);
 

@@ -27,7 +27,7 @@
     /// </para>
     /// </summary>
     /// <seealso cref="System.IDisposable" />
-    public class CloudFormationBucketOperations
+    public class BucketOperations
     {
         /// <summary>
         /// The client factory
@@ -50,13 +50,13 @@
         private readonly CloudFormationBucket cloudFormationBucket;
 
         /// <summary>
-        /// Initializes a new instance of the <see cref="CloudFormationBucketOperations"/> class using the
+        /// Initializes a new instance of the <see cref="BucketOperations"/> class using the
         /// library's private bucket which will be created if it doesn't exist and a 7 day lifecycle rule
         /// applied to prevent build-up of temporary objects.
         /// </summary>
         /// <param name="clientFactory">The AWS client factory.</param>
         /// <param name="context">The context.</param>
-        public CloudFormationBucketOperations(IAwsClientFactory clientFactory, ICloudFormationContext context)
+        public BucketOperations(IAwsClientFactory clientFactory, ICloudFormationContext context)
         {
             this.context = context;
             this.clientFactory = clientFactory;
@@ -78,12 +78,12 @@
         }
 
         /// <summary>
-        /// Initializes a new instance of the <see cref="CloudFormationBucketOperations"/> class with a user-specified bucket for uploads.
+        /// Initializes a new instance of the <see cref="BucketOperations"/> class with a user-specified bucket for uploads.
         /// </summary>
         /// <param name="clientFactory">The client factory.</param>
         /// <param name="context">The context.</param>
         /// <param name="bucketName">Name of the bucket. This bucket should exist.</param>
-        public CloudFormationBucketOperations(
+        public BucketOperations(
             IAwsClientFactory clientFactory,
             ICloudFormationContext context,
             string bucketName)

@@ -19,7 +19,7 @@
         {
             const string S3Location = "s3://bucket/job.etl";
 
-            var parser = Firefly.CloudFormation.CloudFormation.Parsers.TemplateParser.Create(
+            var parser = Firefly.CloudFormation.Parsers.TemplateParser.Create(
                 EmbeddedResourceManager.GetResourceString("test-resource-update.json"));
             var resources = parser.GetResources();
 
@@ -39,7 +39,7 @@
             const string S3Bucket = "bucket-name";
             const string S3Key = "code/lambda.zip";
 
-            var parser = Firefly.CloudFormation.CloudFormation.Parsers.TemplateParser.Create(
+            var parser = Firefly.CloudFormation.Parsers.TemplateParser.Create(
                 EmbeddedResourceManager.GetResourceString("test-resource-update.yaml"));
             var resources = parser.GetResources();
 

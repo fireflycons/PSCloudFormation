@@ -9,7 +9,7 @@
     using Amazon.CloudFormation.Model;
 
     using Firefly.CloudFormation.CloudFormation;
-    using Firefly.CloudFormation.CloudFormation.Parsers;
+    using Firefly.CloudFormation.Parsers;
 
     /// <summary>
     /// <para>

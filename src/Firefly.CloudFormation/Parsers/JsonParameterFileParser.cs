@@ -1,4 +1,4 @@
-﻿namespace Firefly.CloudFormation.CloudFormation.Parsers
+﻿namespace Firefly.CloudFormation.Parsers
 {
     using System.Collections.Generic;
     using System.IO;
@@ -10,7 +10,7 @@
     /// <summary>
     /// Parser for JSON parameter files
     /// </summary>
-    /// <seealso cref="Firefly.CloudFormation.CloudFormation.Parsers.ParameterFileParser" />
+    /// <seealso cref="ParameterFileParser" />
     public class JsonParameterFileParser : ParameterFileParser
     {
         /// <summary>

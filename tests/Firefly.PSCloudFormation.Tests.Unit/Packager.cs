@@ -49,7 +49,7 @@ namespace Firefly.PSCloudFormation.Tests.Unit
             var newPackage = new NewPackageCommand
                                  {
                                      BucketOperations =
-                                         new CloudFormationBucketOperations(
+                                         new BucketOperations(
                                              mockClientFactory.Object,
                                              mockContext.Object),
                                      PathResolver = this.pathResolver,
