@@ -8,6 +8,7 @@
     using Amazon.CloudFormation;
     using Amazon.CloudFormation.Model;
 
+    using Firefly.CloudFormation.Model;
     using Firefly.CloudFormation.Utils;
 
     /// <summary>
@@ -122,7 +123,7 @@
         /// </summary>
         /// <param name="stackName">Name of the stack.</param>
         /// <returns>A <see cref="Stack"/> object.</returns>
-        /// <exception cref="Firefly.CloudFormation.CloudFormation.StackOperationException">Stack does not exist</exception>
+        /// <exception cref="StackOperationException">Stack does not exist</exception>
         public async Task<Stack> GetStackAsync(string stackName)
         {
             try

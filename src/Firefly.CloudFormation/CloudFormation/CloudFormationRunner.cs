@@ -14,6 +14,7 @@ namespace Firefly.CloudFormation.CloudFormation
     using Amazon.CloudFormation.Model;
 
     using Firefly.CloudFormation.CloudFormation.Parsers;
+    using Firefly.CloudFormation.Model;
     using Firefly.CloudFormation.Utils;
 
     /// <summary>Class to manage all stack operations</summary>

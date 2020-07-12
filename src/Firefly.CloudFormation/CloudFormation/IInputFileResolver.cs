@@ -2,6 +2,8 @@
 {
     using System.Threading.Tasks;
 
+    using Firefly.CloudFormation.Model;
+
     /// <summary>
     /// Interface that defines classes that will resolve a file that may be present in the local file system or referenced by URL
     /// </summary>

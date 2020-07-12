@@ -1,7 +1,5 @@
-﻿namespace Firefly.CloudFormation
+﻿namespace Firefly.CloudFormation.Model
 {
-    using Firefly.CloudFormation.CloudFormation;
-
     /// <summary>
     /// Result object returned by Create/Update/Delete/Reset methods
     /// </summary>

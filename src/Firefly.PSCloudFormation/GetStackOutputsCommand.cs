@@ -11,6 +11,7 @@
     using Firefly.CloudFormation;
     using Firefly.CloudFormation.CloudFormation;
     using Firefly.CloudFormation.CloudFormation.Parsers;
+    using Firefly.CloudFormation.Model;
     using Firefly.CloudFormation.Utils;
 
     /// <summary>

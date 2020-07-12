@@ -1,4 +1,4 @@
-﻿namespace Firefly.CloudFormation.CloudFormation
+﻿namespace Firefly.CloudFormation.Model
 {
     /// <summary>
     /// Values that describe readiness state in order to receive updates

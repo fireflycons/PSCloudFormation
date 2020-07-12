@@ -1,5 +1,7 @@
 ﻿namespace Firefly.CloudFormation.CloudFormation
 {
+    using Firefly.CloudFormation.Model;
+
     /// <summary>
     /// Base class for all YAML/JSON parser types
     /// </summary>

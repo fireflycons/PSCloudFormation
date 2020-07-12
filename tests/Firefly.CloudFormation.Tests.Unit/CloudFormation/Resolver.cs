@@ -9,6 +9,7 @@
     using Amazon.S3.Model;
 
     using Firefly.CloudFormation.CloudFormation;
+    using Firefly.CloudFormation.Model;
     using Firefly.CloudFormation.Tests.Unit.resources;
     using Firefly.CloudFormation.Tests.Unit.Utils;
     using Firefly.CloudFormation.Utils;

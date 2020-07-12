@@ -5,6 +5,8 @@
 
     using Amazon.CloudFormation.Model;
 
+    using Firefly.CloudFormation.Model;
+
     /// <summary>
     /// Base class for Resource Import file parsers
     /// </summary>

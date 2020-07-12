@@ -1,4 +1,4 @@
-﻿namespace Firefly.CloudFormation
+﻿namespace Firefly.CloudFormation.Model
 {
     using Firefly.CloudFormation.CloudFormation;
 

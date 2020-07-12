@@ -9,6 +9,7 @@
 
     using Firefly.CloudFormation;
     using Firefly.CloudFormation.CloudFormation;
+    using Firefly.CloudFormation.Model;
 
     /// <summary>
     /// Contains parameters common to all commands that work with CloudFormation stacks.

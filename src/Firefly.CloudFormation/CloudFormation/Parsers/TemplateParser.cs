@@ -3,6 +3,8 @@
     using System.Collections.Generic;
     using System.IO;
 
+    using Firefly.CloudFormation.Model;
+
     using Newtonsoft.Json;
     using Newtonsoft.Json.Linq;
 

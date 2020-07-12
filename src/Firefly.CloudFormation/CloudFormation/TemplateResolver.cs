@@ -4,6 +4,7 @@
 
     using Amazon.CloudFormation.Model;
 
+    using Firefly.CloudFormation.Model;
     using Firefly.CloudFormation.Utils;
 
     /// <summary>

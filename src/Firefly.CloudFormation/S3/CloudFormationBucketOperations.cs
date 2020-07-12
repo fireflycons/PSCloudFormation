@@ -12,6 +12,7 @@
     using Amazon.SecurityToken.Model;
 
     using Firefly.CloudFormation.CloudFormation;
+    using Firefly.CloudFormation.Model;
     using Firefly.CloudFormation.Utils;
 
     /// <summary>

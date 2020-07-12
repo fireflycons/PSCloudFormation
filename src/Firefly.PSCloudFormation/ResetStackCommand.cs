@@ -6,6 +6,7 @@
     using Amazon.CloudFormation;
 
     using Firefly.CloudFormation.CloudFormation;
+    using Firefly.CloudFormation.Model;
 
     /// <summary>
     /// <para type="synopsis">Deletes, then recreates a stack.</para>

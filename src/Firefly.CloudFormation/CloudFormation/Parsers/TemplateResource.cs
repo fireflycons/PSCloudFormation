@@ -3,6 +3,8 @@
     using System;
     using System.IO;
 
+    using Firefly.CloudFormation.Model;
+
     using Newtonsoft.Json.Linq;
 
     using YamlDotNet.RepresentationModel;

@@ -1,4 +1,4 @@
-﻿namespace Firefly.CloudFormation.CloudFormation
+﻿namespace Firefly.CloudFormation.Model
 {
     /// <summary>
     /// Data serialization format for templates, policies etc.

@@ -3,6 +3,8 @@
     using System.Collections.Generic;
     using System.IO;
 
+    using Firefly.CloudFormation.Model;
+
     /// <summary>
     /// Base class for parameter file parsers.
     /// </summary>

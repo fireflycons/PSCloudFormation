@@ -1,4 +1,4 @@
-﻿namespace Firefly.CloudFormation.S3
+﻿namespace Firefly.CloudFormation.Model
 {
     using System;
 

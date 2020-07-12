@@ -4,6 +4,7 @@
     using System.Threading.Tasks;
 
     using Firefly.CloudFormation.CloudFormation;
+    using Firefly.CloudFormation.Model;
 
     /// <summary>
     /// <para type="synopsis">Calls the AWS CloudFormation DeleteStack API operation.</para>
