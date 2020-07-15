@@ -1,8 +1,10 @@
 ﻿namespace Firefly.PSCloudFormation.Tests.Unit.Utils
 {
     using System;
+    using System.Diagnostics;
     using System.IO;
 
+    [DebuggerDisplay("{Path}")]
     public class TempFile : IDisposable
     {
         private readonly string filePath = System.IO.Path.GetTempFileName();

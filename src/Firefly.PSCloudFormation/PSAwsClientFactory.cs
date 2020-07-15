@@ -60,12 +60,17 @@
         /// </returns>
         public IAmazonS3 CreateS3Client()
         {
+            if (this.context.S3EndpointUrl == null)
+            {
+                return new AmazonS3Client(this.context.Credentials, this.context.Region);
+            }
+
             return new AmazonS3Client(
                 this.context.Credentials,
                 new AmazonS3Config
                     {
                         RegionEndpoint = this.context.Region,
-                        ServiceURL = this.context.S3EndpointUrl == null ? null : this.context.S3EndpointUrl.AbsoluteUri
+                        ServiceURL = this.context.S3EndpointUrl.AbsoluteUri
                     });
         }
 
@@ -83,14 +88,17 @@
         // ReSharper disable once StyleCop.SA1650
         public IAmazonSecurityTokenService CreateSTSClient()
         {
+            if (this.context.STSEndpointUrl == null)
+            {
+                return new AmazonSecurityTokenServiceClient(this.context.Credentials, this.context.Region);
+            }
+
             return new AmazonSecurityTokenServiceClient(
                 this.context.Credentials,
                 new AmazonSecurityTokenServiceConfig
                     {
                         RegionEndpoint = this.context.Region,
-                        ServiceURL = this.context.STSEndpointUrl == null
-                                         ? null
-                                         : this.context.STSEndpointUrl.AbsoluteUri
+                        ServiceURL = this.context.STSEndpointUrl.AbsoluteUri
                     });
         }
 

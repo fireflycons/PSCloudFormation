@@ -8,10 +8,12 @@
                 "TemplateURL": "sub-nested-2.json"
             }
         },
-        "secGroupName": {
-            "Type": "AWS::EC2::SecurityGroup",
+        "Param": {
+            "Type": "AWS::SSM::Parameter",
             "Properties": {
-                "GroupDescription": "SubNested1Sg"
+                "Name": "/pscloudformation/test/test-nested-1",
+                "Type": "String",
+                "Value":  "test" 
             }
         }
     }

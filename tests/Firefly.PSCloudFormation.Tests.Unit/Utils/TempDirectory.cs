@@ -1,12 +1,14 @@
 ﻿namespace Firefly.PSCloudFormation.Tests.Unit.Utils
 {
     using System;
+    using System.Diagnostics;
     using System.IO;
 
     /// <summary>
     /// Disposable temporary directory structure
     /// </summary>
     /// <seealso cref="System.IDisposable" />
+    [DebuggerDisplay("{Path}")]
     public class TempDirectory : IDisposable
     {
         /// <summary>

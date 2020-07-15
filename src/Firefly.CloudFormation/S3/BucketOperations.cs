@@ -26,12 +26,17 @@
     /// </para>
     /// </summary>
     /// <seealso cref="System.IDisposable" />
-    public class BucketOperations
+    public class BucketOperations : IS3Util
     {
         /// <summary>
         /// The client factory
         /// </summary>
         private readonly IAwsClientFactory clientFactory;
+
+        /// <summary>
+        /// The cloud formation bucket
+        /// </summary>
+        private readonly CloudFormationBucket cloudFormationBucket;
 
         /// <summary>
         /// The log
@@ -42,11 +47,6 @@
         /// The timestamp generator. Unit tests supply an alternate so object names may be validated.
         /// </summary>
         private readonly ITimestampGenerator timestampGenerator;
-
-        /// <summary>
-        /// The cloud formation bucket
-        /// </summary>
-        private readonly CloudFormationBucket cloudFormationBucket;
 
         /// <summary>
         /// Initializes a new instance of the <see cref="BucketOperations"/> class using the
@@ -73,59 +73,43 @@
                                                     Initialized = false
                                                 };
             }
-
         }
 
         /// <summary>
-        /// Initializes a new instance of the <see cref="BucketOperations"/> class with a user-specified bucket for uploads.
+        /// Uploads oversize content (template or policy) to S3.
         /// </summary>
-        /// <param name="clientFactory">The client factory.</param>
-        /// <param name="context">The context.</param>
-        /// <param name="bucketName">Name of the bucket. This bucket should exist.</param>
-        public BucketOperations(
-            IAwsClientFactory clientFactory,
-            ICloudFormationContext context,
-            string bucketName)
-        {
-            if (bucketName != null)
-            {
-                this.cloudFormationBucket = new CloudFormationBucket
-                                                {
-                                                    BucketName = bucketName,
-                                                    BucketUri = new Uri($"https://{bucketName}.s3.amazonaws.com"),
-                                                    Initialized = true
-                                                };
-                this.context = context;
-                this.clientFactory = clientFactory;
-                this.timestampGenerator = context.TimestampGenerator ?? new TimestampGenerator();
-            }
-        }
-
-        /// <summary>
-        /// Gets the name of the bucket which is either a user supplied one, or the library's private bucket.
-        /// </summary>
-        /// <value>
-        /// The name of the bucket.
-        /// </value>
-        public string BucketName => this.cloudFormationBucket.BucketName;
-
-        /// <summary>
-        /// Uploads a file to the S3 bucket associated with this instance.
-        /// </summary>
-        /// <param name="filePath">Path to file to upload.</param>
-        /// <param name="key">The key to store in S3.</param>
-        /// <returns>URI of uploaded object.</returns>
-        public async Task<Uri> UploadFileToS3(string filePath, string key)
+        /// <param name="stackName">Name of the stack. Use to form part of the S3 key</param>
+        /// <param name="body">String content to be uploaded.</param>
+        /// <param name="originalFilename">File name of original input file, or <c>"RawString"</c> if the input was a string rather than a file</param>
+        /// <param name="uploadFileType">Type of file (template or policy). Could be used to form part of the S3 key.</param>
+        /// <returns>URI of uploaded template.</returns>
+        public async Task<Uri> UploadOversizeArtifactToS3(
+            string stackName,
+            string body,
+            string originalFilename,
+            UploadFileType uploadFileType)
         {
             var bucket = await this.GetCloudFormationBucketAsync();
-            var ub = new UriBuilder(bucket.BucketUri) { Path = $"/{key.TrimStart('/')}" };
+            var key = uploadFileType == UploadFileType.Template
+                          ? this.timestampGenerator.GenerateTimestamp() + $"_{stackName}_template_" + originalFilename
+                          : this.timestampGenerator.GenerateTimestamp() + $"_{stackName}_policy_" + originalFilename;
+
+            var ub = new UriBuilder(bucket.BucketUri) { Path = $"/{key}" };
+
+            this.context.Logger.LogInformation($"Copying oversize {uploadFileType.ToString().ToLower()} to {ub.Uri}");
+
+            var ms = new MemoryStream(
+                new UTF8Encoding().GetBytes(body ?? throw new ArgumentNullException(nameof(body))));
 
             using (var s3 = this.clientFactory.CreateS3Client())
             {
                 await s3.PutObjectAsync(
                     new PutObjectRequest
                         {
-                            BucketName = this.cloudFormationBucket.BucketName, Key = key, FilePath = filePath
+                            BucketName = this.cloudFormationBucket.BucketName,
+                            Key = key,
+                            AutoCloseStream = true,
+                            InputStream = ms
                         });
             }
 
@@ -203,47 +187,6 @@
 
             this.cloudFormationBucket.Initialized = true;
             return this.cloudFormationBucket;
-        }
-
-        /// <summary>
-        /// Uploads oversize content (template or policy) to S3.
-        /// </summary>
-        /// <param name="stackName">Name of the stack. Use to form part of the S3 key</param>
-        /// <param name="body">String content to be uploaded.</param>
-        /// <param name="keySuffix">Suffix to append to S3 key</param>
-        /// <param name="uploadFileType">Type of file (template or policy). Also used to form part of the S3 key.</param>
-        /// <returns>URI of uploaded template.</returns>
-        internal async Task<Uri> UploadCloudFormationArtifactToS3(
-            string stackName,
-            string body,
-            string keySuffix,
-            UploadFileType uploadFileType)
-        {
-            var bucket = await this.GetCloudFormationBucketAsync();
-            var key = uploadFileType == UploadFileType.Template
-                          ? this.timestampGenerator.GenerateTimestamp() + $"_{stackName}_template_" + keySuffix
-                          : this.timestampGenerator.GenerateTimestamp() + $"_{stackName}_policy_" + keySuffix;
-
-            var ub = new UriBuilder(bucket.BucketUri) { Path = $"/{key}" };
-
-            this.context.Logger.LogInformation($"Copying oversize {uploadFileType.ToString().ToLower()} to {ub.Uri}");
-
-            var ms = new MemoryStream(
-                new UTF8Encoding().GetBytes(body ?? throw new ArgumentNullException(nameof(body))));
-
-            using (var s3 = this.clientFactory.CreateS3Client())
-            {
-                await s3.PutObjectAsync(
-                    new PutObjectRequest
-                        {
-                            BucketName = this.cloudFormationBucket.BucketName,
-                            Key = key,
-                            AutoCloseStream = true,
-                            InputStream = ms
-                        });
-            }
-
-            return ub.Uri;
         }
     }
 }

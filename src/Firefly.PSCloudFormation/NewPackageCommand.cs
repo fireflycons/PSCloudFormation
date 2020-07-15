@@ -6,12 +6,11 @@
     using System.IO;
     using System.Linq;
     using System.Management.Automation;
-    using System.Reflection;
     using System.Threading.Tasks;
 
     using Firefly.CloudFormation.Parsers;
-    using Firefly.CloudFormation.S3;
     using Firefly.CrossPlatformZip;
+    using Firefly.PSCloudFormation.Utils;
 
     /// <summary>
     /// <para type="synopsis">
@@ -49,11 +48,6 @@
         /// Type name for nested stacks (we use this a fair bit)
         /// </summary>
         private const string CloudFormationStack = "AWS::CloudFormation::Stack";
-
-        /// <summary>
-        /// Random number generator for getting random alphanumeric strings
-        /// </summary>
-        private static readonly Random Random = new Random((int)(DateTime.Now.Ticks & 0x7fffffff));
 
         /// <summary>
         /// Map of resources that can be packaged to the properties that should be examined.
@@ -192,16 +186,6 @@
                 };
 
         /// <summary>
-        /// The bucket operations instance for S3 uploads
-        /// </summary>
-        internal BucketOperations BucketOperations { get; set; }
-
-        /// <summary>
-        /// Instance of PowerShell implementation of path resolver using provider intrinsic
-        /// </summary>
-        internal IPathResolver PathResolver { get; set; }
-
-        /// <summary>
         /// The output template file
         /// </summary>
         private string outputTemplateFile;
@@ -283,17 +267,27 @@
         }
 
         /// <summary>
+        /// Gets or sets the instance of PowerShell implementation of path resolver using provider intrinsic
+        /// </summary>
+        internal IPathResolver PathResolver { get; set; }
+
+        /// <summary>
+        /// Gets or sets the bucket operations instance for S3 uploads
+        /// </summary>
+        internal S3Util S3 { get; set; }
+
+        /// <summary>
         /// Processes template and nested templates recursively, leaf first
         /// </summary>
         /// <param name="templatePath">The template path.</param>
+        /// <param name="workingDirectory">Working directory for files to upload.</param>
         /// <returns>The path to the processed template.</returns>
-        internal async Task<string> ProcessTemplate(string templatePath)
+        internal async Task<string> ProcessTemplate(string templatePath, string workingDirectory)
         {
             var outputTemplatePath = templatePath;
             var parser = TemplateParser.Create(File.ReadAllText(templatePath));
             var resources = parser.GetResources().ToList();
             var isModified = false;
-            var keyPrefix = this.S3Prefix != null ? this.S3Prefix.TrimEnd('/') : string.Empty;
 
             // Process nested stacks first
             foreach (var nestedStack in resources.Where(r => r.ResourceType == CloudFormationStack))
@@ -313,7 +307,7 @@
 
                         // Referenced nested template is in the filesystem, therefore it must be uploaded
                         // whether or not it was itself modified
-                        var processedTemplate = await this.ProcessTemplate(fi.FullName);
+                        var processedTemplate = await this.ProcessTemplate(fi.FullName, workingDirectory);
                         isModified = true;
 
                         // Output intermediate templates to console if -Debug
@@ -322,14 +316,13 @@
                             fi.FullName,
                             File.ReadAllText(processedTemplate));
 
-                        var key = keyPrefix + Path.GetFileName(processedTemplate);
-
-                        this.Logger.LogVerbose(
-                            $"Uploading processed '{fi.FullName}' to s3://{this.BucketOperations.BucketName}/{key}");
-                        var uri = await this.BucketOperations.UploadFileToS3(processedTemplate, key);
+                        var artifact = await this.S3.UploadResourceToS3Async(
+                                           new FileInfo(processedTemplate),
+                                           this.S3Prefix,
+                                           this.Metadata);
 
                         // Update resource to point to uploaded template
-                        nestedStack.UpdateResourceProperty("TemplateURL", uri.AbsoluteUri);
+                        nestedStack.UpdateResourceProperty("TemplateURL", artifact.Url);
                         break;
 
                     default:
@@ -362,7 +355,7 @@
                         continue;
                     }
 
-                    string fileToUpload = null;
+                    string fileToUpload;
                     isModified = true;
 
                     switch (fsi)
@@ -373,11 +366,11 @@
                             if (propertyToCheck.Zip)
                             {
                                 fileToUpload = Path.Combine(
-                                    Path.GetTempPath(),
-                                    $"{Path.GetFileNameWithoutExtension(fi.Name)}-{RandomString(12)}.zip");
+                                    workingDirectory,
+                                    $"{Path.GetFileNameWithoutExtension(fi.Name)}.zip");
 
                                 this.Logger.LogVerbose($"Zipping '{fi.FullName}' to {Path.GetFileName(fileToUpload)}");
-                                
+
                                 Zipper.Zip(
                                     new CrossPlatformZipSettings
                                         {
@@ -399,9 +392,10 @@
                         case DirectoryInfo di:
 
                             // Property value points to a directory, which must always be zipped.
-                            fileToUpload = Path.Combine(Path.GetTempPath(), $"{di.Name}-{RandomString(12)}.zip");
-                            
-                            this.Logger.LogVerbose($"Zipping directory '{di.FullName}' to {Path.GetFileName(fileToUpload)}");
+                            fileToUpload = Path.Combine(workingDirectory, $"{di.Name}.zip");
+
+                            this.Logger.LogVerbose(
+                                $"Zipping directory '{di.FullName}' to {Path.GetFileName(fileToUpload)}");
 
                             Zipper.Zip(
                                 new CrossPlatformZipSettings
@@ -415,29 +409,36 @@
                                     });
 
                             break;
+
+                        default:
+
+                            // Should never get here, but shuts up a bunch of compiler/R# warnings
+                            throw new InvalidDataException(
+                                $"Unsupported derivative of FileSystemInfo: {fsi.GetType().FullName}");
                     }
 
-                    var key = keyPrefix + Path.GetFileName(fileToUpload);
-
-                    this.Logger.LogVerbose(
-                        $"Uploading processed '{fsi.FullName}' to s3://{this.BucketOperations.BucketName}/{key}");
-                    var uri = await this.BucketOperations.UploadFileToS3(fileToUpload, key);
+                    var artifact = await this.S3.UploadResourceToS3Async(
+                                       new FileInfo(fileToUpload),
+                                       this.S3Prefix,
+                                       this.Metadata);
 
                     if (propertyToCheck.ReplacementType == typeof(string))
                     {
                         // Insert the URI directly
-                        resource.UpdateResourceProperty(propertyToCheck.PropertyPath, uri.AbsoluteUri);
+                        resource.UpdateResourceProperty(propertyToCheck.PropertyPath, artifact.Url);
                     }
                     else
                     {
                         // Create an instance of the new mapping
                         // ReSharper disable once StyleCop.SA1305
-                        var s3Location = propertyToCheck.ReplacementType.GetConstructor(new[] { typeof(Uri) })
-                            ?.Invoke(new object[] { uri });
+                        var s3Location = propertyToCheck.ReplacementType.GetConstructor(new[] { typeof(S3Artifact) })
+                            ?.Invoke(new object[] { artifact });
 
                         if (s3Location == null)
                         {
-                            throw new MissingMethodException(propertyToCheck.ReplacementType.FullName, ".ctor(Uri)");
+                            throw new MissingMethodException(
+                                propertyToCheck.ReplacementType.FullName,
+                                ".ctor(S3Artifact)");
                         }
 
                         // and set on the resource property
@@ -450,9 +451,7 @@
             {
                 // Generate a filename and save.
                 // The caller will upload the template to S3
-                outputTemplatePath = Path.Combine(
-                    Path.GetTempPath(),
-                    $"{Path.GetFileNameWithoutExtension(templatePath)}-{RandomString(12)}{Path.GetExtension(templatePath)}");
+                outputTemplatePath = Path.Combine(workingDirectory, Path.GetFileName(templatePath));
 
                 parser.Save(outputTemplatePath);
             }
@@ -472,34 +471,45 @@
             var clientFactory = new PSAwsClientFactory(
                 this.CreateClient(this._CurrentCredentials, this._RegionEndpoint),
                 context);
-            this.BucketOperations = new BucketOperations(clientFactory, context, this.S3Bucket);
-            var processedTemplatePath = this.ProcessTemplate(this.TemplateFile).Result;
+            this.S3 = new S3Util(clientFactory, context.Logger, this.TemplateFile, this.S3Bucket);
 
-            // The base stack template was changed
-            if (this.OutputTemplateFile != null)
-            {
-                File.Copy(processedTemplatePath, this.OutputTemplateFile, true);
-            }
-            else
-            {
-                this.WriteObject(File.ReadAllText(processedTemplatePath));
-            }
+            var workingDirectory = Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString());
 
-            if (processedTemplatePath != this.TemplateFile)
+            try
             {
-                File.Delete(processedTemplatePath);
-            }
-        }
+                Directory.CreateDirectory(workingDirectory);
 
-        /// <summary>
-        /// Generate a random alphanumeric string.
-        /// </summary>
-        /// <param name="length">The length.</param>
-        /// <returns>Random string of specified length</returns>
-        private static string RandomString(int length)
-        {
-            const string Chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
-            return new string(Enumerable.Repeat(Chars, length).Select(s => s[Random.Next(s.Length)]).ToArray());
+                var processedTemplatePath = this.ProcessTemplate(this.TemplateFile, workingDirectory).Result;
+
+                // The base stack template was changed
+                if (this.OutputTemplateFile != null)
+                {
+                    File.Copy(processedTemplatePath, this.OutputTemplateFile, true);
+                }
+                else
+                {
+                    this.WriteObject(File.ReadAllText(processedTemplatePath));
+                }
+
+                if (processedTemplatePath != this.TemplateFile)
+                {
+                    File.Delete(processedTemplatePath);
+                }
+            }
+            finally
+            {
+                if (Directory.Exists(workingDirectory))
+                {
+                    try
+                    {
+                        Directory.Delete(workingDirectory, true);
+                    }
+                    catch (Exception e)
+                    {
+                        this.Logger?.LogWarning($"Cannot remove workspace directory '{workingDirectory}': {e.Message}");
+                    }
+                }
+            }
         }
 
         /// <summary>
@@ -509,9 +519,7 @@
         /// <param name="propertyValue">Value of the resource property in the template</param>
         /// <returns>A <see cref="FileSystemInfo"/> pointing to the referenced file or directory; else <c>null</c> if not a file system resource.</returns>
         /// <exception cref="FileNotFoundException">The artifact looks like a path, but it cannot be found.</exception>
-        private FileSystemInfo ResolveFileSystemResource(
-            string templatePath,
-            string propertyValue)
+        private FileSystemInfo ResolveFileSystemResource(string templatePath, string propertyValue)
         {
             if (propertyValue == null)
             {
@@ -611,35 +619,19 @@
         }
 
         /// <summary>
-        /// Base class to provide constructor helper for the two S3 mapping types that can be inserted into template
-        /// </summary>
-        private abstract class S3Location
-        {
-            /// <summary>
-            /// Decodes the URI.
-            /// </summary>
-            /// <param name="uri">The URI.</param>
-            /// <returns>Tuple of bucket name and key</returns>
-            protected static (string, string) DecodeUri(Uri uri)
-            {
-                return (uri.Host.Split('.').First(), uri.AbsolutePath.TrimStart('/'));
-            }
-        }
-
-        /// <summary>
         /// S3 location with 'S3' prefixing field names
         /// </summary>
-        private class S3LocationLong : S3Location
+        private class S3LocationLong
         {
             /// <summary>
             /// Initializes a new instance of the <see cref="S3LocationLong" /> class.
             /// </summary>
-            /// <param name="s3Uri">The s3 URI.</param>
-
+            /// <param name="artifact">The S3 artifact.</param>
             // ReSharper disable once StyleCop.SA1305
-            public S3LocationLong(Uri s3Uri)
+            public S3LocationLong(S3Artifact artifact)
             {
-                (this.S3Bucket, this.S3Key) = DecodeUri(s3Uri);
+                this.S3Bucket = artifact.BucketName;
+                this.S3Key = artifact.Key;
             }
 
             /// <summary>
@@ -662,15 +654,16 @@
         /// <summary>
         /// S3 location without 'S3' prefixing field names
         /// </summary>
-        private class S3LocationShort : S3Location
+        private class S3LocationShort
         {
             /// <summary>
             /// Initializes a new instance of the <see cref="S3LocationShort" /> class.
             /// </summary>
-            /// <param name="s3Uri">The s3 URI.</param>
-            public S3LocationShort(Uri s3Uri)
+            /// <param name="artifact">The s3 URI.</param>
+            public S3LocationShort(S3Artifact artifact)
             {
-                (this.Bucket, this.Key) = DecodeUri(s3Uri);
+                this.Bucket = artifact.BucketName;
+                this.Key = artifact.Key;
             }
 
             /// <summary>

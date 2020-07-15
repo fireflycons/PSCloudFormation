@@ -4,7 +4,7 @@
     /// Describes whether a file to be uploaded to S3 is a template or a policy.
     /// Used in the generation of S3 key names.
     /// </summary>
-    internal enum UploadFileType
+    public enum UploadFileType
     {
         /// <summary>
         /// A template file
