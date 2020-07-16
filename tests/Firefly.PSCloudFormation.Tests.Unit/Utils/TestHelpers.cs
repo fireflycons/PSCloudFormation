@@ -21,14 +21,13 @@
 
         public static readonly string RegionName = Region.SystemName;
 
-        internal static Mock<ICloudFormationContext> GetContextMock(TestLogger logger)
+        internal static Mock<IPSCloudFormationContext> GetContextMock(TestLogger logger)
         {
-            var mockContext = new Mock<ICloudFormationContext>();
+            var mockContext = new Mock<IPSCloudFormationContext>();
 
             mockContext.Setup(c => c.Logger).Returns(logger);
             mockContext.Setup(c => c.TimestampGenerator).Returns(new TestTimestampGenerator());
             mockContext.Setup(c => c.Region).Returns(Region);
-            mockContext.Setup(c => c.AccountId).Returns(AccountId);
 
             return mockContext;
         }

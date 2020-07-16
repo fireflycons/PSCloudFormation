@@ -38,7 +38,10 @@ namespace Firefly.PSCloudFormation
     /// <seealso cref="System.Management.Automation.PSCmdlet" />
     public class CloudFormationServiceCommand : PSCmdlet
     {
-        private ICloudFormationContext context;
+        /// <summary>
+        /// The context
+        /// </summary>
+        private IPSCloudFormationContext context;
 
         /// <summary>
         /// Gets or sets the access key.
@@ -227,6 +230,8 @@ namespace Firefly.PSCloudFormation
         /// </value>
         protected RegionEndpoint _RegionEndpoint { get; set; }
 
+        protected IPSAwsClientFactory _ClientFactory { get; set; }
+
         /// <summary>
         /// Gets the credential profile options.
         /// </summary>
@@ -258,8 +263,8 @@ namespace Firefly.PSCloudFormation
         /// <summary>
         /// Creates the cloud formation context.
         /// </summary>
-        /// <returns>New <see cref="ICloudFormationContext"/></returns>
-        protected ICloudFormationContext CreateCloudFormationContext()
+        /// <returns>New <see cref="IPSCloudFormationContext"/></returns>
+        protected IPSCloudFormationContext CreateCloudFormationContext()
         {
             if (this.context != null)
             {
@@ -306,20 +311,28 @@ namespace Firefly.PSCloudFormation
             }
 
             this.Logger = new PSLogger(this);
-
             this.context = new PSCloudFormationContext
                        {
                            Region = this._RegionEndpoint,
                            Credentials = credentials,
-                           S3EndpointUrl =
-                               string.IsNullOrEmpty(this.S3EndpointUrl) ? null : new Uri(this.S3EndpointUrl),
-                           STSEndpointUrl = string.IsNullOrEmpty(this.STSEndpointUrl)
-                                                ? null
-                                                : new Uri(this.S3EndpointUrl),
+                           S3EndpointUrl = S3EndpointUrl,
+                           STSEndpointUrl = this.STSEndpointUrl,
                            Logger = this.Logger
                        };
 
+            this._ClientFactory = new PSAwsClientFactory(this.CreateClient(this._CurrentCredentials, this._RegionEndpoint), this.context);
+            this.context.S3Util = new S3Util(this._ClientFactory, this.context);
+
             return this.context;
+        }
+
+        /// <summary>
+        /// Cmdlet end processing - dispose resources.
+        /// </summary>
+        protected override void EndProcessing()
+        {
+            base.EndProcessing();
+            this._ClientFactory?.Dispose();
         }
 
         /// <summary>

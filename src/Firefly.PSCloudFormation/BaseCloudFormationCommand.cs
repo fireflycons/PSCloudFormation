@@ -102,14 +102,6 @@
         public SwitchParameter Wait { get; set; }
 
         /// <summary>
-        /// Gets or sets the client factory.
-        /// </summary>
-        /// <value>
-        /// The client factory.
-        /// </value>
-        protected PSAwsClientFactory ClientFactory { get; set; }
-
-        /// <summary>
         /// Asks a yes/no question.
         /// </summary>
         /// <param name="caption">The caption.</param>
@@ -159,48 +151,38 @@
         protected override void ProcessRecord()
         {
             base.ProcessRecord();
-            this.ClientFactory = new PSAwsClientFactory(
-                this.CreateClient(this._CurrentCredentials, this._RegionEndpoint),
-                this.CreateCloudFormationContext());
+
+            var task = this.OnProcessRecord();
 
             try
             {
-                var task = this.OnProcessRecord();
-
-                try
-                {
-                    task.Wait();
-                }
-                catch (Exception ex)
-                {
-                    Exception resolvedException;
-
-                    switch (ex)
-                    {
-                        case AggregateException aex:
-
-                            resolvedException = aex.InnerExceptions.First();
-                            break;
-
-                        default:
-
-                            resolvedException = ex;
-                            break;
-                    }
-
-                    this.ThrowExecutionError(resolvedException.Message, this, resolvedException.InnerException);
-                    return;
-                }
-
-                if (task.Result != null)
-                {
-                    var stackResult = (CloudFormationResult)task.Result;
-                    this.WriteObject(this.PassThru ? (object)stackResult.StackArn : stackResult.StackOperationResult);
-                }
+                task.Wait();
             }
-            finally
+            catch (Exception ex)
             {
-                this.ClientFactory?.Dispose();
+                Exception resolvedException;
+
+                switch (ex)
+                {
+                    case AggregateException aex:
+
+                        resolvedException = aex.InnerExceptions.First();
+                        break;
+
+                    default:
+
+                        resolvedException = ex;
+                        break;
+                }
+
+                this.ThrowExecutionError(resolvedException.Message, this, resolvedException.InnerException);
+                return;
+            }
+
+            if (task.Result != null)
+            {
+                var stackResult = (CloudFormationResult)task.Result;
+                this.WriteObject(this.PassThru ? (object)stackResult.StackArn : stackResult.StackOperationResult);
             }
         }
 

@@ -21,9 +21,7 @@
             var mockContext = new Mock<ICloudFormationContext>();
 
             mockContext.Setup(c => c.Logger).Returns(logger);
-            mockContext.Setup(c => c.TimestampGenerator).Returns(new TestTimestampGenerator());
             mockContext.Setup(c => c.Region).Returns(Region);
-            mockContext.Setup(c => c.AccountId).Returns(AccountId);
 
             return mockContext;
         }

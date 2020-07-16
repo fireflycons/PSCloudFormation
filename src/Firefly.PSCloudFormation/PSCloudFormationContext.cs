@@ -14,7 +14,7 @@
     /// </summary>
     /// <seealso cref="Firefly.CloudFormation.ICloudFormationContext" />
     // ReSharper disable once InconsistentNaming
-    public class PSCloudFormationContext : ICloudFormationContext
+    public class PSCloudFormationContext : IPSCloudFormationContext
     {
         /// <summary>
         /// Gets or sets the AWS account identifier.
@@ -25,7 +25,7 @@
         public string AccountId { get; set; }
 
         /// <summary>
-        /// Gets or sets the cloud formation endpoint URL.
+        /// Gets or sets the custom cloud formation endpoint URL. If unset, then AWS default is used.
         /// </summary>
         /// <value>
         /// The cloud formation endpoint URL.
@@ -62,7 +62,7 @@
         /// <value>
         /// The s3 endpoint URL.
         /// </value>
-        public Uri S3EndpointUrl { get; set; }
+        public string S3EndpointUrl { get; set; }
 
         /// <summary>
         /// Gets or sets the STS endpoint URL.
@@ -70,7 +70,7 @@
         /// <value>
         /// The STS endpoint URL.
         /// </value>
-        public Uri STSEndpointUrl { get; set; }
+        public string STSEndpointUrl { get; set; }
 
         /// <summary>
         /// Gets or sets the timestamp generator.

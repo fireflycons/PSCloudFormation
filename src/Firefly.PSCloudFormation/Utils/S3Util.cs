@@ -52,7 +52,7 @@
         /// </summary>
         /// <param name="clientFactory">The AWS client factory.</param>
         /// <param name="context">The context.</param>
-        public S3Util(IPSAwsClientFactory clientFactory, ICloudFormationContext context)
+        public S3Util(IPSAwsClientFactory clientFactory, IPSCloudFormationContext context)
         {
             this.logger = context.Logger;
             this.clientFactory = clientFactory;

@@ -13,7 +13,7 @@
     /// <see cref="IAwsClientFactory"/> implementation for PowerShell
     /// </summary>
     // ReSharper disable once InconsistentNaming
-    public class PSAwsClientFactory : IPSAwsClientFactory, IDisposable
+    public class PSAwsClientFactory : IPSAwsClientFactory
     {
         /// <summary>
         /// The cloud formation client
@@ -23,14 +23,14 @@
         /// <summary>
         /// The context
         /// </summary>
-        private readonly ICloudFormationContext context;
+        private readonly IPSCloudFormationContext context;
 
         /// <summary>
         /// Initializes a new instance of the <see cref="PSAwsClientFactory"/> class.
         /// </summary>
         /// <param name="cloudFormationClient">The cloud formation client.</param>
         /// <param name="context">The context.</param>
-        public PSAwsClientFactory(IAmazonCloudFormation cloudFormationClient, ICloudFormationContext context)
+        public PSAwsClientFactory(IAmazonCloudFormation cloudFormationClient, IPSCloudFormationContext context)
         {
             this.cloudFormationClient = cloudFormationClient;
             this.context = context;
@@ -70,7 +70,7 @@
                 new AmazonS3Config
                     {
                         RegionEndpoint = this.context.Region,
-                        ServiceURL = this.context.S3EndpointUrl.AbsoluteUri
+                        ServiceURL = this.context.S3EndpointUrl
                     });
         }
 
@@ -98,7 +98,7 @@
                 new AmazonSecurityTokenServiceConfig
                     {
                         RegionEndpoint = this.context.Region,
-                        ServiceURL = this.context.STSEndpointUrl.AbsoluteUri
+                        ServiceURL = this.context.STSEndpointUrl
                     });
         }
 

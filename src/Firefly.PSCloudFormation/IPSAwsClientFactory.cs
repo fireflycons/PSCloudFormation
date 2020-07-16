@@ -9,7 +9,7 @@ namespace Firefly.PSCloudFormation
 
     using Firefly.CloudFormation.Utils;
 
-    interface IPSAwsClientFactory : IAwsClientFactory
+    public interface IPSAwsClientFactory : IAwsClientFactory, IDisposable
     {
         /// <summary>
         /// <para>

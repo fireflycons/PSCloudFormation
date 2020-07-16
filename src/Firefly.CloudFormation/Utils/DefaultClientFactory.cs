@@ -35,7 +35,7 @@
 
             if (this.context.CloudFormationEndpointUrl != null)
             {
-                config.ServiceURL = this.context.S3EndpointUrl.AbsoluteUri;
+                config.ServiceURL = this.context.CloudFormationEndpointUrl.AbsoluteUri;
             }
 
             return new AmazonCloudFormationClient(this.context.Credentials ?? new AnonymousAWSCredentials(), config);
