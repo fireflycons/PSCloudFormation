@@ -17,14 +17,6 @@
     public class PSCloudFormationContext : IPSCloudFormationContext
     {
         /// <summary>
-        /// Gets or sets the AWS account identifier.
-        /// </summary>
-        /// <value>
-        /// The account identifier.
-        /// </value>
-        public string AccountId { get; set; }
-
-        /// <summary>
         /// Gets or sets the custom cloud formation endpoint URL. If unset, then AWS default is used.
         /// </summary>
         /// <value>

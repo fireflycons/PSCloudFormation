@@ -19,6 +19,7 @@
     /// </summary>
     /// <seealso cref="Firefly.PSCloudFormation.StackParameterCloudFormationCommand" />
     [Cmdlet(VerbsCommon.New, "PSCFNStack1")]
+    // ReSharper disable once UnusedMember.Global
     public class NewStackCommand : StackParameterCloudFormationCommand, INewStackArguments
     {
         /// <summary>

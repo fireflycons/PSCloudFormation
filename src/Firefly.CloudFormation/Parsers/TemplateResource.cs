@@ -131,18 +131,21 @@
         /// <exception cref="InvalidDataException">Cannot parse CloudFormation resource from object of type {rawResource.GetType().FullName}</exception>
         internal static TemplateResource Create(object rawResource, string logicalName, string resourceType)
         {
-            if (rawResource is JToken)
+            switch (rawResource)
             {
-                return new JsonTemplateResource(rawResource, logicalName, resourceType);
-            }
+                case JToken _:
 
-            if (rawResource is YamlNode)
-            {
-                return new YamlTemplateResource(rawResource, logicalName, resourceType);
-            }
+                    return new JsonTemplateResource(rawResource, logicalName, resourceType);
 
-            throw new InvalidDataException(
-                $"Cannot parse CloudFormation resource from object of type {rawResource.GetType().FullName}");
+                case YamlNode _:
+
+                    return new YamlTemplateResource(rawResource, logicalName, resourceType);
+
+                default:
+
+                    throw new InvalidDataException(
+                        $"Cannot parse CloudFormation resource from object of type {rawResource.GetType().FullName}");
+            }
         }
     }
 }

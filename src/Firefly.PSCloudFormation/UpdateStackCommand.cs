@@ -20,6 +20,7 @@
     /// </summary>
     /// <seealso cref="Firefly.PSCloudFormation.StackParameterCloudFormationCommand" />
     [Cmdlet(VerbsData.Update, "PSCFNStack1")]
+    // ReSharper disable once UnusedMember.Global
     public class UpdateStackCommand : StackParameterCloudFormationCommand
     {
         /// <summary>
@@ -62,6 +63,7 @@
         /// The use previous template.
         /// </value>
         [Parameter(ValueFromPipelineByPropertyName = true)]
+        // ReSharper disable once UnusedMember.Global - used via underlying property
         public SwitchParameter UsePreviousTemplate
         {
             get => this.UsePreviousTemplateFlag;

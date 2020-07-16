@@ -7,6 +7,7 @@
     /// <summary>
     /// Parameters related to stack creation.
     /// </summary>
+    // ReSharper disable UnusedMemberInSuper.Global - This just describes parameters common to more than one cmdlet
     public interface INewStackArguments
     {
         /// <summary>

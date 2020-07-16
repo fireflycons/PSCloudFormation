@@ -94,6 +94,7 @@
                 throw new ArgumentNullException(nameof(propertyPath));
             }
 
+            // ReSharper disable once UnusedVariable
             var propertyToGet = this.GetYamlProperty(propertyPath, out var parent) as YamlScalarNode;
 
             return propertyToGet?.ToString();

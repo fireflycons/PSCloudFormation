@@ -14,10 +14,14 @@
     using Amazon.S3.Model;
     using Amazon.SecurityToken.Model;
 
-    using Firefly.CloudFormation;
     using Firefly.CloudFormation.S3;
     using Firefly.CloudFormation.Utils;
 
+    /// <summary>
+    /// Class to manage interaction with S3, both for the CloudFormation packager in this solution
+    /// and to pass to <c>Firefly.PSCloudFormation</c> as its interface for managing oversize template/policy documents.
+    /// </summary>
+    /// <seealso cref="Firefly.CloudFormation.S3.IS3Util" />
     internal class S3Util : IS3Util
     {
         /// <summary>
@@ -196,7 +200,7 @@
                         ? $"Version of {filePath} exists: {ToS3Url(latestVersion.BucketName, latestVersion.Key)}, ETag: {latestVersion.ETag}"
                         : $"Version of {filePath} not found");
 
-                if (!this.ObjectChanged(filePath, latestVersion))
+                if (!ObjectChanged(filePath, latestVersion))
                 {
                     // Artifact is unchanged. Return the most recent version.
                     this.logger.LogDebug($"{filePath.Name} is unchanged in S3");
@@ -221,8 +225,7 @@
                 else
                 {
                     // Generate new key name so that CloudFormation will redeploy lambdas etc.
-                    var mc = ObjectVersionRegex.Match(
-                        Path.GetFileName(Path.GetFileNameWithoutExtension(latestVersion.Key)));
+                    var mc = ObjectVersionRegex.Match(Path.GetFileNameWithoutExtension(latestVersion.Key));
 
                     if (mc.Success)
                     {
@@ -359,6 +362,28 @@
         }
 
         /// <summary>
+        /// Determine if the object to upload differs from the object in S3
+        /// </summary>
+        /// <param name="filePath">The file path.</param>
+        /// <param name="latestVersion"><see cref="S3Object"/> representing latest version.</param>
+        /// <returns><c>true</c> if the file is different; else <c>false</c></returns>
+        /// <remarks>
+        /// When comparing zip files, this may always return a positive result as fields within zip directory
+        /// such as time stamps may differ even if the contents are the same, i.e. zipping
+        /// the same thing twice can be a non-idempotent operation.
+        /// </remarks>
+        // ReSharper disable once SuggestBaseTypeForParameter - It is explicitly this type
+        private static bool ObjectChanged(FileInfo filePath, S3Object latestVersion)
+        {
+            if (latestVersion == null)
+            {
+                return true;
+            }
+
+            return latestVersion.ETag.Unquote().ToLowerInvariant() != filePath.MD5();
+        }
+
+        /// <summary>
         /// Converts bucket and key to S3 URL.
         /// </summary>
         /// <param name="bucket">The bucket.</param>
@@ -374,6 +399,7 @@
         /// </summary>
         /// <param name="filePath">The file path.</param>
         /// <returns>Object name</returns>
+        // ReSharper disable once SuggestBaseTypeForParameter - It is explicitly this type
         private string FileInfoToUnVersionedObjectName(FileInfo filePath)
         {
             return Path.GetFileNameWithoutExtension(filePath.Name) + "-" + this.ProjectId;
@@ -400,27 +426,6 @@
                                 })).S3Objects.Where(o => o.Key.EndsWith(ext)).OrderByDescending(o => o.Key)
                     .FirstOrDefault();
             }
-        }
-
-        /// <summary>
-        /// Determine if the object to upload differs from the object in S3
-        /// </summary>
-        /// <param name="filePath">The file path.</param>
-        /// <param name="latestVersion"><see cref="S3Object"/> representing latest version.</param>
-        /// <returns><c>true</c> if the file is different; else <c>false</c></returns>
-        /// <remarks>
-        /// When comparing zip files, this may always return a positive result as fields within zip directory
-        /// such as time stamps may differ even if the contents are the same, i.e. zipping
-        /// the same thing twice can be a non-idempotent operation.
-        /// </remarks>
-        private bool ObjectChanged(FileInfo filePath, S3Object latestVersion)
-        {
-            if (latestVersion == null)
-            {
-                return true;
-            }
-
-            return latestVersion.ETag.Unquote().ToLowerInvariant() != filePath.MD5();
         }
     }
 }

@@ -18,6 +18,7 @@
     /// </summary>
     /// <seealso cref="Firefly.PSCloudFormation.BaseCloudFormationCommand" />
     [Cmdlet(VerbsCommon.Reset, "PSCFNStack1")]
+    // ReSharper disable once UnusedMember.Global
     public class ResetStackCommand : StackParameterCloudFormationCommand, IRemoveStackArguments, INewStackArguments
     {
         /// <summary>

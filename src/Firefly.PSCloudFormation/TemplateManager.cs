@@ -213,7 +213,6 @@
             return "String";
         }
 
-
         /// <summary>
         /// Gets the CLR type for a parameter given the type specified for it in the template.
         /// </summary>

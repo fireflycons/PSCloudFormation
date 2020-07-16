@@ -1,14 +1,17 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Text;
-
-namespace Firefly.PSCloudFormation
+﻿namespace Firefly.PSCloudFormation
 {
+    using System;
+
     using Amazon.S3;
     using Amazon.SecurityToken;
 
     using Firefly.CloudFormation.Utils;
 
+    /// <summary>
+    /// Extends <see cref="IAwsClientFactory"/> to add S3 and STS clients used by cmdlets in this module.
+    /// </summary>
+    // ReSharper disable once StyleCop.SA1600
+    // ReSharper disable once InconsistentNaming
     public interface IPSAwsClientFactory : IAwsClientFactory, IDisposable
     {
         /// <summary>
@@ -51,6 +54,7 @@ namespace Firefly.PSCloudFormation
         /// </para>
         /// </summary>
         /// <returns>A Security Token Service client.</returns>
+
         // ReSharper disable once StyleCop.SA1650
         // ReSharper disable once InconsistentNaming
         IAmazonSecurityTokenService CreateSTSClient();

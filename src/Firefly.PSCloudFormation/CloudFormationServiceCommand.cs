@@ -18,7 +18,6 @@ namespace Firefly.PSCloudFormation
     using Amazon.Runtime.CredentialManagement;
     using Amazon.Util;
 
-    using Firefly.CloudFormation;
     using Firefly.CloudFormation.Utils;
     using Firefly.PSCloudFormation.Utils;
 
@@ -315,7 +314,7 @@ namespace Firefly.PSCloudFormation
                        {
                            Region = this._RegionEndpoint,
                            Credentials = credentials,
-                           S3EndpointUrl = S3EndpointUrl,
+                           S3EndpointUrl = this.S3EndpointUrl,
                            STSEndpointUrl = this.STSEndpointUrl,
                            Logger = this.Logger
                        };
@@ -433,9 +432,7 @@ namespace Firefly.PSCloudFormation
             try
             {
                 resolved = this.SessionState.Path.GetUnresolvedProviderPathFromPSPath(
-                    path.Unquote(),
-                    out var provider,
-                    out var drive);
+                    path.Unquote());
             }
             catch
             {
@@ -550,9 +547,9 @@ namespace Firefly.PSCloudFormation
             {
                 var storedCredentials = sessionState.PSVariable.GetValue("StoredAWSCredentials");
 
-                if (storedCredentials is AWSPSCredentials awspsCredentials)
+                if (storedCredentials is AWSPSCredentials awsPsCredentials)
                 {
-                    awsCredentials = GetCredentialsFromPSCredentials(awspsCredentials);
+                    awsCredentials = GetCredentialsFromPSCredentials(awsPsCredentials);
                 }
             }
 

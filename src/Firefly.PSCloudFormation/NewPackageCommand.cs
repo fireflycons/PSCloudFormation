@@ -112,7 +112,7 @@
                                         Zip = false,
                                         PropertyPath = "ResponseMappingTemplateS3Location",
                                         ReplacementType = typeof(string)
-                                    },
+                                    }
                             }
                     },
                     {
@@ -376,8 +376,8 @@
                                         {
                                             Artifacts = fi.FullName,
                                             CompressionLevel = 9,
-                                            LogMessage = (m) => this.Logger.LogVerbose(m),
-                                            LogError = (e) => this.Logger.LogError(e),
+                                            LogMessage = m => this.Logger.LogVerbose(m),
+                                            LogError = e => this.Logger.LogError(e),
                                             ZipFile = fileToUpload,
                                             TargetPlatform = ZipPlatform.Unix
                                         });
@@ -402,8 +402,8 @@
                                     {
                                         Artifacts = di.FullName,
                                         CompressionLevel = 9,
-                                        LogMessage = (m) => this.Logger.LogVerbose(m),
-                                        LogError = (e) => this.Logger.LogError(e),
+                                        LogMessage = m => this.Logger.LogVerbose(m),
+                                        LogError = e => this.Logger.LogError(e),
                                         ZipFile = fileToUpload,
                                         TargetPlatform = ZipPlatform.Unix
                                     });
@@ -621,6 +621,8 @@
         /// <summary>
         /// S3 location with 'S3' prefixing field names
         /// </summary>
+        // ReSharper disable UnusedAutoPropertyAccessor.Local - Classes are accessed by refection
+        // ReSharper disable MemberCanBePrivate.Local
         private class S3LocationLong
         {
             /// <summary>
@@ -682,5 +684,7 @@
             /// </value>
             public string Key { get; }
         }
+        // ReSharper restore UnusedAutoPropertyAccessor.Local
+        // ReSharper restore MemberCanBePrivate.Local
     }
 }

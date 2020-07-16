@@ -84,6 +84,7 @@
                 throw new ArgumentNullException(nameof(propertyPath));
             }
 
+            // ReSharper disable once UnusedVariable
             var propertyToGet = this.GetJsonProperty(propertyPath, out var parent) as JValue;
 
             return propertyToGet?.Value<string>();

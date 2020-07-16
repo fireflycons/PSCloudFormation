@@ -1,12 +1,9 @@
 ﻿namespace Firefly.PSCloudFormation
 {
-    using System;
-
     using Amazon.CloudFormation;
     using Amazon.S3;
     using Amazon.SecurityToken;
 
-    using Firefly.CloudFormation;
     using Firefly.CloudFormation.Utils;
 
     /// <summary>

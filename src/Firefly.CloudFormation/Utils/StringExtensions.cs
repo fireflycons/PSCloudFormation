@@ -28,12 +28,7 @@
 
             var temp = self.Trim();
 
-            if (Quotes.Any(q => temp.StartsWith(q) && temp.EndsWith(q)))
-            {
-                return temp.Substring(1, temp.Length - 2);
-            }
-
-            return temp;
+            return Quotes.Any(q => temp.StartsWith(q) && temp.EndsWith(q)) ? temp.Substring(1, temp.Length - 2) : temp;
         }
     }
 }

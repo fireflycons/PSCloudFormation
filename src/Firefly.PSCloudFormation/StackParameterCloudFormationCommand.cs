@@ -306,12 +306,9 @@
         /// <returns>Dictionary of parameter key/parameter value.</returns>
         internal IDictionary<string, string> ReadParameterFile()
         {
-            if (string.IsNullOrEmpty(this.ParameterFile))
-            {
-                return new Dictionary<string, string>();
-            }
-
-            return ParameterFileParser.CreateParser(this.ResolveParameterFileContent()).ParseParameterFile();
+            return string.IsNullOrEmpty(this.ParameterFile)
+                       ? new Dictionary<string, string>()
+                       : ParameterFileParser.CreateParser(this.ResolveParameterFileContent()).ParseParameterFile();
         }
 
         /// <summary>
