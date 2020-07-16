@@ -30,7 +30,7 @@
         /// <param name="stackName">Name of the stack.</param>
         /// <param name="usePreviousTemplate">if set to <c>true</c> reuse the existing template that is associated with the stack that you are updating.</param>
         public TemplateResolver(ICloudFormationContext context, string stackName, bool usePreviousTemplate)
-            : this(new DefaultClientFactory(context), stackName, usePreviousTemplate)
+            : this(new DefaultClientFactory(context), context, stackName, usePreviousTemplate)
         {
         }
 
@@ -38,10 +38,11 @@
         /// Initializes a new instance of the <see cref="TemplateResolver"/> class.
         /// </summary>
         /// <param name="clientFactory">The client factory.</param>
+        /// <param name="context">The context.</param>
         /// <param name="stackName">Name of the stack.</param>
         /// <param name="usePreviousTemplate">if set to <c>true</c> [use previous template].</param>
-        public TemplateResolver(IAwsClientFactory clientFactory, string stackName, bool usePreviousTemplate)
-            : base(clientFactory)
+        public TemplateResolver(IAwsClientFactory clientFactory, ICloudFormationContext context, string stackName, bool usePreviousTemplate)
+            : base(clientFactory, context)
         {
             this.usePreviousTemplate = usePreviousTemplate;
             this.stackName = stackName;

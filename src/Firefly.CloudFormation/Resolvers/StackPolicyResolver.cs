@@ -12,8 +12,9 @@
         /// Initializes a new instance of the <see cref="StackPolicyResolver"/> class.
         /// </summary>
         /// <param name="clientFactory">The client factory.</param>
-        public StackPolicyResolver(IAwsClientFactory clientFactory)
-            : base(clientFactory)
+        /// <param name="context">The context.</param>
+        public StackPolicyResolver(IAwsClientFactory clientFactory, ICloudFormationContext context)
+            : base(clientFactory, context)
         {
         }
 

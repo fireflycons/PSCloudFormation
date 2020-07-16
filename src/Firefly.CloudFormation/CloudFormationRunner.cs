@@ -266,7 +266,7 @@ namespace Firefly.CloudFormation
             this.stackOperations = new CloudFormationOperations(this.clientFactory, this.context);
 
             // Get parameters and description from supplied template if any
-            this.templateResolver = new TemplateResolver(this.clientFactory, this.stackName, this.usePreviousTemplate);
+            this.templateResolver = new TemplateResolver(this.clientFactory, this.context, this.stackName, this.usePreviousTemplate);
 
             this.templateResolver.ResolveArtifactLocationAsync(this.context, this.templateLocation, this.stackName)
                 .Wait();
@@ -336,7 +336,7 @@ namespace Firefly.CloudFormation
                 req.TimeoutInMinutes = this.timeoutInMinutes;
             }
 
-            var resolved = await new StackPolicyResolver(this.clientFactory).ResolveArtifactLocationAsync(
+            var resolved = await new StackPolicyResolver(this.clientFactory, this.context).ResolveArtifactLocationAsync(
                 this.context,
                 this.stackPolicyLocation,
                 this.stackName);
@@ -395,7 +395,7 @@ namespace Firefly.CloudFormation
             }
 
             // Resolve template from CloudFormation to get description if any
-            this.templateResolver = new TemplateResolver(this.clientFactory, this.stackName, true);
+            this.templateResolver = new TemplateResolver(this.clientFactory, this.context, this.stackName, true);
             await this.templateResolver.ResolveFileAsync(null);
             
             var parser = TemplateParser.Create(this.templateResolver.FileContent);

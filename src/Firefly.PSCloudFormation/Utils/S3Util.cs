@@ -2,6 +2,7 @@
 {
     using System;
     using System.Collections;
+    using System.Collections.Generic;
     using System.IO;
     using System.Linq;
     using System.Security.Cryptography;
@@ -9,11 +10,15 @@
     using System.Text.RegularExpressions;
     using System.Threading.Tasks;
 
+    using Amazon.S3;
     using Amazon.S3.Model;
+    using Amazon.SecurityToken.Model;
 
+    using Firefly.CloudFormation;
+    using Firefly.CloudFormation.S3;
     using Firefly.CloudFormation.Utils;
 
-    internal class S3Util
+    internal class S3Util : IS3Util
     {
         /// <summary>
         /// Regex to extract name and version from S3 Key
@@ -23,12 +28,49 @@
         /// <summary>
         /// The client factory
         /// </summary>
-        private readonly IAwsClientFactory clientFactory;
+        private readonly IPSAwsClientFactory clientFactory;
+
+        /// <summary>
+        /// The cloud formation bucket
+        /// </summary>
+        private readonly CloudFormationBucket cloudFormationBucket;
 
         /// <summary>
         /// The logger
         /// </summary>
         private readonly ILogger logger;
+
+        /// <summary>
+        /// The timestamp generator. Unit tests supply an alternate so object names may be validated.
+        /// </summary>
+        private readonly ITimestampGenerator timestampGenerator;
+
+        /// <summary>
+        /// Initializes a new instance of the <see cref="S3Util"/> class using the
+        /// library's private bucket which will be created if it doesn't exist and a 7 day lifecycle rule
+        /// applied to prevent build-up of temporary objects.
+        /// </summary>
+        /// <param name="clientFactory">The AWS client factory.</param>
+        /// <param name="context">The context.</param>
+        public S3Util(IPSAwsClientFactory clientFactory, ICloudFormationContext context)
+        {
+            this.logger = context.Logger;
+            this.clientFactory = clientFactory;
+            this.timestampGenerator = context.TimestampGenerator ?? new TimestampGenerator();
+
+            using (var sts = this.clientFactory.CreateSTSClient())
+            {
+                var account = sts.GetCallerIdentityAsync(new GetCallerIdentityRequest()).Result.Account;
+                var bucketName = $"cf-templates-pscloudformation-{context.Region.SystemName}-{account}";
+
+                this.cloudFormationBucket = new CloudFormationBucket
+                                                {
+                                                    BucketName = bucketName,
+                                                    BucketUri = new Uri($"https://{bucketName}.s3.amazonaws.com"),
+                                                    Initialized = false
+                                                };
+            }
+        }
 
         /// <summary>
         /// Initializes a new instance of the <see cref="S3Util"/> class.
@@ -38,7 +80,7 @@
         /// <param name="rootTemplate">The root template.</param>
         /// <param name="bucketName">Name of the bucket.</param>
         /// <exception cref="ArgumentNullException">rootTemplate is null</exception>
-        public S3Util(IAwsClientFactory clientFactory, ILogger logger, string rootTemplate, string bucketName)
+        public S3Util(IPSAwsClientFactory clientFactory, ILogger logger, string rootTemplate, string bucketName)
         {
             this.BucketName = bucketName;
             this.clientFactory = clientFactory ?? throw new ArgumentNullException(nameof(clientFactory));
@@ -62,6 +104,76 @@
         /// The project identifier.
         /// </value>
         public string ProjectId { get; }
+
+        /// <summary>
+        /// Gets the content of an S3 object.
+        /// </summary>
+        /// <param name="bucketName">Name of the bucket.</param>
+        /// <param name="key">The key.</param>
+        /// <returns>
+        /// Object contents
+        /// </returns>
+        public async Task<string> GetS3ObjectContent(string bucketName, string key)
+        {
+            using (var s3 = this.clientFactory.CreateS3Client())
+            {
+                using (var response =
+                    await s3.GetObjectAsync(new GetObjectRequest { BucketName = bucketName, Key = key }))
+                {
+                    using (var sr = new StreamReader(response.ResponseStream))
+                    {
+                        return sr.ReadToEnd();
+                    }
+                }
+            }
+        }
+
+        /// <summary>
+        /// <para>
+        /// Uploads oversize content (template or policy) to S3.
+        /// </para>
+        /// This method will be called by create/update operations to upload oversize content to S3.
+        /// <para></para>
+        /// </summary>
+        /// <param name="stackName">Name of the stack. Use to form part of the S3 key</param>
+        /// <param name="body">String content to be uploaded.</param>
+        /// <param name="originalFilename">File name of original input file, or <c>"RawString"</c> if the input was a string rather than a file</param>
+        /// <param name="uploadFileType">Type of file (template or policy). Could be used to form part of the S3 key.</param>
+        /// <returns>
+        /// URI of uploaded template.
+        /// </returns>
+        public async Task<Uri> UploadOversizeArtifactToS3(
+            string stackName,
+            string body,
+            string originalFilename,
+            UploadFileType uploadFileType)
+        {
+            var bucket = await this.GetCloudFormationBucketAsync();
+            var key = uploadFileType == UploadFileType.Template
+                          ? this.timestampGenerator.GenerateTimestamp() + $"_{stackName}_template_" + originalFilename
+                          : this.timestampGenerator.GenerateTimestamp() + $"_{stackName}_policy_" + originalFilename;
+
+            var ub = new UriBuilder(bucket.BucketUri) { Path = $"/{key}" };
+
+            this.logger.LogInformation($"Copying oversize {uploadFileType.ToString().ToLower()} to {ub.Uri}");
+
+            var ms = new MemoryStream(
+                new UTF8Encoding().GetBytes(body ?? throw new ArgumentNullException(nameof(body))));
+
+            using (var s3 = this.clientFactory.CreateS3Client())
+            {
+                await s3.PutObjectAsync(
+                    new PutObjectRequest
+                        {
+                            BucketName = this.cloudFormationBucket.BucketName,
+                            Key = key,
+                            AutoCloseStream = true,
+                            InputStream = ms
+                        });
+            }
+
+            return ub.Uri;
+        }
 
         /// <summary>
         /// Uploads the resource to s3 asynchronous.
@@ -129,9 +241,7 @@
                 var url = ToS3Url(this.BucketName, key);
                 var req = new PutObjectRequest
                               {
-                                  BucketName = this.BucketName,
-                                  Key = key,
-                                  FilePath = filePath.FullName
+                                  BucketName = this.BucketName, Key = key, FilePath = filePath.FullName
                               };
 
                 if (metadata != null)
@@ -150,7 +260,7 @@
 
                 await s3.PutObjectAsync(req);
 
-            this.logger.LogVerbose($"Uploaded {filePath.Name} to {url}");
+                this.logger.LogVerbose($"Uploaded {filePath.Name} to {url}");
                 return new S3Artifact { BucketName = this.BucketName, Key = key, Url = ToS3Url(this.BucketName, key) };
             }
         }
@@ -176,6 +286,84 @@
             }
         }
 
+        /// <summary>
+        /// Gets the cloud formation bucket, creating as necessary.
+        /// </summary>
+        /// <returns>A <see cref="cloudFormationBucket"/> object.</returns>
+        internal async Task<CloudFormationBucket> GetCloudFormationBucketAsync()
+        {
+            if (this.cloudFormationBucket.Initialized)
+            {
+                return this.cloudFormationBucket;
+            }
+
+            var bucketName = this.cloudFormationBucket.BucketName;
+
+            using (var s3 = this.clientFactory.CreateS3Client())
+            {
+                if ((await s3.ListBucketsAsync(new ListBucketsRequest())).Buckets.FirstOrDefault(
+                        b => b.BucketName == bucketName) == null)
+                {
+                    // Create bucket
+                    this.logger.LogInformation($"Creating bucket '{bucketName}' to store uploaded templates.");
+                    await s3.PutBucketAsync(new PutBucketRequest { BucketName = bucketName });
+
+                    try
+                    {
+                        // Add a lifecycle configuration to prevent buildup of old templates.
+                        this.logger.LogInformation("Adding lifecycle rule to purge temporary uploads after 7 days");
+                        await s3.PutLifecycleConfigurationAsync(
+                            new PutLifecycleConfigurationRequest
+                                {
+                                    BucketName = bucketName,
+                                    Configuration = new LifecycleConfiguration
+                                                        {
+                                                            Rules = new List<LifecycleRule>
+                                                                        {
+                                                                            new LifecycleRule
+                                                                                {
+                                                                                    Id = "delete-after-one-week",
+                                                                                    Filter = new LifecycleFilter
+                                                                                                 {
+                                                                                                     LifecycleFilterPredicate
+                                                                                                         = new
+                                                                                                           LifecyclePrefixPredicate
+                                                                                                               {
+                                                                                                                   Prefix
+                                                                                                                       = string
+                                                                                                                           .Empty
+                                                                                                               }
+                                                                                                 },
+                                                                                    Status =
+                                                                                        LifecycleRuleStatus.Enabled,
+                                                                                    Expiration =
+                                                                                        new LifecycleRuleExpiration
+                                                                                            {
+                                                                                                Days = 7
+                                                                                            }
+                                                                                }
+                                                                        }
+                                                        }
+                                });
+                    }
+                    catch (Exception ex)
+                    {
+                        this.logger.LogWarning(
+                            $"Unable to add lifecycle rule to new bucket. Old temporary uploads will not be automatically purged. Exception was\n{ex.Message}");
+                    }
+                }
+            }
+
+            this.cloudFormationBucket.Initialized = true;
+            return this.cloudFormationBucket;
+        }
+
+        /// <summary>
+        /// Converts bucket and key to S3 URL.
+        /// </summary>
+        /// <param name="bucket">The bucket.</param>
+        /// <param name="key">The key.</param>
+        /// <returns>S3 URL.</returns>
         private static string ToS3Url(string bucket, string key)
         {
             return $"https://{bucket}.s3.amazonaws.com/{key}";

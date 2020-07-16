@@ -72,9 +72,9 @@
             return mock;
         }
 
-        internal static Mock<IAwsClientFactory> GetClientFactoryMock()
+        internal static Mock<IPSAwsClientFactory> GetClientFactoryMock()
         {
-            var mock = new Mock<IAwsClientFactory>();
+            var mock = new Mock<IPSAwsClientFactory>();
 
             mock.Setup(f => f.CreateS3Client()).Returns(GetS3ClientWithBucketMock().Object);
             mock.Setup(f => f.CreateSTSClient()).Returns(GetSTSMock().Object);

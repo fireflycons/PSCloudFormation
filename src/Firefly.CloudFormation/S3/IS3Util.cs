@@ -30,5 +30,13 @@
             string body,
             string originalFilename,
             UploadFileType uploadFileType);
+
+        /// <summary>
+        /// Gets the content of an S3 object.
+        /// </summary>
+        /// <param name="bucketName">Name of the bucket.</param>
+        /// <param name="key">The key.</param>
+        /// <returns>Object contents</returns>
+        Task<string> GetS3ObjectContent(string bucketName, string key);
     }
 }

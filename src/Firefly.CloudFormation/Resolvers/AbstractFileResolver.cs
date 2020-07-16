@@ -7,8 +7,6 @@
     using System.Text.RegularExpressions;
     using System.Threading.Tasks;
 
-    using Amazon.S3.Model;
-
     using Firefly.CloudFormation.Model;
     using Firefly.CloudFormation.S3;
     using Firefly.CloudFormation.Utils;
@@ -23,8 +21,10 @@
         /// Initializes a new instance of the <see cref="AbstractFileResolver"/> class.
         /// </summary>
         /// <param name="clientFactory">The client factory.</param>
-        protected AbstractFileResolver(IAwsClientFactory clientFactory)
+        /// <param name="context">The context.</param>
+        protected AbstractFileResolver(IAwsClientFactory clientFactory, ICloudFormationContext context)
         {
+            this.Context = context;
             this.ClientFactory = clientFactory;
         }
 
@@ -34,16 +34,8 @@
         /// <value>
         /// The artifact content, which will be <c>null</c> if the artifact is located in S3 or Use Previous Template is selected for updates.
         /// </value>
-        public string ArtifactContent => (this.Source & (InputFileSource.S3 | InputFileSource.UsePreviousTemplate)) != 0 ? null : this.FileContent;
-
-        /// <summary>
-        /// Gets the file content - wherever it is located.
-        /// </summary>
-        /// <value>
-        /// The file content.
-        /// </value>
-        // ReSharper disable once StyleCop.SA1623
-        public string FileContent { get; protected set; }
+        public string ArtifactContent =>
+            (this.Source & (InputFileSource.S3 | InputFileSource.UsePreviousTemplate)) != 0 ? null : this.FileContent;
 
         /// <summary>
         /// Gets the file URL, used to populate URL properties of stack request objects.
@@ -55,13 +47,14 @@
         public string ArtifactUrl { get; protected set; }
 
         /// <summary>
-        /// Gets the file's source.
+        /// Gets the file content - wherever it is located.
         /// </summary>
         /// <value>
-        /// The source.
+        /// The file content.
         /// </value>
+
         // ReSharper disable once StyleCop.SA1623
-        public InputFileSource Source { get; protected set; }
+        public string FileContent { get; protected set; }
 
         /// <summary>
         /// Gets the name of the input file, or "RawString" if the input was a string rather than a file.
@@ -69,7 +62,16 @@
         /// <value>
         /// The name of the input file.
         /// </value>
-        public string InputFileName { get; private set;  }
+        public string InputFileName { get; private set; }
+
+        /// <summary>
+        /// Gets the file's source.
+        /// </summary>
+        /// <value>
+        /// The source.
+        /// </value>
+        // ReSharper disable once StyleCop.SA1623
+        public InputFileSource Source { get; protected set; }
 
         /// <summary>
         /// Gets the client factory.
@@ -80,6 +82,14 @@
         protected IAwsClientFactory ClientFactory { get; }
 
         /// <summary>
+        /// Gets the context.
+        /// </summary>
+        /// <value>
+        /// The context.
+        /// </value>
+        protected ICloudFormationContext Context { get; }
+
+        /// <summary>
         /// Gets the maximum size of the file.
         /// If the file is on local file system and is larger than this number of bytes, it must first be uploaded to S3.
         /// </summary>
@@ -87,6 +97,76 @@
         /// The maximum size of the file.
         /// </value>
         protected abstract int MaxFileSize { get; }
+
+        /// <summary>
+        /// Resets the template source if an oversize asset was uploaded to S3.
+        /// </summary>
+        /// <param name="uploadedArtifactUri">The uploaded artifact URI.</param>
+        public void ResetTemplateSource(string uploadedArtifactUri)
+        {
+            this.Source = InputFileSource.S3;
+            this.ArtifactUrl = uploadedArtifactUri;
+        }
+
+        /// <summary>
+        /// Resolves the given artifact location (template or policy) from text input
+        /// uploading it to S3 if the object is larger than the maximum size for
+        /// body text supported by the CloudFormation API.
+        /// </summary>
+        /// <param name="context">The context for logging.</param>
+        /// <param name="objectToResolve">The object to resolve.</param>
+        /// <param name="stackName">Name of the stack.</param>
+        /// <returns>
+        /// Result of the resolution.
+        /// </returns>
+        public async Task<ResolutionResult> ResolveArtifactLocationAsync(
+            ICloudFormationContext context,
+            string objectToResolve,
+            string stackName)
+        {
+            var result = new ResolutionResult();
+
+            // Nasty, but really want out arguments here.
+            this.ResolveFileAsync(objectToResolve).Wait();
+
+            var fileType = this is TemplateResolver ? UploadFileType.Template : UploadFileType.Policy;
+
+            if ((this.Source & InputFileSource.Oversize) != 0)
+            {
+                if (context.S3Util == null)
+                {
+                    throw new StackOperationException(
+                        $"Unable to upload oversize {fileType.ToString().ToLowerInvariant()} to S3. No implementation of {typeof(IS3Util).FullName} has been provided.");
+                }
+
+                result.ArtifactUrl = (await context.S3Util.UploadOversizeArtifactToS3(
+                                          stackName,
+                                          this.ArtifactContent,
+                                          this.InputFileName,
+                                          fileType)).AbsoluteUri;
+
+                this.ResetTemplateSource(result.ArtifactUrl);
+            }
+            else
+            {
+                // ReSharper disable once SwitchStatementMissingSomeEnumCasesNoDefault
+                switch (this.Source)
+                {
+                    case InputFileSource.S3:
+
+                        result.ArtifactUrl = this.ArtifactUrl;
+                        break;
+
+                    case InputFileSource.File:
+                    case InputFileSource.String:
+
+                        result.ArtifactBody = this.ArtifactContent;
+                        break;
+                }
+            }
+
+            return result;
+        }
 
         /// <summary>
         /// Resolves and loads the given file from the specified location
@@ -156,7 +236,8 @@
                         }
 
                         this.InputFileName = Path.GetFileNameWithoutExtension(key);
-                        await this.GetS3ObjectContent(bucketName, key);
+                        this.FileContent = await this.Context.S3Util.GetS3ObjectContent(bucketName, key);
+                        this.Source = InputFileSource.S3;
 
                         this.ArtifactUrl = uri.AbsoluteUri;
 
@@ -167,7 +248,9 @@
                         bucketName = uri.Host;
                         key = uri.LocalPath.TrimStart('/');
 
-                        await this.GetS3ObjectContent(bucketName, key);
+                        this.FileContent = await this.Context.S3Util.GetS3ObjectContent(bucketName, key);
+                        this.Source = InputFileSource.S3;
+
                         // ReSharper disable once StringLiteralTypo
                         this.ArtifactUrl = $"https://{bucketName}.s3.amazonaws.com/{key}";
 
@@ -185,76 +268,6 @@
             }
 
             return this.FileContent;
-        }
-
-        /// <summary>
-        /// Resolves the given artifact location (template or policy) from text input
-        /// uploading it to S3 if the object is larger than the maximum size for
-        /// body text supported by the CloudFormation API.
-        /// </summary>
-        /// <param name="context">The context for logging.</param>
-        /// <param name="objectToResolve">The object to resolve.</param>
-        /// <param name="stackName">Name of the stack.</param>
-        /// <returns>
-        /// Result of the resolution.
-        /// </returns>
-        public async Task<ResolutionResult> ResolveArtifactLocationAsync(
-            ICloudFormationContext context,
-            string objectToResolve,
-            string stackName)
-        {
-            var result = new ResolutionResult();
-
-            // Nasty, but really want out arguments here.
-            this.ResolveFileAsync(objectToResolve).Wait();
-
-            var fileType = this is TemplateResolver ? UploadFileType.Template : UploadFileType.Policy;
-
-            if ((this.Source & InputFileSource.Oversize) != 0)
-            {
-                result.ArtifactUrl = (await new BucketOperations(this.ClientFactory, context).UploadOversizeArtifactToS3(
-                    stackName,
-                    this.ArtifactContent,
-                    this.InputFileName,
-                    fileType)).AbsoluteUri;
-
-                this.ResetTemplateSource(result.ArtifactUrl);
-            }
-            else
-            {
-                // ReSharper disable once SwitchStatementMissingSomeEnumCasesNoDefault
-                switch (this.Source)
-                {
-                    case InputFileSource.S3:
-
-                        result.ArtifactUrl = this.ArtifactUrl;
-                        break;
-
-                    case InputFileSource.File:
-                    case InputFileSource.String:
-
-                        result.ArtifactBody = this.ArtifactContent;
-                        break;
-                }
-            }
-
-            return result;
-        }
-
-        /// <summary>
-        /// Resolves an artifact passed to the command as a raw string, checking its length for being oversize.
-        /// </summary>
-        /// <param name="stringContent">Content of the string.</param>
-        private void GetStringContent(string stringContent)
-        {
-            this.FileContent = stringContent;
-            this.Source = InputFileSource.String;
-            this.InputFileName = "RawString";
-
-            if (Encoding.UTF8.GetByteCount(stringContent) >= this.MaxFileSize)
-            {
-                this.Source |= InputFileSource.Oversize;
-            }
         }
 
         /// <summary>
@@ -280,33 +293,18 @@
         }
 
         /// <summary>
-        /// Resets the template source if an oversize asset was uploaded to S3.
+        /// Resolves an artifact passed to the command as a raw string, checking its length for being oversize.
         /// </summary>
-        /// <param name="uploadedArtifactUri">The uploaded artifact URI.</param>
-        public void ResetTemplateSource(string uploadedArtifactUri)
+        /// <param name="stringContent">Content of the string.</param>
+        private void GetStringContent(string stringContent)
         {
-            this.Source = InputFileSource.S3;
-            this.ArtifactUrl = uploadedArtifactUri;
-        }
+            this.FileContent = stringContent;
+            this.Source = InputFileSource.String;
+            this.InputFileName = "RawString";
 
-        /// <summary>
-        /// Gets the content of the s3 object.
-        /// </summary>
-        /// <param name="bucketName">Name of the bucket.</param>
-        /// <param name="key">The key.</param>
-        /// <returns>A task.</returns>
-        private async Task GetS3ObjectContent(string bucketName, string key)
-        {
-            using (var s3 = this.ClientFactory.CreateS3Client())
+            if (Encoding.UTF8.GetByteCount(stringContent) >= this.MaxFileSize)
             {
-                using (var response = await s3.GetObjectAsync(new GetObjectRequest { BucketName = bucketName, Key = key }))
-                {
-                    using (var sr = new StreamReader(response.ResponseStream))
-                    {
-                        this.FileContent = sr.ReadToEnd();
-                        this.Source = InputFileSource.S3;
-                    }
-                }
+                this.Source |= InputFileSource.Oversize;
             }
         }
     }

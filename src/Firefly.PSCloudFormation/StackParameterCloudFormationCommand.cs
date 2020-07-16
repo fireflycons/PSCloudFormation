@@ -1,6 +1,8 @@
 ﻿namespace Firefly.PSCloudFormation
 {
+    using System;
     using System.Collections.Generic;
+    using System.IO;
     using System.Linq;
     using System.Management.Automation;
     using System.Threading.Tasks;
@@ -12,6 +14,7 @@
     using Firefly.CloudFormation.Model;
     using Firefly.CloudFormation.Parsers;
     using Firefly.CloudFormation.Resolvers;
+    using Firefly.CloudFormation.Utils;
 
     /// <summary>
     /// <para>
@@ -47,7 +50,7 @@
         /// <summary>
         /// The parameter file location
         /// </summary>
-        private string parameterFileLocation;
+        private string parameterFile;
 
         /// <summary>
         /// Gets or sets the capabilities.
@@ -109,18 +112,17 @@
         /// If your stack has a parameter with the same name as one of the parameters to this cmdlet, then you *must* set the stack parameter via a parameter file.
         /// </para>
         /// <para type="description">
-        /// You can specify either a string, path to a file, or URL of a object in S3 that contains the parameters.
+        /// You can specify either a string containing JSON or YAML, or path to a file that contains the parameters.
         /// </para>
         /// </summary>
         /// <value>
         /// The parameter file.
         /// </value>
         [Parameter(ValueFromPipelineByPropertyName = true)]
-        [Alias("ParameterFile")]
-        public string ParameterFileLocation
+        public string ParameterFile
         {
-            get => this.parameterFileLocation; 
-            set => this.parameterFileLocation = this.ResolvePath(value);
+            get => this.parameterFile; 
+            set => this.parameterFile = this.ResolvePath(value);
         }
 
         /// <summary>
@@ -304,16 +306,12 @@
         /// <returns>Dictionary of parameter key/parameter value.</returns>
         internal IDictionary<string, string> ReadParameterFile()
         {
-            if (string.IsNullOrEmpty(this.ParameterFileLocation))
+            if (string.IsNullOrEmpty(this.ParameterFile))
             {
                 return new Dictionary<string, string>();
             }
 
-            // Template resolver will do to resolve location of parameter file
-            var resolver = new TemplateResolver(this.ClientFactory, this.StackName, false);
-            var parser = ParameterFileParser.CreateParser(resolver.ResolveFileAsync(this.ParameterFileLocation).Result);
-
-            return parser.ParseParameterFile();
+            return ParameterFileParser.CreateParser(this.ResolveParameterFileContent()).ParseParameterFile();
         }
 
         /// <summary>
@@ -382,6 +380,29 @@
                     });
 
             return null;
+        }
+
+        /// <summary>
+        /// Resolves the content of the parameter file.
+        /// </summary>
+        /// <returns>Parameter file content.</returns>
+        /// <exception cref="ArgumentException">Parameter file cannot be in S3 - ParameterFile</exception>
+        private string ResolveParameterFileContent()
+        {
+            if (File.Exists(this.ParameterFile))
+            {
+                return File.ReadAllText(this.ParameterFile);
+            }
+
+            if (Uri.TryCreate(this.ParameterFile, UriKind.Absolute, out var uri)
+                && !string.IsNullOrEmpty(uri.Scheme))
+            {
+                // ReSharper disable once NotResolvedInText - This is a cmdlet argument rather than local method
+                throw new ArgumentException("Parameter file cannot be in S3", "ParameterFile");
+            }
+
+            // It is string content
+            return this.ParameterFile.Unquote();
         }
     }
 }

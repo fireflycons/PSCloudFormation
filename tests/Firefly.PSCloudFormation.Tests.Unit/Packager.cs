@@ -45,7 +45,7 @@ namespace Firefly.PSCloudFormation.Tests.Unit
             mockS3.Setup(s3 => s3.ListObjectsV2Async(It.IsAny<ListObjectsV2Request>(), default))
                 .ReturnsAsync(this.fileNotFound);
 
-            var mockClientFactory = new Mock<IAwsClientFactory>();
+            var mockClientFactory = new Mock<IPSAwsClientFactory>();
 
             mockClientFactory.Setup(f => f.CreateS3Client()).Returns(mockS3.Object);
             mockClientFactory.Setup(f => f.CreateSTSClient()).Returns(mockSts.Object);
@@ -101,7 +101,7 @@ namespace Firefly.PSCloudFormation.Tests.Unit
                                         }
                     }).ReturnsAsync(this.fileNotFound).ReturnsAsync(this.fileNotFound);
 
-            var mockClientFactory = new Mock<IAwsClientFactory>();
+            var mockClientFactory = new Mock<IPSAwsClientFactory>();
 
             mockClientFactory.Setup(f => f.CreateS3Client()).Returns(mockS3.Object);
             mockClientFactory.Setup(f => f.CreateSTSClient()).Returns(mockSts.Object);
@@ -161,7 +161,7 @@ namespace Firefly.PSCloudFormation.Tests.Unit
                                         }
                 }).ReturnsAsync(this.fileNotFound);
 
-            var mockClientFactory = new Mock<IAwsClientFactory>();
+            var mockClientFactory = new Mock<IPSAwsClientFactory>();
 
             mockClientFactory.Setup(f => f.CreateS3Client()).Returns(mockS3.Object);
             mockClientFactory.Setup(f => f.CreateSTSClient()).Returns(mockSts.Object);

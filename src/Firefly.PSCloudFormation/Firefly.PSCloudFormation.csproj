@@ -10,6 +10,8 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <PackageReference Include="AWSSDK.S3" Version="3.3.110.33" />
+    <PackageReference Include="AWSSDK.SecurityToken" Version="3.3.104.41" />
     <PackageReference Include="Firefly.CrossPlatformZip" Version="0.5.0" />
     <PackageReference Include="Firefly.PowerShell.DynamicParameters" Version="0.2.1" />
     <PackageReference Include="PowerShellStandard.Library" Version="5.1.0" />

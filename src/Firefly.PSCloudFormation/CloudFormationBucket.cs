@@ -1,11 +1,11 @@
-﻿namespace Firefly.CloudFormation.Model
+﻿namespace Firefly.PSCloudFormation
 {
     using System;
 
     /// <summary>
     /// Describes the bucket used to manage oversize (> 51200 bytes) templates
     /// </summary>
-    internal class CloudFormationBucket
+    public class CloudFormationBucket
     {
         /// <summary>
         /// Gets or sets the name of the bucket.

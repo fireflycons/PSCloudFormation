@@ -13,7 +13,7 @@
     /// <see cref="IAwsClientFactory"/> implementation for PowerShell
     /// </summary>
     // ReSharper disable once InconsistentNaming
-    public class PSAwsClientFactory : IAwsClientFactory, IDisposable
+    public class PSAwsClientFactory : IPSAwsClientFactory, IDisposable
     {
         /// <summary>
         /// The cloud formation client

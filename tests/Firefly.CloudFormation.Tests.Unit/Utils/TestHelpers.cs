@@ -3,10 +3,6 @@
     using System.Collections.Generic;
 
     using Amazon;
-    using Amazon.S3;
-    using Amazon.S3.Model;
-    using Amazon.SecurityToken;
-    using Amazon.SecurityToken.Model;
 
     using Firefly.CloudFormation.Utils;
 
@@ -32,54 +28,9 @@
             return mockContext;
         }
 
-        public static Mock<IAmazonS3> GetS3ClientWithBucketMock()
-        {
-            var mock = new Mock<IAmazonS3>();
-
-            mock.Setup(s3 => s3.ListBucketsAsync(It.IsAny<ListBucketsRequest>(), default)).ReturnsAsync(
-                new ListBucketsResponse
-                    {
-                        Buckets = new List<S3Bucket>
-                                      {
-                                          new S3Bucket
-                                              {
-                                                  BucketName = $"cf-templates-pscloudformation-{RegionName}-{AccountId}"
-                                              }
-                                      }
-                    });
-
-            mock.Setup(s3 => s3.PutObjectAsync(It.IsAny<PutObjectRequest>(), default))
-                .ReturnsAsync(new PutObjectResponse());
-
-            return mock;
-        }
-
-        public static Mock<IAmazonS3> GetS3ClientWithoutBucketMock()
-        {
-            var mock = new Mock<IAmazonS3>();
-
-            mock.Setup(s3 => s3.ListBucketsAsync(It.IsAny<ListBucketsRequest>(), default))
-                .ReturnsAsync(new ListBucketsResponse { Buckets = new List<S3Bucket>() });
-
-            return mock;
-        }
-
-        public static Mock<IAmazonSecurityTokenService> GetSTSMock()
-        {
-            var mock = new Mock<IAmazonSecurityTokenService>();
-
-            mock.Setup(sts => sts.GetCallerIdentityAsync(It.IsAny<GetCallerIdentityRequest>(), default))
-                .ReturnsAsync(new GetCallerIdentityResponse() { Account = AccountId });
-
-            return mock;
-        }
-
         internal static Mock<IAwsClientFactory> GetClientFactoryMock()
         {
             var mock = new Mock<IAwsClientFactory>();
-
-            mock.Setup(f => f.CreateS3Client()).Returns(GetS3ClientWithBucketMock().Object);
-            mock.Setup(f => f.CreateSTSClient()).Returns(GetSTSMock().Object);
 
             return mock;
         }

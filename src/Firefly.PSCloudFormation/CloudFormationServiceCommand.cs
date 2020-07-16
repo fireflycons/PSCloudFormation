@@ -20,6 +20,7 @@ namespace Firefly.PSCloudFormation
 
     using Firefly.CloudFormation;
     using Firefly.CloudFormation.Utils;
+    using Firefly.PSCloudFormation.Utils;
 
     using AWSRegion = Amazon.PowerShell.Common.AWSRegion;
 
@@ -37,6 +38,8 @@ namespace Firefly.PSCloudFormation
     /// <seealso cref="System.Management.Automation.PSCmdlet" />
     public class CloudFormationServiceCommand : PSCmdlet
     {
+        private ICloudFormationContext context;
+
         /// <summary>
         /// Gets or sets the access key.
         /// <para type="description">
@@ -258,6 +261,11 @@ namespace Firefly.PSCloudFormation
         /// <returns>New <see cref="ICloudFormationContext"/></returns>
         protected ICloudFormationContext CreateCloudFormationContext()
         {
+            if (this.context != null)
+            {
+                return this.context;
+            }
+
             AWSCredentials credentials;
 
             if (this._CurrentCredentials != null)
@@ -299,7 +307,7 @@ namespace Firefly.PSCloudFormation
 
             this.Logger = new PSLogger(this);
 
-            return new PSCloudFormationContext
+            this.context = new PSCloudFormationContext
                        {
                            Region = this._RegionEndpoint,
                            Credentials = credentials,
@@ -310,6 +318,8 @@ namespace Firefly.PSCloudFormation
                                                 : new Uri(this.S3EndpointUrl),
                            Logger = this.Logger
                        };
+
+            return this.context;
         }
 
         /// <summary>

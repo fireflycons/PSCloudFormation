@@ -239,7 +239,7 @@
 
             // TemplateResolver is good enough for our purposes here
             return ResourceImportParser.Create(
-                await new TemplateResolver(this.clientFactory, this.stackName, false)
+                await new TemplateResolver(this.clientFactory, this.context, this.stackName, false)
                     .ResolveFileAsync(this.resourcesToImportLocation))
                 .GetResourcesToImport();
         }
@@ -251,7 +251,7 @@
         /// <returns>New <see cref="UpdateStackRequest"/></returns>
         private async Task<UpdateStackRequest> GetUpdateRequestWithPolicyFromChangesetRequestAsync(CreateChangeSetRequest changeSetRequest)
         {
-            var policyResolver = new StackPolicyResolver(this.clientFactory);
+            var policyResolver = new StackPolicyResolver(this.clientFactory, this.context);
 
             var policy = await policyResolver.ResolveArtifactLocationAsync(
                              this.context,

@@ -6,6 +6,7 @@
     using Amazon.Runtime;
 
     using Firefly.CloudFormation;
+    using Firefly.CloudFormation.S3;
     using Firefly.CloudFormation.Utils;
 
     /// <summary>
@@ -78,5 +79,14 @@
         /// The timestamp generator.
         /// </value>
         public ITimestampGenerator TimestampGenerator { get; set; }
+
+        /// <summary>
+        /// Gets or sets the S3 utility.
+        /// Used for uploading oversize objects to S3
+        /// </summary>
+        /// <value>
+        /// The S3 utility.
+        /// </value>
+        public IS3Util S3Util { get; set; }
     }
 }
