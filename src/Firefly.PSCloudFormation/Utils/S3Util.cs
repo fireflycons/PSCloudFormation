@@ -35,11 +35,6 @@
         private readonly IPSAwsClientFactory clientFactory;
 
         /// <summary>
-        /// The cloud formation bucket
-        /// </summary>
-        private readonly CloudFormationBucket cloudFormationBucket;
-
-        /// <summary>
         /// The logger
         /// </summary>
         private readonly ILogger logger;
@@ -48,6 +43,11 @@
         /// The timestamp generator. Unit tests supply an alternate so object names may be validated.
         /// </summary>
         private readonly ITimestampGenerator timestampGenerator;
+
+        /// <summary>
+        /// The cloud formation bucket
+        /// </summary>
+        private CloudFormationBucket cloudFormationBucket;
 
         /// <summary>
         /// Initializes a new instance of the <see cref="S3Util"/> class using the
@@ -59,47 +59,54 @@
         public S3Util(IPSAwsClientFactory clientFactory, IPSCloudFormationContext context)
         {
             this.logger = context.Logger;
-            this.clientFactory = clientFactory;
+            this.clientFactory = clientFactory ?? throw new ArgumentNullException(nameof(clientFactory));
             this.timestampGenerator = context.TimestampGenerator ?? new TimestampGenerator();
 
-            using (var sts = this.clientFactory.CreateSTSClient())
-            {
-                var account = sts.GetCallerIdentityAsync(new GetCallerIdentityRequest()).Result.Account;
-                var bucketName = $"cf-templates-pscloudformation-{context.Region.SystemName}-{account}";
-
-                this.cloudFormationBucket = new CloudFormationBucket
-                                                {
-                                                    BucketName = bucketName,
-                                                    BucketUri = new Uri($"https://{bucketName}.s3.amazonaws.com"),
-                                                    Initialized = false
-                                                };
-            }
+            this.GeneratePrivateBucketName(context);
         }
 
         /// <summary>
         /// Initializes a new instance of the <see cref="S3Util"/> class.
         /// </summary>
         /// <param name="clientFactory">The client factory.</param>
-        /// <param name="logger">The logger.</param>
+        /// <param name="context">The context.</param>
         /// <param name="rootTemplate">The root template.</param>
         /// <param name="bucketName">Name of the bucket.</param>
         /// <exception cref="ArgumentNullException">rootTemplate is null</exception>
-        public S3Util(IPSAwsClientFactory clientFactory, ILogger logger, string rootTemplate, string bucketName)
+        public S3Util(
+            IPSAwsClientFactory clientFactory,
+            IPSCloudFormationContext context,
+            string rootTemplate,
+            string bucketName)
         {
-            this.BucketName = bucketName;
             this.clientFactory = clientFactory ?? throw new ArgumentNullException(nameof(clientFactory));
-            this.logger = logger ?? throw new ArgumentNullException(nameof(logger));
+            this.logger = context.Logger;
 
             // Generate a hash of the root template filename to use as part of uploaded file keys
             // to identify this package 'project'
             this.ProjectId = GenerateProjectId(rootTemplate ?? throw new ArgumentNullException(nameof(rootTemplate)));
             this.logger?.LogDebug($"Project ID for this template is {this.ProjectId}");
+
+            if (bucketName == null)
+            {
+                this.GeneratePrivateBucketName(context);
+            }
+            else
+            {
+                // We assume the user has provided a valid bucket
+                this.cloudFormationBucket = new CloudFormationBucket
+                                                {
+                                                    BucketName = bucketName,
+                                                    BucketUri = new Uri($"https://{bucketName}.s3.amazonaws.com"),
+                                                    Initialized = true
+                                                };
+            }
         }
 
         /// <summary>
         /// Gets the bucket name
         /// </summary>
-        public string BucketName { get; }
+        public string BucketName => this.cloudFormationBucket.BucketName;
 
         /// <summary>
         /// Gets the project identifier.
@@ -372,6 +379,7 @@
         /// such as time stamps may differ even if the contents are the same, i.e. zipping
         /// the same thing twice can be a non-idempotent operation.
         /// </remarks>
+
         // ReSharper disable once SuggestBaseTypeForParameter - It is explicitly this type
         private static bool ObjectChanged(FileInfo filePath, S3Object latestVersion)
         {
@@ -399,10 +407,31 @@
         /// </summary>
         /// <param name="filePath">The file path.</param>
         /// <returns>Object name</returns>
+
         // ReSharper disable once SuggestBaseTypeForParameter - It is explicitly this type
         private string FileInfoToUnVersionedObjectName(FileInfo filePath)
         {
             return Path.GetFileNameWithoutExtension(filePath.Name) + "-" + this.ProjectId;
+        }
+
+        /// <summary>
+        /// Generates name of module's private bucket
+        /// </summary>
+        /// <param name="context">The context.</param>
+        private void GeneratePrivateBucketName(IPSCloudFormationContext context)
+        {
+            using (var sts = this.clientFactory.CreateSTSClient())
+            {
+                var account = sts.GetCallerIdentityAsync(new GetCallerIdentityRequest()).Result.Account;
+                var bucketName = $"cf-templates-pscloudformation-{context.Region.SystemName}-{account}";
+
+                this.cloudFormationBucket = new CloudFormationBucket
+                                                {
+                                                    BucketName = bucketName,
+                                                    BucketUri = new Uri($"https://{bucketName}.s3.amazonaws.com"),
+                                                    Initialized = false
+                                                };
+            }
         }
 
         /// <summary>

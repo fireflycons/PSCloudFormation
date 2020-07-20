@@ -471,7 +471,7 @@
             var clientFactory = new PSAwsClientFactory(
                 this.CreateClient(this._CurrentCredentials, this._RegionEndpoint),
                 context);
-            this.S3 = new S3Util(clientFactory, context.Logger, this.TemplateFile, this.S3Bucket);
+            this.S3 = new S3Util(clientFactory, context, this.TemplateFile, this.S3Bucket);
 
             var workingDirectory = Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString());
 
@@ -479,21 +479,33 @@
             {
                 Directory.CreateDirectory(workingDirectory);
 
-                var processedTemplatePath = this.ProcessTemplate(this.TemplateFile, workingDirectory).Result;
+                try
+                {
+                    var processedTemplatePath = this.ProcessTemplate(this.TemplateFile, workingDirectory).Result;
 
-                // The base stack template was changed
-                if (this.OutputTemplateFile != null)
-                {
-                    File.Copy(processedTemplatePath, this.OutputTemplateFile, true);
-                }
-                else
-                {
-                    this.WriteObject(File.ReadAllText(processedTemplatePath));
-                }
+                    // The base stack template was changed
+                    if (this.OutputTemplateFile != null)
+                    {
+                        File.Copy(processedTemplatePath, this.OutputTemplateFile, true);
+                    }
+                    else
+                    {
+                        this.WriteObject(File.ReadAllText(processedTemplatePath));
+                    }
 
-                if (processedTemplatePath != this.TemplateFile)
+                    if (processedTemplatePath != this.TemplateFile)
+                    {
+                        File.Delete(processedTemplatePath);
+                    }
+                }
+                catch (AggregateException aex)
                 {
-                    File.Delete(processedTemplatePath);
+                    var ex = aex.InnerExceptions.First();
+                    this.ThrowExecutionError(ex.Message, this, ex);
+                }
+                catch (Exception ex)
+                {
+                    this.ThrowExecutionError(ex.Message, this, ex);
                 }
             }
             finally

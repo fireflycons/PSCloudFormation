@@ -5,13 +5,10 @@ using System.Text;
 namespace Firefly.PSCloudFormation.Tests.Unit
 {
     using System.IO;
-    using System.Security.Cryptography;
     using System.Threading.Tasks;
 
     using Amazon.S3.Model;
 
-    using Firefly.CloudFormation.S3;
-    using Firefly.CloudFormation.Utils;
     using Firefly.PSCloudFormation.Tests.Unit.Resources;
     using Firefly.PSCloudFormation.Tests.Unit.Utils;
     using Firefly.PSCloudFormation.Utils;
@@ -50,6 +47,9 @@ namespace Firefly.PSCloudFormation.Tests.Unit
             mockClientFactory.Setup(f => f.CreateS3Client()).Returns(mockS3.Object);
             mockClientFactory.Setup(f => f.CreateSTSClient()).Returns(mockSts.Object);
 
+            var mockContext = new Mock<IPSCloudFormationContext>();
+            mockContext.Setup(c => c.Logger).Returns(logger);
+
             using var templateDir = EmbeddedResourceManager.GetResourceDirectory("DeepNestedStack");
             using var workingDirectory = new TempDirectory();
 
@@ -60,7 +60,7 @@ namespace Firefly.PSCloudFormation.Tests.Unit
                                      S3 =
                                          new S3Util(
                                              mockClientFactory.Object,
-                                             logger,
+                                             mockContext.Object,
                                              template,
                                              "test-bucket"),
                                      PathResolver = this.pathResolver,
@@ -86,6 +86,8 @@ namespace Firefly.PSCloudFormation.Tests.Unit
             var logger = new TestLogger(this.output);
             var mockSts = TestHelpers.GetSTSMock();
             var mockS3 = TestHelpers.GetS3ClientWithBucketMock();
+            var mockContext = new Mock<IPSCloudFormationContext>();
+            mockContext.Setup(c => c.Logger).Returns(logger);
 
             mockS3.SetupSequence(s3 => s3.ListObjectsV2Async(It.IsAny<ListObjectsV2Request>(), default)).ReturnsAsync(
                 new ListObjectsV2Response
@@ -114,7 +116,7 @@ namespace Firefly.PSCloudFormation.Tests.Unit
                                      S3 =
                                          new S3Util(
                                              mockClientFactory.Object,
-                                             logger,
+                                             mockContext.Object,
                                              template,
                                              "test-bucket"),
                                      PathResolver = this.pathResolver,
@@ -144,6 +146,8 @@ namespace Firefly.PSCloudFormation.Tests.Unit
             var logger = new TestLogger(this.output);
             var mockSts = TestHelpers.GetSTSMock();
             var mockS3 = TestHelpers.GetS3ClientWithBucketMock();
+            var mockContext = new Mock<IPSCloudFormationContext>();
+            mockContext.Setup(c => c.Logger).Returns(logger);
 
             mockS3.SetupSequence(s3 => s3.ListObjectsV2Async(It.IsAny<ListObjectsV2Request>(), default))
                 .ReturnsAsync(this.fileNotFound)
@@ -173,7 +177,7 @@ namespace Firefly.PSCloudFormation.Tests.Unit
                 S3 =
                                          new S3Util(
                                              mockClientFactory.Object,
-                                             logger,
+                                             mockContext.Object,
                                              template,
                                              "test-bucket"),
                 PathResolver = this.pathResolver,
