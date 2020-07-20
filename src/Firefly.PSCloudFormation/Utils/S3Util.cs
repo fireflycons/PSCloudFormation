@@ -445,14 +445,11 @@
             using (var s3 = this.clientFactory.CreateS3Client())
             {
                 var ext = Path.GetExtension(filePath.Name);
+                var prefix = (keyPrefix.TrimEnd('/') + '/' + this.FileInfoToUnVersionedObjectName(filePath)).TrimStart('/');
+                var objects = (await s3.ListObjectsV2Async(
+                                  new ListObjectsV2Request { BucketName = this.BucketName, Prefix = prefix })).S3Objects;
 
-                return (await s3.ListObjectsV2Async(
-                            new ListObjectsV2Request
-                                {
-                                    BucketName = this.BucketName,
-                                    Prefix = keyPrefix.TrimEnd('/') + '/'
-                                                                    + this.FileInfoToUnVersionedObjectName(filePath)
-                                })).S3Objects.Where(o => o.Key.EndsWith(ext)).OrderByDescending(o => o.Key)
+                return objects.Where(o => o.Key.EndsWith(ext)).OrderByDescending(o => o.Key)
                     .FirstOrDefault();
             }
         }
