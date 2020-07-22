@@ -41,7 +41,7 @@
 
                 return BitConverter
                     .ToString(md5.ComputeHash(Encoding.ASCII.GetBytes(string.Join(string.Empty, md5List))))
-                    .ToLowerInvariant();
+                    .Replace("-", string.Empty).ToLowerInvariant();
             }
         }
     }

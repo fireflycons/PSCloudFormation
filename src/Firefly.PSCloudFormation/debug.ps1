@@ -4,13 +4,17 @@ param
 )
 
 import-module (Join-Path $PSScriptRoot 'PSCloudFormation.psd1')
-
 <#
-New-PSCFNPackage1 -TemplateFile "H:\Dev\Git\PSCloudFormation\tests\packager\complex-nested-stacks\base-stack.json"
 
+push-location H:\dev\git\proget-aws
+
+New-PSCFNPackage1 -TemplateFile  .\cloudFormation.yaml -Verbose -Debug
+
+pop-location
 
 Read-Host -Prompt "Press Enter" | Out-Null
 exit 0
+
 #>
 
 $stackName = 'test-stack-' + [Guid]::NewGuid().ToString().SubString(0,8)
@@ -125,7 +129,7 @@ try
             $commands = @(
             
                 { 
-                    New-PSCFNPackage1 -TemplateFile $nestedTemplatePath -S3Bucket fireflycons-misc-eu-west-1 -S3Prefix nested-test |
+                    New-PSCFNPackage1 -TemplateFile $nestedTemplatePath -S3Bucket fireflycons-misc-eu-west-1 -S3Prefix nested-test -Debug -Verbose |
                     New-PSCFNStack1 -StackName $stackName -Capabilities CAPABILITY_IAM -Wait
                 }
 

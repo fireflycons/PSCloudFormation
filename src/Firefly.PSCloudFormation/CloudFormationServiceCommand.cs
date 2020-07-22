@@ -332,6 +332,8 @@ namespace Firefly.PSCloudFormation
         {
             base.EndProcessing();
             this._ClientFactory?.Dispose();
+
+            (this.context.S3Util as S3Util)?.Dispose();
         }
 
         /// <summary>

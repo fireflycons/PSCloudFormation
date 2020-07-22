@@ -287,7 +287,7 @@
             var outputTemplatePath = templatePath;
             var parser = TemplateParser.Create(File.ReadAllText(templatePath));
             var resources = parser.GetResources().ToList();
-            var isModified = false;
+            var templateModified = false;
 
             // Process nested stacks first
             foreach (var nestedStack in resources.Where(r => r.ResourceType == CloudFormationStack))
@@ -307,22 +307,31 @@
 
                         // Referenced nested template is in the filesystem, therefore it must be uploaded
                         // whether or not it was itself modified
-                        var processedTemplate = await this.ProcessTemplate(fi.FullName, workingDirectory);
-                        isModified = true;
+                        var processedTemplate = new FileInfo(await this.ProcessTemplate(fi.FullName, workingDirectory));
+                        templateModified = true;
 
                         // Output intermediate templates to console if -Debug
                         this.Logger.LogDebug(
                             "Processed template '{0}'\n\n{1}",
                             fi.FullName,
-                            File.ReadAllText(processedTemplate));
+                            File.ReadAllText(processedTemplate.FullName));
 
-                        var artifact = await this.S3.UploadResourceToS3Async(
-                                           new FileInfo(processedTemplate),
-                                           this.S3Prefix,
-                                           this.Metadata);
+                        var resourceToUpload = new ResourceUploadSettings
+                                                   {
+                                                       File = processedTemplate,
+                                                       Hash = processedTemplate.MD5(),
+                                                       KeyPrefix = this.S3Prefix,
+                                                       Metadata = this.Metadata
+                                                   };
+
+                        if (await this.S3.ObjectChangedAsync(resourceToUpload))
+                        {
+                            await this.S3.UploadResourceToS3Async(resourceToUpload);
+                        }
 
                         // Update resource to point to uploaded template
-                        nestedStack.UpdateResourceProperty("TemplateURL", artifact.Url);
+                        nestedStack.UpdateResourceProperty("TemplateURL", resourceToUpload.S3Artifact.Url);
+
                         break;
 
                     default:
@@ -356,7 +365,10 @@
                     }
 
                     string fileToUpload;
-                    isModified = true;
+                    ResourceUploadSettings resourceToUpload;
+
+                    templateModified = true;
+                    var uploadResource = false;
 
                     switch (fsi)
                     {
@@ -369,22 +381,46 @@
                                     workingDirectory,
                                     $"{Path.GetFileNameWithoutExtension(fi.Name)}.zip");
 
-                                this.Logger.LogVerbose($"Zipping '{fi.FullName}' to {Path.GetFileName(fileToUpload)}");
+                                resourceToUpload = new ResourceUploadSettings
+                                                       {
+                                                           File = new FileInfo(fileToUpload),
+                                                           Hash = fi.MD5(),
+                                                           KeyPrefix = this.S3Prefix,
+                                                           Metadata = this.Metadata
+                                                       };
 
-                                Zipper.Zip(
-                                    new CrossPlatformZipSettings
-                                        {
-                                            Artifacts = fi.FullName,
-                                            CompressionLevel = 9,
-                                            LogMessage = m => this.Logger.LogVerbose(m),
-                                            LogError = e => this.Logger.LogError(e),
-                                            ZipFile = fileToUpload,
-                                            TargetPlatform = ZipPlatform.Unix
-                                        });
+                                uploadResource = await this.S3.ObjectChangedAsync(resourceToUpload);
+
+                                if (uploadResource)
+                                {
+                                    this.Logger.LogVerbose(
+                                        $"Zipping '{fi.FullName}' to {Path.GetFileName(fileToUpload)}");
+
+                                    // Compute hash before zipping as zip hashes not idempotent due to temporally changing attributes in central directory
+
+                                    Zipper.Zip(
+                                        new CrossPlatformZipSettings
+                                            {
+                                                Artifacts = fi.FullName,
+                                                CompressionLevel = 9,
+                                                LogMessage = m => this.Logger.LogVerbose(m),
+                                                LogError = e => this.Logger.LogError(e),
+                                                ZipFile = fileToUpload,
+                                                TargetPlatform = ZipPlatform.Unix
+                                            });
+                                }
                             }
                             else
                             {
-                                fileToUpload = fi.FullName;
+                                resourceToUpload = new ResourceUploadSettings
+                                                       {
+                                                           File = fi,
+                                                           Hash = fi.MD5(),
+                                                           KeyPrefix = this.S3Prefix,
+                                                           Metadata = this.Metadata
+                                                       };
+
+                                uploadResource = await this.S3.ObjectChangedAsync(resourceToUpload);
                             }
 
                             break;
@@ -394,19 +430,33 @@
                             // Property value points to a directory, which must always be zipped.
                             fileToUpload = Path.Combine(workingDirectory, $"{di.Name}.zip");
 
-                            this.Logger.LogVerbose(
-                                $"Zipping directory '{di.FullName}' to {Path.GetFileName(fileToUpload)}");
+                            // Compute hash before zipping as zip hashes not idempotent due to temporally changing attributes in central directory
+                            resourceToUpload = new ResourceUploadSettings
+                                                   {
+                                                       File = new FileInfo(fileToUpload),
+                                                       Hash = di.MD5(),
+                                                       KeyPrefix = this.S3Prefix,
+                                                       Metadata = this.Metadata
+                                                   };
 
-                            Zipper.Zip(
-                                new CrossPlatformZipSettings
-                                    {
-                                        Artifacts = di.FullName,
-                                        CompressionLevel = 9,
-                                        LogMessage = m => this.Logger.LogVerbose(m),
-                                        LogError = e => this.Logger.LogError(e),
-                                        ZipFile = fileToUpload,
-                                        TargetPlatform = ZipPlatform.Unix
-                                    });
+                            uploadResource = await this.S3.ObjectChangedAsync(resourceToUpload);
+
+                            if (uploadResource)
+                            {
+                                this.Logger.LogVerbose(
+                                    $"Zipping directory '{di.FullName}' to {Path.GetFileName(fileToUpload)}");
+
+                                Zipper.Zip(
+                                    new CrossPlatformZipSettings
+                                        {
+                                            Artifacts = di.FullName,
+                                            CompressionLevel = 9,
+                                            LogMessage = m => this.Logger.LogVerbose(m),
+                                            LogError = e => this.Logger.LogError(e),
+                                            ZipFile = fileToUpload,
+                                            TargetPlatform = ZipPlatform.Unix
+                                        });
+                            }
 
                             break;
 
@@ -417,22 +467,22 @@
                                 $"Unsupported derivative of FileSystemInfo: {fsi.GetType().FullName}");
                     }
 
-                    var artifact = await this.S3.UploadResourceToS3Async(
-                                       new FileInfo(fileToUpload),
-                                       this.S3Prefix,
-                                       this.Metadata);
+                    if (uploadResource)
+                    {
+                        await this.S3.UploadResourceToS3Async(resourceToUpload);
+                    }
 
                     if (propertyToCheck.ReplacementType == typeof(string))
                     {
                         // Insert the URI directly
-                        resource.UpdateResourceProperty(propertyToCheck.PropertyPath, artifact.Url);
+                        resource.UpdateResourceProperty(propertyToCheck.PropertyPath, resourceToUpload.S3Artifact.Url);
                     }
                     else
                     {
                         // Create an instance of the new mapping
                         // ReSharper disable once StyleCop.SA1305
                         var s3Location = propertyToCheck.ReplacementType.GetConstructor(new[] { typeof(S3Artifact) })
-                            ?.Invoke(new object[] { artifact });
+                            ?.Invoke(new object[] { resourceToUpload.S3Artifact });
 
                         if (s3Location == null)
                         {
@@ -447,7 +497,7 @@
                 }
             }
 
-            if (isModified)
+            if (templateModified)
             {
                 // Generate a filename and save.
                 // The caller will upload the template to S3

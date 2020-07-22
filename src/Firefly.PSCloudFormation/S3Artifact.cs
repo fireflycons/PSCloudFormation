@@ -22,11 +22,11 @@
         public string Key { get; set; }
 
         /// <summary>
-        /// Gets or sets the URL.
+        /// Gets the S3 URL.
         /// </summary>
         /// <value>
         /// The URL.
         /// </value>
-        public string Url { get; set; }
+        public string Url => $"https://{this.BucketName}.s3.amazonaws.com/{this.Key}";
     }
 }
