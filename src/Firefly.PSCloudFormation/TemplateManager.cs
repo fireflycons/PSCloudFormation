@@ -39,7 +39,7 @@
                                                                                             {
                                                                                                 "AWS::EC2::KeyPair::KeyName",
                                                                                                 new Regex(
-                                                                                                    @"^\w{1,255}$")
+                                                                                                    @"^[^\s].{1,253}[^\s]$")
                                                                                             },
                                                                                             {
                                                                                                 "AWS::EC2::SecurityGroup::GroupName",
