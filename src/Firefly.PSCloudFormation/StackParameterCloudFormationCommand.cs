@@ -363,7 +363,15 @@
                         var userParameters = this.MyInvocation.BoundParameters
                             .Where(p => this.stackParameterNames.Contains(p.Key)).ToDictionary(
                                 kvp => kvp.Key,
-                                kvp => kvp.Value.ToString());
+                                kvp =>
+                                    {
+                                        if (kvp.Value is Array arr)
+                                        {
+                                            return string.Join(",", from object val in arr select val.ToString().Trim());
+                                        }
+
+                                        return kvp.Value.ToString();
+                                    });
 
                         // Merge file and user parameters, with user parameters taking precedence
                         this.StackParameters = userParameters
