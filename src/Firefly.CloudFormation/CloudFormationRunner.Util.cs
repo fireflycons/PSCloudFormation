@@ -29,7 +29,7 @@
         private static string CreateChangeSetName()
         {
             // ReSharper disable once StringLiteralTypo
-            return "pscloudformation-" + (long)(DateTime.UtcNow - new DateTime(1970, 1, 1, 0, 0, 0, DateTimeKind.Utc))
+            return "fc-cloudformation-" + (long)(DateTime.UtcNow - new DateTime(1970, 1, 1, 0, 0, 0, DateTimeKind.Utc))
                    .TotalMilliseconds;
         }
 

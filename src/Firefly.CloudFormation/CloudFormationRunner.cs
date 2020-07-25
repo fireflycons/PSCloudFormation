@@ -532,14 +532,13 @@ namespace Firefly.CloudFormation
 
             // If we get here, stack is in Ready state
             var changeSetName = CreateChangeSetName();
-            var stackParameters = this.GetStackParametersForUpdate(this.templateResolver, stack);
             var resourcesToImport = await this.GetResourcesToImportAsync();
 
             var changeSetRequest = new CreateChangeSetRequest
                                        {
                                            ChangeSetName = changeSetName,
                                            ChangeSetType = resourcesToImport != null ? ChangeSetType.IMPORT : ChangeSetType.UPDATE,
-                                           Parameters = stackParameters,
+                                           Parameters = this.GetStackParametersForUpdate(this.templateResolver, stack),
                                            Capabilities = this.capabilities.Select(c => c.Value).ToList(),
                                            StackName = stack.StackId,
                                            ClientToken = this.clientToken,
