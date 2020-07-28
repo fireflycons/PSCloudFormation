@@ -286,7 +286,7 @@ namespace Firefly.CloudFormation.Model
         /// <summary>Sets whether to wait for in progress update.</summary>
         /// <param name="enable">If <c>true</c> (default), wait for stack action to complete, logging stack events to the given <see cref="ILogger"/> implementation.</param>
         /// <returns>The builder</returns>
-        public CloudFormationBuilder WithWaitForInProgressUpdate(bool enable = true)
+        public CloudFormationBuilder WithFollowOperation(bool enable = true)
         {
             this._waitForInProgressUpdate = enable;
             return this;

@@ -5,6 +5,7 @@
     using Amazon.S3;
     using Amazon.SecurityToken;
 
+    using Firefly.CloudFormation;
     using Firefly.CloudFormation.Utils;
 
     /// <summary>

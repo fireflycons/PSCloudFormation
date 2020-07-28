@@ -11,7 +11,7 @@
     /// <summary>
     /// Logging implementation for tests
     /// </summary>
-    /// <seealso cref="Firefly.CloudFormation.Utils.ILogger" />
+    /// <seealso cref="ILogger" />
     public class TestLogger : BaseLogger
     {
         /// <summary>

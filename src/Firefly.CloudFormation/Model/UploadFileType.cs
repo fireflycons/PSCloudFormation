@@ -1,4 +1,4 @@
-﻿namespace Firefly.CloudFormation.S3
+﻿namespace Firefly.CloudFormation.Model
 {
     /// <summary>
     /// Describes whether a file to be uploaded to S3 is a template or a policy.

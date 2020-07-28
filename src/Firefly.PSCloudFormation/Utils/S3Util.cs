@@ -14,14 +14,15 @@
     using Amazon.S3.Model;
     using Amazon.SecurityToken.Model;
 
-    using Firefly.CloudFormation.S3;
+    using Firefly.CloudFormation;
+    using Firefly.CloudFormation.Model;
     using Firefly.CloudFormation.Utils;
 
     /// <summary>
     /// Class to manage interaction with S3, both for the CloudFormation packager in this solution
     /// and to pass to <c>Firefly.PSCloudFormation</c> as its interface for managing oversize template/policy documents.
     /// </summary>
-    /// <seealso cref="Firefly.CloudFormation.S3.IS3Util" />
+    /// <seealso cref="IS3Util" />
     internal class S3Util : IS3Util, IDisposable
     {
         internal const string PackagerHashKey = "pscfnpackge-hash";
@@ -173,28 +174,30 @@
             string originalFilename,
             UploadFileType uploadFileType)
         {
-            var bucket = await this.GetCloudFormationBucketAsync();
-            var key = uploadFileType == UploadFileType.Template
-                          ? this.timestampGenerator.GenerateTimestamp() + $"_{stackName}_template_" + originalFilename
-                          : this.timestampGenerator.GenerateTimestamp() + $"_{stackName}_policy_" + originalFilename;
+            using (var ms = new MemoryStream(
+                new UTF8Encoding().GetBytes(body ?? throw new ArgumentNullException(nameof(body)))))
+            {
+                var bucket = await this.GetCloudFormationBucketAsync();
+                var key = uploadFileType == UploadFileType.Template
+                              ? this.timestampGenerator.GenerateTimestamp()
+                                + $"_{stackName}_template_{originalFilename}"
+                              : this.timestampGenerator.GenerateTimestamp() + $"_{stackName}_policy_{originalFilename}";
 
-            var ub = new UriBuilder(bucket.BucketUri) { Path = $"/{key}" };
+                var ub = new UriBuilder(bucket.BucketUri) { Path = $"/{key}" };
 
-            this.logger.LogInformation($"Copying oversize {uploadFileType.ToString().ToLower()} to {ub.Uri}");
+                this.logger.LogInformation($"Copying oversize {uploadFileType.ToString().ToLower()} to {ub.Uri}");
 
-            var ms = new MemoryStream(
-                new UTF8Encoding().GetBytes(body ?? throw new ArgumentNullException(nameof(body))));
+                await this.s3.PutObjectAsync(
+                    new PutObjectRequest
+                        {
+                            BucketName = this.cloudFormationBucket.BucketName,
+                            Key = key,
+                            AutoCloseStream = true,
+                            InputStream = ms
+                        });
 
-            await this.s3.PutObjectAsync(
-                new PutObjectRequest
-                    {
-                        BucketName = this.cloudFormationBucket.BucketName,
-                        Key = key,
-                        AutoCloseStream = true,
-                        InputStream = ms
-                    });
-
-            return ub.Uri;
+                return ub.Uri;
+            }
         }
 
         /// <summary>

@@ -8,12 +8,13 @@
 
     using Amazon.CloudFormation.Model;
 
+    using Firefly.CloudFormation;
     using Firefly.CloudFormation.Utils;
 
     /// <summary>
     /// Concrete logger implementation for PowerShell
     /// </summary>
-    /// <seealso cref="Firefly.CloudFormation.Utils.ILogger" />
+    /// <seealso cref="ILogger" />
 
     // ReSharper disable once InconsistentNaming
     public class PSLogger : BaseLogger

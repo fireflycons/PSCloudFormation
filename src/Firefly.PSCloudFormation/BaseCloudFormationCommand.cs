@@ -136,7 +136,7 @@
         {
             return CloudFormationRunner.Builder(this.CreateCloudFormationContext(), this.StackName)
                 .WithClientToken(this.ClientRequestToken).WithRoleArn(this.RoleARN)
-                .WithWaitForInProgressUpdate(this.Wait);
+                .WithFollowOperation(this.Wait);
         }
 
         /// <summary>

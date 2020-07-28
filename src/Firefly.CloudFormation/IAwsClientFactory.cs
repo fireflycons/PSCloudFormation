@@ -1,4 +1,4 @@
-﻿namespace Firefly.CloudFormation.Utils
+﻿namespace Firefly.CloudFormation
 {
     using Amazon.CloudFormation;
 

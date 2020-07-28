@@ -1,4 +1,4 @@
-﻿namespace Firefly.CloudFormation.Utils
+﻿namespace Firefly.CloudFormation
 {
     using System.Collections.Generic;
 

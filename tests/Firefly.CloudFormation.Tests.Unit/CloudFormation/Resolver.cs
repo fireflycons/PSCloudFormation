@@ -8,7 +8,6 @@
 
     using Firefly.CloudFormation.Model;
     using Firefly.CloudFormation.Resolvers;
-    using Firefly.CloudFormation.S3;
     using Firefly.CloudFormation.Tests.Unit.resources;
     using Firefly.CloudFormation.Tests.Unit.Utils;
     using Firefly.CloudFormation.Utils;

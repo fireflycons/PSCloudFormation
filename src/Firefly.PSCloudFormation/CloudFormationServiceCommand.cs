@@ -18,6 +18,7 @@ namespace Firefly.PSCloudFormation
     using Amazon.Runtime.CredentialManagement;
     using Amazon.Util;
 
+    using Firefly.CloudFormation;
     using Firefly.CloudFormation.Utils;
     using Firefly.PSCloudFormation.Utils;
 

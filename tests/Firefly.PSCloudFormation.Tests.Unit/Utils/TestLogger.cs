@@ -4,6 +4,7 @@
 
     using Amazon.CloudFormation.Model;
 
+    using Firefly.CloudFormation;
     using Firefly.CloudFormation.Utils;
 
     using Xunit.Abstractions;
@@ -11,7 +12,7 @@
     /// <summary>
     /// Logging implementation for tests
     /// </summary>
-    /// <seealso cref="Firefly.CloudFormation.Utils.ILogger" />
+    /// <seealso cref="ILogger" />
     public class TestLogger : BaseLogger
     {
         /// <summary>

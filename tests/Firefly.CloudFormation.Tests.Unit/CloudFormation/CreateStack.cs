@@ -98,7 +98,7 @@
             using var template = new TempFile(EmbeddedResourceManager.GetResourceStream("test-stack.json"));
             var runner = CloudFormationRunner.Builder(mockContext.Object, StackName)
                 .WithClientFactory(mockClientFactory.Object)
-                .WithWaitForInProgressUpdate()
+                .WithFollowOperation()
                 .WithTemplateLocation(template.Path)
                 .Build();
 

@@ -170,7 +170,7 @@ namespace Firefly.CloudFormation.Tests.Unit.CloudFormation
         }
 
         /// <summary>
-        /// Update should fail if a stack operation is in progress and WithWaitForInProgressUpdate was not applied to the builder.
+        /// Update should fail if a stack operation is in progress and WithFollowOperation was not applied to the builder.
         /// </summary>
         /// <param name="stackStatus">The stack status.</param>
         [Theory]
@@ -577,7 +577,7 @@ namespace Firefly.CloudFormation.Tests.Unit.CloudFormation
             using var template = new TempFile(EmbeddedResourceManager.GetResourceStream("test-stack.json"));
 
             var runner = CloudFormationRunner.Builder(mockContext.Object, StackName)
-                .WithClientFactory(mockClientFactory.Object).WithTemplateLocation(template.Path).WithWaitForInProgressUpdate().Build();
+                .WithClientFactory(mockClientFactory.Object).WithTemplateLocation(template.Path).WithFollowOperation().Build();
 
             (await runner.UpdateStackAsync(_ => true)).StackOperationResult.Should().Be(StackOperationResult.StackUpdated);
             logger.ChangeSets.Count.Should().BeGreaterThan(0);
@@ -680,7 +680,7 @@ namespace Firefly.CloudFormation.Tests.Unit.CloudFormation
             using var template = new TempFile(EmbeddedResourceManager.GetResourceStream("test-stack.json"));
 
             var runner = CloudFormationRunner.Builder(mockContext.Object, StackName)
-                .WithClientFactory(mockClientFactory.Object).WithTemplateLocation(template.Path).WithWaitForInProgressUpdate().Build();
+                .WithClientFactory(mockClientFactory.Object).WithTemplateLocation(template.Path).WithFollowOperation().Build();
 
             Func<Task<CloudFormationResult>> action = async () => await runner.UpdateStackAsync(_ => true);
 

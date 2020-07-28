@@ -6,7 +6,7 @@
     /// <summary>
     /// Default AWS client factory
     /// </summary>
-    /// <seealso cref="Firefly.CloudFormation.Utils.IAwsClientFactory" />
+    /// <seealso cref="IAwsClientFactory" />
     internal class DefaultClientFactory : IAwsClientFactory
     {
         /// <summary>

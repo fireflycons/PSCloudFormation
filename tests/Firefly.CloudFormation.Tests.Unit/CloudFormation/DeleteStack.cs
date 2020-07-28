@@ -156,7 +156,7 @@
             mockClientFactory.Setup(f => f.CreateCloudFormationClient()).Returns(mockCloudFormation.Object);
             var runner = CloudFormationRunner.Builder(mockContext.Object, StackName)
                 .WithClientFactory(mockClientFactory.Object)
-                .WithWaitForInProgressUpdate()
+                .WithFollowOperation()
                 .Build();
 
             (await runner.DeleteStackAsync()).StackOperationResult.Should().Be(StackOperationResult.StackDeleted);
@@ -181,7 +181,7 @@
 
             var runner = CloudFormationRunner.Builder(mockContext.Object, StackName)
                 .WithClientFactory(mockClientFactory.Object)
-                .WithWaitForInProgressUpdate()
+                .WithFollowOperation()
                 .Build();
 
             Func<Task<CloudFormationResult>> action = async () => await runner.DeleteStackAsync();

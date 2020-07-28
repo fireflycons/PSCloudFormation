@@ -5,7 +5,6 @@
     using Amazon;
     using Amazon.Runtime;
 
-    using Firefly.CloudFormation.S3;
     using Firefly.CloudFormation.Utils;
 
     /// <summary>

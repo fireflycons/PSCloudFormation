@@ -7,7 +7,7 @@
     /// <summary>
     /// Concrete class to generate timestamps to form changeset names
     /// </summary>
-    /// <seealso cref="Firefly.CloudFormation.Utils.ITimestampGenerator" />
+    /// <seealso cref="ITimestampGenerator" />
     internal class TimestampGenerator : ITimestampGenerator
     {
         /// <summary>

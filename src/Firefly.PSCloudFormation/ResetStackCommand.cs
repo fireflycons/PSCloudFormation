@@ -105,7 +105,7 @@
             await base.OnProcessRecord();
 
             // We have to wait for the delete, irrespective of -Wait setting
-            using (var runner = this.GetBuilder().WithRetainResource(this.RetainResource).WithWaitForInProgressUpdate()
+            using (var runner = this.GetBuilder().WithRetainResource(this.RetainResource).WithFollowOperation()
                 .Build())
             {
                 if (!this.Force && this.AskYesNo(
@@ -127,7 +127,7 @@
                 .WithDisableRollback(this.DisableRollback)
                 .WithOnFailure(this.OnFailure)
                 .WithTerminationProtection(this.EnableTerminationProtection)
-                .WithWaitForInProgressUpdate(this.Wait)
+                .WithFollowOperation(this.Wait)
                 .WithTimeoutInMinutes(this.TimeoutInMinutes).Build())
             {
                 return await runner.CreateStackAsync();

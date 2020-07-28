@@ -1,4 +1,4 @@
-﻿namespace Firefly.CloudFormation.Utils
+﻿namespace Firefly.PSCloudFormation
 {
     /// <summary>
     /// Interface that defines a timestamp generator to form timestamp part of a changeset name.
