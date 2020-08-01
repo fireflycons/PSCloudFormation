@@ -10,13 +10,43 @@
     /// <para type="synopsis">Calls the AWS CloudFormation DeleteStack API operation.</para>
     /// <para type="description">
     /// Deletes a specified stack.
-    /// If -Wait is present on the command line, then the call does not return until the stack has deleted.
+    /// The call does not return until the stack deletion has completed unless -PassThru is present,
+    /// in which case it returns immediately and you can check the status of the stack via the DescribeStacks API
     /// Stack events for this template and any nested stacks are output to the console.
-    /// If -Wait is not present, the call returns immediately after stack deletion begins. You can check the status of the stack via the DescribeStacks API.
     /// </para>
     /// </summary>
+    /// <example>
+    /// <code>
+    /// Remove-PSFNStack -StackName my-stack
+    /// </code>
+    /// <para>
+    /// Deletes the specified stack
+    /// </para>
+    /// </example>
+    /// <example>
+    /// <code>
+    /// Remove-PSFNStack -StackName my-stack -PassThru
+    /// </code>
+    /// <para>
+    /// Deletes the specified stack. Don't wait for the deletion to complete.
+    /// </para>
+    /// </example>
+    /// <example>
+    /// <code>
+    /// Remove-PSFNStack -StackName my-stack -RetainResource my-bucket, my-security-group
+    /// </code>
+    /// <para>
+    /// Deletes the specified stack, retaining the specified resources.
+    /// </para>
+    /// <para>
+    /// Note that the listed resources will only be retained if, and only if the stack is in a <c>DELETE_FAILED</c> state
+    /// and the listed resources are the cause of the failure. IF the stack is not <c>DELETE_FAILED</c>, you will be asked
+    /// if you want to proceed with the delete and if you answer yes, then ALL resources will be deleted.
+    /// </para>
+    /// </example>
     /// <seealso cref="Firefly.PSCloudFormation.BaseCloudFormationCommand" />
     [Cmdlet(VerbsCommon.Remove, "PSCFNStack1")]
+    [OutputType(typeof(CloudFormationResult))]
     // ReSharper disable once UnusedMember.Global
     public class RemoveStackCommand : BaseCloudFormationCommand, IRemoveStackArguments
     {

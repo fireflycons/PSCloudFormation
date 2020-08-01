@@ -14,11 +14,12 @@
 
     /// <summary>
     /// <para type="synopsis">
-    /// Packages the local artifacts (local paths) that your AWS CloudFormation template references.
+    /// Packages the local artifacts (local paths) that your AWS CloudFormation template references, similarly to <c>aws cloudformation package</c>.
     /// </para>
     /// <para type="description">
     /// The command uploads local artifacts, such as source code for an AWS Lambda function or a Swagger file for an AWS API Gateway REST API, to an S3 bucket.
     /// The command returns a copy of your template, replacing references to local artifacts with the S3 location where the command uploaded the artifacts.
+    /// Unlike <c>aws cloudformation package</c>, the output template is in the same format as the input template, i.e. there is no conversion from JSON to YAML.
     /// </para>
     /// <para type="description">
     /// Use this command to quickly upload local artifacts that might be required by your template.
@@ -34,11 +35,42 @@
     /// The command returns a template and replaces the local path with the S3 location: <c>CodeUri: s3://mybucket/lambdafunction.zip</c>.
     /// </para>
     /// <para type="description">
-    /// If you specify a file, the command directly uploads it to the S3 bucket.
+    /// If you specify a file, the command directly uploads it to the S3 bucket, zipping it first if the resource requires it (e.g. lambda).
     /// If you specify a folder, the command zips the folder and then uploads the .zip file.
     /// For most resources, if you don't specify a path, the command zips and uploads the current working directory.
     /// he exception is <c>AWS::ApiGateway::RestApi</c>; if you don't specify a <c>BodyS3Location</c>, this command will not upload an artifact to S3.
     /// </para>
+    /// <example>
+    /// <code>
+    /// New-PSCFNPackage -TemplateFile my-template.json -OutputTemplateFile my-modified-template.json
+    /// </code>
+    /// <para>
+    /// Reads the template, recursively walking any <c>AWS::CloudFormation::Stack</c> resources, uploading code artifacts and nested templates to S3,
+    /// using the bucket that is auto-created by this module.
+    /// </para>
+    /// </example>
+    /// <example>
+    /// <code>
+    /// New-PSCFNPackage -TemplateFile my-template.json -OutputTemplateFile my-modified-template.json -S3Bucket my-bucket -S3Prefix template-resouces
+    /// </code>
+    /// <para>
+    /// Reads the template, recursively walking any <c>AWS::CloudFormation::Stack</c> resources, uploading code artifacts and nested templates to S3,
+    /// using the specified bucket which must exist, and key prefix for all uploaded objects.
+    /// </para>
+    /// </example>
+    /// <example>
+    /// <code>
+    /// New-PSCFNPackage -TemplateFile my-template.json | New-PSCFNStack -StackName my-stack -ParameterFile stack-parameters.json
+    /// </code>
+    /// <para>
+    /// Reads the template, recursively walking any <c>AWS::CloudFormation::Stack</c> resources, uploading code artifacts and nested templates to S3,
+    /// then sends the modified template to <c>New-PSCFNStack</c> to create a new stack.
+    /// </para>
+    /// <para>
+    /// Due to the nuances of PowerShell dynamic parameters, any stack customization parameters must be placed in a parameter file, as PowerShell starts
+    /// the <c>New-PSCFNStack</c> cmdlet before it receives the template, therefore the template parameters cannot be known in advance.
+    /// </para>
+    /// </example>
     /// </summary>
     /// <seealso cref="Firefly.PSCloudFormation.CloudFormationServiceCommand" />
     [Cmdlet(VerbsCommon.New, "PSCFNPackage1")]

@@ -10,14 +10,27 @@
     /// <summary>
     /// <para type="synopsis">Deletes, then recreates a stack.</para>
     /// <para type="description">
-    /// Deletes a specified stack, then recreates it from the supplied template. You may want to do this if a previous create attempt failed leaving the stack in ROLLBACK_COMPLETE, then you fix the template.
-    /// If -Wait is present on the command line, then the call does not return until the stack has deleted.
+    /// Deletes a specified stack, then recreates it from the supplied template.
+    /// You may want to do this if a previous create attempt failed leaving the stack in ROLLBACK_COMPLETE, then you fix the template.
+    /// The call does not return until the stack recreation has completed unless -PassThru is present,
+    /// in which case it returns immediately and you can check the status of the stack via the DescribeStacks API
     /// Stack events for this template and any nested stacks are output to the console.
-    /// If -Wait is not present, the call returns immediately after stack deletion begins. You can check the status of the stack via the DescribeStacks API.
     /// </para>
+    /// <para>
+    /// Valid arguments for this cmdlet are a combination of those for <c>Remove-PSCFNStack</c> and <c>New-PSCFNStack</c>.
+    /// </para>
+    /// <example>
+    /// <code>Reset-PSCFNStack -StackName "my-stack" -TemplateBody "{TEMPLATE CONTENT HERE}" -PK1 PV1 -PK2 PV2 -DisableRollback</code>
+    /// <para>
+    /// Deletes then creates a new stack with the specified name and follows the output until the operation completes.
+    /// The template is parsed from the supplied content with customization parameters ('PK1' and 'PK2' represent the names of parameters declared in the template content, 'PV1' and 'PV2' represent the values for those parameters.
+    /// If creation of the stack fails, it will not be rolled back.
+    /// </para>
+    /// </example>
     /// </summary>
     /// <seealso cref="Firefly.PSCloudFormation.BaseCloudFormationCommand" />
     [Cmdlet(VerbsCommon.Reset, "PSCFNStack1")]
+    [OutputType(typeof(CloudFormationResult))]
     // ReSharper disable once UnusedMember.Global
     public class ResetStackCommand : StackParameterCloudFormationCommand, IRemoveStackArguments, INewStackArguments
     {
@@ -127,8 +140,9 @@
                 .WithDisableRollback(this.DisableRollback)
                 .WithOnFailure(this.OnFailure)
                 .WithTerminationProtection(this.EnableTerminationProtection)
-                .WithFollowOperation(this.Wait)
-                .WithTimeoutInMinutes(this.TimeoutInMinutes).Build())
+                .WithFollowOperation(!this.PassThru)
+                .WithTimeoutInMinutes(this.TimeoutInMinutes)
+                .Build())
             {
                 return await runner.CreateStackAsync();
             }

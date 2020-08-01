@@ -346,3 +346,9 @@ PSCloudFormation/PSCloudFormation.netcore.psd1
 test-output/
 PSCloudFormation/en-US/PSCloudFormation-help.xml
 *.linq
+
+src/**/*.xml
+
+# Junction linked items
+src/Firefly.CloudFormation/
+tests/Firefly.CloudFormation.Tests.Unit/

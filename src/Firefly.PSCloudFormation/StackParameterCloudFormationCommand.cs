@@ -163,16 +163,15 @@
 
         /// <summary>
         /// Gets or sets the rollback configuration rollback trigger.
-        /// <parameter type="description">
+        /// <para type="description">
         /// The triggers to monitor during stack creation or update actions. By default, AWS CloudFormation saves the rollback triggers specified for a stack and applies them to any subsequent update operations for the stack, unless you specify otherwise.
         /// If you do specify rollback triggers for this parameter, those triggers replace any list of triggers previously specified for the stack. If a specified trigger is missing, the entire stack operation fails and is rolled back.
-        /// </parameter>
+        /// </para>
         /// </summary>
         /// <value>
         /// The rollback configuration rollback trigger.
         /// </value>
         [Parameter(ValueFromPipelineByPropertyName = true)]
-
         // ReSharper disable once InconsistentNaming
         public RollbackTrigger[] RollbackConfiguration_RollbackTrigger { get; set; }
 
@@ -332,12 +331,15 @@
             }
 
             // Can't add parameters till dynamic parameters have been resolved.
-            return base.GetBuilder().WithTemplateLocation(this.TemplateLocation)
+            return base.GetBuilder()
+                .WithTemplateLocation(this.TemplateLocation)
                 .WithTags(this.Tag)
                 .WithNotificationARNs(this.NotificationARNs)
                 .WithCapabilities(this.Capabilities?.Select(Capability.FindValue))
-                .WithRollbackConfiguration(rollbackConfiguration).WithResourceType(this.ResourceType)
-                .WithStackPolicy(this.StackPolicyLocation).WithParameters(this.StackParameters);
+                .WithRollbackConfiguration(rollbackConfiguration)
+                .WithResourceType(this.ResourceType)
+                .WithStackPolicy(this.StackPolicyLocation)
+                .WithParameters(this.StackParameters);
         }
 
         /// <summary>
@@ -348,6 +350,8 @@
         /// </returns>
         protected override async Task<object> OnProcessRecord()
         {
+            this.Logger = new PSLogger(this);
+
             await Task.Run(
                 () =>
                     {

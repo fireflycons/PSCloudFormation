@@ -12,13 +12,53 @@
     /// <para type="synopsis">Calls the AWS CloudFormation CreateStack API operation.</para>
     /// <para type="description">
     /// Creates a stack as specified in the template.
-    /// If -Wait is present on the command line, then the call does not return until the stack has completed.
+    /// The call does not return until the stack creation has completed unless -PassThru is present,
+    /// in which case it returns immediately and you can check the status of the stack via the DescribeStacks API
     /// Stack events for this template and any nested stacks are output to the console.
-    /// If -Wait is not present, the call returns immediately after stack creation begins. You can check the status of the stack via the DescribeStacks API.
     /// </para>
     /// </summary>
+    /// <example>
+    /// <code>New-PSCFNStack -StackName "my-stack" -TemplateBody "{TEMPLATE CONTENT HERE}" -PK1 PV1 -PK2 PV2 -DisableRollback</code>
+    /// <para>
+    /// Creates a new stack with the specified name and follows the output until the operation completes.
+    /// The template is parsed from the supplied content with customization parameters ('PK1' and 'PK2' represent the names of parameters declared in the template content, 'PV1' and 'PV2' represent the values for those parameters.
+    /// If creation of the stack fails, it will not be rolled back.
+    /// </para>
+    /// </example>
+    /// <example>
+    /// <code>New-PSCFNStack -StackName "my-stack" -TemplateLocation template.yaml -PK1 PV1 -PK2 PV2 -OnFailure "ROLLBACK"</code>
+    /// <para>
+    /// Creates a new stack with the specified name from template in given file and follows the output until the operation completes.
+    /// If template is larger than 51,200 bytes it will be automatically uploaded to S3 first.
+    /// The template is parsed from the given file with customization parameters ('PK1' and 'PK2' represent the names of parameters declared in the template content, 'PV1' and 'PV2' represent the values for those parameters.
+    /// If creation of the stack fails, it will be rolled back.
+    /// </para>
+    /// </example>
+    /// <example>
+    /// <code>New-PSCFNStack -StackName "my-stack" -TemplateURL s3://my-template-bucket/template.yaml -PK1 PV1 -PK2 PV2</code>
+    /// <para>
+    /// Creates a new stack with the specified name from template in S3 and follows the output until the operation completes.
+    /// The template is obtained from the Amazon S3 URL with customization parameters ('PK1' and 'PK2' represent the names of parameters declared in the template content, 'PV1' and 'PV2' represent the values for those parameters.
+    /// If creation of the stack fails, it will be rolled back.
+    /// </para>
+    /// </example>
+    /// <example>
+    /// <code>New-PSCFNStack -StackName "my-stack" -TemplateURL https://my-template-bucket.s3.amazonaws.com/template.yaml -PK1 PV1 -PK2 PV2 -NotificationARN @( "arn1", "arn2" )</code>
+    /// <para>
+    /// Creates a new stack with the specified name from template in S3 and follows the output until the operation completes.
+    /// The template is obtained from the Amazon S3 URL with customization parameters ('PK1' and 'PK2' represent the names of parameters declared in the template content, 'PV1' and 'PV2' represent the values for those parameters.
+    /// If creation of the stack fails, it will be rolled back. The specified notification ARNs will receive published stack-related events.
+    /// </para>
+    /// </example>
+    /// <example>
+    /// <code>New-PSCFNStack -StackName "my-stack" -TemplateURL https://my-template-bucket.s3.amazonaws.com/template.yaml -PK1 PV1 -PK2 PV2 -NotificationARN @( "arn1", "arn2" ) -PassThru</code>
+    /// <para>
+    /// As the above example, but the command will return immediately.
+    /// </para>
+    /// </example>
     /// <seealso cref="Firefly.PSCloudFormation.StackParameterCloudFormationCommand" />
     [Cmdlet(VerbsCommon.New, "PSCFNStack1")]
+    [OutputType(typeof(CloudFormationResult))]
     // ReSharper disable once UnusedMember.Global
     public class NewStackCommand : StackParameterCloudFormationCommand, INewStackArguments
     {

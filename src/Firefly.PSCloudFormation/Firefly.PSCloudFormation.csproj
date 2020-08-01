@@ -9,12 +9,25 @@
     <AwsTools Condition="Exists('$(AllUsersAwsTools)')">$(AllUsersAwsTools)</AwsTools>
   </PropertyGroup>
 
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|AnyCPU'">
+    <DocumentationFile>H:\Dev\Git\PSCloudFormation\src\Firefly.PSCloudFormation\Firefly.PSCloudFormation.xml</DocumentationFile>
+  </PropertyGroup>
+
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|AnyCPU'">
+    <DocumentationFile>H:\Dev\Git\PSCloudFormation\src\Firefly.PSCloudFormation\Firefly.PSCloudFormation.xml</DocumentationFile>
+  </PropertyGroup>
+
   <ItemGroup>
     <PackageReference Include="AWSSDK.S3" Version="3.3.110.33" />
     <PackageReference Include="AWSSDK.SecurityToken" Version="3.3.104.41" />
+      <!--PackageReference Include="Firefly.CloudFormation" Version="0.0.2" /-->
     <PackageReference Include="Firefly.CrossPlatformZip" Version="0.5.0" />
     <PackageReference Include="Firefly.PowerShell.DynamicParameters" Version="0.2.1" />
     <PackageReference Include="PowerShellStandard.Library" Version="5.1.0" />
+    <PackageReference Include="XmlDoc2CmdletDoc" Version="0.3.0">
+      <PrivateAssets>all</PrivateAssets>
+      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+    </PackageReference>
   </ItemGroup>
 
   <ItemGroup>
@@ -27,18 +40,6 @@
       <HintPath>$(AwsTools)</HintPath>
     </Reference>
   </ItemGroup>
-  <!--
-  <ItemGroup>
-    <Reference Include="AWS.Tools.Common">
-      <HintPath>C:\Users\abm\Documents\WindowsPowerShell\Modules\AWS.Tools.Common\4.0.5.0\AWS.Tools.Common.dll</HintPath>
-    </Reference>
-  </ItemGroup>
-  <ItemGroup>
-    <Reference Include="AWS.Tools.Common">
-      <HintPath>C:\Program Files\WindowsPowerShell\Modules\AWS.Tools.Common\4.0.5.0\AWS.Tools.Common.dll</HintPath>
-    </Reference>
-  </ItemGroup>
-  -->
 
   <ItemGroup>
     <None Update="debug.ps1">

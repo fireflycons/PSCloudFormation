@@ -47,7 +47,8 @@
         /// <summary>
         /// Gets or sets the pass thru.
         /// <para type="description">
-        /// If set, return the stack ARN instead of the stack operation result.
+        /// If this is set, then the operation returns immediately after submitting the request to CloudFormation.
+        /// If not set, then the operation is followed to completion, with stack events being output to the console.
         /// </para>
         /// </summary>
         /// <value>
@@ -90,18 +91,6 @@
         public string StackName { get; set; }
 
         /// <summary>
-        /// Gets or sets the wait.
-        /// <para type="description">
-        /// If set, then the command waits until the stack operation completes, printing out stack events as it goes.
-        /// </para>
-        /// </summary>
-        /// <value>
-        /// The wait.
-        /// </value>
-        [Parameter(ValueFromPipelineByPropertyName = true)]
-        public SwitchParameter Wait { get; set; }
-
-        /// <summary>
         /// Asks a yes/no question.
         /// </summary>
         /// <param name="caption">The caption.</param>
@@ -136,7 +125,7 @@
         {
             return CloudFormationRunner.Builder(this.CreateCloudFormationContext(), this.StackName)
                 .WithClientToken(this.ClientRequestToken).WithRoleArn(this.RoleARN)
-                .WithFollowOperation(this.Wait);
+                .WithFollowOperation(!this.PassThru);
         }
 
         /// <summary>
@@ -175,14 +164,14 @@
                         break;
                 }
 
-                this.ThrowExecutionError(resolvedException.Message, this, resolvedException.InnerException);
+                this.ThrowExecutionError(resolvedException.Message, this, resolvedException);
                 return;
             }
 
             if (task.Result != null)
             {
                 var stackResult = (CloudFormationResult)task.Result;
-                this.WriteObject(this.PassThru ? (object)stackResult.StackArn : stackResult.StackOperationResult);
+                this.WriteObject(stackResult);
             }
         }
 

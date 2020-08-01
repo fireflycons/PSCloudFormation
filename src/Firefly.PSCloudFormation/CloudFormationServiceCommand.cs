@@ -5,6 +5,7 @@
 namespace Firefly.PSCloudFormation
 {
     using System;
+    using System.Collections.Generic;
     using System.Management.Automation;
     using System.Management.Automation.Host;
     using System.Net;
@@ -19,6 +20,7 @@ namespace Firefly.PSCloudFormation
     using Amazon.Util;
 
     using Firefly.CloudFormation;
+    using Firefly.CloudFormation.Model;
     using Firefly.CloudFormation.Utils;
     using Firefly.PSCloudFormation.Utils;
 
@@ -66,6 +68,13 @@ namespace Firefly.PSCloudFormation
 
         /// <summary>
         /// Gets or sets the endpoint URL.
+        /// <para type="description">
+        /// The endpoint to make CloudFormation calls against.
+        /// </para>
+        /// <para type="description">
+        /// The cmdlets normally determine which endpoint to call based on the region specified to the -Region parameter or set as default in the shell (via Set-DefaultAWSRegion).
+        /// Only specify this parameter if you must direct the call to a specific custom endpoint, e.g. if using LocalStack or some other AWS emulator or a VPC endpoint from an EC2 instance.
+        /// </para>
         /// </summary>
         /// <value>
         /// The endpoint URL.
@@ -143,9 +152,14 @@ namespace Firefly.PSCloudFormation
         /// <summary>
         /// Gets or sets the s3 endpoint URL.
         /// <para type="description">
-        /// The endpoint to make S3 calls against.Note: This parameter is primarily for internal AWS use and is not required/should not be specified for normal usage.
+        /// The endpoint to make S3 calls against. 
+        /// </para>
+        /// <para type="description">
+        /// S3 is used by these cmdlets for managing S3 based templates and by the packager for uploading code artifacts and nested templates.
+        /// </para>
+        /// <para type="description">
         /// The cmdlets normally determine which endpoint to call based on the region specified to the -Region parameter or set as default in the shell (via Set-DefaultAWSRegion).
-        /// Only specify this parameter if you must direct the call to a specific custom endpoint.
+        /// Only specify this parameter if you must direct the call to a specific custom endpoint, e.g. if using LocalStack or some other AWS emulator or a VPC endpoint from an EC2 instance.
         /// </para>
         /// </summary>
         /// <value>
@@ -177,15 +191,21 @@ namespace Firefly.PSCloudFormation
 
         /// <summary>
         /// Gets or sets the STS endpoint URL.
-        /// The endpoint to make STS calls against.Note: This parameter is primarily for internal AWS use and is not required/should not be specified for normal usage.
+        /// <para type="description">
+        /// The endpoint to make STS calls against. 
+        /// </para>
+        /// <para type="description">
+        /// STS is used only if creating a bucket to store oversize templates and packager artifacts to get the caller account ID to use as part of the generated bucket name.
+        /// </para>
+        /// <para type="description">
         /// The cmdlets normally determine which endpoint to call based on the region specified to the -Region parameter or set as default in the shell (via Set-DefaultAWSRegion).
-        /// Only specify this parameter if you must direct the call to a specific custom endpoint.
+        /// Only specify this parameter if you must direct the call to a specific custom endpoint, e.g. if using LocalStack or some other AWS emulator or a VPC endpoint from an EC2 instance.
+        /// </para>
         /// </summary>
         /// <value>
         /// The STS endpoint URL.
         /// </value>
         [Parameter(ValueFromPipelineByPropertyName = true)]
-
         // ReSharper disable once InconsistentNaming
         // ReSharper disable once StyleCop.SA1650
         public string STSEndpointUrl { get; set; }
@@ -230,6 +250,12 @@ namespace Firefly.PSCloudFormation
         /// </value>
         protected RegionEndpoint _RegionEndpoint { get; set; }
 
+        /// <summary>
+        /// Gets or sets the client factory.
+        /// </summary>
+        /// <value>
+        /// The client factory.
+        /// </value>
         protected IPSAwsClientFactory _ClientFactory { get; set; }
 
         /// <summary>
@@ -496,19 +522,61 @@ namespace Firefly.PSCloudFormation
         }
 
         /// <summary>
-        /// Helper to throw an error occuring during service execution
+        /// Helper to throw an error occurring during service execution
         /// </summary>
-        /// <param name="message">The message to emit to the error record</param>
+        /// <param name="message">The message to emit to the error record, if <paramref name="exception"/> is <c>null</c></param>
         /// <param name="errorSource">The source (parameter or cmdlet) reporting the error</param>
-        /// <param name="innerException">The exception that was caught, if any</param>
-        protected void ThrowExecutionError(string message, object errorSource, Exception innerException)
+        /// <param name="exception">The exception that was caught, if any</param>
+        protected void ThrowExecutionError(string message, object errorSource, Exception exception)
         {
-            this.ThrowTerminatingError(
-                new ErrorRecord(
-                    new InvalidOperationException(message, innerException),
-                    innerException == null ? "InvalidOperationException" : innerException.GetType().ToString(),
-                    ErrorCategory.InvalidOperation,
-                    errorSource));
+            if (exception is StackOperationException ex)
+            {
+                var stackOperationToErrorCategory = new Dictionary<StackOperationalState, ErrorCategory>
+                                                        {
+                                                            { StackOperationalState.Busy, ErrorCategory.ResourceBusy },
+                                                            { StackOperationalState.Ready, ErrorCategory.InvalidOperation },
+                                                            {
+                                                                StackOperationalState.NotFound,
+                                                                ErrorCategory.ObjectNotFound
+                                                            },
+                                                            {
+                                                                StackOperationalState.Deleting,
+                                                                ErrorCategory.ResourceBusy
+                                                            },
+                                                            {
+                                                                StackOperationalState.DeleteFailed,
+                                                                ErrorCategory.InvalidOperation
+                                                            },
+                                                            {
+                                                                StackOperationalState.Unknown,
+                                                                ErrorCategory.InvalidOperation
+                                                            },
+                                                            {
+                                                                StackOperationalState.Broken,
+                                                                ErrorCategory.InvalidOperation
+                                                            },
+                                                            {
+                                                                StackOperationalState.Exists,
+                                                                ErrorCategory.ResourceExists
+                                                            }
+                                                        };
+
+                this.ThrowTerminatingError(
+                    new ErrorRecord(
+                        ex,
+                        ex.GetType().ToString(),
+                        stackOperationToErrorCategory[ex.OperationalState],
+                        errorSource));
+            }
+            else
+            {
+                this.ThrowTerminatingError(
+                    new ErrorRecord(
+                        exception ?? new InvalidOperationException(message),
+                        exception == null ? "InvalidOperationException" : exception.GetType().ToString(),
+                        ErrorCategory.InvalidOperation,
+                        errorSource));
+            }
         }
 
         /// <summary>

@@ -11,20 +11,24 @@
     using Firefly.CloudFormation;
     using Firefly.CloudFormation.Model;
     using Firefly.CloudFormation.Parsers;
-    using Firefly.CloudFormation.Utils;
 
     /// <summary>
     /// <para type="synopsis">Get the outputs of a stack in various formats</para>
     /// <para type="description">
-    /// This function can be used to assist creation of new CloudFormation templates
-    /// that refer to the outputs of another stack.
+    /// This cmdlet can be used to assist creation of new CloudFormation templates that refer to the outputs of another stack.
     /// It can be used to generate either mapping or parameter blocks based on these outputs
     /// by converting the returned object to JSON or YAML
     /// </para>
+    /// <example>
+    /// <code>$stackOutputs = Get-PSCFNStackOutputs1 -StackName my-stack -AsHashTable</code>
+    /// <para>
+    /// Retrieves the outputs of the given stack as a hashtable of output key and output value.
+    /// </para>
+    /// </example>
     /// </summary>
     [Cmdlet(VerbsCommon.Get, "PSCFNStackOutputs1")]
     [CmdletBinding(DefaultParameterSetName = HashParameterSet)]
-
+    [OutputType(typeof(Hashtable), typeof(string))]
     // ReSharper disable once UnusedMember.Global - public api
     public class GetStackOutputsCommand : CloudFormationServiceCommand
     {
@@ -208,7 +212,7 @@
             }
             catch (Exception e)
             {
-                this.ThrowExecutionError(e.Message, this, null);
+                this.ThrowExecutionError(e.Message, this, e);
             }
         }
     }
