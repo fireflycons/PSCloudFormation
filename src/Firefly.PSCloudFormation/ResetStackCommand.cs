@@ -13,7 +13,7 @@
     /// Deletes a specified stack, then recreates it from the supplied template.
     /// You may want to do this if a previous create attempt failed leaving the stack in ROLLBACK_COMPLETE, then you fix the template.
     /// The call does not return until the stack recreation has completed unless -PassThru is present,
-    /// in which case it returns immediately and you can check the status of the stack via the DescribeStacks API
+    /// in which case it returns immediately after the creation of the new stack is initiated and you can check the status of the stack via the DescribeStacks API
     /// Stack events for this template and any nested stacks are output to the console.
     /// </para>
     /// <para>
@@ -29,7 +29,7 @@
     /// </example>
     /// </summary>
     /// <seealso cref="Firefly.PSCloudFormation.BaseCloudFormationCommand" />
-    [Cmdlet(VerbsCommon.Reset, "PSCFNStack1")]
+    [Cmdlet(VerbsCommon.Reset, "PSCFNStack")]
     [OutputType(typeof(CloudFormationResult))]
     // ReSharper disable once UnusedMember.Global
     public class ResetStackCommand : StackParameterCloudFormationCommand, IRemoveStackArguments, INewStackArguments

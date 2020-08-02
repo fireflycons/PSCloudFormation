@@ -45,7 +45,7 @@
     /// </para>
     /// </example>
     /// <seealso cref="Firefly.PSCloudFormation.BaseCloudFormationCommand" />
-    [Cmdlet(VerbsCommon.Remove, "PSCFNStack1")]
+    [Cmdlet(VerbsCommon.Remove, "PSCFNStack")]
     [OutputType(typeof(CloudFormationResult))]
     // ReSharper disable once UnusedMember.Global
     public class RemoveStackCommand : BaseCloudFormationCommand, IRemoveStackArguments

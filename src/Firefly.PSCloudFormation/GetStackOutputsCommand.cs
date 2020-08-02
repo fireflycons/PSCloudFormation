@@ -26,7 +26,7 @@
     /// </para>
     /// </example>
     /// </summary>
-    [Cmdlet(VerbsCommon.Get, "PSCFNStackOutputs1")]
+    [Cmdlet(VerbsCommon.Get, "PSCFNStackOutputs")]
     [CmdletBinding(DefaultParameterSetName = HashParameterSet)]
     [OutputType(typeof(Hashtable), typeof(string))]
     // ReSharper disable once UnusedMember.Global - public api

@@ -73,7 +73,7 @@
     /// </example>
     /// </summary>
     /// <seealso cref="Firefly.PSCloudFormation.CloudFormationServiceCommand" />
-    [Cmdlet(VerbsCommon.New, "PSCFNPackage1")]
+    [Cmdlet(VerbsCommon.New, "PSCFNPackage")]
     public class NewPackageCommand : CloudFormationServiceCommand
     {
         /// <summary>

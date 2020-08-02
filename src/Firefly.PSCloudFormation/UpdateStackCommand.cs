@@ -48,7 +48,7 @@
     /// </example>
     /// <para type="link" uri="(https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/resource-import.html)">[Resource Import]</para>
     /// <seealso cref="Firefly.PSCloudFormation.StackParameterCloudFormationCommand" />
-    [Cmdlet(VerbsData.Update, "PSCFNStack1")]
+    [Cmdlet(VerbsData.Update, "PSCFNStack")]
     [OutputType(typeof(CloudFormationResult))]
     // ReSharper disable once UnusedMember.Global
     public class UpdateStackCommand : StackParameterCloudFormationCommand

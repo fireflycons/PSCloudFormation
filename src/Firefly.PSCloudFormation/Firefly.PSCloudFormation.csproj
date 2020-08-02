@@ -1,5 +1,5 @@
-﻿<Project Sdk="Microsoft.NET.Sdk">
-
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
     <TargetFramework>netstandard2.0</TargetFramework>
     <CopyLocalLockFileAssemblies>true</CopyLocalLockFileAssemblies>
@@ -7,20 +7,19 @@
     <AllUsersAwsTools>C:\Program Files\WindowsPowerShell\Modules\AWS.Tools.Common\4.0.5.0\AWS.Tools.Common.dll</AllUsersAwsTools>
     <AwsTools Condition="Exists('$(CurrentUserAwsTools)')">$(CurrentUserAwsTools)</AwsTools>
     <AwsTools Condition="Exists('$(AllUsersAwsTools)')">$(AllUsersAwsTools)</AwsTools>
+    <Version>4.0.14</Version>
+    <AssemblyVersion>4.0.0.0</AssemblyVersion>
+    <FileVersion>4.0.14.0</FileVersion>
   </PropertyGroup>
-
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|AnyCPU'">
     <DocumentationFile>H:\Dev\Git\PSCloudFormation\src\Firefly.PSCloudFormation\Firefly.PSCloudFormation.xml</DocumentationFile>
   </PropertyGroup>
-
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|AnyCPU'">
     <DocumentationFile>H:\Dev\Git\PSCloudFormation\src\Firefly.PSCloudFormation\Firefly.PSCloudFormation.xml</DocumentationFile>
   </PropertyGroup>
-
   <ItemGroup>
     <PackageReference Include="AWSSDK.S3" Version="3.3.110.33" />
     <PackageReference Include="AWSSDK.SecurityToken" Version="3.3.104.41" />
-      <!--PackageReference Include="Firefly.CloudFormation" Version="0.0.2" /-->
     <PackageReference Include="Firefly.CrossPlatformZip" Version="0.5.0" />
     <PackageReference Include="Firefly.PowerShell.DynamicParameters" Version="0.2.1" />
     <PackageReference Include="PowerShellStandard.Library" Version="5.1.0" />
@@ -29,18 +28,17 @@
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
     </PackageReference>
   </ItemGroup>
-
-  <ItemGroup>
+  <ItemGroup Condition="'$(Configuration)' == 'Debug'">
     <ProjectReference Include="..\Firefly.CloudFormation\Firefly.CloudFormation.csproj" />
   </ItemGroup>
-
-
+  <ItemGroup Condition="'$(Configuration)' == 'Release'">
+    <PackageReference Include="Firefly.CloudFormation" Version="0.0.6" />
+  </ItemGroup>
   <ItemGroup>
     <Reference Include="AWS.Tools.Common">
       <HintPath>$(AwsTools)</HintPath>
     </Reference>
   </ItemGroup>
-
   <ItemGroup>
     <None Update="debug.ps1">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
@@ -49,9 +47,7 @@
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </None>
   </ItemGroup>
-
   <Target Name="PostBuild" AfterTargets="PostBuildEvent">
-    <Exec Command="del &quot;$(OutDir)AWS*&quot;&#xD;&#xA;del &quot;$(OutDir)System.Management.Automation.dll&quot;&#xD;&#xA;" />
+    <Exec Command="del &quot;$(OutDir)AWS*&quot;&#xD;&#xA;del &quot;$(OutDir)System.Management.Automation.dll&quot;&#xD;&#xA;echo $(ProjectDir)$(OutDir) &gt; &quot;$(SolutionDir)ModulePath.txt&quot;" />
   </Target>
-
 </Project>
