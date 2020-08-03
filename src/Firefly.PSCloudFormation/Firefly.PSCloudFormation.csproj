@@ -28,11 +28,11 @@
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
     </PackageReference>
   </ItemGroup>
-  <ItemGroup Condition="'$(Configuration)' == 'Debug'">
+  <ItemGroup Condition="'$(SolutionName)' == 'Firefly.PSCloudFormation.debug'">
     <ProjectReference Include="..\Firefly.CloudFormation\Firefly.CloudFormation.csproj" />
   </ItemGroup>
-  <ItemGroup Condition="'$(Configuration)' == 'Release'">
-    <PackageReference Include="Firefly.CloudFormation" Version="0.0.6" />
+  <ItemGroup Condition="'$(SolutionName)' == 'Firefly.PSCloudFormation'">
+    <PackageReference Include="Firefly.CloudFormation" Version="0.1.0" />
   </ItemGroup>
   <ItemGroup>
     <Reference Include="AWS.Tools.Common">

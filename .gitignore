@@ -360,3 +360,5 @@ ModulePath.txt
 **/tools/*
 !**/tools/packages.config
 
+# Integrated debugging
+Firefly.PSCloudFormation.debug.sln
