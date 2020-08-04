@@ -6,6 +6,7 @@ namespace Firefly.PSCloudFormation
 {
     using System;
     using System.Collections.Generic;
+    using System.Linq;
     using System.Management.Automation;
     using System.Management.Automation.Host;
     using System.Net;
@@ -529,6 +530,8 @@ namespace Firefly.PSCloudFormation
         /// <param name="exception">The exception that was caught, if any</param>
         protected void ThrowExecutionError(string message, object errorSource, Exception exception)
         {
+            this.LogException(exception);
+
             if (exception is StackOperationException ex)
             {
                 var stackOperationToErrorCategory = new Dictionary<StackOperationalState, ErrorCategory>
@@ -885,6 +888,36 @@ namespace Firefly.PSCloudFormation
         }
 
         /// <summary>
+        /// Logs exception details, if -Debug parameter was passed.
+        /// </summary>
+        /// <param name="ex">The exception.</param>
+        private void LogException(Exception ex)
+        {
+            if (ex == null || this.MyInvocation.BoundParameters.Keys.All(
+                    k => string.Compare(k, "Debug", StringComparison.OrdinalIgnoreCase) != 0))
+            {
+                return;
+            }
+
+            var currentException = ex;
+            var indent = 0;
+            var ui = this.Host.UI;
+
+            ui.WriteLine("-------------- EXCEPTION DEBUG --------------");
+
+            while (currentException != null)
+            {
+                ui.WriteLine($"{new string(' ', indent)}{currentException.GetType().Name}: {currentException.Message}");
+                currentException = currentException.InnerException;
+                indent += 2;
+            }
+
+            ui.WriteLine("---------------- STACK TRACE ----------------");
+            ui.WriteLine(ex.StackTrace);
+            ui.WriteLine("---------------------------------------------");
+        }
+
+        /// <summary>
         /// Captures the PSHost and executing cmdlet state for use in our credential callback
         /// handler.
         /// </summary>
@@ -913,7 +946,6 @@ namespace Firefly.PSCloudFormation
             /// be found in SelfNetworkCredentialParameter. This value is retained after 
             /// use.
             /// </value>
-
             // ReSharper disable once UnusedAutoPropertyAccessor.Local
             public PSCredential ShellNetworkCredentialParameter { get; set; }
         }
