@@ -15,7 +15,7 @@
     }
     'BuildHelpers'          = @{
         DependencyType = 'PSGalleryModule'
-        Version        = '2.0.7'
+        Version        = '2.0.11'
         Tags           = @('Desktop', 'Core')
     }
     'PSDeploy'          = @{
