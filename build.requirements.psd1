@@ -18,6 +18,11 @@
         Version        = '2.0.7'
         Tags           = @('Desktop', 'Core')
     }
+    'PSDeploy'          = @{
+        DependencyType = 'PSGalleryModule'
+        Version        = '1.0.5'
+        Tags           = @('Desktop', 'Core')
+    }
     'platyps'               = @{
         DependencyType = 'PSGalleryModule'
         Version        = '0.14.0'

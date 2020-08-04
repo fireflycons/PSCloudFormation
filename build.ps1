@@ -28,9 +28,6 @@ try
 
     Import-Module PSDepend
 
-    # Custom version
-    Import-Module PSDeploy
-
     $psDependTags = $(
         if (Test-Path -Path variable:PSEdition)
         {
