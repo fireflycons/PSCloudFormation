@@ -8,9 +8,8 @@ image:
   - Ubuntu
   - Visual Studio 2019
 
-install:
-  - ps: . ./build/cfn-flip-install.ps1
-  - ps: . ./build/psdeploy-install.ps1
+#install:
+#  - ps: . ./build/psdeploy-install.ps1
 
 # Does the whole process
 test_script:

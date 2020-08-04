@@ -64,6 +64,10 @@ Task("SetAssemblyProperties")
 
         var propertyGroups = project.Elements("PropertyGroup").ToList();
 
+        Information($"Package version: {buildVersion}");
+        Information($"Assembly version: {buildVersion.ToString(2)}.0.0");
+        Information($"File version: {buildVersion.ToString(3)}.0");
+
         SetProjectProperty(propertyGroups, "Version", buildVersion.ToString());
         SetProjectProperty(propertyGroups, "AssemblyVersion", $"{buildVersion.ToString(2)}.0.0");
         SetProjectProperty(propertyGroups, "FileVersion", $"{buildVersion.ToString(3)}.0");
@@ -274,17 +278,28 @@ string EnvironmentVariableStrict(string name)
 
 Version GetBuildVersion()
 {
+    var ver = GetBuildVersionInner();
+
+    System.IO.File.WriteAllText(File("module.ver"), ver.ToString());
+
+    return ver;
+}
+
+Version GetBuildVersionInner()
+{
     var tag = EnvironmentVariable("APPVEYOR_REPO_TAG_NAME");
 
     if (tag == null)
     {
-        var appveyorVersion = EnvironmentVariable("APPVEYOR_BUILD_VERSION");
+        var appveyorVersion = EnvironmentVariable("APPVEYOR_BUILD_NUMBER");
 
         if (appveyorVersion != null)
         {
-            return new Version(appveyorVersion);
+            // Development version.
+            return new Version($"0.0.{appveyorVersion}");
         }
 
+        // Generate a version for private package manager.
         var localBuildVer = File("build.ver");
 
         Version newVer;
@@ -303,6 +318,7 @@ Version GetBuildVersion()
         return newVer;
     }
 
+    // Tagged, i.e. release build.
     var m = Regex.Match(tag, @"^v(?<version>\d+\.\d+\.\d+)$", RegexOptions.IgnoreCase);
 
     if (m.Success)
@@ -311,67 +327,6 @@ Version GetBuildVersion()
     }
 
     throw new CakeException($"Cannot determine version from tag: {tag}");
-}
-
-void RunDocFX(FilePath config, bool serve)
-{
-    var sb = new StringBuilder();
-
-    sb.Append($"\"{config}\" --force");
-
-    if (serve)
-    {
-        sb.Append(" --serve");
-    }
-
-    RunExternalProcess("docfx.exe", sb.ToString());
-}
-
-void RunExternalProcess(string executable, string arguments)
-{
-    using (var process = new Process {
-        StartInfo = new ProcessStartInfo {
-
-            FileName = executable,
-            Arguments = arguments,
-            UseShellExecute = false,
-            RedirectStandardOutput = true,
-            RedirectStandardError = true,
-            CreateNoWindow = true
-        }
-    })
-    {
-        process.OutputDataReceived += new DataReceivedEventHandler((sender, e) =>
-        {
-            // Prepend line numbers to each line of the output.
-            if (!String.IsNullOrEmpty(e.Data))
-            {
-                Information(e.Data);
-            }
-        });
-
-        process.ErrorDataReceived += new DataReceivedEventHandler((sender, e) =>
-        {
-            // Prepend line numbers to each line of the output.
-            if (!String.IsNullOrEmpty(e.Data))
-            {
-                Error(e.Data);
-            }
-        });
-
-        process.Start();
-
-        // Asynchronously read the standard output of the spawned process.
-        // This raises OutputDataReceived events for each line of output.
-        process.BeginOutputReadLine();
-        process.BeginErrorReadLine();
-        process.WaitForExit();
-
-        if (process.ExitCode != 0)
-        {
-            throw new Exception($"docfx exited with code {process.ExitCode}");
-        }
-    }
 }
 
 #endregion

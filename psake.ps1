@@ -451,7 +451,7 @@ Task UpdateManifest -Depends Build {
             Throw "Could not find module '$Name'"
         }
 
-        Update-MetaData -Path $env:BHPSModuleManifest -PropertyName CmdletsToExport -Value @( $Module.ExportedCommands.Keys )
+        $cmdlets = $Module.ExportedCommands.Keys
     }
     finally
     {
@@ -459,11 +459,50 @@ Task UpdateManifest -Depends Build {
         $PowerShell.Dispose()
     }
 
+    Update-MetaData -Path $env:BHPSModuleManifest -PropertyName CmdletsToExport -Value @( $cmdlets )
+
     # Bump the module version if we didn't already
-    Update-Metadata -Path $env:BHPSModuleManifest -PropertyName ModuleVersion -Value (Get-Content -Raw (Join-Path $PSScriptRoot "build/build.ver")).Trim() -ErrorAction stop
+    Update-Metadata -Path $env:BHPSModuleManifest -PropertyName ModuleVersion -Value (Get-Content -Raw (Join-Path $PSScriptRoot "build/module.ver")).Trim() -ErrorAction stop
 }
 
-Task Deploy {
+Task CleanModule {
+
+    $lines
+
+    try
+    {
+        Push-Location (Split-Path -Parent $env:BHPSModuleManifest)
+
+        @(
+            'publish',
+            '*.pdb'
+            '*.json'
+            'debug.ps1'
+            'Firefly.PSCloudFormation.xml'
+        ) |
+        Where-Object {
+            Test-Path -Path $_
+        } |
+        Foreach-Object {
+
+            $recurse = @{}
+
+            if (Test-Path -Path $_ -PathType Container)
+            {
+                $recurse.Add('Recurse', $true)
+            }
+
+            Remove-Item $_ @recurse
+        }
+    }
+    finally
+    {
+        Pop-Location
+    }
+}
+
+Task Deploy -Depends CleanModule {
+
     $lines
 
     $deployParams = $(
@@ -576,4 +615,35 @@ function MD5HashFile([string] $filePath)
             $file.Dispose()
         }
     }
+}
+
+function Invoke-WithRetry
+{
+    param
+    (
+        [Parameter(Position = 0)]
+        [scriptblock]$Script,
+
+        [int]$Retries = 10
+    )
+
+    $count = 0
+    $ex = $null
+
+    while ($count++ -lt $Retries)
+    {
+        try
+        {
+            Invoke-Command -NoNewScope -ScriptBlock $Script
+            return
+        }
+        catch
+        {
+            $ex = $_.Exception
+            Write-Warning $ex.Message
+            Start-Sleep -Seconds 1
+        }
+    }
+
+    throw $ex
 }

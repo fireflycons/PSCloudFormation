@@ -13,8 +13,7 @@ try
 
     if ($cf)
     {
-        Write-Warning "A version of AWSSDK.Core.dll is already loaded:"
-        Write-Warning "Loaded from $($cf.Location)"
+        Write-Warning "A version of AWSSDK.Core.dll is already loaded: $($cf.Location)"
     }
 
     # Grab nuget bits, install modules, set build variables, start build.
