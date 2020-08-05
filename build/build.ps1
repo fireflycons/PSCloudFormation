@@ -52,6 +52,9 @@ try
     Set-BuildEnvironment -ErrorAction SilentlyContinue
     Pop-Location
 
+    # Get location of AWS.Tools.Common.dll so build can reference it
+    New-Item -Path Env:\ -Name AWS_TOOLS_COMMON -Value ([AppDomain]::CurrentDomain.GetAssemblies() | Where-Object { $_.Location -like '*AWS.Tools.Common.dll'} | Select-Object -ExpandProperty Location) -Force | Out-Null
+
     Invoke-psake -buildFile $PSScriptRoot/psake.ps1 -taskList $Task -nologo
     exit ( [int]( -not $psake.build_success ) )
 }

@@ -45,7 +45,7 @@ Task Init {
     [Reflection.Assembly]::LoadWithPartialName("System.Security") | Out-Null
     Set-Location $ProjectRoot
     "Build System Details:"
-    Get-Item ENV:BH*
+    Get-ChildItem ENV: | Where-Object { $_.Name -like 'BH*' -or $_.Name -like 'AWS_TOOLS*' }
     "`n"
 
     if ($script:IsWindows)
@@ -90,12 +90,12 @@ Task Init {
 Task ListModules -Depends Init {
 
     Write-Host "Available"
-    Get-Module -ListAvailable | Out-Host
+    Get-Module -ListAvailable | Select-Object ModuleType, Version, Name | Out-Host
     Write-Host "Loaded"
-    Get-Module | Out-Host
+    Get-Module | Select-Object ModuleType, Version, Name | Out-Host
 }
 
-Task Build -Depends ListModules {
+Task Build -Depends Init {
     $lines
 
     # Run Cake build on binary solution

@@ -7,17 +7,20 @@
     <AssemblyVersion>4.0.0.0</AssemblyVersion>
     <FileVersion>4.0.0.0</FileVersion>
   </PropertyGroup>
+  <PropertyGroup>
+    <AwsTools>$(AWS_TOOLS_COMMON)</AwsTools>
+  </PropertyGroup>
   <PropertyGroup Condition="'$(OS)' == 'Windows_NT'">
     <CurrentUserAwsTools>$(USERPROFILE)\Documents\WindowsPowerShell\Modules\AWS.Tools.Common\4.0.5.0\AWS.Tools.Common.dll</CurrentUserAwsTools>
     <AllUsersAwsTools>$(ProgramFiles)\WindowsPowerShell\Modules\AWS.Tools.Common\4.0.5.0\AWS.Tools.Common.dll</AllUsersAwsTools>
-    <AwsTools Condition="Exists('$(CurrentUserAwsTools)')">$(CurrentUserAwsTools)</AwsTools>
-    <AwsTools Condition="Exists('$(AllUsersAwsTools)')">$(AllUsersAwsTools)</AwsTools>
+    <AwsTools Condition="'$(AwsTools)' == '' AND Exists('$(CurrentUserAwsTools)')">$(CurrentUserAwsTools)</AwsTools>
+    <AwsTools Condition="'$(AwsTools)' == '' AND Exists('$(AllUsersAwsTools)')">$(AllUsersAwsTools)</AwsTools>
   </PropertyGroup>
   <PropertyGroup Condition="'$(OS)' != 'Windows_NT'">
     <CurrentUserAwsTools>~/.local/share/powershell/Modules/AWS.Tools.Common/4.0.5.0/AWS.Tools.Common.dll</CurrentUserAwsTools>
     <AllUsersAwsTools>/usr/local/share/powershell/Modules/AWS.Tools.Common/4.0.5.0/AWS.Tools.Common.dll</AllUsersAwsTools>
-    <AwsTools Condition="Exists('$(CurrentUserAwsTools)')">$(CurrentUserAwsTools)</AwsTools>
-    <AwsTools Condition="Exists('$(AllUsersAwsTools)')">$(AllUsersAwsTools)</AwsTools>
+    <AwsTools Condition="'$(AwsTools)' == '' AND Exists('$(CurrentUserAwsTools)')">$(CurrentUserAwsTools)</AwsTools>
+    <AwsTools Condition="'$(AwsTools)' == '' AND Exists('$(AllUsersAwsTools)')">$(AllUsersAwsTools)</AwsTools>
   </PropertyGroup>
   <PropertyGroup>
     <DocumentationFile>$(ProjectDir)Firefly.PSCloudFormation.xml</DocumentationFile>
