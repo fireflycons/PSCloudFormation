@@ -212,11 +212,11 @@ namespace Firefly.PSCloudFormation.Tests.Unit
         [Fact]
         public async Task ShouldNotUploadNewVersionOfDirectoryArtifactWhenHashesMatch()
         {
-            // Hash of lambda directory content before zipping
-            // Zips are not idempotent - fields e.g. timestamps in central directory change with successive zips of the same content.
-            const string HashDirectory = "dbc9a956ab5781ed5484781e9119ddc2";
 
             using var templateDir = EmbeddedResourceManager.GetResourceDirectory("DeepNestedStack");
+            // Hash of lambda directory content before zipping
+            // Zips are not idempotent - fields e.g. timestamps in central directory change with successive zips of the same content.
+            var directoryHash = new DirectoryInfo(Path.Combine(templateDir, "lambdacomplex")).MD5();
             var template = Path.Combine(templateDir, "base-stack.json");
             var projectId = S3Util.GenerateProjectId(template);
             var logger = new TestLogger(this.output);
@@ -243,7 +243,7 @@ namespace Firefly.PSCloudFormation.Tests.Unit
                 {
                     var resp = new GetObjectMetadataResponse();
 
-                    resp.Metadata.Add(S3Util.PackagerHashKey, HashDirectory);
+                    resp.Metadata.Add(S3Util.PackagerHashKey, directoryHash);
                     return resp;
                 });
 
