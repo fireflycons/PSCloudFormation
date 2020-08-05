@@ -57,4 +57,7 @@
   <Target Name="PostBuild" AfterTargets="PostBuildEvent">
     <Exec Command="del &quot;$(OutDir)AWS*&quot;&#xD;&#xA;del &quot;$(OutDir)System.Management.Automation.dll&quot;&#xD;&#xA;echo $(ProjectDir)$(OutDir) &gt; &quot;$(SolutionDir)ModulePath.txt&quot;" />
   </Target>
+  <Target Name="PreBuild" BeforeTargets="PreBuildEvent">
+    <Error Condition="'$(AwsTools)' == ''" Text="Cannot locate AWS Tools" />
+  </Target>
 </Project>
