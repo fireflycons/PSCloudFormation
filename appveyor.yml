@@ -5,7 +5,7 @@ environment:
   DISABLE_LOCALSTACK: true
 
 image:
-#  - Ubuntu
+  - Ubuntu
   - Visual Studio 2019
 
 #install:
