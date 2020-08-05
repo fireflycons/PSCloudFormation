@@ -48,10 +48,11 @@ try
         Invoke-PSDepend -Path "$PSScriptRoot\build.requirements.psd1" -Install -Import -Force -Tags $psDependTags
     }
 
-
+    Push-Location $(git rev-parse --show-toplevel)
     Set-BuildEnvironment -ErrorAction SilentlyContinue
+    Pop-Location
 
-    Invoke-psake -buildFile $ENV:BHProjectPath\psake.ps1 -taskList $Task -nologo
+    Invoke-psake -buildFile $PSScriptRoot/psake.ps1 -taskList $Task -nologo
     exit ( [int]( -not $psake.build_success ) )
 }
 catch

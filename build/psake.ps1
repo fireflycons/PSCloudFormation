@@ -98,7 +98,7 @@ Task Build -Depends Init {
     # Run Cake build on binary solution
     try
     {
-        $Script = Join-Path $PSScriptRoot 'build/build.cake'
+        $Script = Join-Path $PSScriptRoot 'build.cake'
         $Target = 'Default'
         $Configuration = 'Release'
         $Verbosity = "Normal"
@@ -420,11 +420,47 @@ Task Build -Depends Init {
     }
 
     # Update path to module manifest
-    New-Item -Path Env:\ -Name BHPSModuleManifest -Value (Get-ChildItem (Get-Content -Raw .\ModulePath.txt).Trim() -Filter *.psd1 | Select-Object -ExpandProperty FullName) -Force | Out-Null
+    New-Item -Path Env:\ -Name BHPSModuleManifest -Value (Get-ChildItem (Get-Content -Raw (Join-Path $env:BHProjectPath ModulePath.txt)).Trim() -Filter *.psd1 | Select-Object -ExpandProperty FullName) -Force | Out-Null
 
 }
 
-Task UpdateManifest -Depends Build {
+Task CleanModule -Depends Build {
+
+    $lines
+
+    try
+    {
+        Push-Location (Split-Path -Parent $env:BHPSModuleManifest)
+
+        @(
+            'publish',
+            '*.pdb'
+            '*.json'
+            'debug.ps1'
+            'Firefly.PSCloudFormation.xml'
+        ) |
+        Where-Object {
+            Test-Path -Path $_
+        } |
+        Foreach-Object {
+
+            $recurse = @{}
+
+            if (Test-Path -Path $_ -PathType Container)
+            {
+                $recurse.Add('Recurse', $true)
+            }
+
+            Remove-Item $_ @recurse
+        }
+    }
+    finally
+    {
+        Pop-Location
+    }
+}
+
+Task UpdateManifest -Depends CleanModule {
 
     # Load the module, read the exported commands, update the psd1 CmdletsToExport
     try
@@ -462,46 +498,13 @@ Task UpdateManifest -Depends Build {
     Update-MetaData -Path $env:BHPSModuleManifest -PropertyName CmdletsToExport -Value @( $cmdlets )
 
     # Bump the module version if we didn't already
-    Update-Metadata -Path $env:BHPSModuleManifest -PropertyName ModuleVersion -Value (Get-Content -Raw (Join-Path $PSScriptRoot "build/module.ver")).Trim() -ErrorAction stop
+    Update-Metadata -Path $env:BHPSModuleManifest -PropertyName ModuleVersion -Value (Get-Content -Raw (Join-Path $PSScriptRoot "module.ver")).Trim() -ErrorAction stop
+
+    # Set file list
+    Update-Metadata -Path $env:BHPSModuleManifest -PropertyName FileList -Value (Get-ChildItem -Path (Split-Path -Parent $env:BHPSModuleManifest) -Exclude *.psd1).Name
 }
 
-Task CleanModule {
-
-    $lines
-
-    try
-    {
-        Push-Location (Split-Path -Parent $env:BHPSModuleManifest)
-
-        @(
-            'publish',
-            '*.pdb'
-            '*.json'
-            'debug.ps1'
-            'Firefly.PSCloudFormation.xml'
-        ) |
-        Where-Object {
-            Test-Path -Path $_
-        } |
-        Foreach-Object {
-
-            $recurse = @{}
-
-            if (Test-Path -Path $_ -PathType Container)
-            {
-                $recurse.Add('Recurse', $true)
-            }
-
-            Remove-Item $_ @recurse
-        }
-    }
-    finally
-    {
-        Pop-Location
-    }
-}
-
-Task Deploy -Depends CleanModule {
+Task Deploy -Depends UpdateManifest {
 
     $lines
 
