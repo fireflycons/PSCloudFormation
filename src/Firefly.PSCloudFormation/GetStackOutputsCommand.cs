@@ -20,7 +20,7 @@
     /// by converting the returned object to JSON or YAML
     /// </para>
     /// <example>
-    /// <code>$stackOutputs = Get-PSCFNStackOutputs1 -StackName my-stack -AsHashTable</code>
+    /// <code>$stackOutputs = Get-PSCFNStackOutputs -StackName my-stack -AsHashTable</code>
     /// <para>
     /// Retrieves the outputs of the given stack as a hashtable of output key and output value.
     /// </para>
