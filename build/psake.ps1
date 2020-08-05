@@ -89,10 +89,13 @@ Task Init {
 
 Task ListModules -Depends Init {
 
+    Write-Host "Available"
+    Get-Module -ListAvailable | Out-Host
+    Write-Host "Loaded"
     Get-Module | Out-Host
 }
 
-Task Build -Depends Init {
+Task Build -Depends ListModules {
     $lines
 
     # Run Cake build on binary solution
