@@ -146,10 +146,6 @@ namespace Firefly.PSCloudFormation.Tests.Unit
         [Fact]
         public async Task ShouldNotUploadNewVersionOfTemplateArtifactWhenHashesMatch()
         {
-            // Hash of sub-nested-2.json _after_ it has been modified by packager routine.
-            // This must be updated if the content of sub-nested-2.json is changed
-            const string HashSubNested2AfterModification = "c0247137186e4374beea9f3faaf5a79a";
-
             using var templateDir = EmbeddedResourceManager.GetResourceDirectory("DeepNestedStack");
             var template = Path.Combine(templateDir, "base-stack.json");
             var projectId = S3Util.GenerateProjectId(template);
