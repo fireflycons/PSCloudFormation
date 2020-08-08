@@ -54,6 +54,14 @@
         public List<string> ErrorMessages { get; } = new List<string>();
 
         /// <summary>
+        /// Gets the buffer of debug messages.
+        /// </summary>
+        /// <value>
+        /// The error messages.
+        /// </value>
+        public List<string> DebugMessages { get; } = new List<string>();
+
+        /// <summary>
         /// Gets the buffer of stack events.
         /// </summary>
         /// <value>
@@ -69,6 +77,7 @@
         public override void LogDebug(string message, params object[] args)
         {
             var msg = string.Format(message, args);
+            this.DebugMessages.Add(msg);
             this.output.WriteLine($"DEBUG: {msg}");
         }
 

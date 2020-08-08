@@ -340,18 +340,19 @@
                         // Referenced nested template is in the filesystem, therefore it must be uploaded
                         // whether or not it was itself modified
                         var processedTemplate = new FileInfo(await this.ProcessTemplate(fi.FullName, workingDirectory));
+                        var templateHash = processedTemplate.MD5();
                         templateModified = true;
 
                         // Output intermediate templates to console if -Debug
+                        this.Logger.LogDebug($"Processed template '{fi.FullName}', Hash: {templateHash}");
                         this.Logger.LogDebug(
-                            "Processed template '{0}'\n\n{1}",
-                            fi.FullName,
+                            "\n\n{0}",
                             File.ReadAllText(processedTemplate.FullName));
 
                         var resourceToUpload = new ResourceUploadSettings
                                                    {
                                                        File = processedTemplate,
-                                                       Hash = processedTemplate.MD5(),
+                                                       Hash = templateHash,
                                                        KeyPrefix = this.S3Prefix,
                                                        Metadata = this.Metadata
                                                    };

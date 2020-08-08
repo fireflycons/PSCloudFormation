@@ -5,6 +5,8 @@ using System.Text;
 namespace Firefly.PSCloudFormation.Tests.Unit
 {
     using System.IO;
+    using System.Linq;
+    using System.Text.RegularExpressions;
     using System.Threading.Tasks;
 
     using Amazon.S3.Model;
@@ -177,7 +179,7 @@ namespace Firefly.PSCloudFormation.Tests.Unit
                     {
                         var resp = new GetObjectMetadataResponse();
 
-                        resp.Metadata.Add(S3Util.PackagerHashKey, HashSubNested2AfterModification);
+                        resp.Metadata.Add(S3Util.PackagerHashKey, GetModifiedTemplateHash(logger));
                         return resp;
                     });
 
@@ -207,6 +209,24 @@ namespace Firefly.PSCloudFormation.Tests.Unit
 
             // Three objects should have been uploaded to S3
             mockS3.Verify(m => m.PutObjectAsync(It.IsAny<PutObjectRequest>(), default), Times.Exactly(2));
+
+            // Bit hacky, but we need to know the hash of the template after modification.
+            // Different on Windows and Linux due to line endings.
+            string GetModifiedTemplateHash(TestLogger logger)
+            {
+                var re = new Regex(@"sub-nested-2\.json.*Hash: (?<hash>[0-9a-f]+)");
+
+                var logLine = logger.DebugMessages.FirstOrDefault(line => re.IsMatch(line));
+
+                if (logLine == null)
+                {
+                    return "0";
+                }
+
+                var mc = re.Match(logLine);
+
+                return mc.Groups["hash"].Value;
+            }
         }
 
         [Fact]
