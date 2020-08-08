@@ -12,7 +12,7 @@
   </PropertyGroup>
   <PropertyGroup Condition="'$(OS)' == 'Windows_NT'">
     <CurrentUserAwsTools>$(USERPROFILE)\Documents\WindowsPowerShell\Modules\AWS.Tools.Common\4.0.5.0\AWS.Tools.Common.dll</CurrentUserAwsTools>
-    <AllUsersAwsTools>$(ProgramFiles)\WindowsPowerShell\Modules\AWS.Tools.Common\4.0.5.0\AWS.Tools.Common.dll</AllUsersAwsTools>
+    <AllUsersAwsTools>C:\Program Files\WindowsPowerShell\Modules\AWS.Tools.Common\4.0.5.0\AWS.Tools.Common.dll</AllUsersAwsTools>
     <AwsTools Condition="'$(AwsTools)' == '' AND Exists('$(CurrentUserAwsTools)')">$(CurrentUserAwsTools)</AwsTools>
     <AwsTools Condition="'$(AwsTools)' == '' AND Exists('$(AllUsersAwsTools)')">$(AllUsersAwsTools)</AwsTools>
   </PropertyGroup>
@@ -42,7 +42,7 @@
     <ProjectReference Include="..\Firefly.CloudFormation\Firefly.CloudFormation.csproj" />
   </ItemGroup>
   <ItemGroup Condition="'$(SolutionName)' == 'Firefly.PSCloudFormation'">
-    <PackageReference Include="Firefly.CloudFormation" Version="0.1.0" />
+    <PackageReference Include="Firefly.CloudFormation" Version="0.2.0" />
   </ItemGroup>
   <ItemGroup>
     <Reference Include="AWS.Tools.Common">

@@ -87,6 +87,19 @@
         public string[] Capabilities { get; set; }
 
         /// <summary>
+        /// Gets or sets the force s3.
+        /// <para type="description">
+        /// If present, forces upload of a local template (file or string body) to S3, irrespective of whether the template size is over the maximum of 51,200 bytes
+        /// </para>
+        /// <para>
+        /// Occasionally there is a socket closed by remote host exception thrown when working with local templates.
+        /// Experimentation found that uploading the errant template to S3 first circumvents this error so is a suitable workaround, thus this option is provided.
+        /// </para>
+        /// </summary>
+        [Parameter(ValueFromPipelineByPropertyName = true)]
+        public SwitchParameter ForceS3 { get; set; }
+
+        /// <summary>
         /// Gets or sets the notification ARNs.
         /// <para type="description">
         /// The Simple Notification Service (SNS) topic ARNs to publish stack related events.
@@ -97,7 +110,6 @@
         /// The notification ARNs.
         /// </value>
         [Parameter(ValueFromPipelineByPropertyName = true)]
-
         // ReSharper disable once InconsistentNaming
         public string[] NotificationARNs { get; set; }
 
@@ -157,7 +169,6 @@
         [Parameter(ValueFromPipelineByPropertyName = true)]
         [ValidateRange(0, int.MaxValue)]
         [Alias("RollbackConfiguration_MonitoringTimeInMinutes")]
-
         // ReSharper disable once InconsistentNaming
         public int RollbackConfiguration_MonitoringTimeInMinute { get; set; }
 
@@ -212,10 +223,10 @@
         /// Structure containing the template body. For more information, go to Template Anatomy in the AWS CloudFormation User Guide.
         /// </para>
         /// <para type="description">
-        /// You can pipe a template body to this command, e.g. from the output of the <c>New-PSCFNPackage</c> command.
+        /// You can specify either a string, path to a file, or URL of a object in S3 that contains the template body.
         /// </para>
         /// <para type="description">
-        /// You can specify either a string, path to a file, or URL of a object in S3 that contains the template body.
+        /// You can also pipe a template body to this command, e.g. from the output of the <c>New-PSCFNPackage</c> command.
         /// </para>
         /// </summary>
         /// <value>
@@ -281,7 +292,8 @@
             var templateResolver = new TemplateResolver(
                 this.CreateCloudFormationContext(),
                 this.StackName,
-                this.UsePreviousTemplateFlag);
+                this.UsePreviousTemplateFlag,
+                this.ForceS3);
 
             var task = templateResolver.ResolveFileAsync(this.TemplateLocation);
             task.Wait();
