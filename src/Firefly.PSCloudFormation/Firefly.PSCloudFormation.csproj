@@ -60,6 +60,9 @@
   <Target Condition="'$(OS)' == 'Windows_NT'" Name="PostBuild" AfterTargets="PostBuildEvent">
     <Exec Command="del &quot;$(OutDir)AWS*&quot;&#xD;&#xA;del &quot;$(OutDir)System.Management.Automation.dll&quot;&#xD;&#xA;echo $(ProjectDir)$(OutDir) &gt; &quot;$(SolutionDir)ModulePath.txt&quot;" />
   </Target>
+  <Target Condition="'$(OS)' != 'Windows_NT'" Name="PostBuild" AfterTargets="PostBuildEvent">
+    <Exec Command="rm -f &quot;$(OutDir)AWS*&quot;&#xD;&#xA;rm -f &quot;$(OutDir)System.Management.Automation.dll&quot;&#xD;&#xA;echo $(ProjectDir)$(OutDir) &gt; &quot;$(SolutionDir)ModulePath.txt&quot;" />
+  </Target>
   <Target Name="PreBuild" BeforeTargets="PreBuildEvent">
     <Error Condition="'$(AwsTools)' == ''" Text="Cannot locate AWS Tools" />
   </Target>
