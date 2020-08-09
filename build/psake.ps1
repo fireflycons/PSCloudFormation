@@ -507,7 +507,7 @@ Task UpdateManifest -Depends CleanModule {
     Update-Metadata -Path $env:BHPSModuleManifest -PropertyName FileList -Value (Get-ChildItem -Path (Split-Path -Parent $env:BHPSModuleManifest) -Exclude *.psd1).Name
 }
 
-Task Deploy -Depends UpdateManifest {
+Task Deploy -Depends Init {
 
     $lines
 
