@@ -511,6 +511,9 @@ Task Deploy -Depends Init {
 
     $lines
 
+    Write-Host "Testing module manifest"
+    Test-ModuleManifest -Path $env:BHPSModuleManifest
+
     $deployParams = $(
 
         if ($ENV:BHBuildSystem -ieq 'AppVeyor')
