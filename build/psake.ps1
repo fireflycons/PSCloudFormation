@@ -30,9 +30,8 @@ Properties {
     }
 
     $DefaultLocale = 'en-US'
-    $DocsRootDir = Join-Path $PSScriptRoot docs
+    $DocsRootDir = Join-Path $env:BHProjectPath docs
     $ModuleName = "PSCloudFormation"
-    $ModuleOutDir = Join-Path $PSScriptRoot PSCloudFormation
 
 }
 
@@ -423,7 +422,8 @@ Task Build -Depends Init {
     }
 
     # Update path to module manifest
-    New-Item -Path Env:\ -Name BHPSModuleManifest -Value (Get-ChildItem (Get-Content -Raw (Join-Path $env:BHProjectPath ModulePath.txt)).Trim() -Filter *.psd1 | Select-Object -ExpandProperty FullName) -Force | Out-Null
+    $modulePath = (Resolve-Path (Get-Content -Raw (Join-Path $env:BHProjectPath ModulePath.txt)).Trim()).Path
+    New-Item -Path Env:\ -Name BHPSModuleManifest -Value (Get-ChildItem -Path $modulePath -Filter *.psd1 | Select-Object -ExpandProperty FullName) -Force | Out-Null
 
 }
 
