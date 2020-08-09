@@ -1,5 +1,5 @@
 ---
-external help file: PSCloudFormation-help.xml
+external help file: Firefly.PSCloudFormation.dll-Help.xml
 Module Name: PSCloudFormation
 online version:
 schema: 2.0.0
@@ -12,157 +12,133 @@ Get the outputs of a stack in various formats
 
 ## SYNTAX
 
-### Hash (Default)
+### Imports
 ```
-Get-PSCFNStackOutputs [-StackName] <String[]> [-AsHashtable] [-ProfileName <String>] [-EndpointUrl <String>]
- [-AccessKey <String>] [-SecretKey <String>] [-ProfileLocation <String>] [-SessionToken <String>]
- [-NetworkCredential <PSCredential>] [-Credential <AWSCredentials>] [-Region <String>] [<CommonParameters>]
+Get-PSCFNStackOutputs [-AsCrossStackReferences] [-Format <String>] [-StackName] <String> [-AccessKey <String>]
+ [-Credential <AWSCredentials>] [-EndpointUrl <String>] [-NetworkCredential <PSCredential>]
+ [-ProfileLocation <String>] [-ProfileName <String>] [-Region <Object>] [-S3EndpointUrl <String>]
+ [-SecretKey <String>] [-SessionToken <String>] [-STSEndpointUrl <String>] [<CommonParameters>]
 ```
 
-### Mappings
+### Hash
 ```
-Get-PSCFNStackOutputs [-StackName] <String[]> [-AsMappingBlock] [-ProfileName <String>] [-EndpointUrl <String>]
- [-AccessKey <String>] [-SecretKey <String>] [-ProfileLocation <String>] [-SessionToken <String>]
- [-NetworkCredential <PSCredential>] [-Credential <AWSCredentials>] [-Region <String>] [<CommonParameters>]
+Get-PSCFNStackOutputs [-AsHashTable] [-StackName] <String> [-AccessKey <String>] [-Credential <AWSCredentials>]
+ [-EndpointUrl <String>] [-NetworkCredential <PSCredential>] [-ProfileLocation <String>]
+ [-ProfileName <String>] [-Region <Object>] [-S3EndpointUrl <String>] [-SecretKey <String>]
+ [-SessionToken <String>] [-STSEndpointUrl <String>] [<CommonParameters>]
 ```
 
 ### Parameters
 ```
-Get-PSCFNStackOutputs [-StackName] <String[]> [-AsParameterBlock] [-ProfileName <String>]
- [-EndpointUrl <String>] [-AccessKey <String>] [-SecretKey <String>] [-ProfileLocation <String>]
- [-SessionToken <String>] [-NetworkCredential <PSCredential>] [-Credential <AWSCredentials>] [-Region <String>]
- [<CommonParameters>]
-```
-
-### Exports
-```
-Get-PSCFNStackOutputs [-StackName] <String[]> [-AsCrossStackReferences] [-ProfileName <String>]
- [-EndpointUrl <String>] [-AccessKey <String>] [-SecretKey <String>] [-ProfileLocation <String>]
- [-SessionToken <String>] [-NetworkCredential <PSCredential>] [-Credential <AWSCredentials>] [-Region <String>]
- [<CommonParameters>]
+Get-PSCFNStackOutputs [-AsParameterBlock] -Format <String> [-StackName] <String> [-AccessKey <String>]
+ [-Credential <AWSCredentials>] [-EndpointUrl <String>] [-NetworkCredential <PSCredential>]
+ [-ProfileLocation <String>] [-ProfileName <String>] [-Region <Object>] [-S3EndpointUrl <String>]
+ [-SecretKey <String>] [-SessionToken <String>] [-STSEndpointUrl <String>] [<CommonParameters>]
 ```
 
 ## DESCRIPTION
-This function can be used to assist creation of new CloudFormation templates
-that refer to the outputs of another stack.
-
-It can be used to generate either mapping or prarameter blocks based on these outputs
-by converting the returned object to JSON or YAML
+This cmdlet can be used to assist creation of new CloudFormation templates that refer to the outputs of another stack.
+It can be used to generate either mapping or parameter blocks based on these outputs by converting the returned object to JSON or YAML
 
 ## EXAMPLES
 
 ### EXAMPLE 1
 ```
-Get-PSCFNStackOutputs -StackName MyStack -AsMappingBlock
+$stackOutputs = Get-PSCFNStackOutputs1 -StackName my-stack -AsHashTable
 ```
 
-When converted to JSON or YAML, can be pasted into the Mapping declaration of another template
-
-### EXAMPLE 2
-```
-Get-PSCFNStackOutputs -StackName MyStack -AsParameterBlock
-```
-
-When converted to JSON or YAML, can be pasted into the Parameters declaration of another template
-
-### EXAMPLE 3
-```
-Get-PSCFNStackOutputs -StackName MyStack -AsCrossStackReferences
-```
-
-When converted to JSON or YAML, provides a collection of Fn::Import stanzas that can be individually pasted into a new template
-
-### EXAMPLE 4
-```
-$hash = Get-PSCFNStackOutputs -StackName MyStack -AsHashtable
-```
-
-Returns hashtable of output key vs output value
+Retrieves the outputs of the given stack as a hashtable of output key and output value.
 
 ## PARAMETERS
 
-### -StackName
-One or more stacks to process.
-One object is produced for each stack
+### -AsCrossStackReferences
+If set, returned object is formatted as a set of Fn::ImportValue statements, with any text matching the stack name within the output's ExportName being replaced with a placeholder generated from the stack name with the word 'Stack' appended.
+Make this a parameter to your new stack.
+
+Whilst the result output is not much use as it is, the individual elements can be copied and pasted in where an Fn::ImportValue statements for that parameter would be used.
 
 ```yaml
-Type: String[]
-Parameter Sets: (All)
+Type: SwitchParameter
+Parameter Sets: Imports
 Aliases:
 
 Required: True
-Position: 1
-Default value: None
-Accept pipeline input: True (ByPropertyName, ByValue)
+Position: Named
+Default value: False
+Accept pipeline input: True (ByPropertyName)
 Accept wildcard characters: False
 ```
 
-### -AsHashtable
-If set (default), returned object is a hashtable - key/value pairs for each stack output.
+### -AsHashTable
+If set (default), returned object is a hash table - key/value pairs for each stack output.
 
 ```yaml
 Type: SwitchParameter
 Parameter Sets: Hash
 Aliases:
 
-Required: False
+Required: True
 Position: Named
 Default value: False
-Accept pipeline input: False
-Accept wildcard characters: False
-```
-
-### -AsMappingBlock
-If set (default), returned object is formatted as a CloudFomration mapping block.
-Converting the output to JSON or YAML renders text that can be pasted within a Mappings declararion.
-
-```yaml
-Type: SwitchParameter
-Parameter Sets: Mappings
-Aliases:
-
-Required: False
-Position: Named
-Default value: False
-Accept pipeline input: False
+Accept pipeline input: True (ByPropertyName)
 Accept wildcard characters: False
 ```
 
 ### -AsParameterBlock
 If set, returned object is formatted as a CloudFormation parameter block.
-Converting the output to JSON or YAML renders text that can be pasted within a Parameters declararion.
 
 ```yaml
 Type: SwitchParameter
 Parameter Sets: Parameters
 Aliases:
 
-Required: False
+Required: True
 Position: Named
 Default value: False
-Accept pipeline input: False
+Accept pipeline input: True (ByPropertyName)
 Accept wildcard characters: False
 ```
 
-### -AsCrossStackReferences
-If set, returned object is formatted as a set of Fn::ImportValue statements, with any text matching the
-stack name within the output's ExportName being replaced with a placeholder generated from the stack name with the word 'Stack' appended.
-Make this a parameter to your new stack.
-
-Whilst the result converted to JSON is not much use as it is, the individual elements can
-be copied and pasted in where an Fn::ImportValue for that parameter would be used.
-
-YAML is not currently supported for this operation.
+### -Format
+Sets how output of parameters for CloudFormation template fragments should be formatted.
 
 ```yaml
-Type: SwitchParameter
-Parameter Sets: Exports
+Type: String
+Parameter Sets: Imports
 Aliases:
 
 Required: False
 Position: Named
-Default value: False
+Default value: None
 Accept pipeline input: False
+Accept wildcard characters: False
+```
+
+```yaml
+Type: String
+Parameter Sets: Parameters
+Aliases:
+
+Required: True
+Position: Named
+Default value: None
+Accept pipeline input: False
+Accept wildcard characters: False
+```
+
+### -StackName
+One or more stacks to process.
+One object is produced for each stack
+
+```yaml
+Type: String
+Parameter Sets: (All)
+Aliases:
+
+Required: True
+Position: 0
+Default value: None
+Accept pipeline input: True (ByPropertyName, ByValue)
 Accept wildcard characters: False
 ```
 
@@ -173,12 +149,12 @@ This can be a temporary access key if the corresponding session token is supplie
 ```yaml
 Type: String
 Parameter Sets: (All)
-Aliases:
+Aliases: AK
 
 Required: False
 Position: Named
 Default value: None
-Accept pipeline input: False
+Accept pipeline input: True (ByPropertyName)
 Accept wildcard characters: False
 ```
 
@@ -193,12 +169,16 @@ Aliases:
 Required: False
 Position: Named
 Default value: None
-Accept pipeline input: False
+Accept pipeline input: True (ByPropertyName, ByValue)
 Accept wildcard characters: False
 ```
 
 ### -EndpointUrl
-The endpoint to make the call against.
+The endpoint to make CloudFormation calls against.
+
+The cmdlets normally determine which endpoint to call based on the region specified to the -Region parameter or set as default in the shell (via Set-DefaultAWSRegion).
+Only specify this parameter if you must direct the call to a specific custom endpoint, e.g.
+if using LocalStack or some other AWS emulator or a VPC endpoint from an EC2 instance.
 
 ```yaml
 Type: String
@@ -208,12 +188,12 @@ Aliases:
 Required: False
 Position: Named
 Default value: None
-Accept pipeline input: False
+Accept pipeline input: True (ByPropertyName)
 Accept wildcard characters: False
 ```
 
 ### -NetworkCredential
-'Used with SAML-based authentication when ProfileName references a SAML role profile.
+Used with SAML-based authentication when ProfileName references a SAML role profile.
 Contains the network credentials to be supplied during authentication with the configured identity provider's endpoint.
 This parameter is not required if the user's default network identity can or should be used during authentication.
 
@@ -225,22 +205,29 @@ Aliases:
 Required: False
 Position: Named
 Default value: None
-Accept pipeline input: False
+Accept pipeline input: True (ByPropertyName, ByValue)
 Accept wildcard characters: False
 ```
 
 ### -ProfileLocation
 Used to specify the name and location of the ini-format credential file (shared with the AWS CLI and other AWS SDKs)
 
+If this optional parameter is omitted this cmdlet will search the encrypted credential file used by the AWS SDK for .NET and AWS Toolkit for Visual Studio first.
+If the profile is not found then the cmdlet will search in the ini-format credential file at the default location: (user's home directory)\.aws\credentials.
+
+If this parameter is specified then this cmdlet will only search the ini-format credential file at the location given.
+
+As the current folder can vary in a shell or during script execution it is advised that you use specify a fully qualified path instead of a relative path.
+
 ```yaml
 Type: String
 Parameter Sets: (All)
-Aliases:
+Aliases: AWSProfilesLocation, ProfilesLocation
 
 Required: False
 Position: Named
 Default value: None
-Accept pipeline input: False
+Accept pipeline input: True (ByPropertyName)
 Accept wildcard characters: False
 ```
 
@@ -252,18 +239,40 @@ You can also specify the name of a profile stored in the .ini-format credential 
 ```yaml
 Type: String
 Parameter Sets: (All)
-Aliases:
+Aliases: StoredCredentials, AWSProfileName
 
 Required: False
 Position: Named
 Default value: None
-Accept pipeline input: False
+Accept pipeline input: True (ByPropertyName)
 Accept wildcard characters: False
 ```
 
 ### -Region
-The system name of the AWS region in which the operation should be invoked.
-For example, us-east-1, eu-west-1 etc.
+The system name of an AWS region or an AWSRegion instance.
+This governs the endpoint that will be used when calling service operations.
+Note that the AWS resources referenced in a call are usually region-specific.
+
+```yaml
+Type: Object
+Parameter Sets: (All)
+Aliases: RegionToCall
+
+Required: False
+Position: Named
+Default value: None
+Accept pipeline input: True (ByPropertyName)
+Accept wildcard characters: False
+```
+
+### -S3EndpointUrl
+The endpoint to make S3 calls against.
+
+S3 is used by these cmdlets for managing S3 based templates and by the packager for uploading code artifacts and nested templates.
+
+The cmdlets normally determine which endpoint to call based on the region specified to the -Region parameter or set as default in the shell (via Set-DefaultAWSRegion).
+Only specify this parameter if you must direct the call to a specific custom endpoint, e.g.
+if using LocalStack or some other AWS emulator or a VPC endpoint from an EC2 instance.
 
 ```yaml
 Type: String
@@ -273,7 +282,7 @@ Aliases:
 Required: False
 Position: Named
 Default value: None
-Accept pipeline input: False
+Accept pipeline input: True (ByPropertyName)
 Accept wildcard characters: False
 ```
 
@@ -284,12 +293,12 @@ This can be a temporary secret key if the corresponding session token is supplie
 ```yaml
 Type: String
 Parameter Sets: (All)
-Aliases:
+Aliases: SK, SecretAccessKey
 
 Required: False
 Position: Named
 Default value: None
-Accept pipeline input: False
+Accept pipeline input: True (ByPropertyName)
 Accept wildcard characters: False
 ```
 
@@ -299,12 +308,33 @@ The session token if the access and secret keys are temporary session-based cred
 ```yaml
 Type: String
 Parameter Sets: (All)
+Aliases: ST
+
+Required: False
+Position: Named
+Default value: None
+Accept pipeline input: True (ByPropertyName)
+Accept wildcard characters: False
+```
+
+### -STSEndpointUrl
+The endpoint to make STS calls against.
+
+STS is used only if creating a bucket to store oversize templates and packager artifacts to get the caller account ID to use as part of the generated bucket name.
+
+The cmdlets normally determine which endpoint to call based on the region specified to the -Region parameter or set as default in the shell (via Set-DefaultAWSRegion).
+Only specify this parameter if you must direct the call to a specific custom endpoint, e.g.
+if using LocalStack or some other AWS emulator or a VPC endpoint from an EC2 instance.
+
+```yaml
+Type: String
+Parameter Sets: (All)
 Aliases:
 
 Required: False
 Position: Named
 Default value: None
-Accept pipeline input: False
+Accept pipeline input: True (ByPropertyName)
 Accept wildcard characters: False
 ```
 
@@ -313,10 +343,93 @@ This cmdlet supports the common parameters: -Debug, -ErrorAction, -ErrorVariable
 
 ## INPUTS
 
-### [System.String[]] - You can pipe stack names or ARNs to this function
+### System.Management.Automation.SwitchParameter
+If set, returned object is formatted as a set of Fn::ImportValue statements, with any text matching the stack name within the output's ExportName being replaced with a placeholder generated from the stack name with the word 'Stack' appended.
+Make this a parameter to your new stack.
+
+Whilst the result output is not much use as it is, the individual elements can be copied and pasted in where an Fn::ImportValue statements for that parameter would be used.
+
+### System.Management.Automation.SwitchParameter
+If set (default), returned object is a hash table - key/value pairs for each stack output.
+
+### System.Management.Automation.SwitchParameter
+If set, returned object is formatted as a CloudFormation parameter block.
+
+### System.String
+Sets how output of parameters for CloudFormation template fragments should be formatted.
+
+### System.String
+One or more stacks to process.
+One object is produced for each stack
+
+### System.String
+The AWS access key for the user account.
+This can be a temporary access key if the corresponding session token is supplied to the -SessionToken parameter.
+
+### Amazon.Runtime.AWSCredentials
+An AWSCredentials object instance containing access and secret key information, and optionally a token for session-based credentials.
+
+### System.String
+The endpoint to make CloudFormation calls against.
+
+The cmdlets normally determine which endpoint to call based on the region specified to the -Region parameter or set as default in the shell (via Set-DefaultAWSRegion).
+Only specify this parameter if you must direct the call to a specific custom endpoint, e.g.
+if using LocalStack or some other AWS emulator or a VPC endpoint from an EC2 instance.
+
+### System.Management.Automation.PSCredential
+Used with SAML-based authentication when ProfileName references a SAML role profile.
+Contains the network credentials to be supplied during authentication with the configured identity provider's endpoint.
+This parameter is not required if the user's default network identity can or should be used during authentication.
+
+### System.String
+Used to specify the name and location of the ini-format credential file (shared with the AWS CLI and other AWS SDKs)
+
+If this optional parameter is omitted this cmdlet will search the encrypted credential file used by the AWS SDK for .NET and AWS Toolkit for Visual Studio first.
+If the profile is not found then the cmdlet will search in the ini-format credential file at the default location: (user's home directory)\.aws\credentials.
+
+If this parameter is specified then this cmdlet will only search the ini-format credential file at the location given.
+
+As the current folder can vary in a shell or during script execution it is advised that you use specify a fully qualified path instead of a relative path.
+
+### System.String
+The user-defined name of an AWS credentials or SAML-based role profile containing credential information.
+The profile is expected to be found in the secure credential file shared with the AWS SDK for .NET and AWS Toolkit for Visual Studio.
+You can also specify the name of a profile stored in the .ini-format credential file used with the AWS CLI and other AWS SDKs.
+
+### System.Object
+The system name of an AWS region or an AWSRegion instance.
+This governs the endpoint that will be used when calling service operations.
+Note that the AWS resources referenced in a call are usually region-specific.
+
+### System.String
+The endpoint to make S3 calls against.
+
+S3 is used by these cmdlets for managing S3 based templates and by the packager for uploading code artifacts and nested templates.
+
+The cmdlets normally determine which endpoint to call based on the region specified to the -Region parameter or set as default in the shell (via Set-DefaultAWSRegion).
+Only specify this parameter if you must direct the call to a specific custom endpoint, e.g.
+if using LocalStack or some other AWS emulator or a VPC endpoint from an EC2 instance.
+
+### System.String
+The AWS secret key for the user account.
+This can be a temporary secret key if the corresponding session token is supplied to the -SessionToken parameter.
+
+### System.String
+The session token if the access and secret keys are temporary session-based credentials.
+
+### System.String
+The endpoint to make STS calls against.
+
+STS is used only if creating a bucket to store oversize templates and packager artifacts to get the caller account ID to use as part of the generated bucket name.
+
+The cmdlets normally determine which endpoint to call based on the region specified to the -Region parameter or set as default in the shell (via Set-DefaultAWSRegion).
+Only specify this parameter if you must direct the call to a specific custom endpoint, e.g.
+if using LocalStack or some other AWS emulator or a VPC endpoint from an EC2 instance.
+
 ## OUTPUTS
 
-### [PSObject] - An object dependent on the setting of the above switches. Pipe the output to ConvertTo-Json or ConvertTo-Yaml
+### System.Collections.Hashtable
+### System.String
 ## NOTES
 
 ## RELATED LINKS

@@ -1,0 +1,106 @@
+{
+  "AWSTemplateFormatVersion": "2010-09-09",
+  "Parameters": {
+    "BareString": {
+      "Type": "String"
+    },
+    "DescribedString": {
+      "Type": "String",
+      "Description": "A string parameter"
+    },
+    "DefaultedString": {
+      "Type": "String",
+      "Default": "default"
+    },
+    "AllowedValuesString": {
+      "Type": "String",
+      "AllowedValues": [
+        "One",
+        "Two"
+      ]
+    },
+    "RegexString": {
+      "Type": "String",
+      "AllowedPattern": ".*"
+    },
+    "StringList": {
+      "Type": "CommaDelimitedList"
+    },
+    "BareNumber": {
+      "Type": "Number"
+    },
+    "AllowedValuesNumber": {
+      "Type": "Number",
+      "AllowedValues": [
+        1,
+        2,
+        3
+      ]
+    },
+    "DefaultedNumber": {
+      "Type": "Number",
+      "Default": 1
+    },
+    "NumberList": {
+      "Type": "List<Number>"
+    },
+    "AvailabilityZone": {
+      "Type": "AWS::EC2::AvailabilityZone::Name"
+    },
+    "ListAvailabilityZone": {
+      "Type": "List<AWS::EC2::AvailabilityZone::Name>"
+    },
+    "ImageId": {
+      "Type": "AWS::EC2::Image::Id"
+    },
+    "ListImageId": {
+      "Type": "List<AWS::EC2::Image::Id>"
+    },
+    "InstanceId": {
+      "Type": "AWS::EC2::Instance::Id"
+    },
+    "ListInstanceId": {
+      "Type": "List<AWS::EC2::Instance::Id>"
+    },
+    "KeyPair": {
+      "Type": "AWS::EC2::KeyPair::KeyName"
+    },
+    "SecurityGroupName": {
+      "Type": "AWS::EC2::SecurityGroup::GroupName"
+    },
+    "ListSecurityGroupName": {
+      "Type": "List<AWS::EC2::SecurityGroup::GroupName>"
+    },
+    "SecurityGroupId": {
+      "Type": "AWS::EC2::SecurityGroup::Id"
+    },
+    "ListSecurityGroupId": {
+      "Type": "List<AWS::EC2::SecurityGroup::Id>"
+    },
+    "SubnetId": {
+      "Type": "AWS::EC2::Subnet::Id"
+    },
+    "ListSubnetId": {
+      "Type": "List<AWS::EC2::Subnet::Id>"
+    },
+    "VolumeId": {
+      "Type": "AWS::EC2::Volume::Id"
+    },
+    "ListVolumeId": {
+      "Type": "List<AWS::EC2::Volume::Id>"
+    },
+    "VpcId": {
+      "Type": "AWS::EC2::VPC::Id"
+    },
+    "ListVpcId": {
+      "Type": "List<AWS::EC2::VPC::Id>"
+    },
+    "ZoneId": {
+      "Type": "AWS::Route53::HostedZone::Id"
+    },
+    "ListZoneId": {
+      "Type": "List<AWS::Route53::HostedZone::Id>"
+    }
+  },
+  "Resources": {}
+}

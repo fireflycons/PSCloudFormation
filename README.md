@@ -1,45 +1,46 @@
 # PSCloudFormation
 [![Build status](https://ci.appveyor.com/api/projects/status/fgt7d0icj7emc6hl/branch/master?svg=true)](https://ci.appveyor.com/project/fireflycons/pscloudformation/branch/master)
 
-## Breaking News
+## Version 4 is here!
 
-Now supports the new [Resource Import feature](https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/resource-import.html)!
+This version is a complete re-write in C#. I found that it was becoming a cumbersome beast keeping it in pure PowerShell, taking longer to load the module, and certain parts of it were running quite slowly.
 
-See also [PSCloudFormation Resource Import](./static/resource-import.md) documentation.
+Turning it into a binary module addresses the above problems and reduces complexity given the cmdlets share many common arguments meaning that inheritance can be used to reduce code duplication. It also gives me the chance to showcase three of my other projects: [Filrefly.CloudFormation](https://github.com/fireflycons/Firefly.CloudFormation) which underpins this module, [PSDynamicParameters](https://github.com/fireflycons/PSDynamicParameters) which is a library for managing PowerShell Dynamic Parameters for C# cmdlets and [CrossPlatformZip](https://github.com/fireflycons/CrossPlatformZip) which creates zip files targeting Windows or Linux/Unix/MacOS from any source platform - needed for the packaging component of this module. Lambda does not like zip files that don't contain Unix permission attributes!
+
+### Breaking Changes
+
+* Minimum requirement Windows PowerShell 5.1. All NetCore versions are supported.
+* Requires modular [AWS.Tools](https://github.com/aws/aws-tools-for-powershell/issues/67). Monolithic AWSPowerShell is no longer supported (since PSCloudFormation v3.x).
+* Meaning of `-Wait` parameter has changed. This only applies to `Update-PSCFNStack` and means that update should not begin if at the time the cmdlet is called, the target stack is found to be being updated by another process. In this case the update will wait for the other update to complete. All PSCloudFormation cmdlets will wait for their own operation to run to completion unless `-PassThru` is present.
+* Return type from the cmdlets has changed. Instead of being just a stack status or an ARN, it is a structure containing both, defined [here](https://fireflycons.github.io/Firefly-CloudFormation/api/Firefly.CloudFormation.Model.CloudFormationResult.html).
+
+### Enhancements
+
+* More use of colour in changeset and stack event display.
+* All properties of create, update and delete stack are now supported.
+* More complete support for determining AWS credentials from all sources.
+* [Resource Import](https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/resource-import.html) supported (since v3.x) - still not supported by AWS.Tools cmdlets at time of writing.
+
+### Gotchas
+
+Due to the fact that the entire PowerShell process is a single .NET AppDomain, it is possible to fall into DLL hell. This module has various dependencies such as [YamlDotNet](https://github.com/aaubry/YamlDotNet). If something else in the current PowerShell session has loaded a different version of a dependent library like YamlDotNet, then you will get an assembly version clash when importing this module and the import will fail. Start a new PowerShell session and import there.
+
+There is a way round this for pure .NET Core applications, but then I would have to target PowerShell Core only. The time isn't right for that yet, but if there's sufficient interest, then that could be the v5 release.
 
 ## How to Install
 
 The module is published on the PowerShell Gallery and can be installed by following the instructions there.
 
-Up until now, there were two versions of this module published, one for Windows PowerShell and another for PowerShell Core for Linux/Mac. From now on, there is only the one module which works on all platforms.
+Up until v3.x, there were two versions of this module published, one for Windows PowerShell and another for PowerShell Core for Linux/Mac. From now on, there is only the one module which works on all platforms.
 
-The module is now built on the modular [AWS.Tools](https://github.com/aws/aws-tools-for-powershell/issues/67), so if upgrading from an earlier version you should remove `AWSPowerShell` and install `AWS.Tools`
+The last version to support monolithic AWSPowerShell is v2.2.2 which can still be pulled from PSGallery.
 
 ### PowerShell (all platforms)
 ![PowerShell Gallery](https://img.shields.io/powershellgallery/v/PSCloudFormation)
 
 https://www.powershellgallery.com/packages/PSCloudFormation
 
-## What it isn't
 
-It isn't intended as a replacement for the raw API `New-CFNStack` etc. You should probably continue to use those in automation scripts, though there's nothing to stop you using this library to get more visual feedback but as always, ensure you test well before unleashing on production systems.
-
-## What it is
-
-It is two things really
-
-1. A wrapper for the stack modification cmdlets of AWSPowerShell to make it easier to work with CloudFormation stacks from the command line, e.g. when developing a new stack.
-2. An exercise in using PowerShell's dynamic cmdlet parameters.
-
-I found that deploying stacks from the command line, whether via aws-cli or AWSPowerShell was extremely tedious, especially for stacks that have loads of parameters, both remembering all the parameters and having the continuously type them in, or edit _looong_ command lines in the command line history, along with frequent typos
-
-So I thought to myself, I wonder how easy it would be to utilise the dynamic parameters feature of PowerShell to discover the parameters in a CloudFormation template and present these as arguments to some new stack manipulation cmdlets - and you got it - yes we can!
-
-PowerShell builds a dynamic parameter set as soon as you give it an argument from which to work. An example you may be familiar with is the `Get-Content` cmdlet. As soon as you specify the argument for `-Path` it determines whether that path is a file system path (as opposed to registry, environment etc.) and then provides `-Raw` argument to read the file in its entirety rather than line-by-line.
-
-With the cmdlets in this module, as soon as you tell them where the CloudFormation template is, they parse the template and extract all the parameters within and provide them as additional argments to the cmdlet, along with knowledge of whether they are required (no default), are constrained (AllowedValues, AllowedPattern), or typed (Number, `AWS::EC2::Subnet::Id` etc.) and perform pre-validation before submitting the stack update.
-
-If a cmdlet is given the `-Wait` parameter then all stack events are output to the console, including events from any nested stacks with status values in colour so you can quickly spot what is going on.
 
 ## Module Cmdlets
 
@@ -63,7 +64,7 @@ This module provides the following stack modification cmdlets
 
 ### Template Support
 
-Oversize templates in your local file system (file size >= 51,200 bytes) are directly supported. They will be siliently uploaded to an S3 bucket which is created as necessary prior to processing. The bucket is named `cf-templates-pscloudformation-region-accountid` where
+Oversize templates in your local file system (file size >= 51,200 bytes) are directly supported. They will be siliently uploaded to an S3 bucket which is created as necessary prior to processing with a delete after 7 days lifecycle policy to prevent buildup of rubbish. The bucket is named `ps-templates-pscloudformation-region-accountid` where
 * `region` is the region you are building the stack in, e.g. `eu-west-1`.
 * `accountid` is the numeric ID of the AWS account in which you are building the stack.
 
@@ -127,12 +128,15 @@ VpcCidr:
 
 #### Update-PSCFNStack and Dynamic Argumments
 
-When using ```Update-PSCFNStack ``` you only need to supply values on the command line for stack parameters you wish to change. All remaining stack paramaeters will assume their previous values.
+When using `Update-PSCFNStack` you only need to supply values on the command line for stack parameters you wish to change. All remaining stack paramaeters will assume their previous values.
+
+#### Piped Template Body snd Dynamic Arguments
+
+If you pass a template body to one of the cmdlets via the pipeline, it is not possible to use dynamic parameter arguments at all. The cmdlets will throw an exception saying that the cmdlet has no parameter of the given name. This is because at the time the dynamic parameter processing runs in the lifecycle of the cmdlet, the content of the template is not yet known, therefore the dynamic parameters cannot be built. You must in this case use a parameter file to define the template parameters (`-ParameterFile`)
 
 # Notes
 
 Thanks to
 
-* [ramblingcookiemonster](http://ramblingcookiemonster.github.io/) for `New-DynamicParam` and build stuff.
-* [Ahmad Gad](http://ahmad.jempress.com) for `Write-PSObject` that provides coloured output of stack events.
+* [ramblingcookiemonster](http://ramblingcookiemonster.github.io/) for `PSDepend` and `PSDeploy` used in parts of the build of this project.
 * [Antoine Aubry](https://github.com/aaubry/YamlDotNet) for `YamlDotNet`

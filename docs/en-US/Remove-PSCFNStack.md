@@ -1,5 +1,5 @@
 ---
-external help file: PSCloudFormation-help.xml
+external help file: Firefly.PSCloudFormation.dll-Help.xml
 Module Name: PSCloudFormation
 online version:
 schema: 2.0.0
@@ -8,124 +8,93 @@ schema: 2.0.0
 # Remove-PSCFNStack
 
 ## SYNOPSIS
-Delete one or more stacks.
+Calls the AWS CloudFormation DeleteStack API operation.
 
 ## SYNTAX
 
 ```
-Remove-PSCFNStack [-StackName] <String[]> [-Wait] [-Sequential] [-Force] [-ThrowOnAbort] [-BackupTemplate]
- [-ProfileName <String>] [-EndpointUrl <String>] [-AccessKey <String>] [-SecretKey <String>]
- [-ProfileLocation <String>] [-SessionToken <String>] [-NetworkCredential <PSCredential>]
- [-Credential <AWSCredentials>] [-Region <String>] [<CommonParameters>]
+Remove-PSCFNStack [-RetainResource <String[]>] [-ClientRequestToken <String>] [-Force] [-PassThru]
+ [-RoleARN <String>] [-StackName] <String> [-AccessKey <String>] [-Credential <AWSCredentials>]
+ [-EndpointUrl <String>] [-NetworkCredential <PSCredential>] [-ProfileLocation <String>]
+ [-ProfileName <String>] [-Region <Object>] [-S3EndpointUrl <String>] [-SecretKey <String>]
+ [-SessionToken <String>] [-STSEndpointUrl <String>] [<CommonParameters>]
 ```
 
 ## DESCRIPTION
-Delete one or more stacks.
-If -Wait is specified, stack events are output to the console including events from any nested stacks.
-
-Deletion of multiple stacks can be either sequential or parallel.
-If deleting a gruop of stacks where there are dependencies between them
-use the -Sequential switch and list the stacks in dependency order.
+Deletes a specified stack.
+The call does not return until the stack deletion has completed unless -PassThru is present, in which case it returns immediately and you can check the status of the stack via the DescribeStacks API Stack events for this template and any nested stacks are output to the console.
 
 ## EXAMPLES
 
 ### EXAMPLE 1
 ```
-Remove-PSCFNStack -StackName MyStack
+Remove-PSFNStack -StackName my-stack
 ```
 
-Deletes a single stack.
+Deletes the specified stack
 
 ### EXAMPLE 2
 ```
-Remove-PSCFNStack -StackName MyStack -BackupTemplate
+Remove-PSFNStack -StackName my-stack -PassThru
 ```
 
-As per the first example, but with the previous version of the template and its current parameter set saved to files in the current directory.
+Deletes the specified stack.
+Don't wait for the deletion to complete.
 
 ### EXAMPLE 3
 ```
-'DependentStack', 'BaseStack' | Remove-PSCFNStack -Sequential
+Remove-PSFNStack -StackName my-stack -RetainResource my-bucket, my-security-group
 ```
 
-Deletes 'DependentStack', waits for completion, then deletes 'BaseStack'.
+Deletes the specified stack, retaining the specified resources.
 
-### EXAMPLE 4
-```
-'Stack1', 'Stack2' | Remove-PSCFNStack -Wait
-```
-
-Sets both stacks deleting in parallel, then waits for them both to complete.
-
-### EXAMPLE 5
-```
-'Stack1', 'Stack2' | Remove-PSCFNStack
-```
-
-Sets both stacks deleting in parallel, and returns immediately.
-See the CloudFormation console to monitor progress.
-
-### EXAMPLE 6
-```
-Get-CFNStack | Remove-PSCFNStack
-```
-
-You would NOT want to do this, just like you wouldn't do rm -rf / !
-It is for illustration only.
-Sets ALL stacks in the region deleting simultaneously, which would probably trash some stacks
-and then others would fail due to dependent resources.
+Note that the listed resources will only be retained if, and only if the stack is in a DELETE_FAILED state and the listed resources are the cause of the failure.
+IF the stack is not DELETE_FAILED, you will be asked if you want to proceed with the delete and if you answer yes, then ALL resources will be deleted.
 
 ## PARAMETERS
 
-### -StackName
-Either stack names or the object returned by Get-CFNStack, New-CFNStack, Update-CFNStack
-and other functions in this module when run with -Wait.
+### -RetainResource
+For stacks in the DELETE_FAILED state, a list of resource logical IDs that are associated with the resources you want to retain.
+During deletion, AWS CloudFormation deletes the stack but does not delete the retained resources.
+Retaining resources is useful when you cannot delete a resource, such as a non-empty S3 bucket, but you want to delete the stack.
 
 ```yaml
 Type: String[]
 Parameter Sets: (All)
-Aliases:
+Aliases: RetainResources
 
-Required: True
-Position: 1
+Required: False
+Position: Named
 Default value: None
-Accept pipeline input: True (ByPropertyName, ByValue)
+Accept pipeline input: True (ByPropertyName)
 Accept wildcard characters: False
 ```
 
-### -Wait
-If set and -Sequential is not set (so deleting in parallel), wait for all stacks to be deleted before returning.
+### -ClientRequestToken
+A unique identifier for this CreateStack request.
+Specify this token if you plan to retry requests so that AWS CloudFormation knows that you're not attempting to create a stack with the same name.
+You might retry CreateStack requests to ensure that AWS CloudFormation successfully received them.
+All events triggered by a given stack operation are assigned the same client request token, which you can use to track operations.
+For example, if you execute a CreateStack operation with the token token1, then all the StackEvents generated by that operation will have ClientRequestToken set as token1.
+In the console, stack operations display the client request token on the Events tab.
+Stack operations that are initiated from the console use the token format Console-StackOperation-ID, which helps you easily identify the stack operation .
+For example, if you create a stack using the console, each stack event would be assigned the same token in the following format: Console-CreateStack-7f59c3cf-00d2-40c7-b2ff-e75db0987002.
 
 ```yaml
-Type: SwitchParameter
+Type: String
 Parameter Sets: (All)
 Aliases:
 
 Required: False
 Position: Named
-Default value: False
-Accept pipeline input: False
-Accept wildcard characters: False
-```
-
-### -Sequential
-If set, delete stacks in the order they are specified on the command line or received from the pipeline,
-waiting for each stack to delete successfully before proceeding to the next one.
-
-```yaml
-Type: SwitchParameter
-Parameter Sets: (All)
-Aliases:
-
-Required: False
-Position: Named
-Default value: False
-Accept pipeline input: False
+Default value: None
+Accept pipeline input: True (ByPropertyName)
 Accept wildcard characters: False
 ```
 
 ### -Force
-If set, do not ask first.
+This parameter overrides confirmation prompts to force the cmdlet to continue its operation.
+This parameter should always be used with caution.
 
 ```yaml
 Type: SwitchParameter
@@ -135,13 +104,13 @@ Aliases:
 Required: False
 Position: Named
 Default value: False
-Accept pipeline input: False
+Accept pipeline input: True (ByPropertyName)
 Accept wildcard characters: False
 ```
 
-### -ThrowOnAbort
-If set, and user answers no when asked if stack should be deleted, throw an exception instead of just warning.
-This switch is primarily for use by Reset-PSCFNStack to enable cancellation of the reset process.
+### -PassThru
+If this is set, then the operation returns immediately after submitting the request to CloudFormation.
+If not set, then the operation is followed to completion, with stack events being output to the console.
 
 ```yaml
 Type: SwitchParameter
@@ -151,24 +120,44 @@ Aliases:
 Required: False
 Position: Named
 Default value: False
-Accept pipeline input: False
+Accept pipeline input: True (ByPropertyName)
 Accept wildcard characters: False
 ```
 
-### -BackupTemplate
-If set, back up the current version of the template stored by CloudFormation, along with the current parameter set if any to files in the current directory.
-This will assist with undoing any unwanted change.
-Note that if you have dropped or replaced a database or anything else associcated with stored data, then the data is lost forever!
+### -RoleARN
+The Amazon Resource Name (ARN) of an AWS Identity and Access Management (IAM) role that AWS CloudFormation assumes to create the stack.
+AWS CloudFormation uses the role's credentials to make calls on your behalf.
+AWS CloudFormation always uses this role for all future operations on the stack.
+As long as users have permission to operate on the stack, AWS CloudFormation uses this role even if the users don't have permission to pass it.
+Ensure that the role grants least privilege.If you don't specify a value, AWS CloudFormation uses the role that was previously associated with the stack.
+If no role is available, AWS CloudFormation uses a temporary session that is generated from your user credentials.
 
 ```yaml
-Type: SwitchParameter
+Type: String
 Parameter Sets: (All)
 Aliases:
 
 Required: False
 Position: Named
-Default value: False
-Accept pipeline input: False
+Default value: None
+Accept pipeline input: True (ByPropertyName)
+Accept wildcard characters: False
+```
+
+### -StackName
+The name that is associated with the stack.
+The name must be unique in the Region in which you are creating the stack.A stack name can contain only alphanumeric characters (case sensitive) and hyphens.
+It must start with an alphabetic character and cannot be longer than 128 characters.
+
+```yaml
+Type: String
+Parameter Sets: (All)
+Aliases:
+
+Required: True
+Position: 0
+Default value: None
+Accept pipeline input: True (ByPropertyName)
 Accept wildcard characters: False
 ```
 
@@ -179,12 +168,12 @@ This can be a temporary access key if the corresponding session token is supplie
 ```yaml
 Type: String
 Parameter Sets: (All)
-Aliases:
+Aliases: AK
 
 Required: False
 Position: Named
 Default value: None
-Accept pipeline input: False
+Accept pipeline input: True (ByPropertyName)
 Accept wildcard characters: False
 ```
 
@@ -199,12 +188,16 @@ Aliases:
 Required: False
 Position: Named
 Default value: None
-Accept pipeline input: False
+Accept pipeline input: True (ByPropertyName, ByValue)
 Accept wildcard characters: False
 ```
 
 ### -EndpointUrl
-The endpoint to make the call against.
+The endpoint to make CloudFormation calls against.
+
+The cmdlets normally determine which endpoint to call based on the region specified to the -Region parameter or set as default in the shell (via Set-DefaultAWSRegion).
+Only specify this parameter if you must direct the call to a specific custom endpoint, e.g.
+if using LocalStack or some other AWS emulator or a VPC endpoint from an EC2 instance.
 
 ```yaml
 Type: String
@@ -214,12 +207,12 @@ Aliases:
 Required: False
 Position: Named
 Default value: None
-Accept pipeline input: False
+Accept pipeline input: True (ByPropertyName)
 Accept wildcard characters: False
 ```
 
 ### -NetworkCredential
-'Used with SAML-based authentication when ProfileName references a SAML role profile.
+Used with SAML-based authentication when ProfileName references a SAML role profile.
 Contains the network credentials to be supplied during authentication with the configured identity provider's endpoint.
 This parameter is not required if the user's default network identity can or should be used during authentication.
 
@@ -231,22 +224,29 @@ Aliases:
 Required: False
 Position: Named
 Default value: None
-Accept pipeline input: False
+Accept pipeline input: True (ByPropertyName, ByValue)
 Accept wildcard characters: False
 ```
 
 ### -ProfileLocation
 Used to specify the name and location of the ini-format credential file (shared with the AWS CLI and other AWS SDKs)
 
+If this optional parameter is omitted this cmdlet will search the encrypted credential file used by the AWS SDK for .NET and AWS Toolkit for Visual Studio first.
+If the profile is not found then the cmdlet will search in the ini-format credential file at the default location: (user's home directory)\.aws\credentials.
+
+If this parameter is specified then this cmdlet will only search the ini-format credential file at the location given.
+
+As the current folder can vary in a shell or during script execution it is advised that you use specify a fully qualified path instead of a relative path.
+
 ```yaml
 Type: String
 Parameter Sets: (All)
-Aliases:
+Aliases: AWSProfilesLocation, ProfilesLocation
 
 Required: False
 Position: Named
 Default value: None
-Accept pipeline input: False
+Accept pipeline input: True (ByPropertyName)
 Accept wildcard characters: False
 ```
 
@@ -258,18 +258,40 @@ You can also specify the name of a profile stored in the .ini-format credential 
 ```yaml
 Type: String
 Parameter Sets: (All)
-Aliases:
+Aliases: StoredCredentials, AWSProfileName
 
 Required: False
 Position: Named
 Default value: None
-Accept pipeline input: False
+Accept pipeline input: True (ByPropertyName)
 Accept wildcard characters: False
 ```
 
 ### -Region
-The system name of the AWS region in which the operation should be invoked.
-For example, us-east-1, eu-west-1 etc.
+The system name of an AWS region or an AWSRegion instance.
+This governs the endpoint that will be used when calling service operations.
+Note that the AWS resources referenced in a call are usually region-specific.
+
+```yaml
+Type: Object
+Parameter Sets: (All)
+Aliases: RegionToCall
+
+Required: False
+Position: Named
+Default value: None
+Accept pipeline input: True (ByPropertyName)
+Accept wildcard characters: False
+```
+
+### -S3EndpointUrl
+The endpoint to make S3 calls against.
+
+S3 is used by these cmdlets for managing S3 based templates and by the packager for uploading code artifacts and nested templates.
+
+The cmdlets normally determine which endpoint to call based on the region specified to the -Region parameter or set as default in the shell (via Set-DefaultAWSRegion).
+Only specify this parameter if you must direct the call to a specific custom endpoint, e.g.
+if using LocalStack or some other AWS emulator or a VPC endpoint from an EC2 instance.
 
 ```yaml
 Type: String
@@ -279,7 +301,7 @@ Aliases:
 Required: False
 Position: Named
 Default value: None
-Accept pipeline input: False
+Accept pipeline input: True (ByPropertyName)
 Accept wildcard characters: False
 ```
 
@@ -290,12 +312,12 @@ This can be a temporary secret key if the corresponding session token is supplie
 ```yaml
 Type: String
 Parameter Sets: (All)
-Aliases:
+Aliases: SK, SecretAccessKey
 
 Required: False
 Position: Named
 Default value: None
-Accept pipeline input: False
+Accept pipeline input: True (ByPropertyName)
 Accept wildcard characters: False
 ```
 
@@ -305,12 +327,33 @@ The session token if the access and secret keys are temporary session-based cred
 ```yaml
 Type: String
 Parameter Sets: (All)
+Aliases: ST
+
+Required: False
+Position: Named
+Default value: None
+Accept pipeline input: True (ByPropertyName)
+Accept wildcard characters: False
+```
+
+### -STSEndpointUrl
+The endpoint to make STS calls against.
+
+STS is used only if creating a bucket to store oversize templates and packager artifacts to get the caller account ID to use as part of the generated bucket name.
+
+The cmdlets normally determine which endpoint to call based on the region specified to the -Region parameter or set as default in the shell (via Set-DefaultAWSRegion).
+Only specify this parameter if you must direct the call to a specific custom endpoint, e.g.
+if using LocalStack or some other AWS emulator or a VPC endpoint from an EC2 instance.
+
+```yaml
+Type: String
+Parameter Sets: (All)
 Aliases:
 
 Required: False
 Position: Named
 Default value: None
-Accept pipeline input: False
+Accept pipeline input: True (ByPropertyName)
 Accept wildcard characters: False
 ```
 
@@ -320,11 +363,108 @@ This cmdlet supports the common parameters: -Debug, -ErrorAction, -ErrorVariable
 ## INPUTS
 
 ### System.String[]
-### You can pipe the names or ARNs of the stacks to delete to this function
+For stacks in the DELETE_FAILED state, a list of resource logical IDs that are associated with the resources you want to retain.
+During deletion, AWS CloudFormation deletes the stack but does not delete the retained resources.
+Retaining resources is useful when you cannot delete a resource, such as a non-empty S3 bucket, but you want to delete the stack.
+
+### System.String
+A unique identifier for this CreateStack request.
+Specify this token if you plan to retry requests so that AWS CloudFormation knows that you're not attempting to create a stack with the same name.
+You might retry CreateStack requests to ensure that AWS CloudFormation successfully received them.
+All events triggered by a given stack operation are assigned the same client request token, which you can use to track operations.
+For example, if you execute a CreateStack operation with the token token1, then all the StackEvents generated by that operation will have ClientRequestToken set as token1.
+In the console, stack operations display the client request token on the Events tab.
+Stack operations that are initiated from the console use the token format Console-StackOperation-ID, which helps you easily identify the stack operation .
+For example, if you create a stack using the console, each stack event would be assigned the same token in the following format: Console-CreateStack-7f59c3cf-00d2-40c7-b2ff-e75db0987002.
+
+### System.Management.Automation.SwitchParameter
+This parameter overrides confirmation prompts to force the cmdlet to continue its operation.
+This parameter should always be used with caution.
+
+### System.Management.Automation.SwitchParameter
+If this is set, then the operation returns immediately after submitting the request to CloudFormation.
+If not set, then the operation is followed to completion, with stack events being output to the console.
+
+### System.String
+The Amazon Resource Name (ARN) of an AWS Identity and Access Management (IAM) role that AWS CloudFormation assumes to create the stack.
+AWS CloudFormation uses the role's credentials to make calls on your behalf.
+AWS CloudFormation always uses this role for all future operations on the stack.
+As long as users have permission to operate on the stack, AWS CloudFormation uses this role even if the users don't have permission to pass it.
+Ensure that the role grants least privilege.If you don't specify a value, AWS CloudFormation uses the role that was previously associated with the stack.
+If no role is available, AWS CloudFormation uses a temporary session that is generated from your user credentials.
+
+### System.String
+The name that is associated with the stack.
+The name must be unique in the Region in which you are creating the stack.A stack name can contain only alphanumeric characters (case sensitive) and hyphens.
+It must start with an alphabetic character and cannot be longer than 128 characters.
+
+### System.String
+The AWS access key for the user account.
+This can be a temporary access key if the corresponding session token is supplied to the -SessionToken parameter.
+
+### Amazon.Runtime.AWSCredentials
+An AWSCredentials object instance containing access and secret key information, and optionally a token for session-based credentials.
+
+### System.String
+The endpoint to make CloudFormation calls against.
+
+The cmdlets normally determine which endpoint to call based on the region specified to the -Region parameter or set as default in the shell (via Set-DefaultAWSRegion).
+Only specify this parameter if you must direct the call to a specific custom endpoint, e.g.
+if using LocalStack or some other AWS emulator or a VPC endpoint from an EC2 instance.
+
+### System.Management.Automation.PSCredential
+Used with SAML-based authentication when ProfileName references a SAML role profile.
+Contains the network credentials to be supplied during authentication with the configured identity provider's endpoint.
+This parameter is not required if the user's default network identity can or should be used during authentication.
+
+### System.String
+Used to specify the name and location of the ini-format credential file (shared with the AWS CLI and other AWS SDKs)
+
+If this optional parameter is omitted this cmdlet will search the encrypted credential file used by the AWS SDK for .NET and AWS Toolkit for Visual Studio first.
+If the profile is not found then the cmdlet will search in the ini-format credential file at the default location: (user's home directory)\.aws\credentials.
+
+If this parameter is specified then this cmdlet will only search the ini-format credential file at the location given.
+
+As the current folder can vary in a shell or during script execution it is advised that you use specify a fully qualified path instead of a relative path.
+
+### System.String
+The user-defined name of an AWS credentials or SAML-based role profile containing credential information.
+The profile is expected to be found in the secure credential file shared with the AWS SDK for .NET and AWS Toolkit for Visual Studio.
+You can also specify the name of a profile stored in the .ini-format credential file used with the AWS CLI and other AWS SDKs.
+
+### System.Object
+The system name of an AWS region or an AWSRegion instance.
+This governs the endpoint that will be used when calling service operations.
+Note that the AWS resources referenced in a call are usually region-specific.
+
+### System.String
+The endpoint to make S3 calls against.
+
+S3 is used by these cmdlets for managing S3 based templates and by the packager for uploading code artifacts and nested templates.
+
+The cmdlets normally determine which endpoint to call based on the region specified to the -Region parameter or set as default in the shell (via Set-DefaultAWSRegion).
+Only specify this parameter if you must direct the call to a specific custom endpoint, e.g.
+if using LocalStack or some other AWS emulator or a VPC endpoint from an EC2 instance.
+
+### System.String
+The AWS secret key for the user account.
+This can be a temporary secret key if the corresponding session token is supplied to the -SessionToken parameter.
+
+### System.String
+The session token if the access and secret keys are temporary session-based credentials.
+
+### System.String
+The endpoint to make STS calls against.
+
+STS is used only if creating a bucket to store oversize templates and packager artifacts to get the caller account ID to use as part of the generated bucket name.
+
+The cmdlets normally determine which endpoint to call based on the region specified to the -Region parameter or set as default in the shell (via Set-DefaultAWSRegion).
+Only specify this parameter if you must direct the call to a specific custom endpoint, e.g.
+if using LocalStack or some other AWS emulator or a VPC endpoint from an EC2 instance.
+
 ## OUTPUTS
 
-### System.String[]
-### ARN(s) of deleted stack(s) else nothing if the stack did not exist or no stacks were deleted.
+### Firefly.CloudFormation.Model.CloudFormationResult
 ## NOTES
 
 ## RELATED LINKS

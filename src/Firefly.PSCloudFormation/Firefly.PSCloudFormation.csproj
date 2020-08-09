@@ -1,0 +1,76 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFramework>netstandard2.0</TargetFramework>
+    <CopyLocalLockFileAssemblies>true</CopyLocalLockFileAssemblies>
+    <Version>4.0.0</Version>
+    <AssemblyVersion>4.0.0.0</AssemblyVersion>
+    <FileVersion>4.0.0.0</FileVersion>
+  </PropertyGroup>
+  <PropertyGroup>
+    <AwsTools>$(AWS_TOOLS_COMMON)</AwsTools>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(OS)' == 'Windows_NT'">
+    <CurrentUserAwsTools>$(USERPROFILE)\Documents\WindowsPowerShell\Modules\AWS.Tools.Common\4.0.5.0\AWS.Tools.Common.dll</CurrentUserAwsTools>
+    <AllUsersAwsTools>C:\Program Files\WindowsPowerShell\Modules\AWS.Tools.Common\4.0.5.0\AWS.Tools.Common.dll</AllUsersAwsTools>
+    <AwsTools Condition="'$(AwsTools)' == '' AND Exists('$(CurrentUserAwsTools)')">$(CurrentUserAwsTools)</AwsTools>
+    <AwsTools Condition="'$(AwsTools)' == '' AND Exists('$(AllUsersAwsTools)')">$(AllUsersAwsTools)</AwsTools>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(OS)' != 'Windows_NT'">
+    <CurrentUserAwsTools>~/.local/share/powershell/Modules/AWS.Tools.Common/4.0.5.0/AWS.Tools.Common.dll</CurrentUserAwsTools>
+    <AllUsersAwsTools>/usr/local/share/powershell/Modules/AWS.Tools.Common/4.0.5.0/AWS.Tools.Common.dll</AllUsersAwsTools>
+    <AwsTools Condition="'$(AwsTools)' == '' AND Exists('$(CurrentUserAwsTools)')">$(CurrentUserAwsTools)</AwsTools>
+    <AwsTools Condition="'$(AwsTools)' == '' AND Exists('$(AllUsersAwsTools)')">$(AllUsersAwsTools)</AwsTools>
+  </PropertyGroup>
+  <PropertyGroup>
+    <DocumentationFile>$(ProjectDir)Firefly.PSCloudFormation.xml</DocumentationFile>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(APPVEYOR)'!=''">
+    <AppendTargetFrameworkToOutputPath>false</AppendTargetFrameworkToOutputPath>
+    <OutputPath>$(SolutionDir)PSCloudFormation</OutputPath>
+  </PropertyGroup>
+  <ItemGroup>
+    <PackageReference Include="AWSSDK.S3" Version="3.3.110.33" />
+    <PackageReference Include="AWSSDK.SecurityToken" Version="3.3.104.41" />
+    <PackageReference Include="Firefly.CrossPlatformZip" Version="0.5.0" />
+    <PackageReference Include="Firefly.PowerShell.DynamicParameters" Version="0.2.1" />
+    <PackageReference Include="PowerShellStandard.Library" Version="5.1.0" />
+  </ItemGroup>
+  <ItemGroup Condition="'$(OS)' == 'Windows_NT'">
+    <PackageReference Include="XmlDoc2CmdletDoc" Version="0.3.0">
+      <PrivateAssets>all</PrivateAssets>
+      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+    </PackageReference>
+  </ItemGroup>
+  <ItemGroup Condition="'$(SolutionName)' == 'Firefly.PSCloudFormation.debug'">
+    <ProjectReference Include="..\Firefly.CloudFormation\Firefly.CloudFormation.csproj" />
+  </ItemGroup>
+  <ItemGroup Condition="'$(SolutionName)' == 'Firefly.PSCloudFormation'">
+    <PackageReference Include="Firefly.CloudFormation" Version="0.2.0" />
+  </ItemGroup>
+  <ItemGroup>
+    <Reference Include="AWS.Tools.Common">
+      <HintPath>$(AwsTools)</HintPath>
+    </Reference>
+  </ItemGroup>
+  <ItemGroup>
+    <None Update="debug.ps1">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </None>
+    <None Update="PSCloudFormation.psd1">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </None>
+  </ItemGroup>
+  <Target Condition="'$(OS)' == 'Windows_NT'" Name="PostBuild" AfterTargets="PostBuildEvent">
+    <Message Importance="High" Text="Post Build (Windows)" />
+    <Exec Command="del &quot;$(OutDir)AWS*&quot;&#xD;&#xA;del &quot;$(OutDir)System.Management.Automation.dll&quot;&#xD;&#xA;echo $(TargetDir) &gt; &quot;$(SolutionDir)ModulePath.txt&quot;" />
+  </Target>
+  <Target Condition="'$(OS)' != 'Windows_NT'" Name="LinuxPostBuild" AfterTargets="PostBuildEvent">
+    <Message Importance="High" Text="Post Build (Linux)" />
+    <Exec Command="rm -f &quot;$(OutDir)AWS*&quot;&#xD;&#xA;rm -f &quot;$(OutDir)System.Management.Automation.dll&quot;&#xD;&#xA;echo $(TargetDir) &gt; &quot;$(SolutionDir)ModulePath.txt&quot;" />
+  </Target>
+  <Target Name="PreBuild" BeforeTargets="PreBuildEvent">
+    <Error Condition="'$(AwsTools)' == ''" Text="Cannot locate AWS Tools" />
+    <Message Importance="High" Text="TargetDir: $(TargetDir)" />
+  </Target>
+</Project>

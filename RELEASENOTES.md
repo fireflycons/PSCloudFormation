@@ -1,5 +1,18 @@
 # Release Notes
 
+# v4.0.0
+
+* Complete rewrite in C#
+* Support for all CloudFormation properties
+* Better authentication handling
+* Some breaking changes - see README
+
+# v3.0.0
+
+* Support for Resource Import
+* Use modular AWS.Tools
+* One module for Windows PowerShell and PowerShell Core
+
 ## 2.2.2
 
 * Fix bug in nested stack packaging introduced by change in arguments to `New-PSCFNPackage`

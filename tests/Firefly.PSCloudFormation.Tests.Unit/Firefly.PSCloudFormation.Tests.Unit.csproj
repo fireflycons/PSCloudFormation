@@ -1,0 +1,47 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>netcoreapp3.1</TargetFramework>
+
+    <IsPackable>false</IsPackable>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <None Remove="Resources\DeepNestedStack\base-stack.json" />
+    <None Remove="Resources\DeepNestedStack\lambdacomplex\index.js" />
+    <None Remove="Resources\DeepNestedStack\lambdacomplex\other.js" />
+    <None Remove="Resources\DeepNestedStack\nested-1.json" />
+    <None Remove="Resources\DeepNestedStack\sub-nested-2.json" />
+    <None Remove="Resources\ParameterTest.json" />
+    <None Remove="Resources\ParameterTest.yaml" />
+    <None Remove="Resources\progetDockerCloudFormation.yaml" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <EmbeddedResource Include="Resources\DeepNestedStack\base-stack.json" />
+    <EmbeddedResource Include="Resources\DeepNestedStack\lambdacomplex\index.js" />
+    <EmbeddedResource Include="Resources\DeepNestedStack\lambdacomplex\other.js" />
+    <EmbeddedResource Include="Resources\DeepNestedStack\nested-1.json" />
+    <EmbeddedResource Include="Resources\DeepNestedStack\sub-nested-2.json" />
+    <EmbeddedResource Include="Resources\ParameterTest.json" />
+    <EmbeddedResource Include="Resources\ParameterTest.yaml" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="FluentAssertions" Version="5.10.3" />
+    <PackageReference Include="Microsoft.NET.Test.Sdk" Version="16.5.0" />
+    <PackageReference Include="Moq" Version="4.14.1" />
+    <PackageReference Include="xunit" Version="2.4.0" />
+    <PackageReference Include="xunit.runner.visualstudio" Version="2.4.0" />
+    <PackageReference Include="coverlet.collector" Version="1.2.0" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\src\Firefly.PSCloudFormation\Firefly.PSCloudFormation.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Folder Include="Resources\DeepNestedStack\js\" />
+  </ItemGroup>
+
+</Project>

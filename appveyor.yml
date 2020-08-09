@@ -8,20 +8,19 @@ image:
   - Ubuntu
   - Visual Studio 2019
 
-install:
-  - ps: . ./build/cfn-flip-install.ps1
-  - ps: . ./build/psdeploy-install.ps1
+#install:
+#  - ps: . ./build/psdeploy-install.ps1
 
 # Does the whole process
 test_script:
-  - ps: . ./build.ps1 -Task BuildAppVeyor
+  - ps: . ./build/build.ps1 -Task BuildAppVeyor
 
 for:
 - matrix:
     only:
       - image: Visual Studio 2019
   deploy_script:
-    - ps: . .\build.ps1 -Task Deploy
+    - ps: . ./build/build.ps1 -Task Deploy -ImportDependenciesOnly
 
 # Skip on updates to the readme.
 # We can force this by adding [skip ci] or [ci skip] anywhere in commit message
