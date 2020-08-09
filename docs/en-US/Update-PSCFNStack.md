@@ -14,7 +14,7 @@ Calls the AWS CloudFormation UpdateStack API operation.
 
 ```
 Update-PSCFNStack [-StackPolicyDuringUpdateLocation <String>] [-UsePreviousTemplate]
- [-ResourcesToImport <String>] [-Wait] [-Capabilities <String[]>] [-NotificationARNs <String[]>]
+ [-ResourcesToImport <String>] [-Wait] [-Capabilities <String[]>] [-ForceS3] [-NotificationARNs <String[]>]
  [-ParameterFile <String>] [-ResourceType <String[]>] [-RollbackConfiguration_MonitoringTimeInMinute <Int32>]
  [-RollbackConfiguration_RollbackTrigger <RollbackTrigger[]>] [-StackPolicyLocation <String>] [-Tag <Tag[]>]
  [-TemplateLocation <String>] [-ClientRequestToken <String>] [-Force] [-PassThru] [-RoleARN <String>]
@@ -154,6 +154,21 @@ Aliases: Capability
 Required: False
 Position: Named
 Default value: None
+Accept pipeline input: True (ByPropertyName)
+Accept wildcard characters: False
+```
+
+### -ForceS3
+If present, forces upload of a local template (file or string body) to S3, irrespective of whether the template size is over the maximum of 51,200 bytes
+
+```yaml
+Type: SwitchParameter
+Parameter Sets: (All)
+Aliases:
+
+Required: False
+Position: Named
+Default value: False
 Accept pipeline input: True (ByPropertyName)
 Accept wildcard characters: False
 ```
