@@ -25,6 +25,9 @@
   <PropertyGroup>
     <DocumentationFile>$(ProjectDir)Firefly.PSCloudFormation.xml</DocumentationFile>
   </PropertyGroup>
+  <PropertyGroup Condition="'$(APPVEYOR) != ''">
+    <OutputPath>$(SolutionDir)PSCloudFormation\</OutputPath>
+  </PropertyGroup>
   <ItemGroup>
     <PackageReference Include="AWSSDK.S3" Version="3.3.110.33" />
     <PackageReference Include="AWSSDK.SecurityToken" Version="3.3.104.41" />
