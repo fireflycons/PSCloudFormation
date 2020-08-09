@@ -61,16 +61,16 @@
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </None>
   </ItemGroup>
-    <Target Condition="'$(OS)' == 'Windows_NT'" Name="PostBuild" AfterTargets="PostBuildEvent">
+  <Target Condition="'$(OS)' == 'Windows_NT'" Name="PostBuild" AfterTargets="PostBuildEvent">
     <Message Importance="High" Text="Post Build (Windows)" />
-    <Exec Command="del &quot;$(OutDir)AWS*&quot;&#xD;&#xA;del &quot;$(OutDir)System.Management.Automation.dll&quot;&#xD;&#xA;echo $(ProjectDir)$(OutDir) &gt; &quot;$(SolutionDir)ModulePath.txt&quot;" />
+    <Exec Command="del &quot;$(OutDir)AWS*&quot;&#xD;&#xA;del &quot;$(OutDir)System.Management.Automation.dll&quot;&#xD;&#xA;echo $(TargetDir) &gt; &quot;$(SolutionDir)ModulePath.txt&quot;" />
   </Target>
   <Target Condition="'$(OS)' != 'Windows_NT'" Name="LinuxPostBuild" AfterTargets="PostBuildEvent">
     <Message Importance="High" Text="Post Build (Linux)" />
-    <Exec Command="rm -f &quot;$(OutDir)AWS*&quot;&#xD;&#xA;rm -f &quot;$(OutDir)System.Management.Automation.dll&quot;&#xD;&#xA;echo $(ProjectDir)$(OutDir) &gt; &quot;$(SolutionDir)ModulePath.txt&quot;" />
+    <Exec Command="rm -f &quot;$(OutDir)AWS*&quot;&#xD;&#xA;rm -f &quot;$(OutDir)System.Management.Automation.dll&quot;&#xD;&#xA;echo $(TargetDir) &gt; &quot;$(SolutionDir)ModulePath.txt&quot;" />
   </Target>
   <Target Name="PreBuild" BeforeTargets="PreBuildEvent">
     <Error Condition="'$(AwsTools)' == ''" Text="Cannot locate AWS Tools" />
-    <Message Importance="High" Text="OutputPath: $(OutputPath)" />
+    <Message Importance="High" Text="TargetDir: $(TargetDir)" />
   </Target>
 </Project>
