@@ -37,7 +37,7 @@ Properties {
 
 Task Default -Depends BuildHelp, Deploy
 
-Task BuildAppVeyor -Depends Build
+Task BuildAppVeyor -Depends UpdateManifest
 
 Task Init {
     $lines
