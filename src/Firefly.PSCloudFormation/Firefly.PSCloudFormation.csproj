@@ -25,8 +25,9 @@
   <PropertyGroup>
     <DocumentationFile>$(ProjectDir)Firefly.PSCloudFormation.xml</DocumentationFile>
   </PropertyGroup>
-  <PropertyGroup Condition="'$(APPVEYOR) != ''">
-    <OutputPath>$(SolutionDir)PSCloudFormation\</OutputPath>
+  <PropertyGroup Condition="'$(APPVEYOR)'!=''">
+    <AppendTargetFrameworkToOutputPath>false</AppendTargetFrameworkToOutputPath>
+    <OutputPath>$(SolutionDir)PSCloudFormation</OutputPath>
   </PropertyGroup>
   <ItemGroup>
     <PackageReference Include="AWSSDK.S3" Version="3.3.110.33" />
@@ -70,5 +71,6 @@
   </Target>
   <Target Name="PreBuild" BeforeTargets="PreBuildEvent">
     <Error Condition="'$(AwsTools)' == ''" Text="Cannot locate AWS Tools" />
+    <Message Importance="High" Text="OutputPath: $(OutputPath)" />
   </Target>
 </Project>
