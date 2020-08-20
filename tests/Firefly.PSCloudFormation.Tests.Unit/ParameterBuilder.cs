@@ -6,7 +6,6 @@ namespace Firefly.PSCloudFormation.Tests.Unit
     using System.Management.Automation;
 
     using Firefly.CloudFormation.Resolvers;
-    using Firefly.PSCloudFormation.Tests.Unit.Resources;
 
     using FluentAssertions;
 
@@ -64,7 +63,7 @@ namespace Firefly.PSCloudFormation.Tests.Unit
         [Fact]
         public void ShouldCreateTheSameParameterDictionaryForYamlEquivalentTemplate()
         {
-            var templateBody = EmbeddedResourceManager.GetResourceString("ParameterTest.yaml");
+            var templateBody = this.fixture.ParameterTestYaml;
             var mockTemplateResolver = new Mock<IInputFileResolver>();
 
             mockTemplateResolver.Setup(r => r.FileContent).Returns(templateBody);

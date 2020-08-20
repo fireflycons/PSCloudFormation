@@ -11,7 +11,8 @@ namespace Firefly.PSCloudFormation.Tests.Unit
 
     using Amazon.S3.Model;
 
-    using Firefly.PSCloudFormation.Tests.Unit.Resources;
+    using Firefly.EmbeddedResourceLoader;
+    using Firefly.EmbeddedResourceLoader.Materialization;
     using Firefly.PSCloudFormation.Tests.Unit.Utils;
     using Firefly.PSCloudFormation.Utils;
 
@@ -20,7 +21,7 @@ namespace Firefly.PSCloudFormation.Tests.Unit
     using Xunit;
     using Xunit.Abstractions;
 
-    public class Packager
+    public class Packager : AutoResourceLoader, IDisposable
     {
         private readonly IPathResolver pathResolver = new TestPathResolver();
 
@@ -28,6 +29,12 @@ namespace Firefly.PSCloudFormation.Tests.Unit
 
         private readonly ListObjectsV2Response fileNotFound =
             new ListObjectsV2Response { S3Objects = new List<S3Object>() };
+
+        /// <summary>
+        /// Each test needs its own copy of the stack directory structure as the content is modified by the test.
+        /// </summary>
+        [EmbeddedResource("DeepNestedStack")]
+        private TempDirectory deepNestedStack;
 
         public Packager(ITestOutputHelper output)
         {
@@ -52,10 +59,9 @@ namespace Firefly.PSCloudFormation.Tests.Unit
             var mockContext = new Mock<IPSCloudFormationContext>();
             mockContext.Setup(c => c.Logger).Returns(logger);
 
-            using var templateDir = EmbeddedResourceManager.GetResourceDirectory("DeepNestedStack");
             using var workingDirectory = new TempDirectory();
 
-            var template = Path.Combine(templateDir, "base-stack.json");
+            var template = Path.Combine(this.deepNestedStack.FullPath, "base-stack.json");
 
             var newPackage = new NewPackageCommand
                                  {
@@ -69,7 +75,7 @@ namespace Firefly.PSCloudFormation.Tests.Unit
                                      Logger = logger
                                  };
 
-            var outputTemplatePath = await newPackage.ProcessTemplate(template, workingDirectory);
+            var outputTemplatePath = await newPackage.ProcessTemplate(template, workingDirectory.FullPath);
 
             this.output.WriteLine(string.Empty);
             this.output.WriteLine(File.ReadAllText(outputTemplatePath));
@@ -81,8 +87,7 @@ namespace Firefly.PSCloudFormation.Tests.Unit
         [Fact]
         public async Task ShouldUploadNewVersionOfArtifactWhenHashesDontMatch()
         {
-            using var templateDir = EmbeddedResourceManager.GetResourceDirectory("DeepNestedStack");
-            var template = Path.Combine(templateDir, "base-stack.json");
+            var template = Path.Combine(this.deepNestedStack.FullPath, "base-stack.json");
             var projectId = S3Util.GenerateProjectId(template);
 
             var logger = new TestLogger(this.output);
@@ -134,7 +139,7 @@ namespace Firefly.PSCloudFormation.Tests.Unit
                                      Logger = logger
                                  };
 
-            var outputTemplatePath = await newPackage.ProcessTemplate(template, workingDirectory);
+            var outputTemplatePath = await newPackage.ProcessTemplate(template, workingDirectory.FullPath);
 
             this.output.WriteLine(string.Empty);
             this.output.WriteLine(File.ReadAllText(outputTemplatePath));
@@ -146,8 +151,8 @@ namespace Firefly.PSCloudFormation.Tests.Unit
         [Fact]
         public async Task ShouldNotUploadNewVersionOfTemplateArtifactWhenHashesMatch()
         {
-            using var templateDir = EmbeddedResourceManager.GetResourceDirectory("DeepNestedStack");
-            var template = Path.Combine(templateDir, "base-stack.json");
+            var templateDir = this.deepNestedStack;
+            var template = Path.Combine(templateDir.FullPath, "base-stack.json");
             var projectId = S3Util.GenerateProjectId(template);
             var logger = new TestLogger(this.output);
             var mockSts = TestHelpers.GetSTSMock();
@@ -198,7 +203,7 @@ namespace Firefly.PSCloudFormation.Tests.Unit
                 Logger = logger
             };
 
-            var outputTemplatePath = await newPackage.ProcessTemplate(template, workingDirectory);
+            var outputTemplatePath = await newPackage.ProcessTemplate(template, workingDirectory.FullPath);
 
             this.output.WriteLine(string.Empty);
             this.output.WriteLine(File.ReadAllText(outputTemplatePath));
@@ -229,11 +234,11 @@ namespace Firefly.PSCloudFormation.Tests.Unit
         public async Task ShouldNotUploadNewVersionOfDirectoryArtifactWhenHashesMatch()
         {
 
-            using var templateDir = EmbeddedResourceManager.GetResourceDirectory("DeepNestedStack");
+            using var templateDir = this.deepNestedStack;
             // Hash of lambda directory content before zipping
             // Zips are not idempotent - fields e.g. timestamps in central directory change with successive zips of the same content.
-            var directoryHash = new DirectoryInfo(Path.Combine(templateDir, "lambdacomplex")).MD5();
-            var template = Path.Combine(templateDir, "base-stack.json");
+            var directoryHash = new DirectoryInfo(Path.Combine(templateDir.FullPath, "lambdacomplex")).MD5();
+            var template = Path.Combine(templateDir.FullPath, "base-stack.json");
             var projectId = S3Util.GenerateProjectId(template);
             var logger = new TestLogger(this.output);
             var mockSts = TestHelpers.GetSTSMock();
@@ -282,7 +287,7 @@ namespace Firefly.PSCloudFormation.Tests.Unit
                 Logger = logger
             };
 
-            var outputTemplatePath = await newPackage.ProcessTemplate(template, workingDirectory);
+            var outputTemplatePath = await newPackage.ProcessTemplate(template, workingDirectory.FullPath);
 
             this.output.WriteLine(string.Empty);
             this.output.WriteLine(File.ReadAllText(outputTemplatePath));
@@ -291,5 +296,9 @@ namespace Firefly.PSCloudFormation.Tests.Unit
             mockS3.Verify(m => m.PutObjectAsync(It.IsAny<PutObjectRequest>(), default), Times.Exactly(2));
         }
 
+        public void Dispose()
+        {
+            this.deepNestedStack?.Dispose();
+        }
     }
 }
