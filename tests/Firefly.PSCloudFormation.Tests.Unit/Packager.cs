@@ -4,6 +4,8 @@ using System.Text;
 
 namespace Firefly.PSCloudFormation.Tests.Unit
 {
+    #pragma warning disable 649
+
     using System.IO;
     using System.Linq;
     using System.Text.RegularExpressions;

@@ -408,8 +408,9 @@
                         case FileInfo fi:
 
                             // Property value points to a file
-                            if (propertyToCheck.Zip)
+                            if (propertyToCheck.Zip && string.Compare(Path.GetExtension(fi.Name), ".zip", StringComparison.OrdinalIgnoreCase) != 0)
                             {
+                                // Zip if zipping is required and file is not already zipped
                                 fileToUpload = Path.Combine(
                                     workingDirectory,
                                     $"{Path.GetFileNameWithoutExtension(fi.Name)}.zip");

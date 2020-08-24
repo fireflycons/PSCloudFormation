@@ -1,13 +1,17 @@
 # Release Notes
 
-# v4.0.0
+# 4.0.1
+
+* Packager should not zip a local artifact that is already zipped.
+
+# 4.0.0
 
 * Complete rewrite in C#
 * Support for all CloudFormation properties
 * Better authentication handling
 * Some breaking changes - see README
 
-# v3.0.0
+# 3.0.0
 
 * Support for Resource Import
 * Use modular AWS.Tools
