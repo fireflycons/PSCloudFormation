@@ -1,5 +1,10 @@
 # Release Notes
 
+# 4.0.2
+
+* Bump version of Firefly.CloudFormation for this fix:
+    * Address potential race condition when monitoring stack events during creation of set of nested stacks. It seems it's possible to retrieve a nested stack resource prior to it being assigned a physical resource ID.
+
 # 4.0.1
 
 * Packager should not zip a local artifact that is already zipped.
