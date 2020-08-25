@@ -188,5 +188,24 @@
                        "Continue with delete.",
                        "Cancel operation.") == ChoiceResponse.Yes;
         }
+
+        /// <summary>
+        /// Callback method for delete stack.
+        /// </summary>
+        /// <returns><c>true</c> if delete should proceed; else <c>false</c></returns>
+        protected bool AcceptDeleteStack()
+        {
+            if (this.Force)
+            {
+                return true;
+            }
+
+            return this.AskYesNo(
+                       $"Delete {this.StackName} now?",
+                       null,
+                       ChoiceResponse.No,
+                       "Delete now.",
+                       "Cancel operation.") == ChoiceResponse.Yes;
+        }
     }
 }

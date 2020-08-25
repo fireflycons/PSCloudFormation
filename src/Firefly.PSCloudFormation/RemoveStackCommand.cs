@@ -88,18 +88,7 @@
         {
             using (var runner = this.GetBuilder().Build())
             {
-                if (!this.Force && this.AskYesNo(
-                        $"Delete {this.StackName} now?",
-                        null,
-                        ChoiceResponse.No,
-                        "Delete now.",
-                        "Cancel operation.") == ChoiceResponse.No)
-                {
-                    this.Logger.LogWarning($"Delete {this.StackName} cancelled");
-                    return StackOperationResult.NoChange;
-                }
-
-                return await runner.DeleteStackAsync(this.AcceptDeleteWithNoRetainResource);
+                return await runner.DeleteStackAsync(this.AcceptDeleteWithNoRetainResource, this.AcceptDeleteStack);
             }
         }
     }

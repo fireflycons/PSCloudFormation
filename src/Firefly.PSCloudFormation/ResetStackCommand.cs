@@ -121,18 +121,13 @@
             using (var runner = this.GetBuilder().WithRetainResource(this.RetainResource).WithFollowOperation()
                 .Build())
             {
-                if (!this.Force && this.AskYesNo(
-                        $"Delete {this.StackName} now?",
-                        null,
-                        ChoiceResponse.No,
-                        "Delete now.",
-                        "Cancel operation.") == ChoiceResponse.No)
-                {
-                    this.Logger.LogWarning($"Delete {this.StackName} cancelled");
-                    return StackOperationResult.NoChange;
-                }
+                var result = await runner.DeleteStackAsync(this.AcceptDeleteWithNoRetainResource, this.AcceptDeleteStack);
 
-                await runner.DeleteStackAsync(this.AcceptDeleteWithNoRetainResource);
+                if (result.StackOperationResult == StackOperationResult.NoChange)
+                {
+                    // Stop here as user cancelled delete.
+                    return result;
+                }
             }
 
             // Now recreate
