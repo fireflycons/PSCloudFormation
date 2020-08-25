@@ -351,7 +351,8 @@
                 .WithRollbackConfiguration(rollbackConfiguration)
                 .WithResourceType(this.ResourceType)
                 .WithStackPolicy(this.StackPolicyLocation)
-                .WithParameters(this.StackParameters);
+                .WithParameters(this.StackParameters)
+                .WithForceS3(this.ForceS3);
         }
 
         /// <summary>
