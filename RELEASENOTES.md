@@ -1,6 +1,6 @@
 # Release Notes
 
-# 4.1.0
+# 4.0.3
 
 * Fix -ForceS3. Setting not being passed to Firefly.CloudFormation
 * Fix exception thrown when Delete Stack is cancelled
