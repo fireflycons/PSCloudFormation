@@ -93,7 +93,10 @@
                             {
                                 new PackagedResourceProperties
                                     {
-                                        Zip = false, PropertyPath = "BodyS3Location", ReplacementType = typeof(string)
+                                        Zip = false,
+                                        PropertyPath = "BodyS3Location",
+                                        ReplacementType = typeof(string),
+                                        Required = false
                                     }
                             }
                     },
@@ -103,7 +106,10 @@
                             {
                                 new PackagedResourceProperties
                                     {
-                                        Zip = true, PropertyPath = "Code", ReplacementType = typeof(S3LocationLong)
+                                        Zip = true,
+                                        PropertyPath = "Code",
+                                        ReplacementType = typeof(S3LocationLong),
+                                        Required = true
                                     }
                             }
                     },
@@ -113,7 +119,10 @@
                             {
                                 new PackagedResourceProperties
                                     {
-                                        Zip = true, PropertyPath = "CodeUri", ReplacementType = typeof(S3LocationShort)
+                                        Zip = true,
+                                        PropertyPath = "CodeUri",
+                                        ReplacementType = typeof(S3LocationShort),
+                                        Required = false
                                     }
                             }
                     },
@@ -125,7 +134,8 @@
                                     {
                                         Zip = false,
                                         PropertyPath = "DefinitionS3Location",
-                                        ReplacementType = typeof(string)
+                                        ReplacementType = typeof(string),
+                                        Required = false
                                     }
                             }
                     },
@@ -137,13 +147,15 @@
                                     {
                                         Zip = false,
                                         PropertyPath = "RequestMappingTemplateS3Location",
-                                        ReplacementType = typeof(string)
+                                        ReplacementType = typeof(string),
+                                        Required = false
                                     },
                                 new PackagedResourceProperties
                                     {
                                         Zip = false,
                                         PropertyPath = "ResponseMappingTemplateS3Location",
-                                        ReplacementType = typeof(string)
+                                        ReplacementType = typeof(string),
+                                        Required = false
                                     }
                             }
                     },
@@ -155,7 +167,8 @@
                                     {
                                         Zip = false,
                                         PropertyPath = "DefinitionUri",
-                                        ReplacementType = typeof(S3LocationShort)
+                                        ReplacementType = typeof(S3LocationShort),
+                                        Required = false
                                     }
                             }
                     },
@@ -165,7 +178,10 @@
                             {
                                 new PackagedResourceProperties
                                     {
-                                        Zip = false, PropertyPath = "Location", ReplacementType = typeof(string)
+                                        Zip = false,
+                                        PropertyPath = "Location",
+                                        ReplacementType = typeof(string),
+                                        Required = true
                                     }
                             }
                     },
@@ -177,7 +193,8 @@
                                     {
                                         Zip = true,
                                         PropertyPath = "SourceBundle",
-                                        ReplacementType = typeof(S3LocationLong)
+                                        ReplacementType = typeof(S3LocationLong),
+                                        Required = true
                                     }
                             }
                     },
@@ -187,7 +204,10 @@
                             {
                                 new PackagedResourceProperties
                                     {
-                                        Zip = false, PropertyPath = "TemplateURL", ReplacementType = typeof(string)
+                                        Zip = false,
+                                        PropertyPath = "TemplateURL",
+                                        ReplacementType = typeof(string),
+                                        Required = true
                                     }
                             }
                     },
@@ -199,7 +219,8 @@
                                     {
                                         Zip = true,
                                         PropertyPath = "Command.ScriptLocation",
-                                        ReplacementType = typeof(string)
+                                        ReplacementType = typeof(string),
+                                        Required = true
                                     }
                             }
                     },
@@ -211,7 +232,8 @@
                                     {
                                         Zip = false,
                                         PropertyPath = "DefinitionS3Location",
-                                        ReplacementType = typeof(S3LocationShort)
+                                        ReplacementType = typeof(S3LocationShort),
+                                        Required = false
                                     }
                             }
                     }
@@ -381,7 +403,22 @@
             {
                 foreach (var propertyToCheck in PackagedResources[resource.ResourceType])
                 {
-                    var resourceFile = resource.GetResourcePropertyValue(propertyToCheck.PropertyPath);
+                    string resourceFile;
+
+                    try
+                    {
+                        resourceFile = resource.GetResourcePropertyValue(propertyToCheck.PropertyPath);
+                    }
+                    catch (FormatException)
+                    {
+                        if (!propertyToCheck.Required)
+                        {
+                            // Property is missing, but CloudFormation does not require it.
+                            continue;
+                        }
+
+                        throw;
+                    }
 
                     if (resourceFile == null)
                     {
@@ -712,6 +749,15 @@
             ///   <c>true</c> if zip; otherwise, <c>false</c>.
             /// </value>
             public bool Zip { get; set; }
+
+            /// <summary>
+            /// Gets or sets a value indicating whether this <see cref="PackagedResourceProperties"/> is required.
+            /// Indicates whether the property is required for the resource to be valid
+            /// </summary>
+            /// <value>
+            ///   <c>true</c> if required; otherwise, <c>false</c>.
+            /// </value>
+            public bool Required { get; set; }
         }
 
         /// <summary>

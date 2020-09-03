@@ -1,5 +1,9 @@
 # Release Notes
 
+# 4.0.4
+
+* Fix: Packager is not checking whether packaged resource properties are required by CloudFomation and is incorrectly treating all as required.
+
 # 4.0.3
 
 * Fix -ForceS3. Setting not being passed to Firefly.CloudFormation

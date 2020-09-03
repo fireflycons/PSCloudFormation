@@ -4,7 +4,7 @@
       "commandName": "Executable",
       "executablePath": "pwsh.exe",
       "commandLineArgs": "-File .\\debug.ps1",
-      "workingDirectory": "H:\\Dev\\Git\\PSCloudFormation\\src\\Firefly.PSCloudFormation\\bin\\Debug\\netstandard2.0"
+      "workingDirectory": "$(TargetDir)"
     }
   }
 }
