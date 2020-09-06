@@ -1,4 +1,4 @@
-<Project Sdk="Microsoft.NET.Sdk">
+﻿<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
     <TargetFramework>netcoreapp3.1</TargetFramework>
@@ -12,6 +12,16 @@
     <None Remove="Resources\DeepNestedStack\lambdacomplex\other.js" />
     <None Remove="Resources\DeepNestedStack\nested-1.json" />
     <None Remove="Resources\DeepNestedStack\sub-nested-2.json" />
+    <None Remove="Resources\DependencyFile\lambda-dependencies.json" />
+    <None Remove="Resources\DependencyFile\lambda-dependencies.yaml" />
+    <None Remove="Resources\LambdaDependencies\PythonLambda\Lambda\lambda-dependencies.yaml" />
+    <None Remove="Resources\LambdaDependencies\PythonLambda\Lambda\my_lambda.py" />
+    <None Remove="Resources\LambdaDependencies\PythonLambda\Lambda\other.py" />
+    <None Remove="Resources\LambdaDependencies\PythonLambda\template.yaml" />
+    <None Remove="Resources\LambdaDependencies\PythonLambda\venv\Include\placeholder.txt" />
+    <None Remove="Resources\LambdaDependencies\PythonLambda\venv\lib\site-packages\mylibrary\__init__.py" />
+    <None Remove="Resources\LambdaDependencies\PythonLambda\venv\lib\site-packages\mylibrary\__pycache__\__init__.pyc" />
+    <None Remove="Resources\LambdaDependencies\PythonLambda\venv\scripts\placeholder.txt" />
     <None Remove="Resources\ParameterTest.json" />
     <None Remove="Resources\ParameterTest.yaml" />
     <None Remove="Resources\progetDockerCloudFormation.yaml" />
@@ -23,12 +33,23 @@
     <EmbeddedResource Include="Resources\DeepNestedStack\lambdacomplex\other.js" />
     <EmbeddedResource Include="Resources\DeepNestedStack\nested-1.json" />
     <EmbeddedResource Include="Resources\DeepNestedStack\sub-nested-2.json" />
+    <EmbeddedResource Include="Resources\DependencyFile\lambda-dependencies.json" />
+    <EmbeddedResource Include="Resources\DependencyFile\lambda-dependencies.yaml" />
+    <EmbeddedResource Include="Resources\LambdaDependencies\PythonLambda\Lambda\my_lambda.py" />
+    <EmbeddedResource Include="Resources\LambdaDependencies\PythonLambda\Lambda\lambda-dependencies.yaml" />
+    <EmbeddedResource Include="Resources\LambdaDependencies\PythonLambda\Lambda\other.py" />
+    <EmbeddedResource Include="Resources\LambdaDependencies\PythonLambda\template-complex.yaml" />
+    <EmbeddedResource Include="Resources\LambdaDependencies\PythonLambda\template.yaml" />
+    <EmbeddedResource Include="Resources\LambdaDependencies\PythonLambda\venv\Include\placeholder.txt" />
+    <EmbeddedResource Include="Resources\LambdaDependencies\PythonLambda\venv\lib\site-packages\mylibrary\__init__.py" />
+    <EmbeddedResource Include="Resources\LambdaDependencies\PythonLambda\venv\lib\site-packages\mylibrary\__pycache__\__init__.pyc" />
+    <EmbeddedResource Include="Resources\LambdaDependencies\PythonLambda\venv\scripts\placeholder.txt" />
     <EmbeddedResource Include="Resources\ParameterTest.json" />
     <EmbeddedResource Include="Resources\ParameterTest.yaml" />
   </ItemGroup>
 
   <ItemGroup>
-    <PackageReference Include="Firefly.EmbeddedResourceLoader" Version="0.1.0" />
+    <PackageReference Include="Firefly.EmbeddedResourceLoader" Version="0.1.2" />
     <PackageReference Include="FluentAssertions" Version="5.10.3" />
     <PackageReference Include="Microsoft.NET.Test.Sdk" Version="16.5.0" />
     <PackageReference Include="Moq" Version="4.14.1" />

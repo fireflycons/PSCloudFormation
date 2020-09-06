@@ -22,8 +22,8 @@
     /// Class to manage interaction with S3, both for the CloudFormation packager in this solution
     /// and to pass to <c>Firefly.PSCloudFormation</c> as its interface for managing oversize template/policy documents.
     /// </summary>
-    /// <seealso cref="IS3Util" />
-    internal class S3Util : IS3Util, IDisposable
+    /// <seealso cref="IPSS3Util" />
+    internal class S3Util : IDisposable, IPSS3Util
     {
         internal const string PackagerHashKey = "pscfnpackge-hash";
 

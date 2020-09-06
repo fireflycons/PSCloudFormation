@@ -4,17 +4,18 @@ param
 )
 
 import-module (Join-Path $PSScriptRoot 'PSCloudFormation.psd1')
-<#
 
-push-location H:\dev\git\proget-aws
 
-New-PSCFNStack1 -StackName proget -TemplateLocation .\cloudFormation-packaged.yaml -LoadBalancerSubnets subnet-07fc084aea2e3dcee,subnet-0785b231fa30a41e0 -PrivateSubnets subnet-0315debd62f42fe6e,subnet-0fc185564d1f60022 -DNSDomain firefly-consulting.co.uk -CertificateArn arn:aws:acm:eu-west-1:104552851521:certificate/e3c839e9-e1ef-463f-b26b-e0180c6710f1 -SecurityGroupIngressCidr 86.18.92.199/32 -KeyPair kp-eu-west-1 -Capabilities CAPABILITY_AUTO_EXPAND,CAPABILITY_IAM -Wait
+push-location C:\OneDrive\abm\OneDrive\Dev\Git\xrefmap-service
+
+New-PSCFNPackage -TemplateFile cloudFormation.yaml
+
 pop-location
 
 Read-Host -Prompt "Press Enter" | Out-Null
 exit 0
 
-#>
+
 $stackName = 'test-stack-' + [Guid]::NewGuid().ToString().SubString(0,8)
 
 # Random names for resources to create

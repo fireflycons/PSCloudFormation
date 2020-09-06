@@ -9,7 +9,6 @@
     using System.Threading.Tasks;
 
     using Firefly.CloudFormation.Parsers;
-    using Firefly.CrossPlatformZip;
     using Firefly.PSCloudFormation.Utils;
 
     /// <summary>
@@ -328,7 +327,7 @@
         /// <summary>
         /// Gets or sets the bucket operations instance for S3 uploads
         /// </summary>
-        internal S3Util S3 { get; set; }
+        internal IPSS3Util S3 { get; set; }
 
         /// <summary>
         /// Processes template and nested templates recursively, leaf first
@@ -434,112 +433,57 @@
                         continue;
                     }
 
-                    string fileToUpload;
                     ResourceUploadSettings resourceToUpload;
 
                     templateModified = true;
-                    var uploadResource = false;
 
-                    switch (fsi)
+                    // If this is a lambda, check for a dependency file in the same directory
+                    if (resource.ResourceType == "AWS::Lambda::Function"
+                        || resource.ResourceType == "AWS::Serverless::Function")
                     {
-                        case FileInfo fi:
+                        var handler = resource.GetResourcePropertyValue("Runtime");
 
-                            // Property value points to a file
-                            if (propertyToCheck.Zip && string.Compare(Path.GetExtension(fi.Name), ".zip", StringComparison.OrdinalIgnoreCase) != 0)
-                            {
-                                // Zip if zipping is required and file is not already zipped
-                                fileToUpload = Path.Combine(
-                                    workingDirectory,
-                                    $"{Path.GetFileNameWithoutExtension(fi.Name)}.zip");
+                        resourceToUpload = await LambdaPackager.CreatePackager(fsi, handler, this.S3, this.Logger)
+                            .Package(workingDirectory);
+                    }
+                    else
+                    {
+                        switch (fsi)
+                        {
+                            case FileInfo fi:
 
-                                resourceToUpload = new ResourceUploadSettings
-                                                       {
-                                                           File = new FileInfo(fileToUpload),
-                                                           Hash = fi.MD5(),
-                                                           KeyPrefix = this.S3Prefix,
-                                                           Metadata = this.Metadata
-                                                       };
+                                // Property value points to a file
+                                resourceToUpload = await ArtifactPackager.PackageFile(
+                                                       fi,
+                                                       workingDirectory,
+                                                       propertyToCheck.Zip,
+                                                       this.S3,
+                                                       this.Logger);
+                                break;
 
-                                uploadResource = await this.S3.ObjectChangedAsync(resourceToUpload);
+                            case DirectoryInfo di:
 
-                                if (uploadResource)
-                                {
-                                    this.Logger.LogVerbose(
-                                        $"Zipping '{fi.FullName}' to {Path.GetFileName(fileToUpload)}");
+                                // Property value points to a directory, which must always be zipped.
+                                resourceToUpload = await ArtifactPackager.PackageDirectory(
+                                                       di,
+                                                       workingDirectory,
+                                                       this.S3,
+                                                       this.Logger);
+                                break;
 
-                                    // Compute hash before zipping as zip hashes not idempotent due to temporally changing attributes in central directory
+                            default:
 
-                                    Zipper.Zip(
-                                        new CrossPlatformZipSettings
-                                            {
-                                                Artifacts = fi.FullName,
-                                                CompressionLevel = 9,
-                                                LogMessage = m => this.Logger.LogVerbose(m),
-                                                LogError = e => this.Logger.LogError(e),
-                                                ZipFile = fileToUpload,
-                                                TargetPlatform = ZipPlatform.Unix
-                                            });
-                                }
-                            }
-                            else
-                            {
-                                resourceToUpload = new ResourceUploadSettings
-                                                       {
-                                                           File = fi,
-                                                           Hash = fi.MD5(),
-                                                           KeyPrefix = this.S3Prefix,
-                                                           Metadata = this.Metadata
-                                                       };
-
-                                uploadResource = await this.S3.ObjectChangedAsync(resourceToUpload);
-                            }
-
-                            break;
-
-                        case DirectoryInfo di:
-
-                            // Property value points to a directory, which must always be zipped.
-                            fileToUpload = Path.Combine(workingDirectory, $"{di.Name}.zip");
-
-                            // Compute hash before zipping as zip hashes not idempotent due to temporally changing attributes in central directory
-                            resourceToUpload = new ResourceUploadSettings
-                                                   {
-                                                       File = new FileInfo(fileToUpload),
-                                                       Hash = di.MD5(),
-                                                       KeyPrefix = this.S3Prefix,
-                                                       Metadata = this.Metadata
-                                                   };
-
-                            uploadResource = await this.S3.ObjectChangedAsync(resourceToUpload);
-
-                            if (uploadResource)
-                            {
-                                this.Logger.LogVerbose(
-                                    $"Zipping directory '{di.FullName}' to {Path.GetFileName(fileToUpload)}");
-
-                                Zipper.Zip(
-                                    new CrossPlatformZipSettings
-                                        {
-                                            Artifacts = di.FullName,
-                                            CompressionLevel = 9,
-                                            LogMessage = m => this.Logger.LogVerbose(m),
-                                            LogError = e => this.Logger.LogError(e),
-                                            ZipFile = fileToUpload,
-                                            TargetPlatform = ZipPlatform.Unix
-                                        });
-                            }
-
-                            break;
-
-                        default:
-
-                            // Should never get here, but shuts up a bunch of compiler/R# warnings
-                            throw new InvalidDataException(
-                                $"Unsupported derivative of FileSystemInfo: {fsi.GetType().FullName}");
+                                // Should never get here, but shuts up a bunch of compiler/R# warnings
+                                throw new InvalidDataException(
+                                    $"Unsupported derivative of FileSystemInfo: {fsi.GetType().FullName}");
+                        }
                     }
 
-                    if (uploadResource)
+                    if (!resourceToUpload.HashMatch)
                     {
+                        resourceToUpload.KeyPrefix = this.S3Prefix;
+                        resourceToUpload.Metadata = this.Metadata;
+
                         await this.S3.UploadResourceToS3Async(resourceToUpload);
                     }
 

@@ -47,5 +47,16 @@
         /// The s3 key.
         /// </value>
         public S3Artifact S3Artifact { get; set; }
+
+        /// <summary>
+        /// Gets or sets a value indicating whether hashes match.
+        /// </summary>
+        /// <value>
+        ///   <c>true</c> if [hash match]; otherwise, <c>false</c>.
+        /// </value>
+        /// <remarks>
+        /// If hashes match then resource does not need to be uploaded.
+        /// </remarks>
+        public bool HashMatch { get; set; }
     }
 }
