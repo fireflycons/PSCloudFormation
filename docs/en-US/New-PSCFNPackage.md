@@ -1,7 +1,7 @@
 ---
 external help file: Firefly.PSCloudFormation.dll-Help.xml
 Module Name: PSCloudFormation
-online version:
+online version: https://github.com/fireflycons/PSCloudFormation/blob/master/static/lambda-dependencies.md
 schema: 2.0.0
 ---
 
@@ -434,3 +434,6 @@ if using LocalStack or some other AWS emulator or a VPC endpoint from an EC2 ins
 ## NOTES
 
 ## RELATED LINKS
+
+[Packaging Lambda Dependencies](https://github.com/fireflycons/PSCloudFormation/blob/master/static/lambda-dependencies.md)
+

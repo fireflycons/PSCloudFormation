@@ -76,7 +76,7 @@
     /// the <c>New-PSCFNStack</c> cmdlet before it receives the template, therefore the template parameters cannot be known in advance.
     /// </para>
     /// </example>
-    /// <para type="link" uri="../static/lambda-dependencies.md"></para>
+    /// <para type="link" uri="https://github.com/fireflycons/PSCloudFormation/blob/master/static/lambda-dependencies.md">Packaging Lambda Dependencies</para>
     /// </summary>
     /// <seealso cref="Firefly.PSCloudFormation.CloudFormationServiceCommand" />
     [Cmdlet(VerbsCommon.New, "PSCFNPackage")]
