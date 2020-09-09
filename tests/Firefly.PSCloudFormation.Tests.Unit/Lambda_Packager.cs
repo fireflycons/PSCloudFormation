@@ -19,6 +19,7 @@
     using Xunit;
     using Xunit.Abstractions;
 
+    [Collection("Packager")]
     // ReSharper disable once InconsistentNaming
     public class Lambda_Packager : AutoResourceLoader, IDisposable
     {

@@ -1,6 +1,5 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Text;
 
 namespace Firefly.PSCloudFormation.Tests.Unit
 {
@@ -25,6 +24,7 @@ namespace Firefly.PSCloudFormation.Tests.Unit
     using Xunit;
     using Xunit.Abstractions;
 
+    [Collection("Packager")]
     public class Packager : AutoResourceLoader, IDisposable
     {
         private readonly IPathResolver pathResolver = new TestPathResolver();
