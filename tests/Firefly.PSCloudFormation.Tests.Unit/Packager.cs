@@ -310,7 +310,7 @@ namespace Firefly.PSCloudFormation.Tests.Unit
         {
             var dependencyFile = Path.Combine(this.dependencyFiles.FullPath, $"lambda-dependencies.{format}");
 
-            var dependencies = LambdaPackager.LoadDependencies(dependencyFile);
+            var dependencies = PSCloudFormation.LambdaPackager.LoadDependencies(dependencyFile);
             dependencies.Count.Should().Be(2);
         }
 

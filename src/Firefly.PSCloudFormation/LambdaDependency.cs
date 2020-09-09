@@ -1,11 +1,13 @@
 ﻿namespace Firefly.PSCloudFormation
 {
     using System;
+    using System.Diagnostics;
     using System.IO;
 
     /// <summary>
     /// Object that describes a lambda dependency
     /// </summary>
+    [DebuggerDisplay("{Location}")]
     internal class LambdaDependency
     {
         /// <summary>
@@ -60,12 +62,15 @@
                 throw new ArgumentNullException(nameof(dependencyFile));
             }
 
-            if (Path.IsPathRooted(this.location))
+            var location = this.Location.Replace('/', Path.DirectorySeparatorChar)
+                .Replace('\\', Path.DirectorySeparatorChar);
+
+            if (Path.IsPathRooted(location))
             {
                 return this;
             }
 
-            this.location = Path.GetFullPath(Path.Combine(new FileInfo(dependencyFile).DirectoryName, this.location));
+            this.location = Path.GetFullPath(Path.Combine(new FileInfo(dependencyFile).DirectoryName, location));
             return this;
         }
     }

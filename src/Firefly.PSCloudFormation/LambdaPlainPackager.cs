@@ -3,7 +3,6 @@
     using System;
     using System.Collections.Generic;
     using System.IO;
-    using System.Threading.Tasks;
 
     using Firefly.CloudFormation;
     using Firefly.PSCloudFormation.Utils;
@@ -19,28 +18,17 @@
         /// </summary>
         /// <param name="lambdaArtifact">The lambda artifact to package</param>
         /// <param name="dependencies">Dependencies of lambda, or <c>null</c> if none.</param>
+        /// <param name="runtimeVersion">Version of the lambda runtime.</param>
         /// <param name="s3">Interface to S3</param>
         /// <param name="logger">Interface to logger.</param>
         public LambdaPlainPackager(
             FileSystemInfo lambdaArtifact,
             List<LambdaDependency> dependencies,
+            string runtimeVersion,
             IPSS3Util s3,
             ILogger logger)
-            : base(lambdaArtifact, dependencies, s3, logger)
+            : base(lambdaArtifact, dependencies, runtimeVersion, s3, logger)
         {
-        }
-
-        /// <summary>
-        /// Package a directory artifact
-        /// </summary>
-        /// <param name="workingDirectory">Working directory to use for packaging</param>
-        /// <returns>
-        ///   <see cref="ResourceUploadSettings" />; else <c>null</c> if nothing to upload (hash sums match)
-        /// </returns>
-        /// <exception cref="NotImplementedException"></exception>
-        protected override Task<ResourceUploadSettings> PackageDirectory(string workingDirectory)
-        {
-            throw new NotImplementedException();
         }
 
         /// <summary>
@@ -50,10 +38,10 @@
         /// <returns>
         /// Path to directory containing prepared package
         /// </returns>
-        /// <exception cref="NotImplementedException"></exception>
+        /// <exception cref="NotImplementedException">Not implemented for plain packages (no collectable dependencies).</exception>
         protected override string PreparePackage(string workingDirectory)
         {
-            throw new NotImplementedException();
+            throw new NotImplementedException("Not implemented for plain packages (no collectable dependencies).");
         }
     }
 }

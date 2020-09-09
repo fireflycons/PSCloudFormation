@@ -39,6 +39,12 @@
     /// For most resources, if you don't specify a path, the command zips and uploads the current working directory.
     /// he exception is <c>AWS::ApiGateway::RestApi</c>; if you don't specify a <c>BodyS3Location</c>, this command will not upload an artifact to S3.
     /// </para>
+    /// <para>
+    /// For supported lambda runtimes (currently Python, Node and Ruby), this cmdlet can also package dependencies - a feature not currently available in <c>aws cloudformation package</c>.
+    /// To package dependencies, you must create a file called lambda-dependencies.yaml or lambda-dependencies.json in the same directory as the script containing your handler function.
+    /// This file is an array of objects describing dependency locations (directories) and a list of modules therein which should be included in the lambda package.
+    /// Follow the link in the links section for more information on packaging dependencies.
+    /// </para>
     /// <example>
     /// <code>
     /// New-PSCFNPackage -TemplateFile my-template.json -OutputTemplateFile my-modified-template.json
@@ -443,8 +449,10 @@
                     {
                         var handler = resource.GetResourcePropertyValue("Runtime");
 
-                        resourceToUpload = await LambdaPackager.CreatePackager(fsi, handler, this.S3, this.Logger)
-                            .Package(workingDirectory);
+                        using (var packager = LambdaPackager.CreatePackager(fsi, handler, this.S3, this.Logger))
+                        {
+                            resourceToUpload = await packager.Package(workingDirectory);
+                        }
                     }
                     else
                     {

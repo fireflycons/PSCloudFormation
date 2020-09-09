@@ -4,10 +4,10 @@
     using System.Collections.Generic;
     using System.IO;
     using System.Linq;
+    using System.Text.RegularExpressions;
     using System.Threading.Tasks;
 
     using Firefly.CloudFormation;
-    using Firefly.CrossPlatformZip;
     using Firefly.PSCloudFormation.Utils;
 
     using Newtonsoft.Json;
@@ -15,21 +15,33 @@
     /// <summary>
     /// Abstract Lambda Packager
     /// </summary>
-    internal abstract class LambdaPackager
+    internal abstract class LambdaPackager : IDisposable
     {
+        /// <summary>
+        /// Regex to extract runtime version
+        /// </summary>
+        private static readonly Regex RuntimeVersionRegex = new Regex(@"(?<versionId>\d?\..*)");
+
         /// <summary>
         /// Initializes a new instance of the <see cref="LambdaPackager"/> class.
         /// </summary>
         /// <param name="lambdaArtifact">The lambda artifact to package</param>
         /// <param name="dependencies">Dependencies of lambda, or <c>null</c> if none.</param>
+        /// <param name="runtimeVersion">Version of the lambda runtime.</param>
         /// <param name="s3">Interface to S3</param>
         /// <param name="logger">Interface to logger.</param>
-        protected LambdaPackager(FileSystemInfo lambdaArtifact, List<LambdaDependency> dependencies, IPSS3Util s3, ILogger logger)
+        protected LambdaPackager(
+            FileSystemInfo lambdaArtifact,
+            List<LambdaDependency> dependencies,
+            string runtimeVersion,
+            IPSS3Util s3,
+            ILogger logger)
         {
             this.Dependencies = dependencies;
             this.LambdaArtifact = lambdaArtifact;
             this.Logger = logger;
             this.S3 = s3;
+            this.RuntimeVersionIdentifier = runtimeVersion;
         }
 
         /// <summary>
@@ -73,12 +85,44 @@
             Custom
         }
 
+        /// <summary>
+        /// Gets the dependencies.
+        /// </summary>
+        /// <value>
+        /// The dependencies.
+        /// </value>
         protected List<LambdaDependency> Dependencies { get; }
 
+        /// <summary>
+        /// Gets the lambda artifact.
+        /// </summary>
+        /// <value>
+        /// The lambda artifact.
+        /// </value>
         protected FileSystemInfo LambdaArtifact { get; }
 
+        /// <summary>
+        /// Gets the logging interface.
+        /// </summary>
+        /// <value>
+        /// The logging interface.
+        /// </value>
         protected ILogger Logger { get; }
 
+        /// <summary>
+        /// Gets the runtime version identifier.
+        /// </summary>
+        /// <value>
+        /// The runtime version identifier.
+        /// </value>
+        protected string RuntimeVersionIdentifier { get; }
+
+        /// <summary>
+        /// Gets the S3 interface.
+        /// </summary>
+        /// <value>
+        /// The S3 interface.
+        /// </value>
         protected IPSS3Util S3 { get; }
 
         /// <summary>
@@ -95,25 +139,37 @@
             IPSS3Util s3,
             ILogger logger)
         {
-            var lambdaDirectory = lambdaArtifact is DirectoryInfo
-                                         ? lambdaArtifact.FullName
-                                         : Path.GetDirectoryName(lambdaArtifact.FullName);
+            if (lambdaArtifact == null)
+            {
+                throw new ArgumentNullException(nameof(lambdaArtifact));
+            }
 
-            var dependencyFile = Directory.GetFiles(lambdaDirectory, "lambda-dependencies.*", SearchOption.TopDirectoryOnly)
-                .FirstOrDefault(
-                    f =>
-                        {
-                            var ext = Path.GetExtension(f);
-                            return string.Compare(ext, ".json", StringComparison.OrdinalIgnoreCase) == 0
-                                   || string.Compare(ext, ".yaml", StringComparison.OrdinalIgnoreCase) == 0;
-                        });
+            var lambdaDirectory = lambdaArtifact is DirectoryInfo
+                                      ? lambdaArtifact.FullName
+                                      : Path.GetDirectoryName(lambdaArtifact.FullName);
+
+            var dependencyFile = Directory.GetFiles(
+                lambdaDirectory
+                ?? throw new InvalidOperationException("Internal error: Cannot determine location of lambda code"),
+                "lambda-dependencies.*",
+                SearchOption.TopDirectoryOnly).FirstOrDefault(
+                f =>
+                    {
+                        var ext = Path.GetExtension(f);
+                        return string.Compare(ext, ".json", StringComparison.OrdinalIgnoreCase) == 0 || string.Compare(
+                                   ext,
+                                   ".yaml",
+                                   StringComparison.OrdinalIgnoreCase) == 0;
+                    });
 
             if (dependencyFile == null)
             {
-                return new LambdaPlainPackager(lambdaArtifact, null, s3, logger);
+                return new LambdaPlainPackager(lambdaArtifact, null, null, s3, logger);
             }
 
             var dependencies = LoadDependencies(dependencyFile);
+
+            var runtimeVersion = RuntimeVersionRegex.Match(lambdaRuntime).Groups["versionId"].Value;
 
             // To package dependencies, the lambda must be of a supported runtime.
             // ReSharper disable once SwitchStatementHandlesSomeKnownEnumValuesWithDefault - Intentionally so.
@@ -121,20 +177,30 @@
             {
                 case LambdaRuntime.Node:
 
-                    return new LambdaNodePackager(lambdaArtifact, dependencies, s3, logger);
+                    return new LambdaNodePackager(lambdaArtifact, dependencies, runtimeVersion, s3, logger);
 
                 case LambdaRuntime.Python:
 
-                    return new LambdaPythonPackager(lambdaArtifact, dependencies, s3, logger);
+                    return new LambdaPythonPackager(lambdaArtifact, dependencies, runtimeVersion, s3, logger);
 
                 case LambdaRuntime.Ruby:
 
-                    return new LambdaRubyPackager(lambdaArtifact, dependencies, s3, logger);
+                    return new LambdaRubyPackager(lambdaArtifact, dependencies, runtimeVersion, s3, logger);
 
                 default:
 
-                    throw new NotImplementedException($"Dependency packaging for lambda runtime '{lambdaRuntime}' is currently not supported.");
+                    throw new NotImplementedException(
+                        $"Dependency packaging for lambda runtime '{lambdaRuntime}' is currently not supported.");
             }
+        }
+
+        /// <summary>
+        /// Performs application-defined tasks associated with freeing, releasing, or resetting unmanaged resources.
+        /// </summary>
+        public void Dispose()
+        {
+            this.Dispose(true);
+            GC.SuppressFinalize(this);
         }
 
         /// <summary>
@@ -144,8 +210,10 @@
         /// <returns><see cref="ResourceUploadSettings"/>; else <c>null</c> if nothing to upload (hash sums match)</returns>
         public async Task<ResourceUploadSettings> Package(string workingDirectory)
         {
-            if (this.LambdaArtifact is FileInfo fi && string.Compare(Path.GetExtension(fi.Name), ".zip", StringComparison.OrdinalIgnoreCase)
-                == 0)
+            if (this.LambdaArtifact is FileInfo fi && string.Compare(
+                    Path.GetExtension(fi.Name),
+                    ".zip",
+                    StringComparison.OrdinalIgnoreCase) == 0)
             {
                 // Already zipped
                 var resourceToUpload = new ResourceUploadSettings { File = fi, Hash = fi.MD5(), };
@@ -169,10 +237,15 @@
                 }
             }
 
+            // If we get here, there are dependencies to process
             var packageDirectory = this.PreparePackage(workingDirectory);
-            return await ArtifactPackager.PackageDirectory(new DirectoryInfo(packageDirectory), workingDirectory, this.S3, this.Logger);
+            return await ArtifactPackager.PackageDirectory(
+                       new DirectoryInfo(packageDirectory),
+                       workingDirectory,
+                       this.S3,
+                       this.Logger);
         }
-    
+
         /// <summary>
         /// Load and deserialize a dependency file
         /// </summary>
@@ -196,8 +269,9 @@
             try
             {
                 var dependencies = firstChar == "["
-                           ? JsonConvert.DeserializeObject<List<LambdaDependency>>(content)
-                           : new YamlDotNet.Serialization.Deserializer().Deserialize<List<LambdaDependency>>(content);
+                                       ? JsonConvert.DeserializeObject<List<LambdaDependency>>(content)
+                                       : new YamlDotNet.Serialization.Deserializer()
+                                           .Deserialize<List<LambdaDependency>>(content);
 
                 // Make dependency locations absolute
                 return dependencies.Select(d => d.ResolveRelativePath(dependencyFile)).ToList();
@@ -209,11 +283,35 @@
         }
 
         /// <summary>
-        /// Package a directory artifact
+        /// Copies a directory structure from one place to another.
         /// </summary>
-        /// <param name="workingDirectory">Working directory to use for packaging</param>
-        /// <returns><see cref="ResourceUploadSettings"/>; else <c>null</c> if nothing to upload (hash sums match)</returns>
-        protected abstract Task<ResourceUploadSettings> PackageDirectory(string workingDirectory);
+        /// <param name="source">The source.</param>
+        /// <param name="target">The target.</param>
+        protected static void CopyAll(DirectoryInfo source, DirectoryInfo target)
+        {
+            Directory.CreateDirectory(target.FullName);
+
+            // Copy each file into the new directory.
+            foreach (var fi in source.GetFiles())
+            {
+                fi.CopyTo(Path.Combine(target.FullName, fi.Name), true);
+            }
+
+            // Copy each subdirectory using recursion.
+            foreach (var sourceSubDir in source.GetDirectories())
+            {
+                var nextTargetSubDir = target.CreateSubdirectory(sourceSubDir.Name);
+                CopyAll(sourceSubDir, nextTargetSubDir);
+            }
+        }
+
+        /// <summary>
+        /// Releases unmanaged and - optionally - managed resources.
+        /// </summary>
+        /// <param name="disposing"><c>true</c> to release both managed and unmanaged resources; <c>false</c> to release only unmanaged resources.</param>
+        protected virtual void Dispose(bool disposing)
+        {
+        }
 
         /// <summary>
         /// Prepares the package, accumulating any dependencies into a directory for zipping.
@@ -223,9 +321,11 @@
         protected abstract string PreparePackage(string workingDirectory);
 
         /// <summary>
-        /// Determine lambda runtime from file extension of Handler property of function
+        /// Determine lambda runtime from file extension of Handler property of function declaration in CloudFormation.
         /// </summary>
         /// <param name="runtimeIdentifier">Name of lambda runtime extracted from resource.</param>
+        /// <returns>a <see cref="LambdaRuntime"/> identifying the lambda's runtime.</returns>
+        /// <exception cref="PackagerException">Unknown lambda runtime '{runtimeIdentifier}'</exception>
         private static LambdaRuntime GetRuntime(string runtimeIdentifier)
         {
             if (runtimeIdentifier.StartsWith("python"))
@@ -265,30 +365,5 @@
 
             throw new PackagerException($"Unknown lambda runtime '{runtimeIdentifier}'");
         }
-
-        /// <summary>
-        /// Copies a directory structure from one place to another.
-        /// </summary>
-        /// <param name="source">The source.</param>
-        /// <param name="target">The target.</param>
-        protected static void CopyAll(DirectoryInfo source, DirectoryInfo target)
-        {
-            Directory.CreateDirectory(target.FullName);
-
-            // Copy each file into the new directory.
-            foreach (var fi in source.GetFiles())
-            {
-                fi.CopyTo(Path.Combine(target.FullName, fi.Name), true);
-            }
-
-            // Copy each subdirectory using recursion.
-            foreach (var sourceSubDir in source.GetDirectories())
-            {
-                var nextTargetSubDir =
-                    target.CreateSubdirectory(sourceSubDir.Name);
-                CopyAll(sourceSubDir, nextTargetSubDir);
-            }
-        }
-
     }
 }

@@ -4,10 +4,8 @@
     using System.Collections.Generic;
     using System.IO;
     using System.Linq;
-    using System.Threading.Tasks;
 
     using Firefly.CloudFormation;
-    using Firefly.CrossPlatformZip;
     using Firefly.PSCloudFormation.Utils;
 
     /// <summary>
@@ -17,22 +15,59 @@
     /// <seealso href="https://docs.aws.amazon.com/lambda/latest/dg/python-package.html"/>
     internal class LambdaPythonPackager : LambdaPackager
     {
+        /// <summary>
+        /// Directories that are found within a virtual env.
+        /// </summary>
         private static readonly string[] VenvDirectories = { "scripts", "lib", "lib64", "include" };
 
+        /// <summary>
+        /// Path to temporary directory in which we build up the lambda package
+        /// </summary>
+        private DirectoryInfo packageDirectory;
+
+        /// <summary>
+        /// Initializes a new instance of the <see cref="LambdaPythonPackager"/> class.
+        /// </summary>
+        /// <param name="lambdaArtifact">The lambda artifact to package</param>
+        /// <param name="dependencies">Dependencies of lambda, or <c>null</c> if none.</param>
+        /// <param name="runtimeVersion">Version of the lambda runtime.</param>
+        /// <param name="s3">Interface to S3</param>
+        /// <param name="logger">Interface to logger.</param>
         public LambdaPythonPackager(
             FileSystemInfo lambdaArtifact,
             List<LambdaDependency> dependencies,
+            string runtimeVersion,
             IPSS3Util s3,
             ILogger logger)
-            : base(lambdaArtifact, dependencies, s3, logger)
+            : base(lambdaArtifact, dependencies, runtimeVersion, s3, logger)
         {
         }
 
-        protected override async Task<ResourceUploadSettings> PackageDirectory(string workingDirectory)
+        /// <summary>
+        /// Releases unmanaged and - optionally - managed resources.
+        /// </summary>
+        /// <param name="disposing"><c>true</c> to release both managed and unmanaged resources; <c>false</c> to release only unmanaged resources.</param>
+        protected override void Dispose(bool disposing)
         {
-            throw new NotImplementedException();
+            // Remove any temporary packaging directory.
+            this.packageDirectory?.Delete(true);
+            base.Dispose(disposing);
         }
 
+        /// <summary>
+        /// Prepares the package, accumulating any dependencies into a directory for zipping.
+        /// </summary>
+        /// <param name="workingDirectory">The working directory.</param>
+        /// <returns>
+        /// Path to directory containing prepared package
+        /// </returns>
+        /// <exception cref="PackagerException">
+        /// '{dependencyEntry.Location} looks like a virtual env, but no 'site-packages' or 'dist-packages' found.
+        /// or
+        /// Module {library} not found in virtual env '{dependencyEntry.Location}'
+        /// or
+        /// Module {libraryDirectory} not found in '{dependencyEntry.Location}'
+        /// </exception>
         protected override string PreparePackage(string workingDirectory)
         {
             if (this.Dependencies == null)
@@ -40,20 +75,20 @@
                 return null;
             }
 
-            var packageDirectory = new DirectoryInfo(Path.Combine(workingDirectory, Guid.NewGuid().ToString()));
+            this.packageDirectory = new DirectoryInfo(Path.Combine(workingDirectory, Guid.NewGuid().ToString()));
 
             // First, copy over the artifact
             switch (this.LambdaArtifact)
             {
                 case FileInfo fi:
 
-                    Directory.CreateDirectory(packageDirectory.FullName);
-                    fi.CopyTo(Path.Combine(packageDirectory.FullName, fi.Name));
+                    Directory.CreateDirectory(this.packageDirectory.FullName);
+                    fi.CopyTo(Path.Combine(this.packageDirectory.FullName, fi.Name));
                     break;
 
                 case DirectoryInfo di:
 
-                    LambdaPackager.CopyAll(di, packageDirectory);
+                    CopyAll(di, this.packageDirectory);
                     break;
             }
 
@@ -94,8 +129,8 @@
 
                         // Now copy to where we are building the package
                         var source = new DirectoryInfo(libDirectory);
-                        var target = new DirectoryInfo(Path.Combine(packageDirectory.FullName, source.Name));
-                        LambdaPackager.CopyAll(source, target);
+                        var target = new DirectoryInfo(Path.Combine(this.packageDirectory.FullName, source.Name));
+                        CopyAll(source, target);
                     }
                 }
                 else
@@ -110,15 +145,16 @@
                                 $"Module {libraryDirectory} not found in '{dependencyEntry.Location}'");
                         }
 
-                        var target = new DirectoryInfo(Path.Combine(packageDirectory.FullName, libraryDirectory.Name));
-                        LambdaPackager.CopyAll(libraryDirectory, packageDirectory);
+                        var target = new DirectoryInfo(
+                            Path.Combine(this.packageDirectory.FullName, libraryDirectory.Name));
+                        CopyAll(libraryDirectory, this.packageDirectory);
                     }
                 }
 
                 // Remove any __pycache__
                 foreach (var pycaches in dependencyEntry.Libraries.Select(
                     l => Directory.GetDirectories(
-                        Path.Combine(packageDirectory.FullName, l),
+                        Path.Combine(this.packageDirectory.FullName, l),
                         "*__pycache__",
                         SearchOption.AllDirectories)))
                 {
@@ -129,7 +165,7 @@
                 }
             }
 
-            return packageDirectory.FullName;
+            return this.packageDirectory.FullName;
         }
 
         /// <summary>
@@ -144,7 +180,8 @@
         /// </remarks>
         private static bool IsVirtualEnv(string path)
         {
-            var directories = Directory.GetDirectories(path, "*", SearchOption.TopDirectoryOnly).Select(d => Path.GetFileName(d).ToLowerInvariant()).ToList();
+            var directories = Directory.GetDirectories(path, "*", SearchOption.TopDirectoryOnly)
+                .Select(d => Path.GetFileName(d).ToLowerInvariant()).ToList();
 
             return VenvDirectories.Intersect(directories).Count() == directories.Count;
         }
