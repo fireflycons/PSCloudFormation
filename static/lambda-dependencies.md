@@ -40,7 +40,7 @@ Given a directory structure for a lambda project as below, the easiest way to pa
       Code: lambda-function
 ```
 
-You can also provide a `lambda-dependencies` file in the same directory as `index.js` to pull additional modules from other directories outside of the lambda poject.
+You can also provide a `lambda-dependencies` file in the same directory as `index.js` to pull additional modules from other directories outside of the lambda project.
 
 ```
 lambda-project
@@ -70,7 +70,7 @@ Given a directory structure for a lambda project as below, the easiest way to pa
       Runtime: ruby2.7
 ```
 
-You can also provide a `lambda-dependencies` file in the same directory as `index.rb` to pull additional modules from other directories outside of the lambda poject.
+You can also provide a `lambda-dependencies` file in the same directory as `index.rb` to pull additional modules from other directories outside of the lambda project.
 
 ```
 lambda-project
