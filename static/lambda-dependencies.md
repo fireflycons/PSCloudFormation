@@ -45,7 +45,7 @@ You can also provide a `lambda-dependencies` file in the same directory as `inde
 ```
 lambda-project
 ├──template.yaml
-└──lammbda-function
+└──lambda-function
    ├── index.js
    └── node_modules
        ├── async
@@ -55,6 +55,8 @@ lambda-project
        ├── aws-xray-sdk
        ├── aws-xray-sdk-core
 ```
+
+Note that the entire content of `node_modules` will be included in the zip package which may not be what you want. Not being much of a node developer myself, I am open to suggestions. Raise an issue with ideas (I'm thinking maybe use a `package.json` to express what to include or some such).
 
 ### Ruby
 
@@ -73,7 +75,7 @@ You can also provide a `lambda-dependencies` file in the same directory as `inde
 ```
 lambda-project
 ├──template.yaml
-└──lammbda-function
+└──lambda-function
    ├── index.rb
    └── vendor
        └── bundle
@@ -82,4 +84,6 @@ lambda-project
                    └── cache
                        ├── aws-eventstream-1.0.1.gem
 ```
+
+Note that the entire content of `vendor` will be included in the zip package which may not be what you want. Not being much of a ruby developer myself, I am open to suggestions. Raise an issue with ideas.
 
