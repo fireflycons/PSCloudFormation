@@ -12,14 +12,12 @@ The schema for this file is that it is an array of dependency objects, where a d
 Currently the following lambda runtimes are supported, which are basically the script runtimes. Compiled runtimes (Java, .NET and Go) would generally have a build process which can be made to target a zip file which would contain a full lambda package, and that zip file would be referred to in the CloudFormation template.
 
 * `python` - all versions
-* `nodejs` - alll versions
+* `nodejs` - all versions
 * `ruby` - all versions
-
-## Example Dependency Files
 
 ### Python
 
-The easiest way to package Python dependencies is to run `New-PSCFNPackage` from within your Python virtual env, pasing the `VIRTUAL_ENV` environment variable as the location for packages.
+The easiest way to package Python dependencies is to build your Python lambda in a [virtual env](https://virtualenv.pypa.io/en/latest/) and then run `New-PSCFNPackage` from within the virtual env, using the `VIRTUAL_ENV` environment variable in your `lambda-dependencies` file as the location for package dependencies.
 
 ```yaml
 - Location: "$VIRTUAL_ENV"
@@ -29,5 +27,59 @@ The easiest way to package Python dependencies is to run `New-PSCFNPackage` from
 - Location: /some/other/location
   Libraries:
   - other_library
+```
+
+### NodeJS
+
+Given a directory structure for a lambda project as below, the easiest way to package the lambda with dependencies is to specify the lambda function's directory in the CloudFormation template. Packager will then recursively package all the included node modules, e.g.
+
+```yaml
+  LambdaFunction:
+    Type: AWS::Lambda::Function
+    Properties:
+      Code: lambda-function
+```
+
+You can also provide a `lambda-dependencies` file in the same directory as `index.js` to pull additional modules from other directories outside of the lambda poject.
+
+```
+lambda-project
+├──template.yaml
+└──lammbda-function
+   ├── index.js
+   └── node_modules
+       ├── async
+       ├── async-listener
+       ├── atomic-batcher
+       ├── aws-sdk
+       ├── aws-xray-sdk
+       ├── aws-xray-sdk-core
+```
+
+### Ruby
+
+Given a directory structure for a lambda project as below, the easiest way to package the lambda with dependencies is to specify the lambda function's directory in the CloudFormation template. Packager will then recursively package all the included Ruby modules, e.g.
+
+```yaml
+  LambdaFunction:
+    Type: AWS::Lambda::Function
+    Properties:
+      Code: lambda-function
+      Runtime: ruby2.7
+```
+
+You can also provide a `lambda-dependencies` file in the same directory as `index.rb` to pull additional modules from other directories outside of the lambda poject.
+
+```
+lambda-project
+├──template.yaml
+└──lammbda-function
+   ├── index.rb
+   └── vendor
+       └── bundle
+           └── ruby
+               └── 2.7.0
+                   └── cache
+                       ├── aws-eventstream-1.0.1.gem
 ```
 
