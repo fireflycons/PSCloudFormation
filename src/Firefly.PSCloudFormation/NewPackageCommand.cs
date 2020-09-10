@@ -511,7 +511,7 @@
             string templatePath,
             string workingDirectory)
         {
-            bool templateModified = false;
+            var templateModified = false;
 
             foreach (var propertyToCheck in PackagedResources[resource.ResourceType])
             {

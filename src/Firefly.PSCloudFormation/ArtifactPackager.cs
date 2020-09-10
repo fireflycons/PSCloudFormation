@@ -112,7 +112,7 @@
             else
             {
                 resourceToUpload = new ResourceUploadSettings { File = artifact, Hash = artifact.MD5() };
-                resourceToUpload.HashMatch = !(await s3.ObjectChangedAsync(resourceToUpload));
+                resourceToUpload.HashMatch = !await s3.ObjectChangedAsync(resourceToUpload);
             }
 
             return resourceToUpload;

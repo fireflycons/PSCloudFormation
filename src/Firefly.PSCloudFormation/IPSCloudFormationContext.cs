@@ -1,7 +1,6 @@
 ﻿namespace Firefly.PSCloudFormation
 {
     using Firefly.CloudFormation;
-    using Firefly.CloudFormation.Utils;
 
     /// <summary>
     /// Extends <see cref="ICloudFormationContext"/> to add custom endpoint support for S3 and STS

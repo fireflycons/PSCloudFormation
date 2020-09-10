@@ -35,17 +35,20 @@
         private static T FindInnerRecurse<T>(Exception ex)
             where T : Exception
         {
-            if (ex == null)
+            while (true)
             {
-                return null;
-            }
+                if (ex == null)
+                {
+                    return null;
+                }
 
-            if (ex.GetType() == typeof(T))
-            {
-                return (T)ex;
-            }
+                if (ex.GetType() == typeof(T))
+                {
+                    return (T)ex;
+                }
 
-            return FindInnerRecurse<T>(ex.InnerException);
+                ex = ex.InnerException;
+            }
         }
     }
 }

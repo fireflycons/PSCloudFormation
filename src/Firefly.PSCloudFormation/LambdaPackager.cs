@@ -216,7 +216,7 @@
                     StringComparison.OrdinalIgnoreCase) == 0)
             {
                 // Already zipped
-                var resourceToUpload = new ResourceUploadSettings { File = fi, Hash = fi.MD5(), };
+                var resourceToUpload = new ResourceUploadSettings { File = fi, Hash = fi.MD5() };
 
                 var uploadResource = await this.S3.ObjectChangedAsync(resourceToUpload);
 

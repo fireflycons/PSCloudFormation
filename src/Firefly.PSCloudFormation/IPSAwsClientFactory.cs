@@ -6,8 +6,7 @@
     using Amazon.SecurityToken;
 
     using Firefly.CloudFormation;
-    using Firefly.CloudFormation.Utils;
-
+    
     /// <summary>
     /// Extends <see cref="IAwsClientFactory"/> to add S3 and STS clients used by cmdlets in this module.
     /// </summary>

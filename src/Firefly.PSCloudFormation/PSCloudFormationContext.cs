@@ -6,7 +6,6 @@
     using Amazon.Runtime;
 
     using Firefly.CloudFormation;
-    using Firefly.CloudFormation.Utils;
 
     /// <summary>
     /// Concrete implementation of <see cref="ICloudFormationContext"/> for PowerShell

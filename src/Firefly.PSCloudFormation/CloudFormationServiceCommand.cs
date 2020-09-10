@@ -6,7 +6,6 @@ namespace Firefly.PSCloudFormation
 {
     using System;
     using System.Collections.Generic;
-    using System.ComponentModel;
     using System.Linq;
     using System.Management.Automation;
     using System.Management.Automation.Host;

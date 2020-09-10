@@ -69,15 +69,15 @@
                 throw new ArgumentNullException(nameof(dependencyFile));
             }
 
-            var location = this.Location.Replace('/', Path.DirectorySeparatorChar)
+            var locationTemp = this.Location.Replace('/', Path.DirectorySeparatorChar)
                 .Replace('\\', Path.DirectorySeparatorChar);
 
-            if (Path.IsPathRooted(location))
+            if (Path.IsPathRooted(locationTemp))
             {
                 return this;
             }
 
-            this.location = Path.GetFullPath(Path.Combine(new FileInfo(dependencyFile).DirectoryName, location));
+            this.location = Path.GetFullPath(Path.Combine(new FileInfo(dependencyFile).DirectoryName, locationTemp));
 
             return this;
         }

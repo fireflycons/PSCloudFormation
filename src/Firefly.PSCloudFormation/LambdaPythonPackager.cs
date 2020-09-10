@@ -119,7 +119,7 @@
                     foreach (var library in dependencyEntry.Libraries)
                     {
                         var libDirectory = virtualEnvDirectories.Select(d => Path.Combine(d, library))
-                            .FirstOrDefault(l => Directory.Exists(l));
+                            .FirstOrDefault(Directory.Exists);
 
                         if (libDirectory == null)
                         {
@@ -145,9 +145,7 @@
                                 $"Module {libraryDirectory} not found in '{dependencyEntry.Location}'");
                         }
 
-                        var target = new DirectoryInfo(
-                            Path.Combine(this.packageDirectory.FullName, libraryDirectory.Name));
-                        CopyAll(libraryDirectory, this.packageDirectory);
+                        LambdaPackager.CopyAll(libraryDirectory, this.packageDirectory);
                     }
                 }
 
