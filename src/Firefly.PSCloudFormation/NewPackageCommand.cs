@@ -413,11 +413,6 @@
                         File.Delete(processedTemplatePath);
                     }
                 }
-                catch (AggregateException aex)
-                {
-                    var ex = aex.InnerExceptions.First();
-                    this.ThrowExecutionError(ex.Message, this, ex);
-                }
                 catch (Exception ex)
                 {
                     this.ThrowExecutionError(ex.Message, this, ex);

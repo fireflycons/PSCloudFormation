@@ -43,7 +43,7 @@
 
                     if (string.IsNullOrEmpty(envVar))
                     {
-                        throw new DirectoryNotFoundException($"Environment variable {varName} not found");
+                        throw new DirectoryNotFoundException($"Cannot find dependencies directory due to environment variable {varName} not found");
                     }
 
                     this.location = envVar;
@@ -55,6 +55,13 @@
             }
         }
 
+        /// <summary>
+        /// Resolves relative path from dependency file to dependencies directory as full path.
+        /// </summary>
+        /// <param name="dependencyFile">The dependency file.</param>
+        /// <returns>This object</returns>
+        /// <exception cref="ArgumentNullException">dependencyFile is null</exception>
+        /// <exception cref="DirectoryNotFoundException">Dependencies directory not found: {this.location}</exception>
         public LambdaDependency ResolveRelativePath(string dependencyFile)
         {
             if (dependencyFile == null)
@@ -71,6 +78,12 @@
             }
 
             this.location = Path.GetFullPath(Path.Combine(new FileInfo(dependencyFile).DirectoryName, location));
+
+            if (!Directory.Exists(this.location))
+            {
+                throw new DirectoryNotFoundException($"Dependencies directory not found: {this.location}");
+            }
+
             return this;
         }
     }

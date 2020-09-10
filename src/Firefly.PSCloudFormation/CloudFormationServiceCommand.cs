@@ -6,6 +6,7 @@ namespace Firefly.PSCloudFormation
 {
     using System;
     using System.Collections.Generic;
+    using System.ComponentModel;
     using System.Linq;
     using System.Management.Automation;
     using System.Management.Automation.Host;
@@ -530,9 +531,24 @@ namespace Firefly.PSCloudFormation
         /// <param name="exception">The exception that was caught, if any</param>
         protected void ThrowExecutionError(string message, object errorSource, Exception exception)
         {
-            this.LogException(exception);
+            if (exception == null)
+            {
+                this.ThrowTerminatingError(
+                    new ErrorRecord(
+                        new InvalidOperationException(message),
+                        "InvalidOperationException",
+                        ErrorCategory.InvalidOperation,
+                        errorSource));
+            }
 
-            if (exception is StackOperationException ex)
+            new ExceptionDumper(
+                this.Host.UI.WriteLine, 
+                this.MyInvocation.BoundParameters.Keys.Any(k => string.Compare(k, "Debug", StringComparison.OrdinalIgnoreCase) == 0))
+                .Dump(exception);
+
+            var stackOperationException = exception.FindInner<StackOperationException>();
+
+            if (stackOperationException != null)
             {
                 var stackOperationToErrorCategory = new Dictionary<StackOperationalState, ErrorCategory>
                                                         {
@@ -566,17 +582,19 @@ namespace Firefly.PSCloudFormation
 
                 this.ThrowTerminatingError(
                     new ErrorRecord(
-                        ex,
-                        ex.GetType().ToString(),
-                        stackOperationToErrorCategory[ex.OperationalState],
+                        stackOperationException,
+                        stackOperationException.GetType().ToString(),
+                        stackOperationToErrorCategory[stackOperationException.OperationalState],
                         errorSource));
             }
             else
             {
+                var resolvedException = exception is AggregateException aex ? aex.InnerExceptions.First() : exception;
+
                 this.ThrowTerminatingError(
                     new ErrorRecord(
-                        exception ?? new InvalidOperationException(message),
-                        exception == null ? "InvalidOperationException" : exception.GetType().ToString(),
+                        resolvedException,
+                        resolvedException.GetType().ToString(),
                         ErrorCategory.InvalidOperation,
                         errorSource));
             }
@@ -885,36 +903,6 @@ namespace Firefly.PSCloudFormation
             }
 
             return false;
-        }
-
-        /// <summary>
-        /// Logs exception details, if -Debug parameter was passed.
-        /// </summary>
-        /// <param name="ex">The exception.</param>
-        private void LogException(Exception ex)
-        {
-            if (ex == null || this.MyInvocation.BoundParameters.Keys.All(
-                    k => string.Compare(k, "Debug", StringComparison.OrdinalIgnoreCase) != 0))
-            {
-                return;
-            }
-
-            var currentException = ex;
-            var indent = 0;
-            var ui = this.Host.UI;
-
-            ui.WriteLine("-------------- EXCEPTION DEBUG --------------");
-
-            while (currentException != null)
-            {
-                ui.WriteLine($"{new string(' ', indent)}{currentException.GetType().Name}: {currentException.Message}");
-                currentException = currentException.InnerException;
-                indent += 2;
-            }
-
-            ui.WriteLine("---------------- STACK TRACE ----------------");
-            ui.WriteLine(ex.StackTrace);
-            ui.WriteLine("---------------------------------------------");
         }
 
         /// <summary>

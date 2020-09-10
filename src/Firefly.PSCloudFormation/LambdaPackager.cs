@@ -278,7 +278,17 @@
             }
             catch (Exception e)
             {
-                throw new PackagerException($"Error deserializing {dependencyFile}: {e.Message}", e);
+                // Look for DirectoryNotFoundException raised by LambdaDependency setter to reduce stack trace
+                var resolvedException = e;
+
+                var dirException = e.FindInner<DirectoryNotFoundException>();
+
+                if (dirException != null)
+                {
+                    resolvedException = dirException;
+                }
+
+                throw new PackagerException($"Error deserializing {dependencyFile}: {resolvedException.Message}", resolvedException);
             }
         }
 
