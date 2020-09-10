@@ -79,11 +79,6 @@
 
             this.location = Path.GetFullPath(Path.Combine(new FileInfo(dependencyFile).DirectoryName, location));
 
-            if (!Directory.Exists(this.location))
-            {
-                throw new DirectoryNotFoundException($"Dependencies directory not found: {this.location}");
-            }
-
             return this;
         }
     }
