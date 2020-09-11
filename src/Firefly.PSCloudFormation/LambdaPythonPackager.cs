@@ -15,10 +15,18 @@
     /// <seealso href="https://docs.aws.amazon.com/lambda/latest/dg/python-package.html"/>
     internal class LambdaPythonPackager : LambdaPackager
     {
+        private const string ScriptsDir = "scripts";
+
+        private const string LibDir = "lib";
+
+        private const string Lib64Dir = "lib64";
+
+        private const string IncludeDir = "include";
+
         /// <summary>
         /// Directories that are found within a virtual env.
         /// </summary>
-        private static readonly string[] VenvDirectories = { "scripts", "lib", "lib64", "include" };
+        private static readonly string[] VenvDirectories = { ScriptsDir, LibDir, Lib64Dir, IncludeDir };
 
         /// <summary>
         /// Path to temporary directory in which we build up the lambda package
@@ -130,7 +138,7 @@
                         // Now copy to where we are building the package
                         var source = new DirectoryInfo(libDirectory);
                         var target = new DirectoryInfo(Path.Combine(this.packageDirectory.FullName, source.Name));
-                        CopyAll(source, target);
+                        LambdaPackager.CopyAll(source, target);
                     }
                 }
                 else
@@ -181,7 +189,10 @@
             var directories = Directory.GetDirectories(path, "*", SearchOption.TopDirectoryOnly)
                 .Select(d => Path.GetFileName(d).ToLowerInvariant()).ToList();
 
-            return VenvDirectories.Intersect(directories).Count() == directories.Count;
+            var inCommon = VenvDirectories.Intersect(directories).ToList();
+
+            return inCommon.Contains(ScriptsDir) && inCommon.Contains(IncludeDir)
+                                                 && (inCommon.Contains(Lib64Dir) || inCommon.Contains(LibDir));
         }
     }
 }
