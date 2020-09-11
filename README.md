@@ -20,6 +20,7 @@ Turning it into a binary module addresses the above problems and reduces complex
 * All properties of create, update and delete stack are now supported.
 * More complete support for determining AWS credentials from all sources.
 * [Resource Import](https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/resource-import.html) supported (since v3.x) - still not supported by AWS.Tools cmdlets at time of writing.
+* **Dependency Packaging** - For script based lambdas, it is possible to package dependent modules directly with `New-PSCFNPackage`. See [here](./static/lambda-dependencies.md)
 
 ### Gotchas
 
