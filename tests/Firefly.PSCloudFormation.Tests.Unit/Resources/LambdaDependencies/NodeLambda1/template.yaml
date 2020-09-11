@@ -1,0 +1,12 @@
+AWSTemplateFormatVersion: 2010-09-09
+Description: Test lambda dependencies
+Resources:
+
+  lambdaFunction:
+    Type: AWS::Lambda::Function
+    Properties:
+      Handler: my_lambda.handler
+      MemorySize: 128
+      Runtime: nodejs12.x
+      Role: arn:aws:iam::000000000000:role/test-role
+      Code: Lambda/my_lambda.js

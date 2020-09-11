@@ -9,7 +9,6 @@
     using System.Threading.Tasks;
 
     using Firefly.CloudFormation.Parsers;
-    using Firefly.CrossPlatformZip;
     using Firefly.PSCloudFormation.Utils;
 
     /// <summary>
@@ -39,6 +38,12 @@
     /// If you specify a folder, the command zips the folder and then uploads the .zip file.
     /// For most resources, if you don't specify a path, the command zips and uploads the current working directory.
     /// he exception is <c>AWS::ApiGateway::RestApi</c>; if you don't specify a <c>BodyS3Location</c>, this command will not upload an artifact to S3.
+    /// </para>
+    /// <para>
+    /// For supported lambda runtimes (currently Python, Node and Ruby), this cmdlet can also package dependencies - a feature not currently available in <c>aws cloudformation package</c>.
+    /// To package dependencies, you must create a file called lambda-dependencies.yaml or lambda-dependencies.json in the same directory as the script containing your handler function.
+    /// This file is an array of objects describing dependency locations (directories) and a list of modules therein which should be included in the lambda package.
+    /// Follow the link in the links section for more information on packaging dependencies.
     /// </para>
     /// <example>
     /// <code>
@@ -71,6 +76,8 @@
     /// the <c>New-PSCFNStack</c> cmdlet before it receives the template, therefore the template parameters cannot be known in advance.
     /// </para>
     /// </example>
+    /// <para type="link" uri="https://github.com/fireflycons/PSCloudFormation/blob/master/static/lambda-dependencies.md">Packaging Lambda Dependencies</para>
+    /// <para type="link" uri="https://github.com/fireflycons/PSCloudFormation/blob/master/static/s3-usage.md">PSCloudFormation private S3 bucket</para>
     /// </summary>
     /// <seealso cref="Firefly.PSCloudFormation.CloudFormationServiceCommand" />
     [Cmdlet(VerbsCommon.New, "PSCFNPackage")]
@@ -328,7 +335,7 @@
         /// <summary>
         /// Gets or sets the bucket operations instance for S3 uploads
         /// </summary>
-        internal S3Util S3 { get; set; }
+        internal IPSS3Util S3 { get; set; }
 
         /// <summary>
         /// Processes template and nested templates recursively, leaf first
@@ -346,226 +353,14 @@
             // Process nested stacks first
             foreach (var nestedStack in resources.Where(r => r.ResourceType == CloudFormationStack))
             {
-                var nestedTemplateLocation = this.ResolveFileSystemResource(
-                    templatePath,
-                    nestedStack.GetResourcePropertyValue("TemplateURL"));
-
-                switch (nestedTemplateLocation)
-                {
-                    case null:
-
-                        // Value of TemplateURL is already a URL.
-                        continue;
-
-                    case FileInfo fi:
-
-                        // Referenced nested template is in the filesystem, therefore it must be uploaded
-                        // whether or not it was itself modified
-                        var processedTemplate = new FileInfo(await this.ProcessTemplate(fi.FullName, workingDirectory));
-                        var templateHash = processedTemplate.MD5();
-                        templateModified = true;
-
-                        // Output intermediate templates to console if -Debug
-                        this.Logger.LogDebug($"Processed template '{fi.FullName}', Hash: {templateHash}");
-                        this.Logger.LogDebug(
-                            "\n\n{0}",
-                            File.ReadAllText(processedTemplate.FullName));
-
-                        var resourceToUpload = new ResourceUploadSettings
-                                                   {
-                                                       File = processedTemplate,
-                                                       Hash = templateHash,
-                                                       KeyPrefix = this.S3Prefix,
-                                                       Metadata = this.Metadata
-                                                   };
-
-                        if (await this.S3.ObjectChangedAsync(resourceToUpload))
-                        {
-                            await this.S3.UploadResourceToS3Async(resourceToUpload);
-                        }
-
-                        // Update resource to point to uploaded template
-                        nestedStack.UpdateResourceProperty("TemplateURL", resourceToUpload.S3Artifact.Url);
-
-                        break;
-
-                    default:
-
-                        // The path references a directory, which is illegal in this context.
-                        throw new FileNotFoundException(
-                            $"Nested stack resource '{nestedStack.LogicalName}': TemplateURL cannot refer to a directory.");
-                }
+                templateModified |= await this.ProcessNestedStack(nestedStack, templatePath, workingDirectory);
             }
 
             // Process remaining resources
             foreach (var resource in resources.Where(
                 r => r.ResourceType != CloudFormationStack && PackagedResources.ContainsKey(r.ResourceType)))
             {
-                foreach (var propertyToCheck in PackagedResources[resource.ResourceType])
-                {
-                    string resourceFile;
-
-                    try
-                    {
-                        resourceFile = resource.GetResourcePropertyValue(propertyToCheck.PropertyPath);
-                    }
-                    catch (FormatException)
-                    {
-                        if (!propertyToCheck.Required)
-                        {
-                            // Property is missing, but CloudFormation does not require it.
-                            continue;
-                        }
-
-                        throw;
-                    }
-
-                    if (resourceFile == null)
-                    {
-                        // Property was not found, or was not a value type.
-                        continue;
-                    }
-
-                    var fsi = this.ResolveFileSystemResource(templatePath, resourceFile);
-
-                    if (fsi == null)
-                    {
-                        // Property value did not resolve to a path in the file system
-                        continue;
-                    }
-
-                    string fileToUpload;
-                    ResourceUploadSettings resourceToUpload;
-
-                    templateModified = true;
-                    var uploadResource = false;
-
-                    switch (fsi)
-                    {
-                        case FileInfo fi:
-
-                            // Property value points to a file
-                            if (propertyToCheck.Zip && string.Compare(Path.GetExtension(fi.Name), ".zip", StringComparison.OrdinalIgnoreCase) != 0)
-                            {
-                                // Zip if zipping is required and file is not already zipped
-                                fileToUpload = Path.Combine(
-                                    workingDirectory,
-                                    $"{Path.GetFileNameWithoutExtension(fi.Name)}.zip");
-
-                                resourceToUpload = new ResourceUploadSettings
-                                                       {
-                                                           File = new FileInfo(fileToUpload),
-                                                           Hash = fi.MD5(),
-                                                           KeyPrefix = this.S3Prefix,
-                                                           Metadata = this.Metadata
-                                                       };
-
-                                uploadResource = await this.S3.ObjectChangedAsync(resourceToUpload);
-
-                                if (uploadResource)
-                                {
-                                    this.Logger.LogVerbose(
-                                        $"Zipping '{fi.FullName}' to {Path.GetFileName(fileToUpload)}");
-
-                                    // Compute hash before zipping as zip hashes not idempotent due to temporally changing attributes in central directory
-
-                                    Zipper.Zip(
-                                        new CrossPlatformZipSettings
-                                            {
-                                                Artifacts = fi.FullName,
-                                                CompressionLevel = 9,
-                                                LogMessage = m => this.Logger.LogVerbose(m),
-                                                LogError = e => this.Logger.LogError(e),
-                                                ZipFile = fileToUpload,
-                                                TargetPlatform = ZipPlatform.Unix
-                                            });
-                                }
-                            }
-                            else
-                            {
-                                resourceToUpload = new ResourceUploadSettings
-                                                       {
-                                                           File = fi,
-                                                           Hash = fi.MD5(),
-                                                           KeyPrefix = this.S3Prefix,
-                                                           Metadata = this.Metadata
-                                                       };
-
-                                uploadResource = await this.S3.ObjectChangedAsync(resourceToUpload);
-                            }
-
-                            break;
-
-                        case DirectoryInfo di:
-
-                            // Property value points to a directory, which must always be zipped.
-                            fileToUpload = Path.Combine(workingDirectory, $"{di.Name}.zip");
-
-                            // Compute hash before zipping as zip hashes not idempotent due to temporally changing attributes in central directory
-                            resourceToUpload = new ResourceUploadSettings
-                                                   {
-                                                       File = new FileInfo(fileToUpload),
-                                                       Hash = di.MD5(),
-                                                       KeyPrefix = this.S3Prefix,
-                                                       Metadata = this.Metadata
-                                                   };
-
-                            uploadResource = await this.S3.ObjectChangedAsync(resourceToUpload);
-
-                            if (uploadResource)
-                            {
-                                this.Logger.LogVerbose(
-                                    $"Zipping directory '{di.FullName}' to {Path.GetFileName(fileToUpload)}");
-
-                                Zipper.Zip(
-                                    new CrossPlatformZipSettings
-                                        {
-                                            Artifacts = di.FullName,
-                                            CompressionLevel = 9,
-                                            LogMessage = m => this.Logger.LogVerbose(m),
-                                            LogError = e => this.Logger.LogError(e),
-                                            ZipFile = fileToUpload,
-                                            TargetPlatform = ZipPlatform.Unix
-                                        });
-                            }
-
-                            break;
-
-                        default:
-
-                            // Should never get here, but shuts up a bunch of compiler/R# warnings
-                            throw new InvalidDataException(
-                                $"Unsupported derivative of FileSystemInfo: {fsi.GetType().FullName}");
-                    }
-
-                    if (uploadResource)
-                    {
-                        await this.S3.UploadResourceToS3Async(resourceToUpload);
-                    }
-
-                    if (propertyToCheck.ReplacementType == typeof(string))
-                    {
-                        // Insert the URI directly
-                        resource.UpdateResourceProperty(propertyToCheck.PropertyPath, resourceToUpload.S3Artifact.Url);
-                    }
-                    else
-                    {
-                        // Create an instance of the new mapping
-                        // ReSharper disable once StyleCop.SA1305
-                        var s3Location = propertyToCheck.ReplacementType.GetConstructor(new[] { typeof(S3Artifact) })
-                            ?.Invoke(new object[] { resourceToUpload.S3Artifact });
-
-                        if (s3Location == null)
-                        {
-                            throw new MissingMethodException(
-                                propertyToCheck.ReplacementType.FullName,
-                                ".ctor(S3Artifact)");
-                        }
-
-                        // and set on the resource property
-                        resource.UpdateResourceProperty(propertyToCheck.PropertyPath, s3Location);
-                    }
-                }
+                templateModified |= await this.ProcessResource(resource, templatePath, workingDirectory);
             }
 
             if (templateModified)
@@ -619,11 +414,6 @@
                         File.Delete(processedTemplatePath);
                     }
                 }
-                catch (AggregateException aex)
-                {
-                    var ex = aex.InnerExceptions.First();
-                    this.ThrowExecutionError(ex.Message, this, ex);
-                }
                 catch (Exception ex)
                 {
                     this.ThrowExecutionError(ex.Message, this, ex);
@@ -643,6 +433,199 @@
                     }
                 }
             }
+        }
+
+        /// <summary>
+        /// Processes a nested stack.
+        /// </summary>
+        /// <param name="nestedStackResource">The nested stack.</param>
+        /// <param name="templatePath">The template path.</param>
+        /// <param name="workingDirectory">The working directory.</param>
+        /// <returns><c>true</c> if the containing template should be modified (to point to S3); else <c>false</c></returns>
+        /// <exception cref="FileNotFoundException">Nested stack resource '{nestedStackResource.LogicalName}': TemplateURL cannot refer to a directory.</exception>
+        private async Task<bool> ProcessNestedStack(
+            TemplateResource nestedStackResource,
+            string templatePath,
+            string workingDirectory)
+        {
+            var nestedTemplateLocation = this.ResolveFileSystemResource(
+                templatePath,
+                nestedStackResource.GetResourcePropertyValue("TemplateURL"));
+
+            switch (nestedTemplateLocation)
+            {
+                case null:
+
+                    // Value of TemplateURL is already a URL.
+                    return false;
+
+                case FileInfo fi:
+
+                    // Referenced nested template is in the filesystem, therefore it must be uploaded
+                    // whether or not it was itself modified
+                    var processedTemplate = new FileInfo(await this.ProcessTemplate(fi.FullName, workingDirectory));
+                    var templateHash = processedTemplate.MD5();
+
+                    // Output intermediate templates to console if -Debug
+                    this.Logger.LogDebug($"Processed template '{fi.FullName}', Hash: {templateHash}");
+                    this.Logger.LogDebug("\n\n{0}", File.ReadAllText(processedTemplate.FullName));
+
+                    var resourceToUpload = new ResourceUploadSettings
+                                               {
+                                                   File = processedTemplate,
+                                                   Hash = templateHash,
+                                                   KeyPrefix = this.S3Prefix,
+                                                   Metadata = this.Metadata
+                                               };
+
+                    if (await this.S3.ObjectChangedAsync(resourceToUpload))
+                    {
+                        await this.S3.UploadResourceToS3Async(resourceToUpload);
+                    }
+
+                    // Update resource to point to uploaded template
+                    nestedStackResource.UpdateResourceProperty("TemplateURL", resourceToUpload.S3Artifact.Url);
+
+                    break;
+
+                default:
+
+                    // The path references a directory, which is illegal in this context.
+                    throw new FileNotFoundException(
+                        $"Nested stack resource '{nestedStackResource.LogicalName}': TemplateURL cannot refer to a directory.");
+            }
+
+            return true;
+        }
+
+        /// <summary>
+        /// Processes resources that can point to artifacts in S3.
+        /// </summary>
+        /// <param name="resource">The resource.</param>
+        /// <param name="templatePath">The template path.</param>
+        /// <param name="workingDirectory">The working directory.</param>
+        /// <returns><c>true</c> if the containing template should be modified (to point to S3); else <c>false</c></returns>
+        /// <exception cref="InvalidDataException">Unsupported derivative of FileSystemInfo</exception>
+        /// <exception cref="MissingMethodException">Missing constructor for the replacement template artifact.</exception>
+        private async Task<bool> ProcessResource(
+            TemplateResource resource,
+            string templatePath,
+            string workingDirectory)
+        {
+            var templateModified = false;
+
+            foreach (var propertyToCheck in PackagedResources[resource.ResourceType])
+            {
+                string resourceFile;
+
+                try
+                {
+                    resourceFile = resource.GetResourcePropertyValue(propertyToCheck.PropertyPath);
+                }
+                catch (FormatException)
+                {
+                    if (!propertyToCheck.Required)
+                    {
+                        // Property is missing, but CloudFormation does not require it.
+                        continue;
+                    }
+
+                    throw;
+                }
+
+                if (resourceFile == null)
+                {
+                    // Property was not found, or was not a value type.
+                    continue;
+                }
+
+                var fsi = this.ResolveFileSystemResource(templatePath, resourceFile);
+
+                if (fsi == null)
+                {
+                    // Property value did not resolve to a path in the file system
+                    continue;
+                }
+
+                ResourceUploadSettings resourceToUpload;
+
+                templateModified = true;
+
+                // If this is a lambda, check for a dependency file in the same directory
+                if (resource.ResourceType == "AWS::Lambda::Function"
+                    || resource.ResourceType == "AWS::Serverless::Function")
+                {
+                    var handler = resource.GetResourcePropertyValue("Runtime");
+
+                    using (var packager = LambdaPackager.CreatePackager(fsi, handler, this.S3, this.Logger))
+                    {
+                        resourceToUpload = await packager.Package(workingDirectory);
+                    }
+                }
+                else
+                {
+                    switch (fsi)
+                    {
+                        case FileInfo fi:
+
+                            // Property value points to a file
+                            resourceToUpload = await ArtifactPackager.PackageFile(
+                                                   fi,
+                                                   workingDirectory,
+                                                   propertyToCheck.Zip,
+                                                   this.S3,
+                                                   this.Logger);
+                            break;
+
+                        case DirectoryInfo di:
+
+                            // Property value points to a directory, which must always be zipped.
+                            resourceToUpload = await ArtifactPackager.PackageDirectory(
+                                                   di,
+                                                   workingDirectory,
+                                                   this.S3,
+                                                   this.Logger);
+                            break;
+
+                        default:
+
+                            // Should never get here, but shuts up a bunch of compiler/R# warnings
+                            throw new InvalidDataException(
+                                $"Unsupported derivative of FileSystemInfo: {fsi.GetType().FullName}");
+                    }
+                }
+
+                if (!resourceToUpload.HashMatch)
+                {
+                    resourceToUpload.KeyPrefix = this.S3Prefix;
+                    resourceToUpload.Metadata = this.Metadata;
+
+                    await this.S3.UploadResourceToS3Async(resourceToUpload);
+                }
+
+                if (propertyToCheck.ReplacementType == typeof(string))
+                {
+                    // Insert the URI directly
+                    resource.UpdateResourceProperty(propertyToCheck.PropertyPath, resourceToUpload.S3Artifact.Url);
+                }
+                else
+                {
+                    // Create an instance of the new mapping
+                    // ReSharper disable once StyleCop.SA1305
+                    var s3Location = propertyToCheck.ReplacementType.GetConstructor(new[] { typeof(S3Artifact) })
+                        ?.Invoke(new object[] { resourceToUpload.S3Artifact });
+
+                    if (s3Location == null)
+                    {
+                        throw new MissingMethodException(propertyToCheck.ReplacementType.FullName, ".ctor(S3Artifact)");
+                    }
+
+                    // and set on the resource property
+                    resource.UpdateResourceProperty(propertyToCheck.PropertyPath, s3Location);
+                }
+            }
+
+            return templateModified;
         }
 
         /// <summary>
@@ -743,14 +726,6 @@
             public Type ReplacementType { get; set; }
 
             /// <summary>
-            /// Gets or sets a value indicating whether a single file artifact should be zipped
-            /// </summary>
-            /// <value>
-            ///   <c>true</c> if zip; otherwise, <c>false</c>.
-            /// </value>
-            public bool Zip { get; set; }
-
-            /// <summary>
             /// Gets or sets a value indicating whether this <see cref="PackagedResourceProperties"/> is required.
             /// Indicates whether the property is required for the resource to be valid
             /// </summary>
@@ -758,11 +733,20 @@
             ///   <c>true</c> if required; otherwise, <c>false</c>.
             /// </value>
             public bool Required { get; set; }
+
+            /// <summary>
+            /// Gets or sets a value indicating whether a single file artifact should be zipped
+            /// </summary>
+            /// <value>
+            ///   <c>true</c> if zip; otherwise, <c>false</c>.
+            /// </value>
+            public bool Zip { get; set; }
         }
 
         /// <summary>
         /// S3 location with 'S3' prefixing field names
         /// </summary>
+
         // ReSharper disable UnusedAutoPropertyAccessor.Local - Classes are accessed by refection
         // ReSharper disable MemberCanBePrivate.Local
         private class S3LocationLong
@@ -771,6 +755,7 @@
             /// Initializes a new instance of the <see cref="S3LocationLong" /> class.
             /// </summary>
             /// <param name="artifact">The S3 artifact.</param>
+
             // ReSharper disable once StyleCop.SA1305
             public S3LocationLong(S3Artifact artifact)
             {
@@ -826,6 +811,7 @@
             /// </value>
             public string Key { get; }
         }
+
         // ReSharper restore UnusedAutoPropertyAccessor.Local
         // ReSharper restore MemberCanBePrivate.Local
     }

@@ -1,7 +1,6 @@
 ﻿namespace Firefly.PSCloudFormation.Utils
 {
     using System;
-    using System.Collections;
     using System.Collections.Generic;
     using System.IO;
     using System.Linq;
@@ -16,14 +15,13 @@
 
     using Firefly.CloudFormation;
     using Firefly.CloudFormation.Model;
-    using Firefly.CloudFormation.Utils;
 
     /// <summary>
     /// Class to manage interaction with S3, both for the CloudFormation packager in this solution
     /// and to pass to <c>Firefly.PSCloudFormation</c> as its interface for managing oversize template/policy documents.
     /// </summary>
-    /// <seealso cref="IS3Util" />
-    internal class S3Util : IS3Util, IDisposable
+    /// <seealso cref="IPSS3Util" />
+    internal class S3Util : IDisposable, IPSS3Util
     {
         internal const string PackagerHashKey = "pscfnpackge-hash";
 
@@ -85,7 +83,7 @@
         /// <exception cref="ArgumentNullException">rootTemplate is null</exception>
         public S3Util(
             IPSAwsClientFactory clientFactory,
-            IPSCloudFormationContext context,
+            ICloudFormationContext context,
             string rootTemplate,
             string bucketName)
         {
@@ -275,10 +273,8 @@
                                                           };
                         return false;
                     }
-                    else
-                    {
-                        this.logger.LogDebug("- Hashes don't match. Object will be uploaded.");
-                    }
+
+                    this.logger.LogDebug("- Hashes don't match. Object will be uploaded.");
                 }
                 else
                 {
@@ -443,7 +439,7 @@
         /// Generates name of module's private bucket
         /// </summary>
         /// <param name="context">The context.</param>
-        private void GeneratePrivateBucketName(IPSCloudFormationContext context)
+        private void GeneratePrivateBucketName(ICloudFormationContext context)
         {
             using (var sts = this.clientFactory.CreateSTSClient())
             {

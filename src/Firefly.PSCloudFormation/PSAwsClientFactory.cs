@@ -5,7 +5,6 @@
     using Amazon.SecurityToken;
 
     using Firefly.CloudFormation;
-    using Firefly.CloudFormation.Utils;
 
     /// <summary>
     /// <see cref="IAwsClientFactory"/> implementation for PowerShell

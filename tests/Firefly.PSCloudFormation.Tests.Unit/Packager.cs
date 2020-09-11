@@ -1,6 +1,5 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Text;
 
 namespace Firefly.PSCloudFormation.Tests.Unit
 {
@@ -18,11 +17,14 @@ namespace Firefly.PSCloudFormation.Tests.Unit
     using Firefly.PSCloudFormation.Tests.Unit.Utils;
     using Firefly.PSCloudFormation.Utils;
 
+    using FluentAssertions;
+
     using Moq;
 
     using Xunit;
     using Xunit.Abstractions;
 
+    [Collection("Packager")]
     public class Packager : AutoResourceLoader, IDisposable
     {
         private readonly IPathResolver pathResolver = new TestPathResolver();
@@ -37,6 +39,9 @@ namespace Firefly.PSCloudFormation.Tests.Unit
         /// </summary>
         [EmbeddedResource("DeepNestedStack")]
         private TempDirectory deepNestedStack;
+
+        [EmbeddedResource("DependencyFile")]
+        private TempDirectory dependencyFiles;
 
         public Packager(ITestOutputHelper output)
         {
@@ -296,6 +301,31 @@ namespace Firefly.PSCloudFormation.Tests.Unit
 
             // Three objects should have been uploaded to S3
             mockS3.Verify(m => m.PutObjectAsync(It.IsAny<PutObjectRequest>(), default), Times.Exactly(2));
+        }
+
+        [Theory]
+        [InlineData("json")]
+        [InlineData("yaml")]
+        public void ShouldParsePackageDependencies(string format)
+        {
+            var dependencyFile = Path.Combine(this.dependencyFiles.FullPath, $"lambda-dependencies.{format}");
+
+            var dependencies = PSCloudFormation.LambdaPackager.LoadDependencies(dependencyFile);
+            dependencies.Count.Should().Be(2);
+        }
+
+        [Theory]
+        [InlineData("json")]
+        [InlineData("yaml")]
+        public void ShouldResolveRelativeDependencies(string format)
+        {
+            var dependencyFile = Path.Combine(this.dependencyFiles.FullPath, $"lambda-dependencies.{format}");
+            var expectedDependencyPath = Path.GetFullPath(Path.Combine(new FileInfo(dependencyFile).DirectoryName, "../modules"));
+            
+            // Last entry in the lambda-dependencies files has a relative link
+            var relativeDependency = LambdaPackager.LoadDependencies(dependencyFile).Last();
+
+            relativeDependency.Location.Should().Be(expectedDependencyPath);
         }
 
         public void Dispose()

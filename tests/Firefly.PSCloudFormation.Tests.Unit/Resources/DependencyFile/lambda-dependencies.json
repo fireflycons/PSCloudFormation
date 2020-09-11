@@ -1,0 +1,15 @@
+﻿[
+    {
+        "Location": "C:\\Libs",
+        "Libraries": [
+            "yaml",
+            "PIL"
+        ]
+    },
+    {
+        "Location": "../modules",
+        "Libraries": [
+            "boto3"
+        ]
+    }
+]

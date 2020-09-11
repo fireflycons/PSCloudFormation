@@ -2,8 +2,6 @@
 {
     using System;
 
-    using Firefly.CloudFormation.Utils;
-
     /// <summary>
     /// Concrete class to generate timestamps to form changeset names
     /// </summary>

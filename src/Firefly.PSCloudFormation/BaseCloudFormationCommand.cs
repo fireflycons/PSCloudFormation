@@ -2,7 +2,6 @@
 {
     using System;
     using System.Collections.ObjectModel;
-    using System.Linq;
     using System.Management.Automation;
     using System.Management.Automation.Host;
     using System.Threading.Tasks;
@@ -149,22 +148,7 @@
             }
             catch (Exception ex)
             {
-                Exception resolvedException;
-
-                switch (ex)
-                {
-                    case AggregateException aex:
-
-                        resolvedException = aex.InnerExceptions.First();
-                        break;
-
-                    default:
-
-                        resolvedException = ex;
-                        break;
-                }
-
-                this.ThrowExecutionError(resolvedException.Message, this, resolvedException);
+                this.ThrowExecutionError(ex.Message, this, ex);
                 return;
             }
 

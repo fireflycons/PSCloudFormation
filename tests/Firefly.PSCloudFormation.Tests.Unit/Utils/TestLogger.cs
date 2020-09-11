@@ -54,6 +54,14 @@
         public List<string> ErrorMessages { get; } = new List<string>();
 
         /// <summary>
+        /// Gets the buffer of error messages.
+        /// </summary>
+        /// <value>
+        /// The error messages.
+        /// </value>
+        public List<string> VerboseMessages { get; } = new List<string>();
+
+        /// <summary>
         /// Gets the buffer of debug messages.
         /// </summary>
         /// <value>
@@ -137,6 +145,7 @@
         public override void LogVerbose(string message, params object[] args)
         {
             var msg = string.Format(message, args);
+            this.VerboseMessages.Add(msg);
             this.output.WriteLine($"VERBOSE: {msg}");
         }
     }
