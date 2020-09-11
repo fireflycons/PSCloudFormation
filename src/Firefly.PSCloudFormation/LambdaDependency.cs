@@ -11,11 +11,6 @@
     internal class LambdaDependency
     {
         /// <summary>
-        /// Directory containing modules to package with lambda
-        /// </summary>
-        private string location;
-
-        /// <summary>
         /// Gets or sets the libraries to package with the lambda.
         /// </summary>
         /// <value>
@@ -29,55 +24,44 @@
         /// <value>
         /// The location.
         /// </value>
-        /// <exception cref="DirectoryNotFoundException">Environment variable {varName} not found</exception>
-        public string Location
-        {
-            get => this.location;
-            set
-            {
-                if (value.StartsWith("$"))
-                {
-                    // Environment variable
-                    var varName = value.Substring(1);
-                    var envVar = Environment.GetEnvironmentVariable(varName);
-
-                    if (string.IsNullOrEmpty(envVar))
-                    {
-                        throw new DirectoryNotFoundException($"Cannot find dependencies directory due to environment variable {varName} not found");
-                    }
-
-                    this.location = envVar;
-                }
-                else
-                {
-                    this.location = value;
-                }
-            }
-        }
+        public string Location { get; set; }
 
         /// <summary>
-        /// Resolves relative path from dependency file to dependencies directory as full path.
+        /// Resolves relative path and environment variables from dependency file to dependencies directory as full path.
         /// </summary>
         /// <param name="dependencyFile">The dependency file.</param>
         /// <returns>This object</returns>
         /// <exception cref="ArgumentNullException">dependencyFile is null</exception>
-        /// <exception cref="DirectoryNotFoundException">Dependencies directory not found: {this.location}</exception>
-        public LambdaDependency ResolveRelativePath(string dependencyFile)
+        /// <exception cref="DirectoryNotFoundException">Environment variable {name} not found</exception>
+        public LambdaDependency ResolveDependencyLocation(string dependencyFile)
         {
             if (dependencyFile == null)
             {
                 throw new ArgumentNullException(nameof(dependencyFile));
             }
 
-            var locationTemp = this.Location.Replace('/', Path.DirectorySeparatorChar)
-                .Replace('\\', Path.DirectorySeparatorChar);
+            var locationTemp = this.Location;
 
-            if (Path.IsPathRooted(locationTemp))
+            if (locationTemp.StartsWith("$"))
             {
-                return this;
+                var varName = locationTemp.Substring(1);
+                var envVar = Environment.GetEnvironmentVariable(varName);
+
+                if (string.IsNullOrEmpty(envVar))
+                {
+                    throw new DirectoryNotFoundException($"Cannot find dependencies directory due to environment variable {varName} not found");
+                }
+
+                locationTemp = envVar;
             }
 
-            this.location = Path.GetFullPath(Path.Combine(new FileInfo(dependencyFile).DirectoryName, locationTemp));
+            locationTemp = locationTemp.Replace('/', Path.DirectorySeparatorChar)
+                .Replace('\\', Path.DirectorySeparatorChar);
+
+            this.Location = Path.IsPathRooted(locationTemp)
+                                ? locationTemp
+                                : Path.GetFullPath(
+                                    Path.Combine(new FileInfo(dependencyFile).DirectoryName, locationTemp));
 
             return this;
         }

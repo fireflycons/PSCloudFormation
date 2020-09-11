@@ -274,7 +274,7 @@
                                            .Deserialize<List<LambdaDependency>>(content);
 
                 // Make dependency locations absolute
-                return dependencies.Select(d => d.ResolveRelativePath(dependencyFile)).ToList();
+                return dependencies.Select(d => d.ResolveDependencyLocation(dependencyFile)).ToList();
             }
             catch (Exception e)
             {
