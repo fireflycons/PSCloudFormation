@@ -5,17 +5,6 @@ param
 
 import-module (Join-Path $PSScriptRoot 'PSCloudFormation.psd1')
 
-
-push-location C:\OneDrive\abm\OneDrive\Dev\Git\xrefmap-service
-
-New-PSCFNPackage -TemplateFile cloudFormation.yaml
-
-pop-location
-
-Read-Host -Prompt "Press Enter" | Out-Null
-exit 0
-
-
 $stackName = 'test-stack-' + [Guid]::NewGuid().ToString().SubString(0,8)
 
 # Random names for resources to create
