@@ -20,6 +20,9 @@
     /// If -Wait is present, and a stack is found to be updating as a result of another process, this command will wait for that operation to complete
     /// following the stack events, prior to submitting the change set request.
     /// </para>
+    /// <para type="link" uri="https://github.com/fireflycons/PSCloudFormation/blob/master/static/s3-usage.md">PSCloudFormation private S3 bucket</para>
+    /// <para type="link" uri="https://github.com/fireflycons/PSCloudFormation/blob/master/static/resource-import.md">Resource Import (PSCloudFormation)</para>
+    /// <para type="link" uri="(https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/resource-import.html)">Resource Import (AWS docs)</para>
     /// </summary>
     /// <example>
     /// <code>Update-PSCFNStack -StackName "my-stack" -TemplateBody "{TEMPLATE CONTENT HERE}" -PK1 PV1 -PK2 PV2</code>
@@ -46,7 +49,6 @@
     /// If update of the stack fails, it will be rolled back.
     /// </para>
     /// </example>
-    /// <para type="link" uri="(https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/resource-import.html)">[Resource Import]</para>
     /// <seealso cref="Firefly.PSCloudFormation.StackParameterCloudFormationCommand" />
     [Cmdlet(VerbsData.Update, "PSCFNStack")]
     [OutputType(typeof(CloudFormationResult))]
