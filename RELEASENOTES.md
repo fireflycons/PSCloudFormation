@@ -1,5 +1,10 @@
 # Release Notes
 
+# 4.0.6
+
+* Fix - Null reference exception when no template provided
+* Fix - Python lamdba packager with dependencies always uploading new version of package even when nothing has changed.
+
 # 4.0.5
 
 * Enhancement. Create a mechanism for packaging lambda dependencies.
