@@ -4,7 +4,6 @@
     using System.Runtime.CompilerServices;
     using System.Threading.Tasks;
 
-    using Firefly.CloudFormation.Utils;
     using Firefly.PSCloudFormation.Tests.Unit.Utils;
     using Firefly.PSCloudFormation.Utils;
 

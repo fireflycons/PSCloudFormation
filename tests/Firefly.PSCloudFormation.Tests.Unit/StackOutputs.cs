@@ -1,17 +1,12 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Text;
-
-namespace Firefly.PSCloudFormation.Tests.Unit
+﻿namespace Firefly.PSCloudFormation.Tests.Unit
 {
     using System.Collections;
+    using System.Collections.Generic;
 
     using Amazon.CloudFormation;
     using Amazon.CloudFormation.Model;
-    using Amazon.S3.Model;
 
     using Firefly.CloudFormation;
-    using Firefly.CloudFormation.Utils;
     using Firefly.PSCloudFormation.Tests.Unit.Utils;
 
     using FluentAssertions;
@@ -26,10 +21,6 @@ namespace Firefly.PSCloudFormation.Tests.Unit
     public class StackOutputs
     {
         private readonly ITestOutputHelper output;
-
-        private ICloudFormationContext Context { get; }
-
-        private IAwsClientFactory ClientFactory { get; }
 
         public StackOutputs(ITestOutputHelper output)
         {
@@ -73,26 +64,39 @@ namespace Firefly.PSCloudFormation.Tests.Unit
             this.ClientFactory = mockClientFactory.Object;
         }
 
-        [Fact]
-        public void ShouldReturnTwoParametersWithExpectedValuesAsHashtable()
-        {
-            var cmd = new GetStackOutputsCommand { StackName = "test-stack", AsHashTable = true };
+        private IAwsClientFactory ClientFactory { get; }
 
-            var result = (Hashtable)cmd.GetStackOutputs(this.Context, this.ClientFactory, GetStackOutputsCommand.HashParameterSet).Result;
-
-            result.Count.Should().Be(2);
-            result["FirstParameter"].Should().Be("arn:aws:first-parameter");
-            result["SecondParameter"].Should().Be("arn:aws:second-parameter");
-        }
+        private ICloudFormationContext Context { get; }
 
         [Theory]
         [InlineData("JSON")]
         [InlineData("YAML")]
         public void ShouldReturnImportsInCorrectFormat(string format)
         {
-            var cmd = new GetStackOutputsCommand { StackName = "test-stack", AsCrossStackReferences = true, Format = format };
+            var cmd = new GetStackOutputsCommand
+                          {
+                              StackName = "test-stack", AsCrossStackReferences = true, Format = format
+                          };
 
-            var result = (string)cmd.GetStackOutputs(this.Context, this.ClientFactory, GetStackOutputsCommand.ImportsParameterSet).Result;
+            var result = (string)cmd.GetStackOutputs(
+                this.Context,
+                this.ClientFactory,
+                GetStackOutputsCommand.ImportsParameterSet).Result;
+        }
+
+        [Fact]
+        public void ShouldReturnTwoParametersWithExpectedValuesAsHashtable()
+        {
+            var cmd = new GetStackOutputsCommand { StackName = "test-stack", AsHashTable = true };
+
+            var result = (Hashtable)cmd.GetStackOutputs(
+                this.Context,
+                this.ClientFactory,
+                GetStackOutputsCommand.HashParameterSet).Result;
+
+            result.Count.Should().Be(2);
+            result["FirstParameter"].Should().Be("arn:aws:first-parameter");
+            result["SecondParameter"].Should().Be("arn:aws:second-parameter");
         }
     }
 }
