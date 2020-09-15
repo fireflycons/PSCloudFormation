@@ -83,7 +83,7 @@
                 return null;
             }
 
-            this.packageDirectory = new DirectoryInfo(Path.Combine(workingDirectory, Guid.NewGuid().ToString()));
+            this.packageDirectory = new DirectoryInfo(Path.Combine(workingDirectory, this.LambdaArtifact.Name).Replace('.', '_'));
 
             // First, copy over the artifact
             switch (this.LambdaArtifact)
