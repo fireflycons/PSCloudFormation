@@ -363,7 +363,15 @@
         /// </returns>
         protected override async Task<object> OnProcessRecord()
         {
-            this.Logger = new PSLogger(this);
+            if (this.Logger == null)
+            {
+                this.Logger = new PSLogger(this);
+            }
+
+            if (this.TemplateLocation == null)
+            {
+                throw new ArgumentException("Must supply -TemplateLocation");
+            }
 
             await Task.Run(
                 () =>

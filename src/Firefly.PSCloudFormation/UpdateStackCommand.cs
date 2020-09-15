@@ -1,5 +1,6 @@
 ﻿namespace Firefly.PSCloudFormation
 {
+    using System;
     using System.Management.Automation;
     using System.Threading.Tasks;
 
@@ -167,6 +168,13 @@
         /// </returns>
         protected override async Task<object> OnProcessRecord()
         {
+            this.Logger = new PSLogger(this);
+
+            if (this.TemplateLocation == null && !this.UsePreviousTemplate)
+            {
+                throw new ArgumentException("Must supply one of -TemplateLocation, -UsePreviousTemplate");
+            }
+
             await base.OnProcessRecord();
 
             using (var runner = this.GetBuilder()
