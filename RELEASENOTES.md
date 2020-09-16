@@ -1,5 +1,9 @@
 # Release Notes
 
+# 4.0.7
+
+* Fix - Inverse logic in packaging for single file lambda was causing a changed lambda to not be uploaded.
+
 # 4.0.6
 
 * Fix - Null reference exception when no template provided
