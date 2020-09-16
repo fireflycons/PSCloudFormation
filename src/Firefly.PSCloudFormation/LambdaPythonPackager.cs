@@ -58,7 +58,11 @@
         protected override void Dispose(bool disposing)
         {
             // Remove any temporary packaging directory.
-            this.packageDirectory?.Delete(true);
+            if (this.packageDirectory != null && Directory.Exists(this.packageDirectory.FullName))
+            {
+                this.packageDirectory.Delete(true);
+            }
+
             base.Dispose(disposing);
         }
 
@@ -83,7 +87,7 @@
                 return null;
             }
 
-            this.packageDirectory = new DirectoryInfo(Path.Combine(workingDirectory, this.LambdaArtifact.Name).Replace('.', '_'));
+            this.packageDirectory = new DirectoryInfo(Path.Combine(workingDirectory, this.LambdaArtifact.Name.Replace('.', '_')));
 
             // First, copy over the artifact
             switch (this.LambdaArtifact)

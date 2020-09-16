@@ -231,6 +231,49 @@
         }
 
         /// <summary>
+        /// Test that when the template refers to a single python script and a dependency file is present,
+        /// then the script and its dependencies are correctly packaged.
+        /// </summary>
+        [Fact]
+        public async Task ShouldCorrectlyPackagePythonSingleFileLambdaWithoutDependency()
+        {
+            var templateDir = Path.Combine(this.LambdaDependencies.FullPath, "PythonLambda");
+            var template = Path.Combine(templateDir, "template.yaml");
+            this.SetupMocks(template);
+
+            // Mock the virtualenv
+            Environment.SetEnvironmentVariable("VIRTUAL_ENV", Path.Combine(templateDir, "venv"));
+
+            // Remove the materialized lambda_dependencies so this is seen as a single file lambda
+            foreach(var dep in Directory.EnumerateFiles(templateDir, "lambda-dependencies.*", SearchOption.AllDirectories))
+            {
+                File.Delete(dep);
+            }
+
+            using var workingDirectory = new TempDirectory();
+
+            var newPackage = new NewPackageCommand
+                                 {
+                                     S3 = new S3Util(this.ClientFactory, this.Context, template, "test-bucket"),
+                                     PathResolver = this.pathResolver,
+                                     Logger = this.Logger
+                                 };
+
+            await newPackage.ProcessTemplate(template, workingDirectory.FullPath);
+
+            // Verify by checking messages output by the zip library
+            this.Logger.VerboseMessages.Should().Contain(
+                "Adding my_lambda.py",
+                "the function itself and its dependency should be in right places in zip");
+
+            this.Logger.VerboseMessages.Should().NotContain(new[] { "Adding other.py", "Adding mylibrary/__init__.py" }, "lambda is a single script");
+
+            this.Logger.VerboseMessages.Should().NotContain(
+                "*__pycache__*",
+                "__pycache__ should not be included in lambda packages");
+        }
+
+        /// <summary>
         /// Test that when the template refers to a directory and a dependency file is present,
         /// then the script and its dependencies are correctly packaged.
         /// </summary>

@@ -1,8 +1,12 @@
 # Release Notes
 
+# 4.0.8
+
+* Fix - Incorrect generation of temporary directory name when packaging single file python lambda with dependencies. Masked until previous bug was fixed.
+
 # 4.0.7
 
-* Fix - Inverse logic in packaging for single file lambda was causing a changed lambda to not be uploaded.
+* Fix - Inverse logic in packaging for single file lambda without dependencies was causing a changed lambda to not be uploaded.
 
 # 4.0.6
 
