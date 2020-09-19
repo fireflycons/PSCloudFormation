@@ -1,5 +1,9 @@
 # Release Notes
 
+# 4.0.9
+
+* Fix - On running stack update, if there are no resources changed, e.g. only outputs have been changed, then exception is thrown.
+
 # 4.0.8
 
 * Fix - Incorrect generation of temporary directory name when packaging single file python lambda with dependencies. Masked until previous bug was fixed.

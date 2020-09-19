@@ -15,7 +15,6 @@
     /// Concrete logger implementation for PowerShell
     /// </summary>
     /// <seealso cref="ILogger" />
-
     // ReSharper disable once InconsistentNaming
     public class PSLogger : BaseLogger
     {
@@ -53,6 +52,12 @@
         /// </returns>
         public override IDictionary<string, int> LogChangeset(DescribeChangeSetResponse changes)
         {
+            if (!changes.Changes.Any())
+            {
+                this.LogInformation("No changes to stack resources. Other changes such as Outputs may be present.");
+                return new Dictionary<string, int>();
+            }
+
             var columnWidths = base.LogChangeset(changes);
             var foregroundColorMap = new Dictionary<string, ConsoleColor>
                                          {
