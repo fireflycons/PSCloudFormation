@@ -1,5 +1,9 @@
 # Release Notes
 
+# 4.0.10
+
+* Fix - Deleting SAM template stack that fails to create throws exception
+
 # 4.0.9
 
 * Fix - On running stack update, if there are no resources changed, e.g. only outputs have been changed, then exception is thrown.

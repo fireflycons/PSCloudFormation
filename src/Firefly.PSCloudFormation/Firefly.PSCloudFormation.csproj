@@ -46,7 +46,7 @@
     <ProjectReference Include="..\Firefly.CloudFormation\Firefly.CloudFormation.csproj" />
   </ItemGroup>
   <ItemGroup Condition="'$(SolutionName)' == 'Firefly.PSCloudFormation'">
-    <PackageReference Include="Firefly.CloudFormation" Version="0.2.2" />
+    <PackageReference Include="Firefly.CloudFormation" Version="0.2.3" />
   </ItemGroup>
   <ItemGroup>
     <Reference Include="AWS.Tools.Common">
