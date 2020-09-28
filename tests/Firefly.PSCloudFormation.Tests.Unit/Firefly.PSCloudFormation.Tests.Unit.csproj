@@ -29,6 +29,7 @@
     <None Remove="Resources\LambdaDependencies\PythonLambda\venv\Include\placeholder.txt" />
     <None Remove="Resources\LambdaDependencies\PythonLambda\venv\lib\site-packages\mylibrary\__init__.py" />
     <None Remove="Resources\LambdaDependencies\PythonLambda\venv\lib\site-packages\mylibrary\__pycache__\__init__.pyc" />
+    <None Remove="Resources\LambdaDependencies\PythonLambda\venv\lib\site-packages\standalone_module.py" />
     <None Remove="Resources\LambdaDependencies\PythonLambda\venv\scripts\placeholder.txt" />
     <None Remove="Resources\LambdaDependencies\NodeLambda1\Lambda\lambda-dependencies.yaml" />
     <None Remove="Resources\LambdaDependencies\NodeLambda1\template.yaml" />
@@ -68,6 +69,7 @@
     <EmbeddedResource Include="Resources\LambdaDependencies\PythonLambda\venv\Include\placeholder.txt" />
     <EmbeddedResource Include="Resources\LambdaDependencies\PythonLambda\venv\lib\site-packages\mylibrary\__init__.py" />
     <EmbeddedResource Include="Resources\LambdaDependencies\PythonLambda\venv\lib\site-packages\mylibrary\__pycache__\__init__.pyc" />
+    <EmbeddedResource Include="Resources\LambdaDependencies\PythonLambda\venv\lib\site-packages\standalone_module.py" />
     <EmbeddedResource Include="Resources\LambdaDependencies\PythonLambda\venv\scripts\placeholder.txt" />
     <EmbeddedResource Include="Resources\LambdaDependencies\NodeLambda1\Dependencies\mylibrary\libfile.js" />
     <EmbeddedResource Include="Resources\LambdaDependencies\NodeLambda1\Lambda\lambda-dependencies.yaml" />

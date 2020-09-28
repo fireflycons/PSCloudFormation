@@ -186,7 +186,11 @@
 
             // Verify by checking messages output by the zip library
             this.Logger.VerboseMessages.Should().Contain(
-                new[] { "Adding my_lambda.py", "Adding other.py", "Adding mylibrary/__init__.py" },
+                new[]
+                    {
+                        "Adding my_lambda.py", "Adding other.py", "Adding mylibrary/__init__.py",
+                        "Adding standalone_module.py"
+                    },
                 "the function itself and its dependency should be in right places in zip");
             this.Logger.VerboseMessages.Should().NotContain(
                 "*__pycache__*",

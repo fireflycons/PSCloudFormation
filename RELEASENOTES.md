@@ -1,5 +1,9 @@
 # Release Notes
 
+# 4.0.11
+
+* Fix - Python packager should gather dependencies that are a single file rather than module direcory, e.g. `six`
+
 # 4.0.10
 
 * Fix - Deleting SAM template stack that fails to create throws exception

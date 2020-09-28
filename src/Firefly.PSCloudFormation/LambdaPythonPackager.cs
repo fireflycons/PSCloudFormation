@@ -1,6 +1,5 @@
 ﻿namespace Firefly.PSCloudFormation
 {
-    using System;
     using System.Collections.Generic;
     using System.IO;
     using System.Linq;
@@ -15,13 +14,13 @@
     /// <seealso href="https://docs.aws.amazon.com/lambda/latest/dg/python-package.html"/>
     internal class LambdaPythonPackager : LambdaPackager
     {
-        private const string ScriptsDir = "scripts";
-
-        private const string LibDir = "lib";
+        private const string IncludeDir = "include";
 
         private const string Lib64Dir = "lib64";
 
-        private const string IncludeDir = "include";
+        private const string LibDir = "lib";
+
+        private const string ScriptsDir = "scripts";
 
         /// <summary>
         /// Directories that are found within a virtual env.
@@ -87,7 +86,8 @@
                 return null;
             }
 
-            this.packageDirectory = new DirectoryInfo(Path.Combine(workingDirectory, this.LambdaArtifact.Name.Replace('.', '_')));
+            this.packageDirectory =
+                new DirectoryInfo(Path.Combine(workingDirectory, this.LambdaArtifact.Name.Replace('.', '_')));
 
             // First, copy over the artifact
             switch (this.LambdaArtifact)
@@ -128,45 +128,23 @@
                         }
                     }
 
-                    foreach (var library in dependencyEntry.Libraries)
-                    {
-                        var libDirectory = virtualEnvDirectories.Select(d => Path.Combine(d, library))
-                            .FirstOrDefault(Directory.Exists);
-
-                        if (libDirectory == null)
-                        {
-                            throw new PackagerException(
-                                $"Module {library} not found in virtual env '{dependencyEntry.Location}'");
-                        }
-
-                        // Now copy to where we are building the package
-                        var source = new DirectoryInfo(libDirectory);
-                        var target = new DirectoryInfo(Path.Combine(this.packageDirectory.FullName, source.Name));
-                        LambdaPackager.CopyAll(source, target);
-                    }
+                    this.CopyDependenciesToPackageDirectory(dependencyEntry, virtualEnvDirectories);
                 }
                 else
                 {
                     // Package is directly beneath given location
-                    foreach (var libraryDirectory in dependencyEntry.Libraries.Select(
-                        l => new DirectoryInfo(Path.Combine(dependencyEntry.Location, l))))
-                    {
-                        if (!libraryDirectory.Exists)
-                        {
-                            throw new PackagerException(
-                                $"Module {libraryDirectory} not found in '{dependencyEntry.Location}'");
-                        }
-
-                        LambdaPackager.CopyAll(libraryDirectory, this.packageDirectory);
-                    }
+                    this.CopyDependenciesToPackageDirectory(
+                        dependencyEntry,
+                        new List<string> { dependencyEntry.Location });
                 }
 
                 // Remove any __pycache__
-                foreach (var pycaches in dependencyEntry.Libraries.Select(
-                    l => Directory.GetDirectories(
-                        Path.Combine(this.packageDirectory.FullName, l),
-                        "*__pycache__",
-                        SearchOption.AllDirectories)))
+                foreach (var pycaches in dependencyEntry.Libraries
+                    .Where(l => Directory.Exists(Path.Combine(this.packageDirectory.FullName, l))).Select(
+                        l => Directory.GetDirectories(
+                            Path.Combine(this.packageDirectory.FullName, l),
+                            "*__pycache__",
+                            SearchOption.AllDirectories)))
                 {
                     foreach (var pycache in pycaches)
                     {
@@ -197,6 +175,45 @@
 
             return inCommon.Contains(ScriptsDir) && inCommon.Contains(IncludeDir)
                                                  && (inCommon.Contains(Lib64Dir) || inCommon.Contains(LibDir));
+        }
+
+        /// <summary>
+        /// Copies the dependencies to package directory.
+        /// </summary>
+        /// <param name="dependencyEntry">The dependency entry.</param>
+        /// <param name="dependencyLocations">The dependency locations - one or more directories where dependencies may be found.</param>
+        /// <exception cref="PackagerException">Module {library} not found in virtual env '{dependencyEntry.Location}'</exception>
+        private void CopyDependenciesToPackageDirectory(
+            LambdaDependency dependencyEntry,
+            List<string> dependencyLocations)
+        {
+            foreach (var library in dependencyEntry.Libraries)
+            {
+                var libDirectory = dependencyLocations.Select(d => Path.Combine(d, library))
+                    .FirstOrDefault(Directory.Exists);
+
+                if (libDirectory != null)
+                {
+                    // Now copy to where we are building the package
+                    var source = new DirectoryInfo(libDirectory);
+                    var target = new DirectoryInfo(Path.Combine(this.packageDirectory.FullName, source.Name));
+                    CopyAll(source, target);
+                    continue;
+                }
+
+                // Perhaps the dependency is a single file
+                var libFile = dependencyLocations.Select(d => Path.Combine(d, $"{library}.py"))
+                    .FirstOrDefault(File.Exists);
+
+                if (libFile == null)
+                {
+                    throw new PackagerException(
+                        $"Module {library} not found in virtual env '{dependencyEntry.Location}'");
+                }
+
+                // Copy the file to the packaging directory
+                File.Copy(libFile, Path.Combine(this.packageDirectory.FullName, Path.GetFileName(libFile)));
+            }
         }
     }
 }
