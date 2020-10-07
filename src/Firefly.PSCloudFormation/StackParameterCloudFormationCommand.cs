@@ -295,8 +295,15 @@
                 this.UsePreviousTemplateFlag,
                 this.ForceS3);
 
-            var task = templateResolver.ResolveFileAsync(this.TemplateLocation);
-            task.Wait();
+            try
+            {
+                var task = templateResolver.ResolveFileAsync(this.TemplateLocation);
+                task.Wait();
+            }
+            catch (AggregateException e)
+            {
+                throw e.InnerExceptions.FirstOrDefault() ?? e;
+            }
 
             var templateManager = new TemplateManager(templateResolver, this.StackOperation, new PSLogger(this));
 

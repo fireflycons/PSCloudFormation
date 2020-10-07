@@ -1,5 +1,9 @@
 # Release Notes
 
+# 4.0.12
+
+* Fix - Incorrect error message when a template file is not found
+
 # 4.0.11
 
 * Fix - Python packager should gather dependencies that are a single file rather than module direcory, e.g. `six`
