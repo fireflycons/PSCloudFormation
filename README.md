@@ -10,7 +10,7 @@ Turning it into a binary module addresses the above problems and reduces complex
 ### Breaking Changes
 
 * Minimum requirement Windows PowerShell 5.1. All NetCore versions are supported.
-* Requires modular [AWS.Tools](https://github.com/aws/aws-tools-for-powershell/issues/67). Monolithic AWSPowerShell is no longer supported (since PSCloudFormation v3.x).
+* Requires modular [AWS.Tools](https://github.com/aws/aws-tools-for-powershell/issues/67) - currently version `4.0.5.0`. Monolithic AWSPowerShell is no longer supported (since PSCloudFormation v3.x). I plan to start releasing builds of this in line and version locked with AWS Tools releases.
 * Meaning of `-Wait` parameter has changed. This only applies to `Update-PSCFNStack` and means that update should not begin if at the time the cmdlet is called, the target stack is found to be being updated by another process. In this case the update will wait for the other update to complete. All PSCloudFormation cmdlets will wait for their own operation to run to completion unless `-PassThru` is present.
 * Return type from the cmdlets has changed. Instead of being just a stack status or an ARN, it is a structure containing both, defined [here](https://fireflycons.github.io/Firefly-CloudFormation/api/Firefly.CloudFormation.Model.CloudFormationResult.html).
 
