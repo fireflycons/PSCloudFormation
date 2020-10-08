@@ -5,6 +5,7 @@
     using System.IO;
     using System.Linq;
     using System.Management.Automation;
+    using System.Runtime.CompilerServices;
     using System.Threading.Tasks;
 
     using Amazon.CloudFormation;
@@ -134,7 +135,7 @@
         public string ParameterFile
         {
             get => this.parameterFile; 
-            set => this.parameterFile = this.ResolvePath(value);
+            set => this.parameterFile = this.PathResolver.ResolvePath(value);
         }
 
         /// <summary>
@@ -201,7 +202,7 @@
         public string StackPolicyLocation
         {
             get => this.stackPolicyLocation; 
-            set => this.stackPolicyLocation = this.ResolvePath(value);
+            set => this.stackPolicyLocation = this.PathResolver.ResolvePath(value);
         }
 
         /// <summary>
@@ -239,7 +240,7 @@
             get => this.templateLocation;
 
             // Try to resolve as a path through the file system provider. PS and .NET may have different ideas about the current directory.
-            set => this.templateLocation = this.ResolvePath(value);
+            set => this.templateLocation = this.PathResolver.ResolvePath(value);
         }
 
         /// <summary>
@@ -274,7 +275,7 @@
         ///   <c>true</c> if <c>-UsePreviousTemplate</c> was set; otherwise, <c>false</c>.
         /// </value>
         protected bool UsePreviousTemplateFlag { get; set; }
-
+        
         /// <summary>
         /// Gets any parameters defined in the CloudFormation template as a <see cref="RuntimeDefinedParameterDictionary"/>
         /// </summary>

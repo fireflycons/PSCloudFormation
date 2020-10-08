@@ -47,6 +47,11 @@ namespace Firefly.PSCloudFormation
         private IPSCloudFormationContext context;
 
         /// <summary>
+        /// The path resolver
+        /// </summary>
+        private IPathResolver pathResolver;
+
+        /// <summary>
         /// Gets or sets the access key.
         /// <para type="description">
         /// The AWS access key for the user account. This can be a temporary access key
@@ -218,6 +223,16 @@ namespace Firefly.PSCloudFormation
         /// The logger.
         /// </value>
         internal ILogger Logger { get; set; }
+
+        /// <summary>
+        /// Gets or sets the instance of PowerShell implementation of path resolver using provider intrinsic
+        /// </summary>
+        internal IPathResolver PathResolver
+        {
+            get => this.pathResolver ?? (this.pathResolver = new PSPathResolver(this.SessionState));
+
+            set => this.pathResolver = value;
+        }
 
         /// <summary>
         /// Gets or sets the current credentials.
@@ -711,7 +726,7 @@ namespace Firefly.PSCloudFormation
         /// <param name="sessionState">State of the session.</param>
         /// <returns><c>true</c> if region was determined; else <c>false</c>.</returns>
         /// <exception cref="ArgumentException">Unsupported parameter type; Region must be a string containing the system name for a region, or an AWSRegion instance</exception>
-        /// <exception cref="ArgumentOutOfRangeException"></exception>
+        /// <exception cref="ArgumentOutOfRangeException">Unsupported region</exception>
         protected bool TryGetRegion(bool useInstanceMetadata, out RegionEndpoint region, SessionState sessionState)
         {
             region = null;
@@ -887,7 +902,7 @@ namespace Firefly.PSCloudFormation
         /// <param name="profileLocation">The profile location.</param>
         /// <param name="region">The region.</param>
         /// <param name="source">The source.</param>
-        /// <returns></returns>
+        /// <returns><c>true</c> if region was acquired; else <c>false</c></returns>
         private static bool TryLoadRegionFromProfile(
             string name,
             string profileLocation,

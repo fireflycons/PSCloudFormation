@@ -117,7 +117,7 @@
         public string OutputTemplateFile
         {
             get => this.outputTemplateFile;
-            set => this.outputTemplateFile = this.ResolvePath(value);
+            set => this.outputTemplateFile = this.PathResolver.ResolvePath(value);
         }
 
         /// <summary>
@@ -160,13 +160,8 @@
         public string TemplateFile
         {
             get => this.templateFile;
-            set => this.templateFile = this.ResolvePath(value);
+            set => this.templateFile = this.PathResolver.ResolvePath(value);
         }
-
-        /// <summary>
-        /// Gets or sets the instance of PowerShell implementation of path resolver using provider intrinsic
-        /// </summary>
-        internal IPathResolver PathResolver { get; set; }
 
         /// <summary>
         /// Gets or sets the bucket operations instance for S3 uploads
