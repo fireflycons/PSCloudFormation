@@ -43,6 +43,9 @@ namespace Firefly.PSCloudFormation.Tests.Unit
         [EmbeddedResource("DependencyFile")]
         private TempDirectory dependencyFiles;
 
+        [EmbeddedResource("no_package.yaml")]
+        private TempFile noPackageStack;
+
         public Packager(ITestOutputHelper output)
         {
             this.output = output;
@@ -328,9 +331,36 @@ namespace Firefly.PSCloudFormation.Tests.Unit
             relativeDependency.Location.Should().Be(expectedDependencyPath);
         }
 
+        [Fact]
+        public void ShouldDetectStackNeedsPackagingWhenNestedStackRefersToFile()
+        {
+            var templateFile = Path.Combine(this.deepNestedStack, "base-stack.json");
+            var templateContent = File.ReadAllText(templateFile);
+
+            new PackagerUtils(this.pathResolver).RequiresPackaging(templateContent, templateFile).Should().BeTrue();
+        }
+
+        [Fact]
+        public void ShouldDetectStackNeedsPackagingWhenResourceRefersToFile()
+        {
+            var templateFile = Path.Combine(this.deepNestedStack, "sub-nested-2.json");
+            var templateContent = File.ReadAllText(templateFile);
+
+            new PackagerUtils(this.pathResolver).RequiresPackaging(templateContent, templateFile).Should().BeTrue();
+        }
+
+        [Fact]
+        public void ShouldDetectStackDoesNotNeedPackagingWhenNoLocalFileReferences()
+        {
+            var templateContent = File.ReadAllText(this.noPackageStack);
+
+            new PackagerUtils(this.pathResolver).RequiresPackaging(templateContent, this.noPackageStack).Should().BeFalse();
+        }
+
         public void Dispose()
         {
             this.deepNestedStack?.Dispose();
+            this.noPackageStack?.Dispose();
         }
     }
 }
