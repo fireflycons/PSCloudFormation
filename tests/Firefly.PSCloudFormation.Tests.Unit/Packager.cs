@@ -10,6 +10,7 @@ namespace Firefly.PSCloudFormation.Tests.Unit
     using System.Text.RegularExpressions;
     using System.Threading.Tasks;
 
+    using Amazon;
     using Amazon.S3.Model;
 
     using Firefly.EmbeddedResourceLoader;
@@ -68,6 +69,7 @@ namespace Firefly.PSCloudFormation.Tests.Unit
 
             var mockContext = new Mock<IPSCloudFormationContext>();
             mockContext.Setup(c => c.Logger).Returns(logger);
+            mockContext.Setup(c => c.Region).Returns(RegionEndpoint.EUWest1);
 
             using var workingDirectory = new TempDirectory();
 
@@ -80,7 +82,9 @@ namespace Firefly.PSCloudFormation.Tests.Unit
                                              mockClientFactory.Object,
                                              mockContext.Object,
                                              template,
-                                             "test-bucket"),
+                                             "test-bucket",
+                                             null,
+                                             null),
                                      PathResolver = this.pathResolver,
                                      Logger = logger
                                  };
@@ -115,6 +119,7 @@ namespace Firefly.PSCloudFormation.Tests.Unit
 
             var mockContext = new Mock<IPSCloudFormationContext>();
             mockContext.Setup(c => c.Logger).Returns(logger);
+            mockContext.Setup(c => c.Region).Returns(RegionEndpoint.EUWest1);
 
             mockS3.SetupSequence(s3 => s3.ListObjectsV2Async(It.IsAny<ListObjectsV2Request>(), default)).ReturnsAsync(
                 new ListObjectsV2Response
@@ -144,7 +149,9 @@ namespace Firefly.PSCloudFormation.Tests.Unit
                                              mockClientFactory.Object,
                                              mockContext.Object,
                                              template,
-                                             "test-bucket"),
+                                             "test-bucket",
+                                             null,
+                                             null),
                                      PathResolver = this.pathResolver,
                                      Logger = logger
                                  };
@@ -169,6 +176,7 @@ namespace Firefly.PSCloudFormation.Tests.Unit
             var mockS3 = TestHelpers.GetS3ClientWithBucketMock();
             var mockContext = new Mock<IPSCloudFormationContext>();
             mockContext.Setup(c => c.Logger).Returns(logger);
+            mockContext.Setup(c => c.Region).Returns(RegionEndpoint.EUWest1);
 
             mockS3.SetupSequence(s3 => s3.ListObjectsV2Async(It.IsAny<ListObjectsV2Request>(), default))
                 .ReturnsAsync(this.fileNotFound)
@@ -208,7 +216,9 @@ namespace Firefly.PSCloudFormation.Tests.Unit
                                              mockClientFactory.Object,
                                              mockContext.Object,
                                              template,
-                                             "test-bucket"),
+                                             "test-bucket",
+                                             null,
+                                             null),
                 PathResolver = this.pathResolver,
                 Logger = logger
             };
@@ -255,7 +265,7 @@ namespace Firefly.PSCloudFormation.Tests.Unit
             var mockS3 = TestHelpers.GetS3ClientWithBucketMock();
             var mockContext = new Mock<IPSCloudFormationContext>();
             mockContext.Setup(c => c.Logger).Returns(logger);
-
+            mockContext.Setup(c => c.Region).Returns(RegionEndpoint.EUWest1);
             mockS3.SetupSequence(s3 => s3.ListObjectsV2Async(It.IsAny<ListObjectsV2Request>(), default)).ReturnsAsync(
                 new ListObjectsV2Response
                     {
@@ -292,7 +302,9 @@ namespace Firefly.PSCloudFormation.Tests.Unit
                                              mockClientFactory.Object,
                                              mockContext.Object,
                                              template,
-                                             "test-bucket"),
+                                             "test-bucket",
+                                             null,
+                                             null),
                 PathResolver = this.pathResolver,
                 Logger = logger
             };
@@ -335,26 +347,22 @@ namespace Firefly.PSCloudFormation.Tests.Unit
         public void ShouldDetectStackNeedsPackagingWhenNestedStackRefersToFile()
         {
             var templateFile = Path.Combine(this.deepNestedStack, "base-stack.json");
-            var templateContent = File.ReadAllText(templateFile);
 
-            new PackagerUtils(this.pathResolver).RequiresPackaging(templateContent, templateFile).Should().BeTrue();
+            new PackagerUtils(this.pathResolver, new TestLogger(this.output), null).RequiresPackaging(templateFile).Should().BeTrue();
         }
 
         [Fact]
         public void ShouldDetectStackNeedsPackagingWhenResourceRefersToFile()
         {
             var templateFile = Path.Combine(this.deepNestedStack, "sub-nested-2.json");
-            var templateContent = File.ReadAllText(templateFile);
 
-            new PackagerUtils(this.pathResolver).RequiresPackaging(templateContent, templateFile).Should().BeTrue();
+            new PackagerUtils(this.pathResolver, new TestLogger(this.output), null).RequiresPackaging(templateFile).Should().BeTrue();
         }
 
         [Fact]
         public void ShouldDetectStackDoesNotNeedPackagingWhenNoLocalFileReferences()
         {
-            var templateContent = File.ReadAllText(this.noPackageStack);
-
-            new PackagerUtils(this.pathResolver).RequiresPackaging(templateContent, this.noPackageStack).Should().BeFalse();
+            new PackagerUtils(this.pathResolver, new TestLogger(this.output), null).RequiresPackaging(this.noPackageStack).Should().BeFalse();
         }
 
         public void Dispose()

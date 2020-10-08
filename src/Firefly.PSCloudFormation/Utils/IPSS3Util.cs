@@ -1,6 +1,7 @@
 ﻿namespace Firefly.PSCloudFormation.Utils
 {
     using System;
+    using System.Collections;
     using System.Threading.Tasks;
 
     using Firefly.CloudFormation;
@@ -27,5 +28,9 @@
         /// <returns>URL of object in S3</returns>
         /// <exception cref="FormatException">Unable to parse key name '{Path.GetFileName(latestVersion.Key)}'</exception>
         Task<S3Artifact> UploadResourceToS3Async(ResourceUploadSettings resourceToUpload);
+
+        string KeyPrefix { get; }
+
+        IDictionary Metadata { get; }
     }
 }

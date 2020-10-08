@@ -1,6 +1,7 @@
 ﻿namespace Firefly.PSCloudFormation.Utils
 {
     using System;
+    using System.Collections;
     using System.Collections.Generic;
     using System.IO;
     using System.Linq;
@@ -80,27 +81,21 @@
         /// <param name="context">The context.</param>
         /// <param name="rootTemplate">The root template.</param>
         /// <param name="bucketName">Name of the bucket.</param>
+        /// <param name="keyPrefix">Key prefix to use when packaging.</param>
+        /// <param name="metadata">Metadata to use when packaging.</param>
         /// <exception cref="ArgumentNullException">rootTemplate is null</exception>
         public S3Util(
             IPSAwsClientFactory clientFactory,
-            ICloudFormationContext context,
+            IPSCloudFormationContext context,
             string rootTemplate,
-            string bucketName)
+            string bucketName,
+            string keyPrefix,
+            IDictionary metadata)
+        : this(clientFactory, context)
         {
-            this.clientFactory = clientFactory ?? throw new ArgumentNullException(nameof(clientFactory));
-            this.s3 = this.clientFactory.CreateS3Client();
-            this.logger = context.Logger;
-
-            // Generate a hash of the root template filename to use as part of uploaded file keys
-            // to identify this package 'project'
-            this.ProjectId = GenerateProjectId(rootTemplate ?? throw new ArgumentNullException(nameof(rootTemplate)));
-            this.logger?.LogDebug($"Project ID for this template is {this.ProjectId}");
-
-            if (bucketName == null)
-            {
-                this.GeneratePrivateBucketName(context);
-            }
-            else
+            this.Metadata = metadata;
+            this.KeyPrefix = keyPrefix;
+            if (bucketName != null)
             {
                 // We assume the user has provided a valid bucket
                 this.cloudFormationBucket = new CloudFormationBucket
@@ -110,7 +105,16 @@
                                                     Initialized = true
                                                 };
             }
+
+            // Generate a hash of the root template filename to use as part of uploaded file keys
+            // to identify this package 'project'
+            this.ProjectId = GenerateProjectId(rootTemplate ?? throw new ArgumentNullException(nameof(rootTemplate)));
+            this.logger?.LogDebug($"Project ID for this template is {this.ProjectId}");
         }
+
+        public string KeyPrefix { get; }
+
+        public IDictionary Metadata { get; }
 
         /// <summary>
         /// Gets the bucket name
@@ -147,7 +151,7 @@
             {
                 using (var sr = new StreamReader(response.ResponseStream))
                 {
-                    return sr.ReadToEnd();
+                    return await sr.ReadToEndAsync();
                 }
             }
         }
@@ -407,7 +411,6 @@
                         $"Unable to add lifecycle rule to new bucket. Old temporary uploads will not be automatically purged. Exception was\n{ex.Message}");
                 }
             }
-
 
             this.cloudFormationBucket.Initialized = true;
             return this.cloudFormationBucket;

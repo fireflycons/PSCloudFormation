@@ -5,6 +5,7 @@
     using System.IO;
     using System.Threading.Tasks;
 
+    using Amazon;
     using Amazon.S3.Model;
 
     using Firefly.EmbeddedResourceLoader;
@@ -72,7 +73,7 @@
 
             var newPackage = new NewPackageCommand
                                  {
-                                     S3 = new S3Util(this.ClientFactory, this.Context, template, "test-bucket"),
+                                     S3 = new S3Util(this.ClientFactory, this.Context, template, "test-bucket", null, null),
                                      PathResolver = this.pathResolver,
                                      Logger = this.Logger
                                  };
@@ -105,7 +106,7 @@
 
             var newPackage = new NewPackageCommand
                                  {
-                                     S3 = new S3Util(this.ClientFactory, this.Context, template, "test-bucket"),
+                                     S3 = new S3Util(this.ClientFactory, this.Context, template, "test-bucket", null, null),
                                      PathResolver = this.pathResolver,
                                      Logger = this.Logger
                                  };
@@ -139,7 +140,7 @@
 
             var newPackage = new NewPackageCommand
                                  {
-                                     S3 = new S3Util(this.ClientFactory, this.Context, template, "test-bucket"),
+                                     S3 = new S3Util(this.ClientFactory, this.Context, template, "test-bucket", null, null),
                                      PathResolver = this.pathResolver,
                                      Logger = this.Logger
                                  };
@@ -177,7 +178,7 @@
 
             var newPackage = new NewPackageCommand
                                  {
-                                     S3 = new S3Util(this.ClientFactory, this.Context, template, "test-bucket"),
+                                     S3 = new S3Util(this.ClientFactory, this.Context, template, "test-bucket", null, null),
                                      PathResolver = this.pathResolver,
                                      Logger = this.Logger
                                  };
@@ -215,7 +216,7 @@
 
             var newPackage = new NewPackageCommand
                                  {
-                                     S3 = new S3Util(this.ClientFactory, this.Context, template, "test-bucket"),
+                                     S3 = new S3Util(this.ClientFactory, this.Context, template, "test-bucket", null, null),
                                      PathResolver = this.pathResolver,
                                      Logger = this.Logger
                                  };
@@ -258,7 +259,7 @@
 
             var newPackage = new NewPackageCommand
                                  {
-                                     S3 = new S3Util(this.ClientFactory, this.Context, template, "test-bucket"),
+                                     S3 = new S3Util(this.ClientFactory, this.Context, template, "test-bucket", null, null),
                                      PathResolver = this.pathResolver,
                                      Logger = this.Logger
                                  };
@@ -294,7 +295,7 @@
 
             var newPackage = new NewPackageCommand
                                  {
-                                     S3 = new S3Util(this.ClientFactory, this.Context, template, "test-bucket"),
+                                     S3 = new S3Util(this.ClientFactory, this.Context, template, "test-bucket", null, null),
                                      PathResolver = this.pathResolver,
                                      Logger = this.Logger
                                  };
@@ -331,7 +332,7 @@
 
             var newPackage = new NewPackageCommand
                                  {
-                                     S3 = new S3Util(this.ClientFactory, this.Context, template, "test-bucket"),
+                                     S3 = new S3Util(this.ClientFactory, this.Context, template, "test-bucket", null, null),
                                      PathResolver = this.pathResolver,
                                      Logger = this.Logger
                                  };
@@ -365,7 +366,7 @@
 
             var newPackage = new NewPackageCommand
                                  {
-                                     S3 = new S3Util(this.ClientFactory, this.Context, template, "test-bucket"),
+                                     S3 = new S3Util(this.ClientFactory, this.Context, template, "test-bucket", null, null),
                                      PathResolver = this.pathResolver,
                                      Logger = this.Logger
                                  };
@@ -394,7 +395,7 @@
             var mockContext = new Mock<IPSCloudFormationContext>();
 
             mockContext.Setup(c => c.Logger).Returns(logger);
-
+            mockContext.Setup(c => c.Region).Returns(RegionEndpoint.EUWest1);
             mockS3.SetupSequence(s3 => s3.ListObjectsV2Async(It.IsAny<ListObjectsV2Request>(), default)).ReturnsAsync(
                 new ListObjectsV2Response
                     {

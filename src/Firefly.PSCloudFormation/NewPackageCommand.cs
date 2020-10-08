@@ -218,14 +218,10 @@
             var clientFactory = new PSAwsClientFactory(
                 this.CreateClient(this._CurrentCredentials, this._RegionEndpoint),
                 context);
-            this.S3 = new S3Util(clientFactory, context, this.TemplateFile, this.S3Bucket);
+            this.S3 = new S3Util(clientFactory, context, this.TemplateFile, this.S3Bucket, this.S3Prefix, this.Metadata);
 
-            var workingDirectory = Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString());
-
-            try
+            using (var workingDirectory = new WorkingDirectory(this.Logger))
             {
-                Directory.CreateDirectory(workingDirectory);
-
                 try
                 {
                     var processedTemplatePath = this.ProcessTemplate(this.TemplateFile, workingDirectory).Result;
@@ -250,20 +246,6 @@
                     this.ThrowExecutionError(ex.Message, this, ex);
                 }
             }
-            finally
-            {
-                if (Directory.Exists(workingDirectory))
-                {
-                    try
-                    {
-                        Directory.Delete(workingDirectory, true);
-                    }
-                    catch (Exception e)
-                    {
-                        this.Logger?.LogWarning($"Cannot remove workspace directory '{workingDirectory}': {e.Message}");
-                    }
-                }
-            }
         }
 
         /// <summary>
@@ -279,7 +261,7 @@
             string templatePath,
             string workingDirectory)
         {
-            var nestedTemplateLocation = new PackagerUtils(this.PathResolver).ResolveFileSystemResource(
+            var nestedTemplateLocation = new PackagerUtils(this.PathResolver, this.Logger, this.S3).ResolveFileSystemResource(
                 templatePath,
                 nestedStackResource.GetResourcePropertyValue("TemplateURL"));
 
@@ -343,7 +325,7 @@
             string templatePath,
             string workingDirectory)
         {
-            var utils = new PackagerUtils(this.PathResolver);
+            var utils = new PackagerUtils(this.PathResolver, this.Logger, this.S3);
             var templateModified = false;
 
             foreach (var propertyToCheck in PackagerUtils.PackagedResources[resource.ResourceType])
