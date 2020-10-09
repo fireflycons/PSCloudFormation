@@ -169,44 +169,6 @@
         internal IPSS3Util S3 { get; set; }
 
         /// <summary>
-        /// Processes template and nested templates recursively, leaf first
-        /// </summary>
-        /// <param name="templatePath">The template path.</param>
-        /// <param name="workingDirectory">Working directory for files to upload.</param>
-        /// <returns>The path to the processed template.</returns>
-        internal async Task<string> ProcessTemplate(string templatePath, string workingDirectory)
-        {
-            var outputTemplatePath = templatePath;
-            var parser = TemplateParser.Create(File.ReadAllText(templatePath));
-            var resources = parser.GetResources().ToList();
-            var templateModified = false;
-
-            // Process nested stacks first
-            foreach (var nestedStack in resources.Where(r => r.ResourceType == PackagerUtils.CloudFormationStack))
-            {
-                templateModified |= await this.ProcessNestedStack(nestedStack, templatePath, workingDirectory);
-            }
-
-            // Process remaining resources
-            foreach (var resource in resources.Where(
-                r => r.ResourceType != PackagerUtils.CloudFormationStack && PackagerUtils.PackagedResources.ContainsKey(r.ResourceType)))
-            {
-                templateModified |= await this.ProcessResource(resource, templatePath, workingDirectory);
-            }
-
-            if (templateModified)
-            {
-                // Generate a filename and save.
-                // The caller will upload the template to S3
-                outputTemplatePath = Path.Combine(workingDirectory, Path.GetFileName(templatePath));
-
-                parser.Save(outputTemplatePath);
-            }
-
-            return outputTemplatePath;
-        }
-
-        /// <summary>
         /// Processes the record.
         /// </summary>
         protected override void ProcessRecord()
@@ -218,13 +180,20 @@
             var clientFactory = new PSAwsClientFactory(
                 this.CreateClient(this._CurrentCredentials, this._RegionEndpoint),
                 context);
-            this.S3 = new S3Util(clientFactory, context, this.TemplateFile, this.S3Bucket, this.S3Prefix, this.Metadata);
+            this.S3 = new S3Util(
+                clientFactory,
+                context,
+                this.TemplateFile,
+                this.S3Bucket,
+                this.S3Prefix,
+                this.Metadata);
 
-            using (var workingDirectory = new WorkingDirectory(this.Logger))
+            try
             {
-                try
+                using (var workingDirectory = new WorkingDirectory(this.Logger))
                 {
-                    var processedTemplatePath = this.ProcessTemplate(this.TemplateFile, workingDirectory).Result;
+                    var packager = new PackagerUtils(this.PathResolver, this.Logger, this.S3);
+                    var processedTemplatePath = packager.ProcessTemplate(this.TemplateFile, workingDirectory).Result;
 
                     // The base stack template was changed
                     if (this.OutputTemplateFile != null)
@@ -241,208 +210,11 @@
                         File.Delete(processedTemplatePath);
                     }
                 }
-                catch (Exception ex)
-                {
-                    this.ThrowExecutionError(ex.Message, this, ex);
-                }
             }
-        }
-
-        /// <summary>
-        /// Processes a nested stack.
-        /// </summary>
-        /// <param name="nestedStackResource">The nested stack.</param>
-        /// <param name="templatePath">The template path.</param>
-        /// <param name="workingDirectory">The working directory.</param>
-        /// <returns><c>true</c> if the containing template should be modified (to point to S3); else <c>false</c></returns>
-        /// <exception cref="FileNotFoundException">Nested stack resource '{nestedStackResource.LogicalName}': TemplateURL cannot refer to a directory.</exception>
-        private async Task<bool> ProcessNestedStack(
-            TemplateResource nestedStackResource,
-            string templatePath,
-            string workingDirectory)
-        {
-            var nestedTemplateLocation = new PackagerUtils(this.PathResolver, this.Logger, this.S3).ResolveFileSystemResource(
-                templatePath,
-                nestedStackResource.GetResourcePropertyValue("TemplateURL"));
-
-            switch (nestedTemplateLocation)
+            catch (Exception ex)
             {
-                case null:
-
-                    // Value of TemplateURL is already a URL.
-                    return false;
-
-                case FileInfo fi:
-
-                    // Referenced nested template is in the filesystem, therefore it must be uploaded
-                    // whether or not it was itself modified
-                    var processedTemplate = new FileInfo(await this.ProcessTemplate(fi.FullName, workingDirectory));
-                    var templateHash = processedTemplate.MD5();
-
-                    // Output intermediate templates to console if -Debug
-                    this.Logger.LogDebug($"Processed template '{fi.FullName}', Hash: {templateHash}");
-                    this.Logger.LogDebug("\n\n{0}", File.ReadAllText(processedTemplate.FullName));
-
-                    var resourceToUpload = new ResourceUploadSettings
-                                               {
-                                                   File = processedTemplate,
-                                                   Hash = templateHash,
-                                                   KeyPrefix = this.S3Prefix,
-                                                   Metadata = this.Metadata
-                                               };
-
-                    if (await this.S3.ObjectChangedAsync(resourceToUpload))
-                    {
-                        await this.S3.UploadResourceToS3Async(resourceToUpload);
-                    }
-
-                    // Update resource to point to uploaded template
-                    nestedStackResource.UpdateResourceProperty("TemplateURL", resourceToUpload.S3Artifact.Url);
-
-                    break;
-
-                default:
-
-                    // The path references a directory, which is illegal in this context.
-                    throw new FileNotFoundException(
-                        $"Nested stack resource '{nestedStackResource.LogicalName}': TemplateURL cannot refer to a directory.");
+                this.ThrowExecutionError(ex.Message, this, ex);
             }
-
-            return true;
         }
-
-        /// <summary>
-        /// Processes resources that can point to artifacts in S3.
-        /// </summary>
-        /// <param name="resource">The resource.</param>
-        /// <param name="templatePath">The template path.</param>
-        /// <param name="workingDirectory">The working directory.</param>
-        /// <returns><c>true</c> if the containing template should be modified (to point to S3); else <c>false</c></returns>
-        /// <exception cref="InvalidDataException">Unsupported derivative of FileSystemInfo</exception>
-        /// <exception cref="MissingMethodException">Missing constructor for the replacement template artifact.</exception>
-        private async Task<bool> ProcessResource(
-            TemplateResource resource,
-            string templatePath,
-            string workingDirectory)
-        {
-            var utils = new PackagerUtils(this.PathResolver, this.Logger, this.S3);
-            var templateModified = false;
-
-            foreach (var propertyToCheck in PackagerUtils.PackagedResources[resource.ResourceType])
-            {
-                string resourceFile;
-
-                try
-                {
-                    resourceFile = resource.GetResourcePropertyValue(propertyToCheck.PropertyPath);
-                }
-                catch (FormatException)
-                {
-                    if (!propertyToCheck.Required)
-                    {
-                        // Property is missing, but CloudFormation does not require it.
-                        continue;
-                    }
-
-                    throw;
-                }
-
-                if (resourceFile == null)
-                {
-                    // Property was not found, or was not a value type.
-                    continue;
-                }
-
-                var fsi = utils.ResolveFileSystemResource(templatePath, resourceFile);
-
-                if (fsi == null)
-                {
-                    // Property value did not resolve to a path in the file system
-                    continue;
-                }
-
-                ResourceUploadSettings resourceToUpload;
-
-                templateModified = true;
-
-                // If this is a lambda, check for a dependency file in the same directory
-                if (resource.ResourceType == "AWS::Lambda::Function"
-                    || resource.ResourceType == "AWS::Serverless::Function")
-                {
-                    var handler = resource.GetResourcePropertyValue("Runtime");
-
-                    using (var packager = LambdaPackager.CreatePackager(fsi, handler, this.S3, this.Logger))
-                    {
-                        resourceToUpload = await packager.Package(workingDirectory);
-                    }
-                }
-                else
-                {
-                    switch (fsi)
-                    {
-                        case FileInfo fi:
-
-                            // Property value points to a file
-                            resourceToUpload = await ArtifactPackager.PackageFile(
-                                                   fi,
-                                                   workingDirectory,
-                                                   propertyToCheck.Zip,
-                                                   this.S3,
-                                                   this.Logger);
-                            break;
-
-                        case DirectoryInfo di:
-
-                            // Property value points to a directory, which must always be zipped.
-                            resourceToUpload = await ArtifactPackager.PackageDirectory(
-                                                   di,
-                                                   workingDirectory,
-                                                   this.S3,
-                                                   this.Logger);
-                            break;
-
-                        default:
-
-                            // Should never get here, but shuts up a bunch of compiler/R# warnings
-                            throw new InvalidDataException(
-                                $"Unsupported derivative of FileSystemInfo: {fsi.GetType().FullName}");
-                    }
-                }
-
-                if (!resourceToUpload.HashMatch)
-                {
-                    resourceToUpload.KeyPrefix = this.S3Prefix;
-                    resourceToUpload.Metadata = this.Metadata;
-
-                    await this.S3.UploadResourceToS3Async(resourceToUpload);
-                }
-
-                if (propertyToCheck.ReplacementType == typeof(string))
-                {
-                    // Insert the URI directly
-                    resource.UpdateResourceProperty(propertyToCheck.PropertyPath, resourceToUpload.S3Artifact.Url);
-                }
-                else
-                {
-                    // Create an instance of the new mapping
-                    // ReSharper disable once StyleCop.SA1305
-                    var s3Location = propertyToCheck.ReplacementType.GetConstructor(new[] { typeof(S3Artifact) })
-                        ?.Invoke(new object[] { resourceToUpload.S3Artifact });
-
-                    if (s3Location == null)
-                    {
-                        throw new MissingMethodException(propertyToCheck.ReplacementType.FullName, ".ctor(S3Artifact)");
-                    }
-
-                    // and set on the resource property
-                    resource.UpdateResourceProperty(propertyToCheck.PropertyPath, s3Location);
-                }
-            }
-
-            return templateModified;
-        }
-
-        // ReSharper restore UnusedAutoPropertyAccessor.Local
-        // ReSharper restore MemberCanBePrivate.Local
     }
 }

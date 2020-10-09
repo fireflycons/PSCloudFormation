@@ -75,21 +75,12 @@ namespace Firefly.PSCloudFormation.Tests.Unit
 
             var template = Path.Combine(this.deepNestedStack.FullPath, "base-stack.json");
 
-            var newPackage = new NewPackageCommand
-                                 {
-                                     S3 =
-                                         new S3Util(
-                                             mockClientFactory.Object,
-                                             mockContext.Object,
-                                             template,
-                                             "test-bucket",
-                                             null,
-                                             null),
-                                     PathResolver = this.pathResolver,
-                                     Logger = logger
-                                 };
+            var packager = new PackagerUtils(
+                new TestPathResolver(),
+                logger,
+                new S3Util(mockClientFactory.Object, mockContext.Object, template, "test-bucket", null, null));
 
-            var outputTemplatePath = await newPackage.ProcessTemplate(template, workingDirectory.FullPath);
+            var outputTemplatePath = await packager.ProcessTemplate(template, workingDirectory);
 
             this.output.WriteLine(string.Empty);
             this.output.WriteLine(File.ReadAllText(outputTemplatePath));
@@ -142,21 +133,12 @@ namespace Firefly.PSCloudFormation.Tests.Unit
             using var workingDirectory = new TempDirectory();
 
 
-            var newPackage = new NewPackageCommand
-                                 {
-                                     S3 =
-                                         new S3Util(
-                                             mockClientFactory.Object,
-                                             mockContext.Object,
-                                             template,
-                                             "test-bucket",
-                                             null,
-                                             null),
-                                     PathResolver = this.pathResolver,
-                                     Logger = logger
-                                 };
+            var packager = new PackagerUtils(
+                new TestPathResolver(),
+                logger,
+                new S3Util(mockClientFactory.Object, mockContext.Object, template, "test-bucket", null, null));
 
-            var outputTemplatePath = await newPackage.ProcessTemplate(template, workingDirectory.FullPath);
+            var outputTemplatePath = await packager.ProcessTemplate(template, workingDirectory);
 
             this.output.WriteLine(string.Empty);
             this.output.WriteLine(File.ReadAllText(outputTemplatePath));
@@ -209,21 +191,12 @@ namespace Firefly.PSCloudFormation.Tests.Unit
 
             using var workingDirectory = new TempDirectory();
 
-            var newPackage = new NewPackageCommand
-            {
-                S3 =
-                                         new S3Util(
-                                             mockClientFactory.Object,
-                                             mockContext.Object,
-                                             template,
-                                             "test-bucket",
-                                             null,
-                                             null),
-                PathResolver = this.pathResolver,
-                Logger = logger
-            };
+            var packager = new PackagerUtils(
+                new TestPathResolver(),
+                logger,
+                new S3Util(mockClientFactory.Object, mockContext.Object, template, "test-bucket", null, null));
 
-            var outputTemplatePath = await newPackage.ProcessTemplate(template, workingDirectory.FullPath);
+            var outputTemplatePath = await packager.ProcessTemplate(template, workingDirectory);
 
             this.output.WriteLine(string.Empty);
             this.output.WriteLine(File.ReadAllText(outputTemplatePath));
@@ -295,21 +268,12 @@ namespace Firefly.PSCloudFormation.Tests.Unit
 
             using var workingDirectory = new TempDirectory();
 
-            var newPackage = new NewPackageCommand
-            {
-                S3 =
-                                         new S3Util(
-                                             mockClientFactory.Object,
-                                             mockContext.Object,
-                                             template,
-                                             "test-bucket",
-                                             null,
-                                             null),
-                PathResolver = this.pathResolver,
-                Logger = logger
-            };
+            var packager = new PackagerUtils(
+                new TestPathResolver(),
+                logger,
+                new S3Util(mockClientFactory.Object, mockContext.Object, template, "test-bucket", null, null));
 
-            var outputTemplatePath = await newPackage.ProcessTemplate(template, workingDirectory.FullPath);
+            var outputTemplatePath = await packager.ProcessTemplate(template, workingDirectory);
 
             this.output.WriteLine(string.Empty);
             this.output.WriteLine(File.ReadAllText(outputTemplatePath));

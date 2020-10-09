@@ -357,16 +357,6 @@
             throw new FileNotFoundException($"Path not found: '{propertyValue}");
         }
 
-        public string PackageTemplateIfNecessary(string templatePath)
-        {
-            if (!this.RequiresPackaging(templatePath))
-            {
-                return templatePath;
-            }
-
-            return null;
-        }
-
         /// <summary>
         /// Processes a nested stack.
         /// </summary>
@@ -566,7 +556,7 @@
         /// <param name="templatePath">The template path.</param>
         /// <param name="workingDirectory">Working directory for files to upload.</param>
         /// <returns>The path to the processed template.</returns>
-        internal async Task<string> ProcessTemplate(string templatePath, string workingDirectory)
+        public async Task<string> ProcessTemplate(string templatePath, string workingDirectory)
         {
             var outputTemplatePath = templatePath;
             var parser = TemplateParser.Create(File.ReadAllText(templatePath));
@@ -638,7 +628,6 @@
         /// <summary>
         /// S3 location with 'S3' prefixing field names
         /// </summary>
-
         // ReSharper disable UnusedAutoPropertyAccessor.Local - Classes are accessed by refection
         // ReSharper disable MemberCanBePrivate.Local
         private class S3LocationLong
