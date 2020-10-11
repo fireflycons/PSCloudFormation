@@ -22,7 +22,6 @@ namespace Firefly.PSCloudFormation
 
     using Firefly.CloudFormation;
     using Firefly.CloudFormation.Model;
-    using Firefly.CloudFormation.Utils;
     using Firefly.PSCloudFormation.Utils;
 
     using AWSRegion = Amazon.PowerShell.Common.AWSRegion;
@@ -41,11 +40,6 @@ namespace Firefly.PSCloudFormation
     /// <seealso cref="System.Management.Automation.PSCmdlet" />
     public class CloudFormationServiceCommand : PSCmdlet
     {
-        /// <summary>
-        /// The context
-        /// </summary>
-        private IPSCloudFormationContext context;
-
         /// <summary>
         /// The path resolver
         /// </summary>
@@ -235,6 +229,14 @@ namespace Firefly.PSCloudFormation
         }
 
         /// <summary>
+        /// Gets or sets the client factory.
+        /// </summary>
+        /// <value>
+        /// The client factory.
+        /// </value>
+        protected IPSAwsClientFactory _ClientFactory { get; set; }
+
+        /// <summary>
         /// Gets or sets the current credentials.
         /// </summary>
         /// <value>
@@ -267,12 +269,12 @@ namespace Firefly.PSCloudFormation
         protected RegionEndpoint _RegionEndpoint { get; set; }
 
         /// <summary>
-        /// Gets or sets the client factory.
+        /// Gets the context.
         /// </summary>
         /// <value>
-        /// The client factory.
+        /// The context.
         /// </value>
-        protected IPSAwsClientFactory _ClientFactory { get; set; }
+        protected IPSCloudFormationContext Context { get; private set; }
 
         /// <summary>
         /// Gets the credential profile options.
@@ -308,9 +310,9 @@ namespace Firefly.PSCloudFormation
         /// <returns>New <see cref="IPSCloudFormationContext"/></returns>
         protected IPSCloudFormationContext CreateCloudFormationContext()
         {
-            if (this.context != null)
+            if (this.Context != null)
             {
-                return this.context;
+                return this.Context;
             }
 
             AWSCredentials credentials;
@@ -353,30 +355,21 @@ namespace Firefly.PSCloudFormation
             }
 
             this.Logger = new PSLogger(this);
-            this.context = new PSCloudFormationContext
-                       {
-                           Region = this._RegionEndpoint,
-                           Credentials = credentials,
-                           S3EndpointUrl = this.S3EndpointUrl,
-                           STSEndpointUrl = this.STSEndpointUrl,
-                           Logger = this.Logger
-                       };
+            this.Context = new PSCloudFormationContext
+                               {
+                                   Region = this._RegionEndpoint,
+                                   Credentials = credentials,
+                                   S3EndpointUrl = this.S3EndpointUrl,
+                                   STSEndpointUrl = this.STSEndpointUrl,
+                                   Logger = this.Logger
+                               };
 
-            this._ClientFactory = new PSAwsClientFactory(this.CreateClient(this._CurrentCredentials, this._RegionEndpoint), this.context);
-            this.context.S3Util = new S3Util(this._ClientFactory, this.context);
+            this._ClientFactory = new PSAwsClientFactory(
+                this.CreateClient(this._CurrentCredentials, this._RegionEndpoint),
+                this.Context);
+            this.Context.S3Util = new S3Util(this._ClientFactory, this.Context);
 
-            return this.context;
-        }
-
-        /// <summary>
-        /// Cmdlet end processing - dispose resources.
-        /// </summary>
-        protected override void EndProcessing()
-        {
-            base.EndProcessing();
-            this._ClientFactory?.Dispose();
-
-            (this.context.S3Util as S3Util)?.Dispose();
+            return this.Context;
         }
 
         /// <summary>
@@ -390,6 +383,17 @@ namespace Firefly.PSCloudFormation
                 config.AuthenticationRegion = config.RegionEndpoint.SystemName;
                 config.ServiceURL = this.EndpointUrl;
             }
+        }
+
+        /// <summary>
+        /// Cmdlet end processing - dispose resources.
+        /// </summary>
+        protected override void EndProcessing()
+        {
+            base.EndProcessing();
+            this._ClientFactory?.Dispose();
+
+            (this.Context.S3Util as S3Util)?.Dispose();
         }
 
         /// <summary>
@@ -448,43 +452,6 @@ namespace Firefly.PSCloudFormation
 
             Console.WriteLine();
             return text;
-        }
-
-        /// <summary>
-        /// Resolve a PowerShell path to a .NET path
-        /// </summary>
-        /// <remarks>
-        /// <para>
-        /// Try to resolve as a path through the file system provider. PS and .NET have different ideas about the current directory.
-        /// .NET path will be whatever the current directory was when PowerShell started, and within PowerShell, it is controlled by
-        /// file system provider.
-        /// </para>
-        /// <para>
-        /// If the path was entered as a quoted literal string then those quotes are retained on the argument, so we have to remove them here
-        /// </para>
-        /// </remarks>
-        /// <param name="path">The path.</param>
-        /// <returns>Absolute path of the artifact if it could be resolved; else the input.</returns>
-        protected string ResolvePath(string path)
-        {
-            if (path == null)
-            {
-                return null;
-            }
-
-            string resolved = null;
-
-            try
-            {
-                resolved = this.SessionState.Path.GetUnresolvedProviderPathFromPSPath(
-                    path.Unquote());
-            }
-            catch
-            {
-                // do nothing
-            }
-
-            return resolved ?? path.Unquote();
         }
 
         /// <summary>
@@ -556,9 +523,9 @@ namespace Firefly.PSCloudFormation
             }
 
             new ExceptionDumper(
-                this.Host.UI.WriteLine, 
-                this.MyInvocation.BoundParameters.Keys.Any(k => string.Compare(k, "Debug", StringComparison.OrdinalIgnoreCase) == 0))
-                .Dump(exception);
+                this.Host.UI.WriteLine,
+                this.MyInvocation.BoundParameters.Keys.Any(
+                    k => string.Compare(k, "Debug", StringComparison.OrdinalIgnoreCase) == 0)).Dump(exception);
 
             var stackOperationException = exception.FindInner<StackOperationException>();
 
@@ -567,7 +534,10 @@ namespace Firefly.PSCloudFormation
                 var stackOperationToErrorCategory = new Dictionary<StackOperationalState, ErrorCategory>
                                                         {
                                                             { StackOperationalState.Busy, ErrorCategory.ResourceBusy },
-                                                            { StackOperationalState.Ready, ErrorCategory.InvalidOperation },
+                                                            {
+                                                                StackOperationalState.Ready,
+                                                                ErrorCategory.InvalidOperation
+                                                            },
                                                             {
                                                                 StackOperationalState.NotFound,
                                                                 ErrorCategory.ObjectNotFound

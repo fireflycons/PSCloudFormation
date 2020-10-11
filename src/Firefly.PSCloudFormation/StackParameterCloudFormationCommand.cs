@@ -5,7 +5,6 @@
     using System.IO;
     using System.Linq;
     using System.Management.Automation;
-    using System.Runtime.CompilerServices;
     using System.Threading.Tasks;
 
     using Amazon.CloudFormation;
@@ -16,6 +15,7 @@
     using Firefly.CloudFormation.Parsers;
     using Firefly.CloudFormation.Resolvers;
     using Firefly.CloudFormation.Utils;
+    using Firefly.PSCloudFormation.Utils;
 
     /// <summary>
     /// <para>
@@ -371,51 +371,59 @@
         /// </returns>
         protected override async Task<object> OnProcessRecord()
         {
-            if (this.Logger == null)
-            {
-                this.Logger = new PSLogger(this);
-            }
-
             if (this.TemplateLocation == null)
             {
                 throw new ArgumentException("Must supply -TemplateLocation");
             }
 
-            await Task.Run(
-                () =>
-                    {
-                        // Read parameter file, if any
-                        var fileParameters = this.ReadParameterFile();
+            // Override S3Util with one suitable for packaging
+            this.Context.S3Util = new S3Util(this._ClientFactory, this.Context, this.templateLocation, null, null, null);
 
-                        if (fileParameters.Any())
+            // Check whether template needs packaging
+            var packager = new PackagerUtils(
+                this.PathResolver,
+                this.Logger,
+                this.Context.S3Util as IPSS3Util);
+
+            if (packager.RequiresPackaging(this.TemplateLocation))
+            {
+                this.Logger.LogInformation(
+                    "Template contains resources that require packaging. Packager will use default bucket for storage.");
+                this.TemplateLocation = await packager.ProcessTemplate(this.templateLocation, this.WorkingDirectory);
+            }
+
+            // Read parameter file, if any
+            var fileParameters = this.ReadParameterFile();
+
+            if (fileParameters.Any())
+            {
+                this.Logger.LogVerbose($"Parameters from file: {string.Join(", ", fileParameters.Keys)}");
+            }
+
+            // Resolve dynamic parameters to stack parameters
+            var userParameters = this.MyInvocation.BoundParameters.Where(p => this.stackParameterNames.Contains(p.Key))
+                .ToDictionary(
+                    kvp => kvp.Key,
+                    kvp =>
                         {
-                            this.Logger.LogVerbose($"Parameters from file: {string.Join(", ", fileParameters.Keys)}");
-                        }
+                            if (kvp.Value is Array arr)
+                            {
+                                return string.Join(",", from object val in arr select val.ToString().Trim());
+                            }
 
-                        // Resolve dynamic parameters to stack parameters
-                        var userParameters = this.MyInvocation.BoundParameters
-                            .Where(p => this.stackParameterNames.Contains(p.Key)).ToDictionary(
-                                kvp => kvp.Key,
-                                kvp =>
-                                    {
-                                        if (kvp.Value is Array arr)
-                                        {
-                                            return string.Join(",", from object val in arr select val.ToString().Trim());
-                                        }
+                            return kvp.Value.ToString();
+                        });
 
-                                        return kvp.Value.ToString();
-                                    });
+            // Merge file and user parameters, with user parameters taking precedence
+            this.StackParameters = userParameters
+                .Concat(fileParameters.Where(kvp => !userParameters.ContainsKey(kvp.Key)))
+                .ToDictionary(kvp => kvp.Key, kvp => kvp.Value);
 
-                        // Merge file and user parameters, with user parameters taking precedence
-                        this.StackParameters = userParameters
-                            .Concat(fileParameters.Where(kvp => !userParameters.ContainsKey(kvp.Key)))
-                            .ToDictionary(kvp => kvp.Key, kvp => kvp.Value);
+            if (this.StackParameters.Any())
+            {
+                this.Logger.LogVerbose($"Parameters to pass to stack: {string.Join(", ", this.StackParameters.Keys)}");
+            }
 
-                        if (this.StackParameters.Any())
-                        {
-                            this.Logger.LogVerbose($"Parameters to pass to stack: {string.Join(", ", this.StackParameters.Keys)}");
-                        }
-                    });
 
             return null;
         }
