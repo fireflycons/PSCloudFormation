@@ -2,6 +2,7 @@
 {
     using System.Collections;
     using System.IO;
+    using System.Runtime.InteropServices.ComTypes;
 
     /// <summary>
     /// Describes a packager resource to upload to S3
@@ -58,5 +59,24 @@
         /// If hashes match then resource does not need to be uploaded.
         /// </remarks>
         public bool HashMatch { get; set; }
+
+        /// <summary>
+        /// Gets the full key with any prefix prepended.
+        /// </summary>
+        /// <value>
+        /// The full key.
+        /// </value>
+        public string FullKey
+        {
+            get
+            {
+                if (string.IsNullOrEmpty(this.KeyPrefix))
+                {
+                    return this.S3Artifact.Key;
+                }
+
+                return this.KeyPrefix.Trim('/') + "/" + this.S3Artifact.Key;
+            }
+        }
     }
 }
