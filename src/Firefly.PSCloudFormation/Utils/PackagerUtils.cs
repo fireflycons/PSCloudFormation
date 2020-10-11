@@ -182,10 +182,20 @@
                     }
                 };
 
+        /// <summary>
+        /// The path resolver
+        /// </summary>
         private readonly IPathResolver pathResolver;
 
+        /// <summary>
+        /// The logger
+        /// </summary>
         private readonly ILogger logger;
 
+        /// <summary>
+        /// The s3 utility
+        /// </summary>
+        // ReSharper disable once StyleCop.SA1305
         private readonly IPSS3Util s3Util;
 
         /// <summary>
@@ -193,6 +203,8 @@
         /// </summary>
         /// <param name="pathResolver">The path resolver.</param>
         /// <param name="logger">Logging interface.</param>
+        /// <param name="s3Util">S3 utility to use for pushing packaged objects.</param>
+        // ReSharper disable once StyleCop.SA1305
         public PackagerUtils(IPathResolver pathResolver, ILogger logger, IPSS3Util s3Util)
         {
             this.s3Util = s3Util;
