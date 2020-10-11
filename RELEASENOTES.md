@@ -2,6 +2,7 @@
 
 # 4.0.12
 
+* Enhancement - Automatic packaging of templates that contain resources that require packaging, e.g. nested templates, lambdas with local filesystem references to code etc.
 * Fix - Incorrect error message when a template file is not found
 
 # 4.0.11
