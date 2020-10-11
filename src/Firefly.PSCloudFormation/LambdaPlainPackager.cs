@@ -3,6 +3,7 @@
     using System;
     using System.Collections.Generic;
     using System.IO;
+    using System.Text.RegularExpressions;
 
     using Firefly.CloudFormation;
     using Firefly.PSCloudFormation.Utils;
@@ -18,17 +19,27 @@
         /// </summary>
         /// <param name="lambdaArtifact">The lambda artifact to package</param>
         /// <param name="dependencies">Dependencies of lambda, or <c>null</c> if none.</param>
+        /// <param name="lambdaHandler">Handler as extracted from resource.</param>
         /// <param name="runtimeVersion">Version of the lambda runtime.</param>
         /// <param name="s3">Interface to S3</param>
         /// <param name="logger">Interface to logger.</param>
         public LambdaPlainPackager(
             FileSystemInfo lambdaArtifact,
             List<LambdaDependency> dependencies,
+            string lambdaHandler,
             string runtimeVersion,
             IPSS3Util s3,
             ILogger logger)
-            : base(lambdaArtifact, dependencies, runtimeVersion, s3, logger)
+            : base(lambdaArtifact, dependencies, lambdaHandler, runtimeVersion, s3, logger)
         {
+        }
+
+        /// <summary>
+        /// If possible, validate the handler
+        /// </summary>
+        protected override void ValidateHandler()
+        {
+            // Do nothing
         }
 
         /// <summary>

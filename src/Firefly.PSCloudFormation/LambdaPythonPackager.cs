@@ -1,8 +1,10 @@
 ﻿namespace Firefly.PSCloudFormation
 {
+    using System;
     using System.Collections.Generic;
     using System.IO;
     using System.Linq;
+    using System.Text.RegularExpressions;
 
     using Firefly.CloudFormation;
     using Firefly.PSCloudFormation.Utils;
@@ -28,6 +30,13 @@
         private static readonly string[] VenvDirectories = { ScriptsDir, LibDir, Lib64Dir, IncludeDir };
 
         /// <summary>
+        /// Gets the regex to detect lambda handler
+        /// </summary>
+        private static readonly Regex HandlerRegex = new Regex(
+            @"^\s*def\s+(?<handler>[^\d\W]\w*)\s*\(\s*[^\d\W]\w*\s*,\s*[^\d\W]\w*\s*\)\s*:",
+            RegexOptions.Multiline);
+
+        /// <summary>
         /// Path to temporary directory in which we build up the lambda package
         /// </summary>
         private DirectoryInfo packageDirectory;
@@ -37,16 +46,18 @@
         /// </summary>
         /// <param name="lambdaArtifact">The lambda artifact to package</param>
         /// <param name="dependencies">Dependencies of lambda, or <c>null</c> if none.</param>
+        /// <param name="lambdaHandler">Handler as extracted from resource.</param>
         /// <param name="runtimeVersion">Version of the lambda runtime.</param>
         /// <param name="s3">Interface to S3</param>
         /// <param name="logger">Interface to logger.</param>
         public LambdaPythonPackager(
             FileSystemInfo lambdaArtifact,
             List<LambdaDependency> dependencies,
+            string lambdaHandler,
             string runtimeVersion,
             IPSS3Util s3,
             ILogger logger)
-            : base(lambdaArtifact, dependencies, runtimeVersion, s3, logger)
+            : base(lambdaArtifact, dependencies, lambdaHandler, runtimeVersion, s3, logger)
         {
         }
 
@@ -154,6 +165,73 @@
             }
 
             return this.packageDirectory.FullName;
+        }
+
+        /// <summary>
+        /// If possible, validate the handler
+        /// </summary>
+        /// <exception cref="PackagerException">
+        /// Invalid signature for handler {this.LambdaHandler}
+        /// or
+        /// Cannot locate handler method '{method}' in '{moduleFileName}'
+        /// </exception>
+        /// <exception cref="FileNotFoundException">Module containing handler not found</exception>
+        /// <exception cref="System.NotImplementedException">Unknown subclass of <see cref="FileSystemInfo"/></exception>
+        protected override void ValidateHandler()
+        {
+            var handlerComponents = this.LambdaHandler.Split('.');
+
+            if (handlerComponents.Length != 2)
+            {
+                throw new PackagerException($"Invalid signature for handler {this.LambdaHandler}");
+            }
+
+            var fileName = handlerComponents[0];
+            var method = handlerComponents[1];
+            string moduleFileName;
+            string content;
+
+            switch (this.LambdaArtifact)
+            {
+                case FileInfo fi:
+
+                    if (!fi.Exists)
+                    {
+                        throw new FileNotFoundException(fi.Name);
+                    }
+
+                    content = File.ReadAllText(fi.FullName);
+                    moduleFileName = fi.FullName;
+
+                    break;
+
+                case DirectoryInfo di:
+
+                    var file = Directory.GetFiles(di.FullName, $"{fileName}.*", SearchOption.TopDirectoryOnly)
+                        .FirstOrDefault(
+                            f => string.Compare(Path.GetExtension(f), ".py", StringComparison.OrdinalIgnoreCase) == 0);
+
+                    if (file == null)
+                    {
+                        throw new FileNotFoundException($"{fileName}.py");
+                    }
+
+                    content = File.ReadAllText(file);
+                    moduleFileName = file;
+                    break;
+
+                default:
+
+                    // Will never get here unless a new subclass of FileSystemInfo appears.
+                    throw new NotImplementedException(this.LambdaArtifact.GetType().FullName);
+            }
+
+            var mc = HandlerRegex.Matches(content);
+
+            if (mc.Count == 0 || mc.Cast<Match>().All(m => m.Groups["handler"].Value != method))
+            {
+                throw new PackagerException($"Cannot locate handler method '{method}' in '{moduleFileName}'");
+            }
         }
 
         /// <summary>

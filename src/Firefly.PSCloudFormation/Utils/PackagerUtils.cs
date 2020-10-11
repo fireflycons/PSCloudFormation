@@ -489,9 +489,12 @@
                 if (resource.ResourceType == "AWS::Lambda::Function"
                     || resource.ResourceType == "AWS::Serverless::Function")
                 {
-                    var handler = resource.GetResourcePropertyValue("Runtime");
-
-                    using (var packager = LambdaPackager.CreatePackager(fsi, handler, this.s3Util, this.logger))
+                    using (var packager = LambdaPackager.CreatePackager(
+                        fsi,
+                        resource.GetResourcePropertyValue("Runtime"),
+                        resource.GetResourcePropertyValue("Handler"),
+                        this.s3Util,
+                        this.logger))
                     {
                         resourceToUpload = await packager.Package(workingDirectory);
                     }

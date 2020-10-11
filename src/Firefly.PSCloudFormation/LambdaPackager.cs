@@ -4,6 +4,7 @@
     using System.Collections.Generic;
     using System.IO;
     using System.Linq;
+    using System.Runtime.CompilerServices;
     using System.Text.RegularExpressions;
     using System.Threading.Tasks;
 
@@ -27,12 +28,14 @@
         /// </summary>
         /// <param name="lambdaArtifact">The lambda artifact to package</param>
         /// <param name="dependencies">Dependencies of lambda, or <c>null</c> if none.</param>
+        /// <param name="lambdaHandler">Handler as extracted from resource.</param>
         /// <param name="runtimeVersion">Version of the lambda runtime.</param>
         /// <param name="s3">Interface to S3</param>
         /// <param name="logger">Interface to logger.</param>
         protected LambdaPackager(
             FileSystemInfo lambdaArtifact,
             List<LambdaDependency> dependencies,
+            string lambdaHandler,
             string runtimeVersion,
             IPSS3Util s3,
             ILogger logger)
@@ -42,6 +45,7 @@
             this.Logger = logger;
             this.S3 = s3;
             this.RuntimeVersionIdentifier = runtimeVersion;
+            this.LambdaHandler = lambdaHandler;
         }
 
         /// <summary>
@@ -111,11 +115,20 @@
 
         /// <summary>
         /// Gets the runtime version identifier.
+        /// Used by Ruby lambdas as modules are pulled to a version specific directory.
         /// </summary>
         /// <value>
         /// The runtime version identifier.
         /// </value>
         protected string RuntimeVersionIdentifier { get; }
+
+        /// <summary>
+        /// Gets the lambda handler as defined by the resource.
+        /// </summary>
+        /// <value>
+        /// The lambda handler.
+        /// </value>
+        protected string LambdaHandler { get;  }
 
         /// <summary>
         /// Gets the S3 interface.
@@ -130,12 +143,14 @@
         /// </summary>
         /// <param name="lambdaArtifact">The lambda artifact to package</param>
         /// <param name="lambdaRuntime">Name of lambda runtime extracted from resource</param>
+        /// <param name="lambdaHandler">Name of lambda handler extracted from resource</param>
         /// <param name="s3">Interface to S3</param>
         /// <param name="logger">Interface to logger.</param>
         /// <returns>Runtime specific subclass of <see cref="LambdaPackager"/></returns>
         public static LambdaPackager CreatePackager(
             FileSystemInfo lambdaArtifact,
             string lambdaRuntime,
+            string lambdaHandler,
             IPSS3Util s3,
             ILogger logger)
         {
@@ -162,12 +177,7 @@
                                    StringComparison.OrdinalIgnoreCase) == 0;
                     });
 
-            if (dependencyFile == null)
-            {
-                return new LambdaPlainPackager(lambdaArtifact, null, null, s3, logger);
-            }
-
-            var dependencies = LoadDependencies(dependencyFile);
+            var dependencies = dependencyFile != null ? LoadDependencies(dependencyFile) : null;
 
             var runtimeVersion = RuntimeVersionRegex.Match(lambdaRuntime).Groups["versionId"].Value;
 
@@ -177,20 +187,21 @@
             {
                 case LambdaRuntime.Node:
 
-                    return new LambdaNodePackager(lambdaArtifact, dependencies, runtimeVersion, s3, logger);
+                    return new LambdaNodePackager(lambdaArtifact, dependencies, lambdaHandler, runtimeVersion, s3, logger);
 
                 case LambdaRuntime.Python:
 
-                    return new LambdaPythonPackager(lambdaArtifact, dependencies, runtimeVersion, s3, logger);
+                    return new LambdaPythonPackager(lambdaArtifact, dependencies, lambdaHandler, runtimeVersion, s3, logger);
 
                 case LambdaRuntime.Ruby:
 
-                    return new LambdaRubyPackager(lambdaArtifact, dependencies, runtimeVersion, s3, logger);
+                    return new LambdaRubyPackager(lambdaArtifact, dependencies, lambdaHandler, runtimeVersion, s3, logger);
 
                 default:
 
-                    throw new NotImplementedException(
+                    logger.LogWarning(
                         $"Dependency packaging for lambda runtime '{lambdaRuntime}' is currently not supported.");
+                    return new LambdaPlainPackager(lambdaArtifact, null, lambdaHandler, null, s3, logger);
             }
         }
 
@@ -222,6 +233,8 @@
 
                 return uploadResource ? resourceToUpload : null;
             }
+
+            this.ValidateHandler();
 
             if (this.Dependencies == null)
             {
@@ -322,6 +335,11 @@
         protected virtual void Dispose(bool disposing)
         {
         }
+
+        /// <summary>
+        /// If possible, validate the handler
+        /// </summary>
+        protected abstract void ValidateHandler();
 
         /// <summary>
         /// Prepares the package, accumulating any dependencies into a directory for zipping.

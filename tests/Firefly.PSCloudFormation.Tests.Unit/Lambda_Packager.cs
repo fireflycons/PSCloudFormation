@@ -20,6 +20,12 @@
     using Xunit;
     using Xunit.Abstractions;
 
+    /// <summary>
+    /// In these tests various packaging scenarios are tested.
+    /// All the lambdas have valid handler methods that should pass handler validation.
+    /// </summary>
+    /// <seealso cref="Firefly.EmbeddedResourceLoader.AutoResourceLoader" />
+    /// <seealso cref="System.IDisposable" />
     [Collection("Packager")]
     // ReSharper disable once InconsistentNaming
     public class Lambda_Packager : AutoResourceLoader, IDisposable
