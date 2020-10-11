@@ -8,6 +8,7 @@
 
     using Firefly.CloudFormation;
     using Firefly.CloudFormation.Model;
+    using Firefly.PSCloudFormation.Utils;
 
     /// <summary>
     /// Contains parameters common to all commands that work with CloudFormation stacks.
@@ -90,6 +91,14 @@
         public string StackName { get; set; }
 
         /// <summary>
+        /// Gets the working directory for use by packaging.
+        /// </summary>
+        /// <value>
+        /// The working directory.
+        /// </value>
+        internal WorkingDirectory WorkingDirectory { get; private set; }
+
+        /// <summary>
         /// Asks a yes/no question.
         /// </summary>
         /// <param name="caption">The caption.</param>
@@ -140,22 +149,30 @@
         {
             base.ProcessRecord();
 
-            var task = this.OnProcessRecord();
-
-            try
+            if (this.Logger == null)
             {
-                task.Wait();
-            }
-            catch (Exception ex)
-            {
-                this.ThrowExecutionError(ex.Message, this, ex);
-                return;
+                this.Logger = new PSLogger(this);
             }
 
-            if (task.Result != null)
+            using (this.WorkingDirectory = new WorkingDirectory(this.Logger))
             {
-                var stackResult = (CloudFormationResult)task.Result;
-                this.WriteObject(stackResult);
+                var task = this.OnProcessRecord();
+
+                try
+                {
+                    task.Wait();
+                }
+                catch (Exception ex)
+                {
+                    this.ThrowExecutionError(ex.Message, this, ex);
+                    return;
+                }
+
+                if (task.Result != null)
+                {
+                    var stackResult = (CloudFormationResult)task.Result;
+                    this.WriteObject(stackResult);
+                }
             }
         }
 

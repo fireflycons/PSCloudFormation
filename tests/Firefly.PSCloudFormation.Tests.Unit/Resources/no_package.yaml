@@ -1,0 +1,50 @@
+AWSTemplateFormatVersion: 2010-09-09
+
+Resources:
+
+  # cidr_findr
+  # Custom resource lambda to create subnet ranges within a VPC CIDR
+
+  CidrFindrFn:
+    Type: AWS::Lambda::Function
+    Properties:
+      Code:
+        S3Bucket: !Sub example-bucket-${AWS::Region}
+        S3Key: lambda/CustomResource/cidr_findr.zip
+      Handler: cidr_findr.lambda_handler
+      Role:
+        Fn::GetAtt:
+        - CidrFindrRole
+        - Arn
+      Runtime: python3.6
+      Timeout: 10
+
+  CidrFindrRole:
+    Properties:
+      AssumeRolePolicyDocument:
+        Statement:
+        - Action:
+          - sts:AssumeRole
+          Effect: Allow
+          Principal:
+            Service:
+            - lambda.amazonaws.com
+        Version: '2012-10-17'
+      ManagedPolicyArns:
+      - arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole
+    Type: AWS::IAM::Role
+
+  CidrFindrPolicy:
+    Type: AWS::IAM::Policy
+    Properties:
+      PolicyName: CidrFindrFnEC2Policy
+      PolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+        - Effect: Allow
+          Action:
+          - ec2:DescribeVpcs
+          - ec2:DescribeSubnets
+          Resource: '*'
+      Roles:
+        - !Ref CidrFindrRole

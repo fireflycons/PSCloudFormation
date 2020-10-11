@@ -82,7 +82,7 @@
         public string StackPolicyDuringUpdateLocation
         {
             get => this.stackPolicyDuringUpdateLocation;
-            set => this.stackPolicyDuringUpdateLocation = this.ResolvePath(value);
+            set => this.stackPolicyDuringUpdateLocation = this.PathResolver.ResolvePath(value);
         }
 
         /// <summary>
@@ -124,7 +124,7 @@
         public string ResourcesToImport
         {
             get => this.resourcesToImport; 
-            set => this.resourcesToImport = this.ResolvePath(value);
+            set => this.resourcesToImport = this.PathResolver.ResolvePath(value);
         }
 
         /// <summary>

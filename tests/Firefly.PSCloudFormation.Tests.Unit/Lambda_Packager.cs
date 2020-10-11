@@ -5,6 +5,7 @@
     using System.IO;
     using System.Threading.Tasks;
 
+    using Amazon;
     using Amazon.S3.Model;
 
     using Firefly.EmbeddedResourceLoader;
@@ -70,14 +71,12 @@
 
             using var workingDirectory = new TempDirectory();
 
-            var newPackage = new NewPackageCommand
-                                 {
-                                     S3 = new S3Util(this.ClientFactory, this.Context, template, "test-bucket"),
-                                     PathResolver = this.pathResolver,
-                                     Logger = this.Logger
-                                 };
+            var packager = new PackagerUtils(
+                new TestPathResolver(),
+                this.Logger,
+                new S3Util(this.ClientFactory, this.Context, template, "test-bucket", null, null));
 
-            await newPackage.ProcessTemplate(template, workingDirectory.FullPath);
+            await packager.ProcessTemplate(template, workingDirectory);
 
             // Verify by checking messages output by the zip library
             this.Logger.VerboseMessages.Should().Contain(
@@ -103,14 +102,12 @@
 
             using var workingDirectory = new TempDirectory();
 
-            var newPackage = new NewPackageCommand
-                                 {
-                                     S3 = new S3Util(this.ClientFactory, this.Context, template, "test-bucket"),
-                                     PathResolver = this.pathResolver,
-                                     Logger = this.Logger
-                                 };
+            var packager = new PackagerUtils(
+                new TestPathResolver(),
+                this.Logger,
+                new S3Util(this.ClientFactory, this.Context, template, "test-bucket", null, null));
 
-            await newPackage.ProcessTemplate(template, workingDirectory.FullPath);
+            await packager.ProcessTemplate(template, workingDirectory);
 
             // Verify by checking messages output by the zip library
             this.Logger.VerboseMessages.Should().Contain(
@@ -137,14 +134,12 @@
 
             using var workingDirectory = new TempDirectory();
 
-            var newPackage = new NewPackageCommand
-                                 {
-                                     S3 = new S3Util(this.ClientFactory, this.Context, template, "test-bucket"),
-                                     PathResolver = this.pathResolver,
-                                     Logger = this.Logger
-                                 };
+            var packager = new PackagerUtils(
+                new TestPathResolver(),
+                this.Logger,
+                new S3Util(this.ClientFactory, this.Context, template, "test-bucket", null, null));
 
-            await newPackage.ProcessTemplate(template, workingDirectory.FullPath);
+            await packager.ProcessTemplate(template, workingDirectory);
 
             // Verify by checking messages output by the zip library
             this.Logger.VerboseMessages.Should().Contain(
@@ -175,14 +170,12 @@
 
             using var workingDirectory = new TempDirectory();
 
-            var newPackage = new NewPackageCommand
-                                 {
-                                     S3 = new S3Util(this.ClientFactory, this.Context, template, "test-bucket"),
-                                     PathResolver = this.pathResolver,
-                                     Logger = this.Logger
-                                 };
+            var packager = new PackagerUtils(
+                new TestPathResolver(),
+                this.Logger,
+                new S3Util(this.ClientFactory, this.Context, template, "test-bucket", null, null));
 
-            await newPackage.ProcessTemplate(template, workingDirectory.FullPath);
+            await packager.ProcessTemplate(template, workingDirectory);
 
             // Verify by checking messages output by the zip library
             this.Logger.VerboseMessages.Should().Contain(
@@ -213,14 +206,12 @@
 
             using var workingDirectory = new TempDirectory();
 
-            var newPackage = new NewPackageCommand
-                                 {
-                                     S3 = new S3Util(this.ClientFactory, this.Context, template, "test-bucket"),
-                                     PathResolver = this.pathResolver,
-                                     Logger = this.Logger
-                                 };
+            var packager = new PackagerUtils(
+                new TestPathResolver(),
+                this.Logger,
+                new S3Util(this.ClientFactory, this.Context, template, "test-bucket", null, null));
 
-            await newPackage.ProcessTemplate(template, workingDirectory.FullPath);
+            await packager.ProcessTemplate(template, workingDirectory);
 
             // Verify by checking messages output by the zip library
             this.Logger.VerboseMessages.Should().Contain(
@@ -256,14 +247,12 @@
 
             using var workingDirectory = new TempDirectory();
 
-            var newPackage = new NewPackageCommand
-                                 {
-                                     S3 = new S3Util(this.ClientFactory, this.Context, template, "test-bucket"),
-                                     PathResolver = this.pathResolver,
-                                     Logger = this.Logger
-                                 };
+            var packager = new PackagerUtils(
+                new TestPathResolver(),
+                this.Logger,
+                new S3Util(this.ClientFactory, this.Context, template, "test-bucket", null, null));
 
-            await newPackage.ProcessTemplate(template, workingDirectory.FullPath);
+            await packager.ProcessTemplate(template, workingDirectory);
 
             // Verify by checking messages output by the zip library
             this.Logger.VerboseMessages.Should().Contain(
@@ -292,14 +281,12 @@
 
             using var workingDirectory = new TempDirectory();
 
-            var newPackage = new NewPackageCommand
-                                 {
-                                     S3 = new S3Util(this.ClientFactory, this.Context, template, "test-bucket"),
-                                     PathResolver = this.pathResolver,
-                                     Logger = this.Logger
-                                 };
+            var packager = new PackagerUtils(
+                new TestPathResolver(),
+                this.Logger,
+                new S3Util(this.ClientFactory, this.Context, template, "test-bucket", null, null));
 
-            await newPackage.ProcessTemplate(template, workingDirectory.FullPath);
+            await packager.ProcessTemplate(template, workingDirectory);
 
             // Verify by checking messages output by the zip library
             this.Logger.VerboseMessages.Should().Contain(
@@ -329,14 +316,12 @@
 
             using var workingDirectory = new TempDirectory();
 
-            var newPackage = new NewPackageCommand
-                                 {
-                                     S3 = new S3Util(this.ClientFactory, this.Context, template, "test-bucket"),
-                                     PathResolver = this.pathResolver,
-                                     Logger = this.Logger
-                                 };
+            var packager = new PackagerUtils(
+                new TestPathResolver(),
+                this.Logger,
+                new S3Util(this.ClientFactory, this.Context, template, "test-bucket", null, null));
 
-            await newPackage.ProcessTemplate(template, workingDirectory.FullPath);
+            await packager.ProcessTemplate(template, workingDirectory);
 
             // Verify by checking messages output by the zip library
             this.Logger.VerboseMessages.Should().Contain(
@@ -363,14 +348,12 @@
 
             using var workingDirectory = new TempDirectory();
 
-            var newPackage = new NewPackageCommand
-                                 {
-                                     S3 = new S3Util(this.ClientFactory, this.Context, template, "test-bucket"),
-                                     PathResolver = this.pathResolver,
-                                     Logger = this.Logger
-                                 };
+            var packager = new PackagerUtils(
+                new TestPathResolver(),
+                this.Logger,
+                new S3Util(this.ClientFactory, this.Context, template, "test-bucket", null, null));
 
-            await newPackage.ProcessTemplate(template, workingDirectory.FullPath);
+            await packager.ProcessTemplate(template, workingDirectory);
 
             // Verify by checking messages output by the zip library
             this.Logger.VerboseMessages.Should().Contain(
@@ -394,7 +377,7 @@
             var mockContext = new Mock<IPSCloudFormationContext>();
 
             mockContext.Setup(c => c.Logger).Returns(logger);
-
+            mockContext.Setup(c => c.Region).Returns(RegionEndpoint.EUWest1);
             mockS3.SetupSequence(s3 => s3.ListObjectsV2Async(It.IsAny<ListObjectsV2Request>(), default)).ReturnsAsync(
                 new ListObjectsV2Response
                     {

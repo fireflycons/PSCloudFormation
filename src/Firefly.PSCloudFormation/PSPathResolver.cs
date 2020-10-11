@@ -2,6 +2,8 @@
 {
     using System.Management.Automation;
 
+    using Firefly.CloudFormation.Utils;
+
     /// <summary>
     /// Concrete implementation for PowerShell
     /// </summary>
@@ -24,15 +26,42 @@
         }
 
         /// <summary>
-        /// Resolves the path.
+        /// Resolve a PowerShell path to a .NET path
         /// </summary>
+        /// <remarks>
+        /// <para>
+        /// Try to resolve as a path through the file system provider. PS and .NET have different ideas about the current directory.
+        /// .NET path will be whatever the current directory was when PowerShell started, and within PowerShell, it is controlled by
+        /// file system provider.
+        /// </para>
+        /// <para>
+        /// If the path was entered as a quoted literal string then those quotes are retained on the argument, so we have to remove them here
+        /// </para>
+        /// </remarks>
         /// <param name="relativePath">The relative path.</param>
         /// <returns>
         /// Absolute path.
         /// </returns>
         public string ResolvePath(string relativePath)
         {
-            return this.pathIntrinsics.GetUnresolvedProviderPathFromPSPath(relativePath);
+            if (relativePath == null)
+            {
+                return null;
+            }
+
+            string resolved = null;
+
+            try
+            {
+                resolved = this.pathIntrinsics.GetUnresolvedProviderPathFromPSPath(
+                    relativePath.Unquote());
+            }
+            catch
+            {
+                // do nothing
+            }
+
+            return resolved ?? relativePath.Unquote();
         }
 
         /// <summary>

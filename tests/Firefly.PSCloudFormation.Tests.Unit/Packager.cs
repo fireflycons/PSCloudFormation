@@ -10,6 +10,7 @@ namespace Firefly.PSCloudFormation.Tests.Unit
     using System.Text.RegularExpressions;
     using System.Threading.Tasks;
 
+    using Amazon;
     using Amazon.S3.Model;
 
     using Firefly.EmbeddedResourceLoader;
@@ -43,6 +44,9 @@ namespace Firefly.PSCloudFormation.Tests.Unit
         [EmbeddedResource("DependencyFile")]
         private TempDirectory dependencyFiles;
 
+        [EmbeddedResource("no_package.yaml")]
+        private TempFile noPackageStack;
+
         public Packager(ITestOutputHelper output)
         {
             this.output = output;
@@ -65,24 +69,18 @@ namespace Firefly.PSCloudFormation.Tests.Unit
 
             var mockContext = new Mock<IPSCloudFormationContext>();
             mockContext.Setup(c => c.Logger).Returns(logger);
+            mockContext.Setup(c => c.Region).Returns(RegionEndpoint.EUWest1);
 
             using var workingDirectory = new TempDirectory();
 
             var template = Path.Combine(this.deepNestedStack.FullPath, "base-stack.json");
 
-            var newPackage = new NewPackageCommand
-                                 {
-                                     S3 =
-                                         new S3Util(
-                                             mockClientFactory.Object,
-                                             mockContext.Object,
-                                             template,
-                                             "test-bucket"),
-                                     PathResolver = this.pathResolver,
-                                     Logger = logger
-                                 };
+            var packager = new PackagerUtils(
+                new TestPathResolver(),
+                logger,
+                new S3Util(mockClientFactory.Object, mockContext.Object, template, "test-bucket", null, null));
 
-            var outputTemplatePath = await newPackage.ProcessTemplate(template, workingDirectory.FullPath);
+            var outputTemplatePath = await packager.ProcessTemplate(template, workingDirectory);
 
             this.output.WriteLine(string.Empty);
             this.output.WriteLine(File.ReadAllText(outputTemplatePath));
@@ -112,6 +110,7 @@ namespace Firefly.PSCloudFormation.Tests.Unit
 
             var mockContext = new Mock<IPSCloudFormationContext>();
             mockContext.Setup(c => c.Logger).Returns(logger);
+            mockContext.Setup(c => c.Region).Returns(RegionEndpoint.EUWest1);
 
             mockS3.SetupSequence(s3 => s3.ListObjectsV2Async(It.IsAny<ListObjectsV2Request>(), default)).ReturnsAsync(
                 new ListObjectsV2Response
@@ -134,19 +133,12 @@ namespace Firefly.PSCloudFormation.Tests.Unit
             using var workingDirectory = new TempDirectory();
 
 
-            var newPackage = new NewPackageCommand
-                                 {
-                                     S3 =
-                                         new S3Util(
-                                             mockClientFactory.Object,
-                                             mockContext.Object,
-                                             template,
-                                             "test-bucket"),
-                                     PathResolver = this.pathResolver,
-                                     Logger = logger
-                                 };
+            var packager = new PackagerUtils(
+                new TestPathResolver(),
+                logger,
+                new S3Util(mockClientFactory.Object, mockContext.Object, template, "test-bucket", null, null));
 
-            var outputTemplatePath = await newPackage.ProcessTemplate(template, workingDirectory.FullPath);
+            var outputTemplatePath = await packager.ProcessTemplate(template, workingDirectory);
 
             this.output.WriteLine(string.Empty);
             this.output.WriteLine(File.ReadAllText(outputTemplatePath));
@@ -166,6 +158,7 @@ namespace Firefly.PSCloudFormation.Tests.Unit
             var mockS3 = TestHelpers.GetS3ClientWithBucketMock();
             var mockContext = new Mock<IPSCloudFormationContext>();
             mockContext.Setup(c => c.Logger).Returns(logger);
+            mockContext.Setup(c => c.Region).Returns(RegionEndpoint.EUWest1);
 
             mockS3.SetupSequence(s3 => s3.ListObjectsV2Async(It.IsAny<ListObjectsV2Request>(), default))
                 .ReturnsAsync(this.fileNotFound)
@@ -198,19 +191,12 @@ namespace Firefly.PSCloudFormation.Tests.Unit
 
             using var workingDirectory = new TempDirectory();
 
-            var newPackage = new NewPackageCommand
-            {
-                S3 =
-                                         new S3Util(
-                                             mockClientFactory.Object,
-                                             mockContext.Object,
-                                             template,
-                                             "test-bucket"),
-                PathResolver = this.pathResolver,
-                Logger = logger
-            };
+            var packager = new PackagerUtils(
+                new TestPathResolver(),
+                logger,
+                new S3Util(mockClientFactory.Object, mockContext.Object, template, "test-bucket", null, null));
 
-            var outputTemplatePath = await newPackage.ProcessTemplate(template, workingDirectory.FullPath);
+            var outputTemplatePath = await packager.ProcessTemplate(template, workingDirectory);
 
             this.output.WriteLine(string.Empty);
             this.output.WriteLine(File.ReadAllText(outputTemplatePath));
@@ -252,7 +238,7 @@ namespace Firefly.PSCloudFormation.Tests.Unit
             var mockS3 = TestHelpers.GetS3ClientWithBucketMock();
             var mockContext = new Mock<IPSCloudFormationContext>();
             mockContext.Setup(c => c.Logger).Returns(logger);
-
+            mockContext.Setup(c => c.Region).Returns(RegionEndpoint.EUWest1);
             mockS3.SetupSequence(s3 => s3.ListObjectsV2Async(It.IsAny<ListObjectsV2Request>(), default)).ReturnsAsync(
                 new ListObjectsV2Response
                     {
@@ -282,19 +268,12 @@ namespace Firefly.PSCloudFormation.Tests.Unit
 
             using var workingDirectory = new TempDirectory();
 
-            var newPackage = new NewPackageCommand
-            {
-                S3 =
-                                         new S3Util(
-                                             mockClientFactory.Object,
-                                             mockContext.Object,
-                                             template,
-                                             "test-bucket"),
-                PathResolver = this.pathResolver,
-                Logger = logger
-            };
+            var packager = new PackagerUtils(
+                new TestPathResolver(),
+                logger,
+                new S3Util(mockClientFactory.Object, mockContext.Object, template, "test-bucket", null, null));
 
-            var outputTemplatePath = await newPackage.ProcessTemplate(template, workingDirectory.FullPath);
+            var outputTemplatePath = await packager.ProcessTemplate(template, workingDirectory);
 
             this.output.WriteLine(string.Empty);
             this.output.WriteLine(File.ReadAllText(outputTemplatePath));
@@ -328,9 +307,32 @@ namespace Firefly.PSCloudFormation.Tests.Unit
             relativeDependency.Location.Should().Be(expectedDependencyPath);
         }
 
+        [Fact]
+        public void ShouldDetectStackNeedsPackagingWhenNestedStackRefersToFile()
+        {
+            var templateFile = Path.Combine(this.deepNestedStack, "base-stack.json");
+
+            new PackagerUtils(this.pathResolver, new TestLogger(this.output), null).RequiresPackaging(templateFile).Should().BeTrue();
+        }
+
+        [Fact]
+        public void ShouldDetectStackNeedsPackagingWhenResourceRefersToFile()
+        {
+            var templateFile = Path.Combine(this.deepNestedStack, "sub-nested-2.json");
+
+            new PackagerUtils(this.pathResolver, new TestLogger(this.output), null).RequiresPackaging(templateFile).Should().BeTrue();
+        }
+
+        [Fact]
+        public void ShouldDetectStackDoesNotNeedPackagingWhenNoLocalFileReferences()
+        {
+            new PackagerUtils(this.pathResolver, new TestLogger(this.output), null).RequiresPackaging(this.noPackageStack).Should().BeFalse();
+        }
+
         public void Dispose()
         {
             this.deepNestedStack?.Dispose();
+            this.noPackageStack?.Dispose();
         }
     }
 }
