@@ -3,11 +3,8 @@
     using System;
     using System.Collections;
     using System.IO;
-    using System.Linq;
     using System.Management.Automation;
-    using System.Threading.Tasks;
 
-    using Firefly.CloudFormation.Parsers;
     using Firefly.PSCloudFormation.Utils;
 
     /// <summary>
