@@ -33,7 +33,10 @@
             // Compute hash before zipping as zip hashes not idempotent due to temporally changing attributes in central directory
             var resourceToUpload = new ResourceUploadSettings
                                        {
-                                           File = new FileInfo(fileToUpload), Hash = artifact.MD5(), HashMatch = true
+                                           File = new FileInfo(fileToUpload),
+                                           Hash = artifact.MD5(),
+                                           HashMatch = true,
+                                           KeyPrefix = s3.KeyPrefix
                                        };
 
             if (await s3.ObjectChangedAsync(resourceToUpload))
@@ -85,9 +88,12 @@
                     $"{Path.GetFileNameWithoutExtension(artifact.Name)}.zip");
 
                 resourceToUpload = new ResourceUploadSettings
-                                           {
-                                               File = new FileInfo(fileToUpload), Hash = artifact.MD5(), HashMatch = true
-                                           };
+                                       {
+                                           File = new FileInfo(fileToUpload),
+                                           Hash = artifact.MD5(),
+                                           HashMatch = true,
+                                           KeyPrefix = s3.KeyPrefix
+                                       };
 
 
                 if (await s3.ObjectChangedAsync(resourceToUpload))
