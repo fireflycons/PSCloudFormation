@@ -241,7 +241,8 @@
 
             // Any nested stacks return not null for ResolveFileSystemResource point to files and thus need packaging.
             if (resources.Where(r => r.ResourceType == CloudFormationStack).Any(
-                nestedStackResource => this.ResolveFileSystemResource(
+                nestedStackResource => ResolveFileSystemResource(
+                                           this.pathResolver,
                                            templatePath,
                                            nestedStackResource.GetResourcePropertyValue("TemplateURL")) != null))
             {
@@ -278,7 +279,7 @@
                         continue;
                     }
 
-                    var fsi = this.ResolveFileSystemResource(templatePath, resourceFile);
+                    var fsi = ResolveFileSystemResource(this.pathResolver, templatePath, resourceFile);
 
                     if (fsi != null)
                     {
@@ -294,11 +295,12 @@
         /// <summary>
         /// Examines the given template property value and determines if it points to something in the file system.
         /// </summary>
+        /// <param name="pathResolver">The path resolver to use.</param>
         /// <param name="templatePath">Path to the template being processed.</param>
         /// <param name="propertyValue">Value of the resource property in the template</param>
         /// <returns>A <see cref="FileSystemInfo"/> pointing to the referenced file or directory; else <c>null</c> if not a file system resource.</returns>
         /// <exception cref="FileNotFoundException">The artifact looks like a path, but it cannot be found.</exception>
-        public FileSystemInfo ResolveFileSystemResource(string templatePath, string propertyValue)
+        public static FileSystemInfo ResolveFileSystemResource(IPathResolver pathResolver, string templatePath, string propertyValue)
         {
             if (propertyValue == null)
             {
@@ -306,7 +308,7 @@
             }
 
             string fullPath = null;
-            var currentLocation = this.pathResolver.GetLocation();
+            var currentLocation = pathResolver.GetLocation();
 
             if (Path.IsPathRooted(propertyValue) || @"\".Equals(Path.GetPathRoot(propertyValue)))
             {
@@ -316,7 +318,7 @@
             {
                 try
                 {
-                    this.pathResolver.SetLocation(Path.GetDirectoryName(templatePath));
+                    pathResolver.SetLocation(Path.GetDirectoryName(templatePath));
 
                     try
                     {
@@ -343,12 +345,12 @@
                     if (fullPath == null)
                     {
                         // Assume we have a relative path, so convert to absolute
-                        fullPath = this.pathResolver.ResolvePath(propertyValue);
+                        fullPath = pathResolver.ResolvePath(propertyValue);
                     }
                 }
                 finally
                 {
-                    this.pathResolver.SetLocation(currentLocation);
+                    pathResolver.SetLocation(currentLocation);
                 }
             }
 
@@ -382,7 +384,8 @@
             string templatePath,
             string workingDirectory)
         {
-            var nestedTemplateLocation = this.ResolveFileSystemResource(
+            var nestedTemplateLocation = ResolveFileSystemResource(
+                this.pathResolver,
                 templatePath,
                 nestedStackResource.GetResourcePropertyValue("TemplateURL"));
 
@@ -473,7 +476,7 @@
                     continue;
                 }
 
-                var fsi = this.ResolveFileSystemResource(templatePath, resourceFile);
+                var fsi = ResolveFileSystemResource(this.pathResolver, templatePath, resourceFile);
 
                 if (fsi == null)
                 {
@@ -491,8 +494,7 @@
                 {
                     using (var packager = LambdaPackager.CreatePackager(
                         fsi,
-                        resource.GetResourcePropertyValue("Runtime"),
-                        resource.GetResourcePropertyValue("Handler"),
+                        resource,
                         this.s3Util,
                         this.logger))
                     {

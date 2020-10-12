@@ -7,6 +7,7 @@
     using System.Text.RegularExpressions;
 
     using Firefly.CloudFormation;
+    using Firefly.CloudFormation.Parsers;
     using Firefly.PSCloudFormation.Utils;
 
     /// <summary>
@@ -22,23 +23,28 @@
         private static readonly Regex HandlerRegex = new Regex(@"^\s*def\s+(?<handler>[^\d\W]\w*)\s*\(\s*[^\d\W]\w*:\s*,\s*[^\d\W]\w*:\s*\)\s*", RegexOptions.Multiline);
 
         /// <summary>
+        /// The runtime version
+        /// </summary>
+        private readonly string runtimeVersion;
+
+        /// <summary>
         /// Initializes a new instance of the <see cref="LambdaRubyPackager"/> class.
         /// </summary>
         /// <param name="lambdaArtifact">The lambda artifact to package</param>
         /// <param name="dependencies">Dependencies of lambda, or <c>null</c> if none.</param>
-        /// <param name="lambdaHandler">Handler as extracted from resource.</param>
-        /// <param name="runtimeVersion">Version of the lambda runtime.</param>
+        /// <param name="lambdaResource"><see cref="TemplateResource"/> describing the lambda</param>
         /// <param name="s3">Interface to S3</param>
         /// <param name="logger">Interface to logger.</param>
         public LambdaRubyPackager(
             FileSystemInfo lambdaArtifact,
             List<LambdaDependency> dependencies,
-            string lambdaHandler,
-            string runtimeVersion,
+            TemplateResource lambdaResource,
             IPSS3Util s3,
             ILogger logger)
-            : base(lambdaArtifact, dependencies, lambdaHandler, runtimeVersion, s3, logger)
+            : base(lambdaArtifact, dependencies, lambdaResource, s3, logger)
         {
+            this.runtimeVersion = RuntimeVersionRegex
+                .Match(lambdaResource.GetResourcePropertyValue("Runtime")).Groups["versionId"].Value;
         }
 
         /// <summary>
@@ -47,22 +53,20 @@
         /// <value>
         /// The name of the module directory.
         /// </value>
-        protected override string ModuleDirectory => $"vendor/bundle/ruby/{this.RuntimeVersionIdentifier}.0/cache".Replace('/', Path.DirectorySeparatorChar);
+        protected override string ModuleDirectory => $"vendor/bundle/ruby/{this.runtimeVersion}.0/cache".Replace('/', Path.DirectorySeparatorChar);
 
         /// <summary>
         /// If possible, validate the handler
         /// </summary>
         protected override void ValidateHandler()
         {
-            var handlerComponents = this.LambdaHandler.Split('.');
-
-            if (handlerComponents.Length != 2)
+            if (!this.LambdaHandler.IsValid)
             {
                 throw new PackagerException($"Invalid signature for handler {this.LambdaHandler}");
             }
 
-            var fileName = handlerComponents[0];
-            var method = handlerComponents[1];
+            var fileName = this.LambdaHandler.FilePart;
+            var method = this.LambdaHandler.MethodPart;
             string moduleFileName;
             string content;
 
@@ -92,7 +96,7 @@
                     }
 
                     content = File.ReadAllText(file);
-                    moduleFileName = file;
+                    moduleFileName = Path.GetFileName(file);
                     break;
 
                 default:
@@ -105,7 +109,7 @@
 
             if (mc.Count == 0 || mc.Cast<Match>().All(m => m.Groups["handler"].Value != method))
             {
-                this.Logger.LogWarning($"Cannot locate handler method '{method}' in '{moduleFileName}'. If your method is within a class, validation is not yet supported for this.");
+                this.Logger.LogWarning($"{this.LambdaResource.LogicalName}: Cannot locate handler method '{method}' in '{moduleFileName}'. If your method is within a class, validation is not yet supported for this.");
             }
         }
     }

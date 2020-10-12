@@ -7,6 +7,7 @@
     using System.Text.RegularExpressions;
 
     using Firefly.CloudFormation;
+    using Firefly.CloudFormation.Parsers;
     using Firefly.PSCloudFormation.Utils;
 
     /// <summary>
@@ -46,18 +47,16 @@
         /// </summary>
         /// <param name="lambdaArtifact">The lambda artifact to package</param>
         /// <param name="dependencies">Dependencies of lambda, or <c>null</c> if none.</param>
-        /// <param name="lambdaHandler">Handler as extracted from resource.</param>
-        /// <param name="runtimeVersion">Version of the lambda runtime.</param>
+        /// <param name="lambdaResource"><see cref="TemplateResource"/> describing the lambda</param>
         /// <param name="s3">Interface to S3</param>
         /// <param name="logger">Interface to logger.</param>
         public LambdaPythonPackager(
             FileSystemInfo lambdaArtifact,
             List<LambdaDependency> dependencies,
-            string lambdaHandler,
-            string runtimeVersion,
+            TemplateResource lambdaResource,
             IPSS3Util s3,
             ILogger logger)
-            : base(lambdaArtifact, dependencies, lambdaHandler, runtimeVersion, s3, logger)
+            : base(lambdaArtifact, dependencies, lambdaResource, s3, logger)
         {
         }
 
@@ -179,15 +178,13 @@
         /// <exception cref="System.NotImplementedException">Unknown subclass of <see cref="FileSystemInfo"/></exception>
         protected override void ValidateHandler()
         {
-            var handlerComponents = this.LambdaHandler.Split('.');
-
-            if (handlerComponents.Length != 2)
+            if (!this.LambdaHandler.IsValid)
             {
                 throw new PackagerException($"Invalid signature for handler {this.LambdaHandler}");
             }
 
-            var fileName = handlerComponents[0];
-            var method = handlerComponents[1];
+            var fileName = this.LambdaHandler.FilePart;
+            var method = this.LambdaHandler.MethodPart;
             string moduleFileName;
             string content;
 
@@ -217,7 +214,7 @@
                     }
 
                     content = File.ReadAllText(file);
-                    moduleFileName = file;
+                    moduleFileName = Path.GetFileName(file);
                     break;
 
                 default:
@@ -230,7 +227,7 @@
 
             if (mc.Count == 0 || mc.Cast<Match>().All(m => m.Groups["handler"].Value != method))
             {
-                throw new PackagerException($"Cannot locate handler method '{method}' in '{moduleFileName}'");
+                throw new PackagerException($"{this.LambdaResource.LogicalName}: Cannot locate handler method '{method}' in '{moduleFileName}'");
             }
         }
 

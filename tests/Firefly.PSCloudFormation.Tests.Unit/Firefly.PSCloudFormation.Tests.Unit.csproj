@@ -46,6 +46,7 @@
     <None Remove="Resources\LambdaDependencies\RubyLambda2\Lambda\other.rb" />
     <None Remove="Resources\LambdaDependencies\RubyLambda2\Lambda\vendor\bundle\ruby\_2_7_0\cache\local_lib\local_lib.rb" />
     <None Remove="Resources\LambdaDependencies\RubyLambda2\template.yaml" />
+    <None Remove="Resources\LambdaHandler\inlineHandler.yaml" />
     <None Remove="Resources\no_package.yaml" />
     <None Remove="Resources\ParameterTest.json" />
     <None Remove="Resources\ParameterTest.yaml" />
@@ -93,13 +94,14 @@
     <EmbeddedResource Include="Resources\LambdaDependencies\RubyLambda2\Lambda\other.rb" />
     <EmbeddedResource Include="Resources\LambdaDependencies\RubyLambda2\Lambda\vendor\bundle\ruby\_2_7_0\cache\local_lib\local_lib.rb" />
     <EmbeddedResource Include="Resources\LambdaDependencies\RubyLambda2\template.yaml" />
+    <EmbeddedResource Include="Resources\LambdaHandler\inlineHandler.yaml" />
     <EmbeddedResource Include="Resources\no_package.yaml" />
     <EmbeddedResource Include="Resources\ParameterTest.json" />
     <EmbeddedResource Include="Resources\ParameterTest.yaml" />
   </ItemGroup>
 
   <ItemGroup>
-    <PackageReference Include="Firefly.EmbeddedResourceLoader" Version="0.1.3" />
+    <PackageReference Include="Firefly.EmbeddedResourceLoader" Version="0.1.4" />
     <PackageReference Include="FluentAssertions" Version="5.10.3" />
     <PackageReference Include="Microsoft.NET.Test.Sdk" Version="16.5.0" />
     <PackageReference Include="Moq" Version="4.14.1" />

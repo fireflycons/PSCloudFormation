@@ -9,6 +9,7 @@
     using System.Threading.Tasks;
 
     using Firefly.CloudFormation;
+    using Firefly.CloudFormation.Parsers;
     using Firefly.PSCloudFormation.Utils;
 
     using Newtonsoft.Json;
@@ -21,22 +22,20 @@
         /// <summary>
         /// Regex to extract runtime version
         /// </summary>
-        private static readonly Regex RuntimeVersionRegex = new Regex(@"(?<versionId>\d?\..*)");
+        protected static readonly Regex RuntimeVersionRegex = new Regex(@"(?<versionId>\d?\..*)");
 
         /// <summary>
         /// Initializes a new instance of the <see cref="LambdaPackager"/> class.
         /// </summary>
         /// <param name="lambdaArtifact">The lambda artifact to package</param>
         /// <param name="dependencies">Dependencies of lambda, or <c>null</c> if none.</param>
-        /// <param name="lambdaHandler">Handler as extracted from resource.</param>
-        /// <param name="runtimeVersion">Version of the lambda runtime.</param>
+        /// <param name="lambdaResource"><see cref="TemplateResource"/> describing the lambda</param>
         /// <param name="s3">Interface to S3</param>
         /// <param name="logger">Interface to logger.</param>
         protected LambdaPackager(
             FileSystemInfo lambdaArtifact,
             List<LambdaDependency> dependencies,
-            string lambdaHandler,
-            string runtimeVersion,
+            TemplateResource lambdaResource,
             IPSS3Util s3,
             ILogger logger)
         {
@@ -44,49 +43,8 @@
             this.LambdaArtifact = lambdaArtifact;
             this.Logger = logger;
             this.S3 = s3;
-            this.RuntimeVersionIdentifier = runtimeVersion;
-            this.LambdaHandler = lambdaHandler;
-        }
-
-        /// <summary>
-        /// Supported runtimes for packaging dependencies
-        /// </summary>
-        protected enum LambdaRuntime
-        {
-            /// <summary>
-            /// Python lambda
-            /// </summary>
-            Python,
-
-            /// <summary>
-            /// JavaScript lambda
-            /// </summary>
-            Node,
-
-            /// <summary>
-            /// Ruby lambda
-            /// </summary>
-            Ruby,
-
-            /// <summary>
-            /// Java lambda
-            /// </summary>
-            Java,
-
-            /// <summary>
-            /// Go lambda
-            /// </summary>
-            Go,
-
-            /// <summary>
-            /// .NET lambda
-            /// </summary>
-            DotNet,
-
-            /// <summary>
-            /// Custom runtime lambda
-            /// </summary>
-            Custom
+            this.LambdaResource = lambdaResource;
+            this.LambdaHandler = new LambdaHandlerInfo(lambdaResource);
         }
 
         /// <summary>
@@ -114,21 +72,20 @@
         protected ILogger Logger { get; }
 
         /// <summary>
-        /// Gets the runtime version identifier.
-        /// Used by Ruby lambdas as modules are pulled to a version specific directory.
-        /// </summary>
-        /// <value>
-        /// The runtime version identifier.
-        /// </value>
-        protected string RuntimeVersionIdentifier { get; }
-
-        /// <summary>
         /// Gets the lambda handler as defined by the resource.
         /// </summary>
         /// <value>
         /// The lambda handler.
         /// </value>
-        protected string LambdaHandler { get;  }
+        protected LambdaHandlerInfo LambdaHandler { get;  }
+
+        /// <summary>
+        /// Gets the lambda resource.
+        /// </summary>
+        /// <value>
+        /// The lambda resource.
+        /// </value>
+        protected TemplateResource LambdaResource { get; }
 
         /// <summary>
         /// Gets the S3 interface.
@@ -142,15 +99,13 @@
         /// Factory method to create a runtime specific lambda packager.
         /// </summary>
         /// <param name="lambdaArtifact">The lambda artifact to package</param>
-        /// <param name="lambdaRuntime">Name of lambda runtime extracted from resource</param>
-        /// <param name="lambdaHandler">Name of lambda handler extracted from resource</param>
+        /// <param name="lambdaResource"><see cref="TemplateResource"/> describing the lambda</param>
         /// <param name="s3">Interface to S3</param>
         /// <param name="logger">Interface to logger.</param>
         /// <returns>Runtime specific subclass of <see cref="LambdaPackager"/></returns>
         public static LambdaPackager CreatePackager(
             FileSystemInfo lambdaArtifact,
-            string lambdaRuntime,
-            string lambdaHandler,
+            TemplateResource lambdaResource,
             IPSS3Util s3,
             ILogger logger)
         {
@@ -159,6 +114,7 @@
                 throw new ArgumentNullException(nameof(lambdaArtifact));
             }
 
+            var lambdaRuntime = lambdaResource.GetResourcePropertyValue("Runtime");
             var lambdaDirectory = lambdaArtifact is DirectoryInfo
                                       ? lambdaArtifact.FullName
                                       : Path.GetDirectoryName(lambdaArtifact.FullName);
@@ -185,23 +141,23 @@
             // ReSharper disable once SwitchStatementHandlesSomeKnownEnumValuesWithDefault - Intentionally so.
             switch (GetRuntime(lambdaRuntime))
             {
-                case LambdaRuntime.Node:
+                case LambdaRuntimeType.Node:
 
-                    return new LambdaNodePackager(lambdaArtifact, dependencies, lambdaHandler, runtimeVersion, s3, logger);
+                    return new LambdaNodePackager(lambdaArtifact, dependencies, lambdaResource, s3, logger);
 
-                case LambdaRuntime.Python:
+                case LambdaRuntimeType.Python:
 
-                    return new LambdaPythonPackager(lambdaArtifact, dependencies, lambdaHandler, runtimeVersion, s3, logger);
+                    return new LambdaPythonPackager(lambdaArtifact, dependencies, lambdaResource, s3, logger);
 
-                case LambdaRuntime.Ruby:
+                case LambdaRuntimeType.Ruby:
 
-                    return new LambdaRubyPackager(lambdaArtifact, dependencies, lambdaHandler, runtimeVersion, s3, logger);
+                    return new LambdaRubyPackager(lambdaArtifact, dependencies, lambdaResource, s3, logger);
 
                 default:
 
                     logger.LogWarning(
                         $"Dependency packaging for lambda runtime '{lambdaRuntime}' is currently not supported.");
-                    return new LambdaPlainPackager(lambdaArtifact, null, lambdaHandler, null, s3, logger);
+                    return new LambdaPlainPackager(lambdaArtifact, null, lambdaResource, null, s3, logger);
             }
         }
 
@@ -352,43 +308,43 @@
         /// Determine lambda runtime from file extension of Handler property of function declaration in CloudFormation.
         /// </summary>
         /// <param name="runtimeIdentifier">Name of lambda runtime extracted from resource.</param>
-        /// <returns>a <see cref="LambdaRuntime"/> identifying the lambda's runtime.</returns>
+        /// <returns>a <see cref="LambdaRuntimeType"/> identifying the lambda's runtime.</returns>
         /// <exception cref="PackagerException">Unknown lambda runtime '{runtimeIdentifier}'</exception>
-        private static LambdaRuntime GetRuntime(string runtimeIdentifier)
+        private static LambdaRuntimeType GetRuntime(string runtimeIdentifier)
         {
             if (runtimeIdentifier.StartsWith("python"))
             {
-                return LambdaRuntime.Python;
+                return LambdaRuntimeType.Python;
             }
 
             if (runtimeIdentifier.StartsWith("nodejs"))
             {
-                return LambdaRuntime.Node;
+                return LambdaRuntimeType.Node;
             }
 
             if (runtimeIdentifier.StartsWith("ruby"))
             {
-                return LambdaRuntime.Ruby;
+                return LambdaRuntimeType.Ruby;
             }
 
             if (runtimeIdentifier.StartsWith("java"))
             {
-                return LambdaRuntime.Java;
+                return LambdaRuntimeType.Java;
             }
 
             if (runtimeIdentifier.StartsWith("go"))
             {
-                return LambdaRuntime.Go;
+                return LambdaRuntimeType.Go;
             }
 
             if (runtimeIdentifier.StartsWith("dotnetcore"))
             {
-                return LambdaRuntime.DotNet;
+                return LambdaRuntimeType.DotNet;
             }
 
             if (runtimeIdentifier.StartsWith("provided"))
             {
-                return LambdaRuntime.Custom;
+                return LambdaRuntimeType.Custom;
             }
 
             throw new PackagerException($"Unknown lambda runtime '{runtimeIdentifier}'");
