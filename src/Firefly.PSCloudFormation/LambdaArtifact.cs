@@ -352,7 +352,7 @@
                     $"Invalid or missing {(isServerless ? "CodeUri" : "Code")} property for {this.lambdaResource.LogicalName}");
             }
 
-            this.ArtifactType = LambdaArtifactType.Remote;
+            this.ArtifactType = LambdaArtifactType.FromS3;
             this.S3Location = new S3Artifact { BucketName = bucket, Key = key, ObjectVersion = version };
         }
     }

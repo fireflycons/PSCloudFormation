@@ -48,7 +48,7 @@
         /// <exception cref="System.NotImplementedException">Unknown subclass of <see cref="FileSystemInfo"/></exception>
         protected override void ValidateHandler()
         {
-            if (!this.LambdaArtifact.HandlerInfo.IsValid)
+            if (!this.LambdaArtifact.HandlerInfo.IsValidSignature)
             {
                 throw new PackagerException(
                     $"{this.LambdaArtifact.LogicalName}: Invalid signature for handler: {this.LambdaArtifact.HandlerInfo.Handler}");
@@ -92,10 +92,22 @@
                     moduleFileName = Path.GetFileName(file);
                     break;
 
+                case LambdaArtifactType.Inline:
+
+                    if (fileName != "index")
+                    {
+                        throw new PackagerException($"{this.LambdaArtifact.LogicalName}: Inline lambdas must have a handler beginning 'index.'");
+                    }
+
+                    content = this.LambdaArtifact.InlineCode;
+                    moduleFileName = "<inline code>";
+                    break;
+
                 default:
 
-                    // Will never get here unless a new subclass of FileSystemInfo appears.
-                    throw new NotImplementedException(this.LambdaArtifact.GetType().FullName);
+                    this.Logger.LogWarning(
+                        $"{this.LambdaArtifact.LogicalName}: Handler validation currently not supported for lambdas of type {this.LambdaArtifact.ArtifactType}");
+                    return;
             }
 
             var mc = HandlerRegex.Matches(content);
@@ -103,7 +115,7 @@
             if (mc.Count == 0 || mc.Cast<Match>().All(m => m.Groups["handler"].Value != method))
             {
                 throw new PackagerException(
-                    $"{this.LambdaArtifact.LogicalName}: Cannot locate handler method '{method}' in '{moduleFileName}'");
+                    $"{this.LambdaArtifact.LogicalName}: Cannot locate handler method 'exports.{method}' in '{moduleFileName}'");
             }
         }
     }

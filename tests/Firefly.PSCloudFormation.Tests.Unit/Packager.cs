@@ -13,6 +13,8 @@ namespace Firefly.PSCloudFormation.Tests.Unit
     using Amazon;
     using Amazon.S3.Model;
 
+    using Firefly.CloudFormation;
+    using Firefly.CloudFormation.Parsers;
     using Firefly.EmbeddedResourceLoader;
     using Firefly.EmbeddedResourceLoader.Materialization;
     using Firefly.PSCloudFormation.Tests.Unit.Utils;
@@ -327,6 +329,46 @@ namespace Firefly.PSCloudFormation.Tests.Unit
         public void ShouldDetectStackDoesNotNeedPackagingWhenNoLocalFileReferences()
         {
             new PackagerUtils(this.pathResolver, new TestLogger(this.output), null).RequiresPackaging(this.noPackageStack).Should().BeFalse();
+        }
+
+        [Fact]
+        public async Task ShouldThrowWhenInlineLambdaHasMissingHandlerMethod()
+        {
+            var mockS3 = new Mock<IPSS3Util>();
+
+            using var template = ResourceLoader.GetFileResource("inlineHandlerBadHandlerMethod.yaml");
+
+            var parser = TemplateParser.Create(File.ReadAllText(template));
+            var function = parser.GetResources().FirstOrDefault(r => r.ResourceType == "AWS::Lambda::Function");
+
+            function.Should().NotBeNull("you broke the template!");
+
+            var artifact = new LambdaArtifact(new TestPathResolver(), template, function);
+            var packager = LambdaPackager.CreatePackager(artifact, mockS3.Object, new TestLogger(this.output));
+
+            Func<Task> act = async () => { await packager.Package(null); };
+
+            await act.Should().ThrowAsync<PackagerException>().WithMessage("*Cannot locate handler method 'exports.*");
+        }
+
+        [Fact]
+        public async Task ShouldThrowWhenInlineServerlessLambdaHasMissingHandlerMethod()
+        {
+            var mockS3 = new Mock<IPSS3Util>();
+
+            using var template = ResourceLoader.GetFileResource("inlineHandlerBadHandlerMethod.yaml");
+
+            var parser = TemplateParser.Create(File.ReadAllText(template));
+            var function = parser.GetResources().FirstOrDefault(r => r.ResourceType == "AWS::Serverless::Function");
+
+            function.Should().NotBeNull("you broke the template!");
+
+            var artifact = new LambdaArtifact(new TestPathResolver(), template, function);
+            var packager = LambdaPackager.CreatePackager(artifact, mockS3.Object, new TestLogger(this.output));
+
+            Func<Task> act = async () => { await packager.Package(null); };
+
+            await act.Should().ThrowAsync<PackagerException>().WithMessage("*Cannot locate handler method*");
         }
 
         public void Dispose()

@@ -95,6 +95,7 @@
     <EmbeddedResource Include="Resources\LambdaDependencies\RubyLambda2\Lambda\vendor\bundle\ruby\_2_7_0\cache\local_lib\local_lib.rb" />
     <EmbeddedResource Include="Resources\LambdaDependencies\RubyLambda2\template.yaml" />
     <EmbeddedResource Include="Resources\LambdaHandler\inlineHandler.yaml" />
+    <EmbeddedResource Include="Resources\LambdaHandler\inlineHandlerBadHandlerMethod.yaml" />
     <EmbeddedResource Include="Resources\no_package.yaml" />
     <EmbeddedResource Include="Resources\ParameterTest.json" />
     <EmbeddedResource Include="Resources\ParameterTest.yaml" />

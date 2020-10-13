@@ -26,7 +26,7 @@
 
             var m = HandlerRegex.Match(this.Handler);
 
-            this.IsValid = m.Success;
+            this.IsValidSignature = m.Success;
 
             if (!m.Success)
             {
@@ -60,7 +60,7 @@
         /// <value>
         ///   <c>true</c> if this instance is valid; otherwise, <c>false</c>.
         /// </value>
-        public bool IsValid { get; }
+        public bool IsValidSignature { get; }
 
         /// <summary>
         /// Gets the method part of the handler value.

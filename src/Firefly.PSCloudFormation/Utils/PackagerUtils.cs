@@ -489,13 +489,26 @@
             foreach (var propertyToCheck in PackagedResources[resource.ResourceType])
             {
                 ResourceUploadSettings resourceToUpload;
+
+                // See if we have a lambda
                 var lambdaResource = new LambdaArtifact(this.pathResolver, templatePath, resource);
 
                 if (lambdaResource.ArtifactType != LambdaArtifactType.NotLambda)
                 {
+                    // We do
                     using (var packager = LambdaPackager.CreatePackager(lambdaResource, this.s3Util, this.logger))
                     {
                         resourceToUpload = await packager.Package(workingDirectory);
+
+                        if (resourceToUpload == null)
+                        {
+                            // Lambda syntax does not imply a template modification
+                            // i.e. it is inline code or already an S3 reference.
+                            continue;
+                        }
+
+                        // The template will be altered to an S3 location,
+                        // however the zip may or may not be uploaded.
                         templateModified = true;
                     }
                 }

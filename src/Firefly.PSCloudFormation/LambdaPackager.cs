@@ -108,51 +108,62 @@
         /// <returns><see cref="ResourceUploadSettings"/>; else <c>null</c> if nothing to upload (hash sums match)</returns>
         public async Task<ResourceUploadSettings> Package(string workingDirectory)
         {
-            if (this.LambdaArtifact.ArtifactType == LambdaArtifactType.ZipFile)
-            {
-                // Already zipped
-                FileInfo lambdaFile = this.LambdaArtifact;
-                var resourceToUpload = new ResourceUploadSettings { File = lambdaFile, Hash = lambdaFile.MD5() };
-
-                var uploadResource = await this.S3.ObjectChangedAsync(resourceToUpload);
-
-                return uploadResource ? resourceToUpload : null;
-            }
-
             this.ValidateHandler();
 
-            var dependencies = this.LambdaArtifact.LoadDependencies();
-
-            if (!dependencies.Any())
+            // ReSharper disable once SwitchStatementHandlesSomeKnownEnumValuesWithDefault - Intentionally so, all other cases are effectively the default
+            switch (this.LambdaArtifact.ArtifactType)
             {
-                switch (this.LambdaArtifact.ArtifactType)
-                {
-                    case LambdaArtifactType.CodeFile:
+                case LambdaArtifactType.ZipFile:
 
-                        return await ArtifactPackager.PackageFile(
-                                   this.LambdaArtifact,
-                                   workingDirectory,
-                                   true,
-                                   this.S3,
-                                   this.Logger);
+                    // Already zipped
+                    FileInfo lambdaFile = this.LambdaArtifact;
+                    var resourceToUpload = new ResourceUploadSettings { File = lambdaFile, Hash = lambdaFile.MD5() };
 
-                    case LambdaArtifactType.Directory:
+                    await this.S3.ObjectChangedAsync(resourceToUpload);
 
-                        return await ArtifactPackager.PackageDirectory(
-                                   this.LambdaArtifact,
-                                   workingDirectory,
-                                   this.S3,
-                                   this.Logger);
-                }
+                    // Template will always be modified, however the resource may not need upload.
+                    return resourceToUpload;
+
+                case LambdaArtifactType.Inline:
+                case LambdaArtifactType.FromS3:
+                    // Template is unchanged if code is inline or already in S3
+                    return null;
+
+                default:
+
+                    var dependencies = this.LambdaArtifact.LoadDependencies();
+
+                    if (!dependencies.Any())
+                    {
+                        switch (this.LambdaArtifact.ArtifactType)
+                        {
+                            case LambdaArtifactType.CodeFile:
+
+                                return await ArtifactPackager.PackageFile(
+                                           this.LambdaArtifact,
+                                           workingDirectory,
+                                           true,
+                                           this.S3,
+                                           this.Logger);
+
+                            case LambdaArtifactType.Directory:
+
+                                return await ArtifactPackager.PackageDirectory(
+                                           this.LambdaArtifact,
+                                           workingDirectory,
+                                           this.S3,
+                                           this.Logger);
+                        }
+                    }
+
+                    // If we get here, there are dependencies to process
+                    var packageDirectory = this.PreparePackage(workingDirectory);
+                    return await ArtifactPackager.PackageDirectory(
+                               new DirectoryInfo(packageDirectory),
+                               workingDirectory,
+                               this.S3,
+                               this.Logger);
             }
-
-            // If we get here, there are dependencies to process
-            var packageDirectory = this.PreparePackage(workingDirectory);
-            return await ArtifactPackager.PackageDirectory(
-                       new DirectoryInfo(packageDirectory),
-                       workingDirectory,
-                       this.S3,
-                       this.Logger);
         }
 
         /// <summary>
