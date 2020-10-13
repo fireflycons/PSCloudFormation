@@ -1,13 +1,11 @@
 ﻿namespace Firefly.PSCloudFormation
 {
     using System;
-    using System.Collections.Generic;
     using System.IO;
     using System.Linq;
     using System.Text.RegularExpressions;
 
     using Firefly.CloudFormation;
-    using Firefly.CloudFormation.Parsers;
     using Firefly.PSCloudFormation.Utils;
 
     /// <summary>
@@ -20,31 +18,19 @@
         /// <summary>
         /// Gets the regex to detect lambda handler
         /// </summary>
-        private static readonly Regex HandlerRegex = new Regex(@"^\s*def\s+(?<handler>[^\d\W]\w*)\s*\(\s*[^\d\W]\w*:\s*,\s*[^\d\W]\w*:\s*\)\s*", RegexOptions.Multiline);
-
-        /// <summary>
-        /// The runtime version
-        /// </summary>
-        private readonly string runtimeVersion;
+        private static readonly Regex HandlerRegex = new Regex(
+            @"^\s*def\s+(?<handler>[^\d\W]\w*)\s*\(\s*[^\d\W]\w*:\s*,\s*[^\d\W]\w*:\s*\)\s*",
+            RegexOptions.Multiline);
 
         /// <summary>
         /// Initializes a new instance of the <see cref="LambdaRubyPackager"/> class.
         /// </summary>
         /// <param name="lambdaArtifact">The lambda artifact to package</param>
-        /// <param name="dependencies">Dependencies of lambda, or <c>null</c> if none.</param>
-        /// <param name="lambdaResource"><see cref="TemplateResource"/> describing the lambda</param>
         /// <param name="s3">Interface to S3</param>
         /// <param name="logger">Interface to logger.</param>
-        public LambdaRubyPackager(
-            FileSystemInfo lambdaArtifact,
-            List<LambdaDependency> dependencies,
-            TemplateResource lambdaResource,
-            IPSS3Util s3,
-            ILogger logger)
-            : base(lambdaArtifact, dependencies, lambdaResource, s3, logger)
+        public LambdaRubyPackager(LambdaArtifact lambdaArtifact, IPSS3Util s3, ILogger logger)
+            : base(lambdaArtifact, s3, logger)
         {
-            this.runtimeVersion = RuntimeVersionRegex
-                .Match(lambdaResource.GetResourcePropertyValue("Runtime")).Groups["versionId"].Value;
         }
 
         /// <summary>
@@ -53,26 +39,32 @@
         /// <value>
         /// The name of the module directory.
         /// </value>
-        protected override string ModuleDirectory => $"vendor/bundle/ruby/{this.runtimeVersion}.0/cache".Replace('/', Path.DirectorySeparatorChar);
+        protected override string ModuleDirectory =>
+            $"vendor/bundle/ruby/{this.LambdaArtifact.RuntimeInfo.RuntimeVersion}.0/cache".Replace(
+                '/',
+                Path.DirectorySeparatorChar);
 
         /// <summary>
         /// If possible, validate the handler
         /// </summary>
         protected override void ValidateHandler()
         {
-            if (!this.LambdaHandler.IsValid)
+            if (!this.LambdaArtifact.HandlerInfo.IsValid)
             {
-                throw new PackagerException($"Invalid signature for handler {this.LambdaHandler}");
+                throw new PackagerException(
+                    $"{this.LambdaArtifact.LogicalName}: Invalid signature for handler: {this.LambdaArtifact.HandlerInfo.Handler}");
             }
 
-            var fileName = this.LambdaHandler.FilePart;
-            var method = this.LambdaHandler.MethodPart;
+            var fileName = this.LambdaArtifact.HandlerInfo.FilePart;
+            var method = this.LambdaArtifact.HandlerInfo.MethodPart;
             string moduleFileName;
             string content;
 
-            switch (this.LambdaArtifact)
+            switch (this.LambdaArtifact.ArtifactType)
             {
-                case FileInfo fi:
+                case LambdaArtifactType.CodeFile:
+
+                    FileInfo fi = this.LambdaArtifact;
 
                     if (!fi.Exists)
                     {
@@ -84,7 +76,9 @@
 
                     break;
 
-                case DirectoryInfo di:
+                case LambdaArtifactType.Directory:
+
+                    DirectoryInfo di = this.LambdaArtifact;
 
                     var file = Directory.GetFiles(di.FullName, $"{fileName}.*", SearchOption.TopDirectoryOnly)
                         .FirstOrDefault(
@@ -109,7 +103,8 @@
 
             if (mc.Count == 0 || mc.Cast<Match>().All(m => m.Groups["handler"].Value != method))
             {
-                this.Logger.LogWarning($"{this.LambdaResource.LogicalName}: Cannot locate handler method '{method}' in '{moduleFileName}'. If your method is within a class, validation is not yet supported for this.");
+                this.Logger.LogWarning(
+                    $"{this.LambdaArtifact.LogicalName}: Cannot locate handler method '{method}' in '{moduleFileName}'. If your method is within a class, validation is not yet supported for this.");
             }
         }
     }

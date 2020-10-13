@@ -4,12 +4,10 @@
     using System.Collections.Generic;
     using System.IO;
     using System.Linq;
-    using System.Runtime.CompilerServices;
     using System.Text.RegularExpressions;
     using System.Threading.Tasks;
 
     using Firefly.CloudFormation;
-    using Firefly.CloudFormation.Parsers;
     using Firefly.PSCloudFormation.Utils;
 
     using Newtonsoft.Json;
@@ -20,40 +18,17 @@
     internal abstract class LambdaPackager : IDisposable
     {
         /// <summary>
-        /// Regex to extract runtime version
-        /// </summary>
-        protected static readonly Regex RuntimeVersionRegex = new Regex(@"(?<versionId>\d?\..*)");
-
-        /// <summary>
         /// Initializes a new instance of the <see cref="LambdaPackager"/> class.
         /// </summary>
         /// <param name="lambdaArtifact">The lambda artifact to package</param>
-        /// <param name="dependencies">Dependencies of lambda, or <c>null</c> if none.</param>
-        /// <param name="lambdaResource"><see cref="TemplateResource"/> describing the lambda</param>
         /// <param name="s3">Interface to S3</param>
         /// <param name="logger">Interface to logger.</param>
-        protected LambdaPackager(
-            FileSystemInfo lambdaArtifact,
-            List<LambdaDependency> dependencies,
-            TemplateResource lambdaResource,
-            IPSS3Util s3,
-            ILogger logger)
+        protected LambdaPackager(LambdaArtifact lambdaArtifact, IPSS3Util s3, ILogger logger)
         {
-            this.Dependencies = dependencies;
             this.LambdaArtifact = lambdaArtifact;
             this.Logger = logger;
             this.S3 = s3;
-            this.LambdaResource = lambdaResource;
-            this.LambdaHandler = new LambdaHandlerInfo(lambdaResource);
         }
-
-        /// <summary>
-        /// Gets the dependencies.
-        /// </summary>
-        /// <value>
-        /// The dependencies.
-        /// </value>
-        protected List<LambdaDependency> Dependencies { get; }
 
         /// <summary>
         /// Gets the lambda artifact.
@@ -61,7 +36,7 @@
         /// <value>
         /// The lambda artifact.
         /// </value>
-        protected FileSystemInfo LambdaArtifact { get; }
+        protected LambdaArtifact LambdaArtifact { get; }
 
         /// <summary>
         /// Gets the logging interface.
@@ -70,22 +45,6 @@
         /// The logging interface.
         /// </value>
         protected ILogger Logger { get; }
-
-        /// <summary>
-        /// Gets the lambda handler as defined by the resource.
-        /// </summary>
-        /// <value>
-        /// The lambda handler.
-        /// </value>
-        protected LambdaHandlerInfo LambdaHandler { get;  }
-
-        /// <summary>
-        /// Gets the lambda resource.
-        /// </summary>
-        /// <value>
-        /// The lambda resource.
-        /// </value>
-        protected TemplateResource LambdaResource { get; }
 
         /// <summary>
         /// Gets the S3 interface.
@@ -99,65 +58,37 @@
         /// Factory method to create a runtime specific lambda packager.
         /// </summary>
         /// <param name="lambdaArtifact">The lambda artifact to package</param>
-        /// <param name="lambdaResource"><see cref="TemplateResource"/> describing the lambda</param>
         /// <param name="s3">Interface to S3</param>
         /// <param name="logger">Interface to logger.</param>
         /// <returns>Runtime specific subclass of <see cref="LambdaPackager"/></returns>
-        public static LambdaPackager CreatePackager(
-            FileSystemInfo lambdaArtifact,
-            TemplateResource lambdaResource,
-            IPSS3Util s3,
-            ILogger logger)
+        public static LambdaPackager CreatePackager(LambdaArtifact lambdaArtifact, IPSS3Util s3, ILogger logger)
         {
             if (lambdaArtifact == null)
             {
                 throw new ArgumentNullException(nameof(lambdaArtifact));
             }
 
-            var lambdaRuntime = lambdaResource.GetResourcePropertyValue("Runtime");
-            var lambdaDirectory = lambdaArtifact is DirectoryInfo
-                                      ? lambdaArtifact.FullName
-                                      : Path.GetDirectoryName(lambdaArtifact.FullName);
-
-            var dependencyFile = Directory.GetFiles(
-                lambdaDirectory
-                ?? throw new InvalidOperationException("Internal error: Cannot determine location of lambda code"),
-                "lambda-dependencies.*",
-                SearchOption.TopDirectoryOnly).FirstOrDefault(
-                f =>
-                    {
-                        var ext = Path.GetExtension(f);
-                        return string.Compare(ext, ".json", StringComparison.OrdinalIgnoreCase) == 0 || string.Compare(
-                                   ext,
-                                   ".yaml",
-                                   StringComparison.OrdinalIgnoreCase) == 0;
-                    });
-
-            var dependencies = dependencyFile != null ? LoadDependencies(dependencyFile) : null;
-
-            var runtimeVersion = RuntimeVersionRegex.Match(lambdaRuntime).Groups["versionId"].Value;
-
             // To package dependencies, the lambda must be of a supported runtime.
             // ReSharper disable once SwitchStatementHandlesSomeKnownEnumValuesWithDefault - Intentionally so.
-            switch (GetRuntime(lambdaRuntime))
+            switch (lambdaArtifact.RuntimeInfo.RuntimeType)
             {
                 case LambdaRuntimeType.Node:
 
-                    return new LambdaNodePackager(lambdaArtifact, dependencies, lambdaResource, s3, logger);
+                    return new LambdaNodePackager(lambdaArtifact, s3, logger);
 
                 case LambdaRuntimeType.Python:
 
-                    return new LambdaPythonPackager(lambdaArtifact, dependencies, lambdaResource, s3, logger);
+                    return new LambdaPythonPackager(lambdaArtifact, s3, logger);
 
                 case LambdaRuntimeType.Ruby:
 
-                    return new LambdaRubyPackager(lambdaArtifact, dependencies, lambdaResource, s3, logger);
+                    return new LambdaRubyPackager(lambdaArtifact, s3, logger);
 
                 default:
 
                     logger.LogWarning(
-                        $"Dependency packaging for lambda runtime '{lambdaRuntime}' is currently not supported.");
-                    return new LambdaPlainPackager(lambdaArtifact, null, lambdaResource, null, s3, logger);
+                        $"Dependency packaging for lambda runtime '{lambdaArtifact.RuntimeInfo.RuntimeType}' is currently not supported.");
+                    return new LambdaPlainPackager(lambdaArtifact, s3, logger);
             }
         }
 
@@ -177,13 +108,11 @@
         /// <returns><see cref="ResourceUploadSettings"/>; else <c>null</c> if nothing to upload (hash sums match)</returns>
         public async Task<ResourceUploadSettings> Package(string workingDirectory)
         {
-            if (this.LambdaArtifact is FileInfo fi && string.Compare(
-                    Path.GetExtension(fi.Name),
-                    ".zip",
-                    StringComparison.OrdinalIgnoreCase) == 0)
+            if (this.LambdaArtifact.ArtifactType == LambdaArtifactType.ZipFile)
             {
                 // Already zipped
-                var resourceToUpload = new ResourceUploadSettings { File = fi, Hash = fi.MD5() };
+                FileInfo lambdaFile = this.LambdaArtifact;
+                var resourceToUpload = new ResourceUploadSettings { File = lambdaFile, Hash = lambdaFile.MD5() };
 
                 var uploadResource = await this.S3.ObjectChangedAsync(resourceToUpload);
 
@@ -192,17 +121,28 @@
 
             this.ValidateHandler();
 
-            if (this.Dependencies == null)
+            var dependencies = this.LambdaArtifact.LoadDependencies();
+
+            if (!dependencies.Any())
             {
-                switch (this.LambdaArtifact)
+                switch (this.LambdaArtifact.ArtifactType)
                 {
-                    case FileInfo fil:
+                    case LambdaArtifactType.CodeFile:
 
-                        return await ArtifactPackager.PackageFile(fil, workingDirectory, true, this.S3, this.Logger);
+                        return await ArtifactPackager.PackageFile(
+                                   this.LambdaArtifact,
+                                   workingDirectory,
+                                   true,
+                                   this.S3,
+                                   this.Logger);
 
-                    case DirectoryInfo di:
+                    case LambdaArtifactType.Directory:
 
-                        return await ArtifactPackager.PackageDirectory(di, workingDirectory, this.S3, this.Logger);
+                        return await ArtifactPackager.PackageDirectory(
+                                   this.LambdaArtifact,
+                                   workingDirectory,
+                                   this.S3,
+                                   this.Logger);
                 }
             }
 
@@ -257,7 +197,9 @@
                     resolvedException = dirException;
                 }
 
-                throw new PackagerException($"Error deserializing {dependencyFile}: {resolvedException.Message}", resolvedException);
+                throw new PackagerException(
+                    $"Error deserializing {dependencyFile}: {resolvedException.Message}",
+                    resolvedException);
             }
         }
 
@@ -293,11 +235,6 @@
         }
 
         /// <summary>
-        /// If possible, validate the handler
-        /// </summary>
-        protected abstract void ValidateHandler();
-
-        /// <summary>
         /// Prepares the package, accumulating any dependencies into a directory for zipping.
         /// </summary>
         /// <param name="workingDirectory">The working directory.</param>
@@ -305,49 +242,8 @@
         protected abstract string PreparePackage(string workingDirectory);
 
         /// <summary>
-        /// Determine lambda runtime from file extension of Handler property of function declaration in CloudFormation.
+        /// If possible, validate the handler
         /// </summary>
-        /// <param name="runtimeIdentifier">Name of lambda runtime extracted from resource.</param>
-        /// <returns>a <see cref="LambdaRuntimeType"/> identifying the lambda's runtime.</returns>
-        /// <exception cref="PackagerException">Unknown lambda runtime '{runtimeIdentifier}'</exception>
-        private static LambdaRuntimeType GetRuntime(string runtimeIdentifier)
-        {
-            if (runtimeIdentifier.StartsWith("python"))
-            {
-                return LambdaRuntimeType.Python;
-            }
-
-            if (runtimeIdentifier.StartsWith("nodejs"))
-            {
-                return LambdaRuntimeType.Node;
-            }
-
-            if (runtimeIdentifier.StartsWith("ruby"))
-            {
-                return LambdaRuntimeType.Ruby;
-            }
-
-            if (runtimeIdentifier.StartsWith("java"))
-            {
-                return LambdaRuntimeType.Java;
-            }
-
-            if (runtimeIdentifier.StartsWith("go"))
-            {
-                return LambdaRuntimeType.Go;
-            }
-
-            if (runtimeIdentifier.StartsWith("dotnetcore"))
-            {
-                return LambdaRuntimeType.DotNet;
-            }
-
-            if (runtimeIdentifier.StartsWith("provided"))
-            {
-                return LambdaRuntimeType.Custom;
-            }
-
-            throw new PackagerException($"Unknown lambda runtime '{runtimeIdentifier}'");
-        }
+        protected abstract void ValidateHandler();
     }
 }

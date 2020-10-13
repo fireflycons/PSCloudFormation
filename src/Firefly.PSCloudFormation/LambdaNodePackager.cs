@@ -1,13 +1,11 @@
 ﻿namespace Firefly.PSCloudFormation
 {
     using System;
-    using System.Collections.Generic;
     using System.IO;
     using System.Linq;
     using System.Text.RegularExpressions;
 
     using Firefly.CloudFormation;
-    using Firefly.CloudFormation.Parsers;
     using Firefly.PSCloudFormation.Utils;
 
     /// <summary>
@@ -28,17 +26,10 @@
         /// Initializes a new instance of the <see cref="LambdaNodePackager"/> class.
         /// </summary>
         /// <param name="lambdaArtifact">The lambda artifact to package</param>
-        /// <param name="dependencies">Dependencies of lambda, or <c>null</c> if none.</param>
-        /// <param name="lambdaResource"><see cref="TemplateResource"/> describing the lambda</param>
         /// <param name="s3">Interface to S3</param>
         /// <param name="logger">Interface to logger.</param>
-        public LambdaNodePackager(
-            FileSystemInfo lambdaArtifact,
-            List<LambdaDependency> dependencies,
-            TemplateResource lambdaResource,
-            IPSS3Util s3,
-            ILogger logger)
-            : base(lambdaArtifact, dependencies, lambdaResource, s3, logger)
+        public LambdaNodePackager(LambdaArtifact lambdaArtifact, IPSS3Util s3, ILogger logger)
+            : base(lambdaArtifact, s3, logger)
         {
         }
 
@@ -57,19 +48,22 @@
         /// <exception cref="System.NotImplementedException">Unknown subclass of <see cref="FileSystemInfo"/></exception>
         protected override void ValidateHandler()
         {
-            if (!this.LambdaHandler.IsValid)
+            if (!this.LambdaArtifact.HandlerInfo.IsValid)
             {
-                throw new PackagerException($"Invalid signature for handler {this.LambdaHandler}");
+                throw new PackagerException(
+                    $"{this.LambdaArtifact.LogicalName}: Invalid signature for handler: {this.LambdaArtifact.HandlerInfo.Handler}");
             }
 
-            var fileName = this.LambdaHandler.FilePart;
-            var method = this.LambdaHandler.MethodPart;
+            var fileName = this.LambdaArtifact.HandlerInfo.FilePart;
+            var method = this.LambdaArtifact.HandlerInfo.MethodPart;
             string moduleFileName;
             string content;
 
-            switch (this.LambdaArtifact)
+            switch (this.LambdaArtifact.ArtifactType)
             {
-                case FileInfo fi:
+                case LambdaArtifactType.CodeFile:
+
+                    FileInfo fi = this.LambdaArtifact;
 
                     if (!fi.Exists)
                     {
@@ -81,7 +75,9 @@
 
                     break;
 
-                case DirectoryInfo di:
+                case LambdaArtifactType.Directory:
+
+                    DirectoryInfo di = this.LambdaArtifact;
 
                     var file = Directory.GetFiles(di.FullName, $"{fileName}.*", SearchOption.TopDirectoryOnly)
                         .FirstOrDefault(
@@ -106,7 +102,8 @@
 
             if (mc.Count == 0 || mc.Cast<Match>().All(m => m.Groups["handler"].Value != method))
             {
-                throw new PackagerException($"{this.LambdaResource.LogicalName}: Cannot locate handler method '{method}' in '{moduleFileName}'");
+                throw new PackagerException(
+                    $"{this.LambdaArtifact.LogicalName}: Cannot locate handler method '{method}' in '{moduleFileName}'");
             }
         }
     }

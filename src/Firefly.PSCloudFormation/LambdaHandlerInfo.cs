@@ -1,6 +1,5 @@
 ﻿namespace Firefly.PSCloudFormation
 {
-    using System.Diagnostics;
     using System.Text.RegularExpressions;
 
     using Firefly.CloudFormation.Parsers;
@@ -40,20 +39,20 @@
         }
 
         /// <summary>
-        /// Gets the handler, as passed to the constructor.
-        /// </summary>
-        /// <value>
-        /// The handler.
-        /// </value>
-        public string Handler { get;  }
-
-        /// <summary>
         /// Gets the file part of the handler value.
         /// </summary>
         /// <value>
         /// The file part.
         /// </value>
         public string FilePart { get; }
+
+        /// <summary>
+        /// Gets the handler, as passed to the constructor.
+        /// </summary>
+        /// <value>
+        /// The handler.
+        /// </value>
+        public string Handler { get; }
 
         /// <summary>
         /// Gets a value indicating whether the handler info is valid (we got at least a file and a method)

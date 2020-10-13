@@ -5,7 +5,6 @@
     using System.Linq;
 
     using Firefly.CloudFormation;
-    using Firefly.CloudFormation.Parsers;
     using Firefly.PSCloudFormation.Utils;
 
     /// <summary>
@@ -22,17 +21,10 @@
         /// Initializes a new instance of the <see cref="LambdaSiblingModulePackager"/> class.
         /// </summary>
         /// <param name="lambdaArtifact">The lambda artifact to package</param>
-        /// <param name="dependencies">Dependencies of lambda, or <c>null</c> if none.</param>
-        /// <param name="lambdaResource"><see cref="TemplateResource"/> describing the lambda</param>
         /// <param name="s3">Interface to S3</param>
         /// <param name="logger">Interface to logger.</param>
-        protected LambdaSiblingModulePackager(
-            FileSystemInfo lambdaArtifact,
-            List<LambdaDependency> dependencies,
-            TemplateResource lambdaResource,
-            IPSS3Util s3,
-            ILogger logger)
-            : base(lambdaArtifact, dependencies, lambdaResource, s3, logger)
+        protected LambdaSiblingModulePackager(LambdaArtifact lambdaArtifact, IPSS3Util s3, ILogger logger)
+            : base(lambdaArtifact, s3, logger)
         {
         }
 
@@ -45,20 +37,20 @@
         protected List<DirectoryInfo> CopiedModules { get; } = new List<DirectoryInfo>();
 
         /// <summary>
-        /// Gets the name of the module directory (full relative path from handler script).
-        /// </summary>
-        /// <value>
-        /// The name of the module directory.
-        /// </value>
-        protected abstract string ModuleDirectory { get; }
-
-        /// <summary>
         /// Gets the module base directory - the point at which to delete if removing the entire thing.
         /// </summary>
         /// <value>
         /// The module base directory.
         /// </value>
         protected string ModuleBaseDirectory => this.ModuleDirectory.Split('/', '\\').First();
+
+        /// <summary>
+        /// Gets the name of the module directory (full relative path from handler script).
+        /// </summary>
+        /// <value>
+        /// The name of the module directory.
+        /// </value>
+        protected abstract string ModuleDirectory { get; }
 
         /// <summary>
         /// Releases unmanaged and - optionally - managed resources.
@@ -89,9 +81,9 @@
         protected override string PreparePackage(string workingDirectory)
         {
             // ReSharper disable once IsExpressionAlwaysTrue - LambdaArtifact already null checked before we get here.
-            var packageDirectory = this.LambdaArtifact is FileSystemInfo
-                                       ? Path.GetDirectoryName(this.LambdaArtifact.FullName)
-                                       : this.LambdaArtifact.FullName;
+            var packageDirectory = this.LambdaArtifact.ArtifactType == LambdaArtifactType.CodeFile
+                                       ? Path.GetDirectoryName(this.LambdaArtifact.Path)
+                                       : this.LambdaArtifact.Path;
             var modulesDirectoryFullPath = Path.Combine(packageDirectory, this.ModuleDirectory);
             var haveModulesDirectory = Directory.Exists(Path.Combine(packageDirectory, this.ModuleBaseDirectory));
 
@@ -105,7 +97,7 @@
                 this.CopiedModules.Add(new DirectoryInfo(Path.Combine(packageDirectory, this.ModuleBaseDirectory)));
             }
 
-            foreach (var dependencyEntry in this.Dependencies)
+            foreach (var dependencyEntry in this.LambdaArtifact.LoadDependencies())
             {
                 if (dependencyEntry.Location == modulesDirectoryFullPath)
                 {
@@ -119,7 +111,7 @@
                     var source = new DirectoryInfo(Path.Combine(dependencyEntry.Location, lib));
                     var target = new DirectoryInfo(Path.Combine(modulesDirectoryFullPath, lib));
 
-                    LambdaPackager.CopyAll(source, target);
+                    CopyAll(source, target);
 
                     if (haveModulesDirectory)
                     {

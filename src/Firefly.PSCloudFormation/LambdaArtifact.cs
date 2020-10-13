@@ -1,16 +1,20 @@
 ﻿namespace Firefly.PSCloudFormation
 {
     using System;
+    using System.Collections.Generic;
     using System.Diagnostics;
     using System.IO;
+    using System.Linq;
 
     using Firefly.CloudFormation.Parsers;
     using Firefly.PSCloudFormation.Utils;
 
+    using Newtonsoft.Json;
+
     /// <summary>
     /// Given a resource, decide if it is a lambda and if so, what sort.
     /// </summary>
-    [DebuggerDisplay("{lambdaResource.LogicalName}")]
+    [DebuggerDisplay("{LogicalName}")]
     internal class LambdaArtifact
     {
         /// <summary>
@@ -84,7 +88,7 @@
                 default:
 
                     this.ArtifactType = LambdaArtifactType.NotLambda;
-                    break;
+                    return;
             }
 
             // Now get handler and runtime  info
@@ -117,6 +121,41 @@
         public LambdaArtifactType ArtifactType { get; private set; }
 
         /// <summary>
+        /// Gets the containing directory.
+        /// </summary>
+        /// <value>
+        /// The directory containing the local lambda code; else <c>null</c> if lambda not local.
+        /// </value>
+        public string ContainingDirectory
+        {
+            get
+            {
+                switch (this.ArtifactType)
+                {
+                    case LambdaArtifactType.Directory:
+
+                        return this.Path;
+
+                    case LambdaArtifactType.CodeFile:
+
+                        return System.IO.Path.GetDirectoryName(this.Path);
+
+                    default:
+
+                        return null;
+                }
+            }
+        }
+
+        /// <summary>
+        /// Gets the resource logical name.
+        /// </summary>
+        /// <value>
+        /// The name of the logical.
+        /// </value>
+        public string LogicalName => this.lambdaResource.LogicalName;
+
+        /// <summary>
         /// Gets the body of the lambda code, if it is an inline lambda.
         /// </summary>
         /// <value>
@@ -139,6 +178,115 @@
         /// The s3 location.
         /// </value>
         public S3Artifact S3Location { get; private set; }
+
+        /// <summary>
+        /// Performs an implicit conversion from <see cref="LambdaArtifact"/> to <see cref="FileInfo"/>.
+        /// </summary>
+        /// <param name="self">The self.</param>
+        /// <returns>
+        /// The result of the conversion.
+        /// </returns>
+        /// <exception cref="InvalidCastException">Cannot cast LambdaArtifact of type {self.ArtifactType} to FileInfo</exception>
+        public static implicit operator FileInfo(LambdaArtifact self)
+        {
+            if (self.ArtifactType == LambdaArtifactType.CodeFile || self.ArtifactType == LambdaArtifactType.ZipFile)
+            {
+                return new FileInfo(self.Path);
+            }
+
+            throw new InvalidCastException($"Cannot cast LambdaArtifact of type {self.ArtifactType} to FileInfo");
+        }
+
+        /// <summary>
+        /// Performs an implicit conversion from <see cref="LambdaArtifact"/> to <see cref="DirectoryInfo"/>.
+        /// </summary>
+        /// <param name="self">The self.</param>
+        /// <returns>
+        /// The result of the conversion.
+        /// </returns>
+        /// <exception cref="InvalidCastException">Cannot cast LambdaArtifact of type {self.ArtifactType} to DirectoryInfo</exception>
+        public static implicit operator DirectoryInfo(LambdaArtifact self)
+        {
+            if (self.ArtifactType == LambdaArtifactType.Directory)
+            {
+                return new DirectoryInfo(self.Path);
+            }
+
+            throw new InvalidCastException($"Cannot cast LambdaArtifact of type {self.ArtifactType} to DirectoryInfo");
+        }
+
+        /// <summary>
+        /// Gets the dependency file for this lambda.
+        /// </summary>
+        /// <returns>Path to dependency file if present; else <c>null</c></returns>
+        public string GetDependencyFile()
+        {
+            if (this.ContainingDirectory == null)
+            {
+                return null;
+            }
+
+            return Directory.GetFiles(this.ContainingDirectory, "lambda-dependencies.*", SearchOption.TopDirectoryOnly)
+                .FirstOrDefault(
+                    f =>
+                        {
+                            var ext = System.IO.Path.GetExtension(f);
+                            return string.Compare(ext, ".json", StringComparison.OrdinalIgnoreCase) == 0
+                                   || string.Compare(ext, ".yaml", StringComparison.OrdinalIgnoreCase) == 0;
+                        });
+        }
+
+        /// <summary>
+        /// Load and deserialize this lambda's dependency file
+        /// </summary>
+        /// <returns>Deserialized Dependencies</returns>
+        public List<LambdaDependency> LoadDependencies()
+        {
+            var dependencyFile = this.GetDependencyFile();
+
+            if (dependencyFile == null)
+            {
+                return new List<LambdaDependency>();
+            }
+
+            // Ensure input file path is absolute
+            dependencyFile = System.IO.Path.GetFullPath(dependencyFile);
+            var content = File.ReadAllText(dependencyFile).Trim();
+
+            // Determine if JSON
+            var firstChar = content.Substring(0, 1);
+
+            if (firstChar == "{")
+            {
+                // We are expecting an array, not an object
+                throw new PackagerException($"{dependencyFile} contains a JSON object. Expecting array");
+            }
+
+            try
+            {
+                var dependencies = firstChar == "["
+                                       ? JsonConvert.DeserializeObject<List<LambdaDependency>>(content)
+                                       : new YamlDotNet.Serialization.Deserializer()
+                                           .Deserialize<List<LambdaDependency>>(content);
+
+                // Make dependency locations absolute
+                return dependencies.Select(d => d.ResolveDependencyLocation(dependencyFile)).ToList();
+            }
+            catch (Exception e)
+            {
+                // Look for DirectoryNotFoundException raised by LambdaDependency setter to reduce stack trace
+                var resolvedException = e;
+
+                var dirException = e.FindInner<DirectoryNotFoundException>();
+
+                if (dirException != null)
+                {
+                    resolvedException = dirException;
+                }
+
+                throw new PackagerException($"Error deserializing {dependencyFile}: {resolvedException.Message}", resolvedException);
+            }
+        }
 
         /// <summary>
         /// Gets the resource property value.
@@ -178,9 +326,9 @@
             this.Path = fsi.FullName;
 
             this.ArtifactType = fsi is FileInfo fi
-                                    ? (System.IO.Path.GetExtension(fi.Name).ToLowerInvariant() == ".zip"
-                                           ? LambdaArtifactType.ZipFile
-                                           : LambdaArtifactType.CodeFile)
+                                    ? System.IO.Path.GetExtension(fi.Name).ToLowerInvariant() == ".zip"
+                                          ? LambdaArtifactType.ZipFile
+                                          : LambdaArtifactType.CodeFile
                                     : LambdaArtifactType.Directory;
 
             return true;

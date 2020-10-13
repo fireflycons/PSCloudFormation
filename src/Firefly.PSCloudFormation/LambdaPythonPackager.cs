@@ -7,7 +7,6 @@
     using System.Text.RegularExpressions;
 
     using Firefly.CloudFormation;
-    using Firefly.CloudFormation.Parsers;
     using Firefly.PSCloudFormation.Utils;
 
     /// <summary>
@@ -46,17 +45,10 @@
         /// Initializes a new instance of the <see cref="LambdaPythonPackager"/> class.
         /// </summary>
         /// <param name="lambdaArtifact">The lambda artifact to package</param>
-        /// <param name="dependencies">Dependencies of lambda, or <c>null</c> if none.</param>
-        /// <param name="lambdaResource"><see cref="TemplateResource"/> describing the lambda</param>
         /// <param name="s3">Interface to S3</param>
         /// <param name="logger">Interface to logger.</param>
-        public LambdaPythonPackager(
-            FileSystemInfo lambdaArtifact,
-            List<LambdaDependency> dependencies,
-            TemplateResource lambdaResource,
-            IPSS3Util s3,
-            ILogger logger)
-            : base(lambdaArtifact, dependencies, lambdaResource, s3, logger)
+        public LambdaPythonPackager(LambdaArtifact lambdaArtifact, IPSS3Util s3, ILogger logger)
+            : base(lambdaArtifact, s3, logger)
         {
         }
 
@@ -91,33 +83,36 @@
         /// </exception>
         protected override string PreparePackage(string workingDirectory)
         {
-            if (this.Dependencies == null)
+            var dependencies = this.LambdaArtifact.LoadDependencies();
+
+            if (!dependencies.Any())
             {
                 return null;
             }
 
-            this.packageDirectory =
-                new DirectoryInfo(Path.Combine(workingDirectory, this.LambdaArtifact.Name.Replace('.', '_')));
+            this.packageDirectory = new DirectoryInfo(
+                Path.Combine(workingDirectory, this.LambdaArtifact.LogicalName.Replace('.', '_')));
 
             // First, copy over the artifact
-            switch (this.LambdaArtifact)
+            switch (this.LambdaArtifact.ArtifactType)
             {
-                case FileInfo fi:
+                case LambdaArtifactType.CodeFile:
 
+                    FileInfo fi = this.LambdaArtifact;
                     Directory.CreateDirectory(this.packageDirectory.FullName);
                     fi.CopyTo(Path.Combine(this.packageDirectory.FullName, fi.Name));
                     break;
 
-                case DirectoryInfo di:
+                case LambdaArtifactType.Directory:
 
-                    CopyAll(di, this.packageDirectory);
+                    CopyAll(this.LambdaArtifact, this.packageDirectory);
                     break;
             }
 
             // Now accumulate dependencies
             List<string> virtualEnvDirectories = null;
 
-            foreach (var dependencyEntry in this.Dependencies)
+            foreach (var dependencyEntry in dependencies)
             {
                 if (IsVirtualEnv(dependencyEntry.Location))
                 {
@@ -178,19 +173,22 @@
         /// <exception cref="System.NotImplementedException">Unknown subclass of <see cref="FileSystemInfo"/></exception>
         protected override void ValidateHandler()
         {
-            if (!this.LambdaHandler.IsValid)
+            if (!this.LambdaArtifact.HandlerInfo.IsValid)
             {
-                throw new PackagerException($"Invalid signature for handler {this.LambdaHandler}");
+                throw new PackagerException(
+                    $"{this.LambdaArtifact.LogicalName}: Invalid signature for handler: {this.LambdaArtifact.HandlerInfo.Handler}");
             }
 
-            var fileName = this.LambdaHandler.FilePart;
-            var method = this.LambdaHandler.MethodPart;
+            var fileName = this.LambdaArtifact.HandlerInfo.FilePart;
+            var method = this.LambdaArtifact.HandlerInfo.MethodPart;
             string moduleFileName;
             string content;
 
-            switch (this.LambdaArtifact)
+            switch (this.LambdaArtifact.ArtifactType)
             {
-                case FileInfo fi:
+                case LambdaArtifactType.CodeFile:
+
+                    FileInfo fi = this.LambdaArtifact;
 
                     if (!fi.Exists)
                     {
@@ -202,7 +200,9 @@
 
                     break;
 
-                case DirectoryInfo di:
+                case LambdaArtifactType.Directory:
+
+                    DirectoryInfo di = this.LambdaArtifact;
 
                     var file = Directory.GetFiles(di.FullName, $"{fileName}.*", SearchOption.TopDirectoryOnly)
                         .FirstOrDefault(
@@ -227,7 +227,8 @@
 
             if (mc.Count == 0 || mc.Cast<Match>().All(m => m.Groups["handler"].Value != method))
             {
-                throw new PackagerException($"{this.LambdaResource.LogicalName}: Cannot locate handler method '{method}' in '{moduleFileName}'");
+                throw new PackagerException(
+                    $"{this.LambdaArtifact.LogicalName}: Cannot locate handler method '{method}' in '{moduleFileName}'");
             }
         }
 
@@ -260,7 +261,7 @@
         /// <exception cref="PackagerException">Module {library} not found in virtual env '{dependencyEntry.Location}'</exception>
         private void CopyDependenciesToPackageDirectory(
             LambdaDependency dependencyEntry,
-            List<string> dependencyLocations)
+            IReadOnlyCollection<string> dependencyLocations)
         {
             foreach (var library in dependencyEntry.Libraries)
             {
