@@ -1,8 +1,6 @@
 ﻿namespace Firefly.PSCloudFormation
 {
-    using System;
     using System.IO;
-    using System.Linq;
     using System.Text.RegularExpressions;
 
     using Firefly.CloudFormation;
@@ -16,13 +14,6 @@
     internal class LambdaRubyPackager : LambdaSiblingModulePackager
     {
         /// <summary>
-        /// Gets the regex to detect lambda handler
-        /// </summary>
-        private static readonly Regex HandlerRegex = new Regex(
-            @"^\s*def\s+(?<handler>[^\d\W]\w*)\s*\(\s*[^\d\W]\w*:\s*,\s*[^\d\W]\w*:\s*\)\s*",
-            RegexOptions.Multiline);
-
-        /// <summary>
         /// Initializes a new instance of the <see cref="LambdaRubyPackager"/> class.
         /// </summary>
         /// <param name="lambdaArtifact">The lambda artifact to package</param>
@@ -32,6 +23,16 @@
             : base(lambdaArtifact, s3, logger)
         {
         }
+
+        /// <summary>
+        /// Gets the  regex to detect lambda handler.
+        /// </summary>
+        /// <value>
+        /// The handler regex.
+        /// </value>
+        protected override Regex HandlerRegex { get; } = new Regex(
+            @"^\s*def\s+(?<handler>[^\d\W]\w*)\s*\(\s*[^\d\W]\w*:\s*,\s*[^\d\W]\w*:\s*\)\s*",
+            RegexOptions.Multiline);
 
         /// <summary>
         /// Gets the name of the module directory.
@@ -45,79 +46,11 @@
                 Path.DirectorySeparatorChar);
 
         /// <summary>
-        /// If possible, validate the handler
+        /// Gets the file extension of script files for the given lambda.
         /// </summary>
-        protected override void ValidateHandler()
-        {
-            if (!this.LambdaArtifact.HandlerInfo.IsValidSignature)
-            {
-                throw new PackagerException(
-                    $"{this.LambdaArtifact.LogicalName}: Invalid signature for handler: {this.LambdaArtifact.HandlerInfo.Handler}");
-            }
-
-            var fileName = this.LambdaArtifact.HandlerInfo.FilePart;
-            var method = this.LambdaArtifact.HandlerInfo.MethodPart;
-            string moduleFileName;
-            string content;
-
-            switch (this.LambdaArtifact.ArtifactType)
-            {
-                case LambdaArtifactType.CodeFile:
-
-                    FileInfo fi = this.LambdaArtifact;
-
-                    if (!fi.Exists)
-                    {
-                        throw new FileNotFoundException(fi.Name);
-                    }
-
-                    content = File.ReadAllText(fi.FullName);
-                    moduleFileName = fi.FullName;
-
-                    break;
-
-                case LambdaArtifactType.Directory:
-
-                    DirectoryInfo di = this.LambdaArtifact;
-
-                    var file = Directory.GetFiles(di.FullName, $"{fileName}.*", SearchOption.TopDirectoryOnly)
-                        .FirstOrDefault(
-                            f => string.Compare(Path.GetExtension(f), ".rb", StringComparison.OrdinalIgnoreCase) == 0);
-
-                    if (file == null)
-                    {
-                        throw new FileNotFoundException($"{fileName}.rb");
-                    }
-
-                    content = File.ReadAllText(file);
-                    moduleFileName = Path.GetFileName(file);
-                    break;
-
-                case LambdaArtifactType.Inline:
-
-                    if (fileName != "index")
-                    {
-                        throw new PackagerException($"{this.LambdaArtifact.LogicalName}: Inline lambdas must have a handler beginning 'index.'");
-                    }
-
-                    content = this.LambdaArtifact.InlineCode;
-                    moduleFileName = "<inline code>";
-                    break;
-
-                default:
-
-                    this.Logger.LogWarning(
-                        $"{this.LambdaArtifact.LogicalName}: Handler validation currently not supported for lambdas of type {this.LambdaArtifact.ArtifactType}");
-                    return;
-            }
-
-            var mc = HandlerRegex.Matches(content);
-
-            if (mc.Count == 0 || mc.Cast<Match>().All(m => m.Groups["handler"].Value != method))
-            {
-                this.Logger.LogWarning(
-                    $"{this.LambdaArtifact.LogicalName}: Cannot locate handler method '{method}' in '{moduleFileName}'. If your method is within a class, validation is not yet supported for this.");
-            }
-        }
+        /// <value>
+        /// The script file extension.
+        /// </value>
+        protected override string ScriptFileExtension { get; } = ".rb";
     }
 }

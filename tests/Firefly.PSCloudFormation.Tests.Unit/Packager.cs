@@ -348,7 +348,7 @@ namespace Firefly.PSCloudFormation.Tests.Unit
 
             Func<Task> act = async () => { await packager.Package(null); };
 
-            await act.Should().ThrowAsync<PackagerException>().WithMessage("*Cannot locate handler method 'exports.*");
+            await act.Should().ThrowAsync<PackagerException>().WithMessage("*Cannot locate handler method*");
         }
 
         [Fact]

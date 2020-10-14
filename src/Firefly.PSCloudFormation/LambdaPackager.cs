@@ -10,6 +10,8 @@
     using Firefly.CloudFormation;
     using Firefly.PSCloudFormation.Utils;
 
+    using ICSharpCode.SharpZipLib.Zip;
+
     using Newtonsoft.Json;
 
     /// <summary>
@@ -53,6 +55,22 @@
         /// The S3 interface.
         /// </value>
         protected IPSS3Util S3 { get; }
+
+        /// <summary>
+        /// Gets the  regex to detect lambda handler.
+        /// </summary>
+        /// <value>
+        /// The handler regex.
+        /// </value>
+        protected virtual Regex HandlerRegex { get; } = null;
+
+        /// <summary>
+        /// Gets the file extension of script files for the given lambda.
+        /// </summary>
+        /// <value>
+        /// The script file extension.
+        /// </value>
+        protected virtual string ScriptFileExtension { get; } = null;
 
         /// <summary>
         /// Factory method to create a runtime specific lambda packager.
@@ -255,6 +273,131 @@
         /// <summary>
         /// If possible, validate the handler
         /// </summary>
-        protected abstract void ValidateHandler();
+        private void ValidateHandler()
+        {
+            if (this.HandlerRegex == null)
+            {
+                this.Logger.LogWarning(
+                    $"{this.LambdaArtifact.LogicalName}: Handler validation currently not supported for lambdas of type {this.LambdaArtifact.RuntimeInfo.RuntimeType}");
+                return;
+            }
+
+            if (!this.LambdaArtifact.HandlerInfo.IsValidSignature)
+            {
+                throw new PackagerException(
+                    $"{this.LambdaArtifact.LogicalName}: Invalid signature for handler: {this.LambdaArtifact.HandlerInfo.Handler}");
+            }
+
+            var handlerFileNameWithoutExtension = this.LambdaArtifact.HandlerInfo.FilePart;
+            var methodName = this.LambdaArtifact.HandlerInfo.MethodPart;
+            string moduleFileName;
+            string content;
+
+            switch (this.LambdaArtifact.ArtifactType)
+            {
+                case LambdaArtifactType.CodeFile:
+
+                    FileInfo handlerScriptInfo = this.LambdaArtifact;
+
+                    if (!handlerScriptInfo.Exists)
+                    {
+                        throw new FileNotFoundException(handlerScriptInfo.Name);
+                    }
+
+                    content = File.ReadAllText(handlerScriptInfo.FullName);
+                    moduleFileName = handlerScriptInfo.Name;
+
+                    break;
+
+                case LambdaArtifactType.Directory:
+
+                    DirectoryInfo lambdaDirectoryInfo = this.LambdaArtifact;
+
+                    var handlerScript = Directory.GetFiles(lambdaDirectoryInfo.FullName, $"{handlerFileNameWithoutExtension}.*", SearchOption.TopDirectoryOnly)
+                        .FirstOrDefault(
+                            f => string.Compare(Path.GetExtension(f), this.ScriptFileExtension, StringComparison.OrdinalIgnoreCase) == 0);
+
+                    if (handlerScript == null)
+                    {
+                        throw new FileNotFoundException($"{handlerFileNameWithoutExtension}{this.ScriptFileExtension}");
+                    }
+
+                    content = File.ReadAllText(handlerScript);
+                    moduleFileName = Path.GetFileName(handlerScript);
+                    break;
+
+                case LambdaArtifactType.Inline:
+
+                    if (handlerFileNameWithoutExtension != "index")
+                    {
+                        throw new PackagerException($"{this.LambdaArtifact.LogicalName}: Inline lambdas must have a handler beginning 'index.'");
+                    }
+
+                    content = this.LambdaArtifact.InlineCode;
+                    moduleFileName = "<inline code>";
+                    break;
+
+                case LambdaArtifactType.ZipFile:
+
+                    var zipFileName = this.LambdaArtifact.HandlerInfo.MethodPart + this.ScriptFileExtension;
+                    content = null;
+
+                    // Read the zip. Handler file must be in root directory of zip
+                    // ReSharper disable once AssignNullToNotNullAttribute - Path should be set when artifact is Zip.
+                    using (var archive = new ZipInputStream(File.OpenRead(this.LambdaArtifact.Path)))
+                    {
+                        ZipEntry entry;
+
+                        while (content == null && (entry = archive.GetNextEntry()) != null)
+                        {
+                            if (entry.Name != zipFileName)
+                            {
+                                continue;
+                            }
+
+                            using (var sr = new StreamReader(archive))
+                            {
+                                content = sr.ReadToEnd();
+                            }
+                        }
+                    }
+
+                    if (content == null)
+                    {
+                        throw new
+                            PackagerException($"{this.LambdaArtifact.LogicalName}: Cannot locate {zipFileName} in {this.LambdaArtifact.Path}");
+                    }
+
+                    moduleFileName = $"{zipFileName} ({Path.GetFileName(this.LambdaArtifact.Path)})";
+                    break;
+
+                default:
+
+                    this.Logger.LogWarning(
+                        $"{this.LambdaArtifact.LogicalName}: Handler validation currently not supported for lambdas of type {this.LambdaArtifact.ArtifactType}");
+                    return;
+            }
+
+            var mc = this.HandlerRegex.Matches(content);
+
+            if (mc.Count == 0 || mc.Cast<Match>().All(m => m.Groups["handler"].Value != methodName))
+            {
+                // Debug info
+                this.Logger.LogDebug($"Lambda handler validation for: {this.LambdaArtifact.LogicalName}");
+                this.Logger.LogDebug($"- Handler to find: {this.LambdaArtifact.HandlerInfo.Handler}");
+                this.Logger.LogDebug($"- Script: {moduleFileName}, Methods found: {mc.Count}");
+                this.Logger.LogDebug("  " + string.Join("\n  ", mc.Cast<Match>().Select(m => m.Value)));
+
+                if (this.GetType() == typeof(LambdaRubyPackager))
+                {
+                    this.Logger.LogWarning(
+                        $"{this.LambdaArtifact.LogicalName}: Cannot locate handler method '{methodName}' in '{moduleFileName}'. If your method is within a class, validation is not yet supported for this.");
+                    return;
+                }
+
+                throw new PackagerException(
+                    $"{this.LambdaArtifact.LogicalName}: Cannot locate handler method '{methodName}' in '{moduleFileName}'");
+            }
+        }
     }
 }

@@ -34,13 +34,5 @@
         {
             throw new NotImplementedException("Not implemented for plain packages (no collectable dependencies).");
         }
-
-        /// <summary>
-        /// If possible, validate the handler
-        /// </summary>
-        protected override void ValidateHandler()
-        {
-            // Do nothing
-        }
     }
 }
