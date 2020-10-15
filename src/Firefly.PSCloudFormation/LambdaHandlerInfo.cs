@@ -20,7 +20,7 @@
         /// Initializes a new instance of the <see cref="LambdaHandlerInfo"/> class.
         /// </summary>
         /// <param name="lambdaResource"><see cref="TemplateResource"/> describing the lambda</param>
-        public LambdaHandlerInfo(TemplateResource lambdaResource)
+        public LambdaHandlerInfo(ITemplateResource lambdaResource)
         {
             this.Handler = lambdaResource.GetResourcePropertyValue("Handler");
 

@@ -20,7 +20,7 @@
         /// <summary>
         /// The lambda resource
         /// </summary>
-        private readonly TemplateResource lambdaResource;
+        private readonly ITemplateResource lambdaResource;
 
         /// <summary>
         /// The path resolver
@@ -36,9 +36,9 @@
         /// Initializes a new instance of the <see cref="LambdaArtifact"/> class.
         /// </summary>
         /// <param name="pathResolver">The path resolver.</param>
-        /// <param name="templatePath">Path to the template being processed.</param>
         /// <param name="lambdaResource">The lambda resource.</param>
-        public LambdaArtifact(IPathResolver pathResolver, string templatePath, TemplateResource lambdaResource)
+        /// <param name="templatePath">Path to the template being processed.</param>
+        public LambdaArtifact(IPathResolver pathResolver, ITemplateResource lambdaResource, string templatePath)
         {
             this.templatePath = templatePath;
             this.pathResolver = pathResolver;
@@ -97,22 +97,6 @@
         }
 
         /// <summary>
-        /// Gets the runtime information.
-        /// </summary>
-        /// <value>
-        /// The runtime information.
-        /// </value>
-        public LambdaRuntimeInfo RuntimeInfo { get;  }
-
-        /// <summary>
-        /// Gets the handler information.
-        /// </summary>
-        /// <value>
-        /// The handler information.
-        /// </value>
-        public LambdaHandlerInfo HandlerInfo { get; }
-
-        /// <summary>
         /// Gets the type of the artifact.
         /// </summary>
         /// <value>
@@ -148,12 +132,12 @@
         }
 
         /// <summary>
-        /// Gets the resource logical name.
+        /// Gets the handler information.
         /// </summary>
         /// <value>
-        /// The name of the logical.
+        /// The handler information.
         /// </value>
-        public string LogicalName => this.lambdaResource.LogicalName;
+        public LambdaHandlerInfo HandlerInfo { get; }
 
         /// <summary>
         /// Gets the body of the lambda code, if it is an inline lambda.
@@ -164,12 +148,28 @@
         public string InlineCode { get; }
 
         /// <summary>
+        /// Gets the resource logical name.
+        /// </summary>
+        /// <value>
+        /// The name of the logical.
+        /// </value>
+        public string LogicalName => this.lambdaResource.LogicalName;
+
+        /// <summary>
         /// Gets the path to the lambda code, if present in the file system.
         /// </summary>
         /// <value>
         /// The path.
         /// </value>
         public string Path { get; private set; }
+
+        /// <summary>
+        /// Gets the runtime information.
+        /// </summary>
+        /// <value>
+        /// The runtime information.
+        /// </value>
+        public LambdaRuntimeInfo RuntimeInfo { get; }
 
         /// <summary>
         /// Gets the location of the code package in S3 if the artifact is remote.
@@ -213,27 +213,6 @@
             }
 
             throw new InvalidCastException($"Cannot cast LambdaArtifact of type {self.ArtifactType} to DirectoryInfo");
-        }
-
-        /// <summary>
-        /// Gets the dependency file for this lambda.
-        /// </summary>
-        /// <returns>Path to dependency file if present; else <c>null</c></returns>
-        public string GetDependencyFile()
-        {
-            if (this.ContainingDirectory == null)
-            {
-                return null;
-            }
-
-            return Directory.GetFiles(this.ContainingDirectory, "lambda-dependencies.*", SearchOption.TopDirectoryOnly)
-                .FirstOrDefault(
-                    f =>
-                        {
-                            var ext = System.IO.Path.GetExtension(f);
-                            return string.Compare(ext, ".json", StringComparison.OrdinalIgnoreCase) == 0
-                                   || string.Compare(ext, ".yaml", StringComparison.OrdinalIgnoreCase) == 0;
-                        });
         }
 
         /// <summary>
@@ -284,8 +263,31 @@
                     resolvedException = dirException;
                 }
 
-                throw new PackagerException($"Error deserializing {dependencyFile}: {resolvedException.Message}", resolvedException);
+                throw new PackagerException(
+                    $"Error deserializing {dependencyFile}: {resolvedException.Message}",
+                    resolvedException);
             }
+        }
+
+        /// <summary>
+        /// Gets the dependency file for this lambda.
+        /// </summary>
+        /// <returns>Path to dependency file if present; else <c>null</c></returns>
+        private string GetDependencyFile()
+        {
+            if (this.ContainingDirectory == null)
+            {
+                return null;
+            }
+
+            return Directory.GetFiles(this.ContainingDirectory, "lambda-dependencies.*", SearchOption.TopDirectoryOnly)
+                .FirstOrDefault(
+                    f =>
+                        {
+                            var ext = System.IO.Path.GetExtension(f);
+                            return string.Compare(ext, ".json", StringComparison.OrdinalIgnoreCase) == 0
+                                   || string.Compare(ext, ".yaml", StringComparison.OrdinalIgnoreCase) == 0;
+                        });
         }
 
         /// <summary>
@@ -315,7 +317,10 @@
         /// </returns>
         private bool HasFileSystemReference(string propertyName)
         {
-            var fsi = PackagerUtils.ResolveFileSystemResource(this.pathResolver, this.templatePath, this.GetResourcePropertyValue(propertyName));
+            var fsi = PackagerUtils.ResolveFileSystemResource(
+                this.pathResolver,
+                this.templatePath,
+                this.GetResourcePropertyValue(propertyName));
 
             if (fsi == null)
             {
@@ -327,7 +332,8 @@
 
             this.ArtifactType = fsi is FileInfo fi
                                     ? System.IO.Path.GetExtension(fi.Name).ToLowerInvariant() == ".zip"
-                                          ? LambdaArtifactType.ZipFile
+                                          ?
+                                          LambdaArtifactType.ZipFile
                                           : LambdaArtifactType.CodeFile
                                     : LambdaArtifactType.Directory;
 

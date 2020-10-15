@@ -47,6 +47,8 @@
     <None Remove="Resources\LambdaDependencies\RubyLambda2\Lambda\vendor\bundle\ruby\_2_7_0\cache\local_lib\local_lib.rb" />
     <None Remove="Resources\LambdaDependencies\RubyLambda2\template.yaml" />
     <None Remove="Resources\LambdaHandler\inlineHandler.yaml" />
+    <None Remove="Resources\LambdaHandler\ruby_lambda.zip" />
+    <None Remove="Resources\LambdaHandler\zipped_lambda.yaml" />
     <None Remove="Resources\no_package.yaml" />
     <None Remove="Resources\ParameterTest.json" />
     <None Remove="Resources\ParameterTest.yaml" />
@@ -96,6 +98,8 @@
     <EmbeddedResource Include="Resources\LambdaDependencies\RubyLambda2\template.yaml" />
     <EmbeddedResource Include="Resources\LambdaHandler\inlineHandler.yaml" />
     <EmbeddedResource Include="Resources\LambdaHandler\inlineHandlerBadHandlerMethod.yaml" />
+    <EmbeddedResource Include="Resources\LambdaHandler\ruby_lambda.zip" />
+    <EmbeddedResource Include="Resources\LambdaHandler\zipped_lambda.yaml" />
     <EmbeddedResource Include="Resources\no_package.yaml" />
     <EmbeddedResource Include="Resources\ParameterTest.json" />
     <EmbeddedResource Include="Resources\ParameterTest.yaml" />

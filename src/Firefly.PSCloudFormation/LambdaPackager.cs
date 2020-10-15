@@ -185,54 +185,6 @@
         }
 
         /// <summary>
-        /// Load and deserialize a dependency file
-        /// </summary>
-        /// <param name="dependencyFile">Path to dependency file</param>
-        /// <returns>Deserialized Dependencies</returns>
-        internal static List<LambdaDependency> LoadDependencies(string dependencyFile)
-        {
-            // Ensure input file path is absolute
-            dependencyFile = Path.GetFullPath(dependencyFile);
-            var content = File.ReadAllText(dependencyFile).Trim();
-
-            // Determine if JSON
-            var firstChar = content.Substring(0, 1);
-
-            if (firstChar == "{")
-            {
-                // We are expecting an array, not an object
-                throw new PackagerException($"{dependencyFile} contains a JSON object. Expecting array");
-            }
-
-            try
-            {
-                var dependencies = firstChar == "["
-                                       ? JsonConvert.DeserializeObject<List<LambdaDependency>>(content)
-                                       : new YamlDotNet.Serialization.Deserializer()
-                                           .Deserialize<List<LambdaDependency>>(content);
-
-                // Make dependency locations absolute
-                return dependencies.Select(d => d.ResolveDependencyLocation(dependencyFile)).ToList();
-            }
-            catch (Exception e)
-            {
-                // Look for DirectoryNotFoundException raised by LambdaDependency setter to reduce stack trace
-                var resolvedException = e;
-
-                var dirException = e.FindInner<DirectoryNotFoundException>();
-
-                if (dirException != null)
-                {
-                    resolvedException = dirException;
-                }
-
-                throw new PackagerException(
-                    $"Error deserializing {dependencyFile}: {resolvedException.Message}",
-                    resolvedException);
-            }
-        }
-
-        /// <summary>
         /// Copies a directory structure from one place to another.
         /// </summary>
         /// <param name="source">The source.</param>
@@ -339,7 +291,7 @@
 
                 case LambdaArtifactType.ZipFile:
 
-                    var zipFileName = this.LambdaArtifact.HandlerInfo.MethodPart + this.ScriptFileExtension;
+                    var zipEntryName = this.LambdaArtifact.HandlerInfo.FilePart + this.ScriptFileExtension;
                     content = null;
 
                     // Read the zip. Handler file must be in root directory of zip
@@ -350,7 +302,7 @@
 
                         while (content == null && (entry = archive.GetNextEntry()) != null)
                         {
-                            if (entry.Name != zipFileName)
+                            if (entry.Name != zipEntryName)
                             {
                                 continue;
                             }
@@ -365,10 +317,10 @@
                     if (content == null)
                     {
                         throw new
-                            PackagerException($"{this.LambdaArtifact.LogicalName}: Cannot locate {zipFileName} in {this.LambdaArtifact.Path}");
+                            PackagerException($"{this.LambdaArtifact.LogicalName}: Cannot locate {zipEntryName} in {this.LambdaArtifact.Path}");
                     }
 
-                    moduleFileName = $"{zipFileName} ({Path.GetFileName(this.LambdaArtifact.Path)})";
+                    moduleFileName = $"{zipEntryName} ({Path.GetFileName(this.LambdaArtifact.Path)})";
                     break;
 
                 default:

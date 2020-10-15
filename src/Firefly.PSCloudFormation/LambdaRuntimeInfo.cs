@@ -45,7 +45,7 @@
         /// <exception cref="PackagerException">
         /// Missing property OR unknown runtime
         /// </exception>
-        public LambdaRuntimeInfo(TemplateResource lambdaResource)
+        public LambdaRuntimeInfo(ITemplateResource lambdaResource)
         {
             this.runtime = lambdaResource.GetResourcePropertyValue("Runtime");
 

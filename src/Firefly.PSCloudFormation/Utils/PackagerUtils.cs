@@ -415,7 +415,7 @@
         /// <returns><c>true</c> if the containing template should be modified (to point to S3); else <c>false</c></returns>
         /// <exception cref="FileNotFoundException">Nested stack resource '{nestedStackResource.LogicalName}': TemplateURL cannot refer to a directory.</exception>
         private async Task<bool> ProcessNestedStack(
-            TemplateResource nestedStackResource,
+            ITemplateResource nestedStackResource,
             string templatePath,
             string workingDirectory)
         {
@@ -480,7 +480,7 @@
         /// <exception cref="InvalidDataException">Unsupported derivative of FileSystemInfo</exception>
         /// <exception cref="MissingMethodException">Missing constructor for the replacement template artifact.</exception>
         private async Task<bool> ProcessResource(
-            TemplateResource resource,
+            ITemplateResource resource,
             string templatePath,
             string workingDirectory)
         {
@@ -491,7 +491,7 @@
                 ResourceUploadSettings resourceToUpload;
 
                 // See if we have a lambda
-                var lambdaResource = new LambdaArtifact(this.pathResolver, templatePath, resource);
+                var lambdaResource = new LambdaArtifact(this.pathResolver, resource, templatePath);
 
                 if (lambdaResource.ArtifactType != LambdaArtifactType.NotLambda)
                 {

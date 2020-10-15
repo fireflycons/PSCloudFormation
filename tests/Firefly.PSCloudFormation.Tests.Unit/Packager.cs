@@ -13,8 +13,6 @@ namespace Firefly.PSCloudFormation.Tests.Unit
     using Amazon;
     using Amazon.S3.Model;
 
-    using Firefly.CloudFormation;
-    using Firefly.CloudFormation.Parsers;
     using Firefly.EmbeddedResourceLoader;
     using Firefly.EmbeddedResourceLoader.Materialization;
     using Firefly.PSCloudFormation.Tests.Unit.Utils;
@@ -42,9 +40,6 @@ namespace Firefly.PSCloudFormation.Tests.Unit
         /// </summary>
         [EmbeddedResource("DeepNestedStack")]
         private TempDirectory deepNestedStack;
-
-        [EmbeddedResource("DependencyFile")]
-        private TempDirectory dependencyFiles;
 
         [EmbeddedResource("no_package.yaml")]
         private TempFile noPackageStack;
@@ -75,7 +70,7 @@ namespace Firefly.PSCloudFormation.Tests.Unit
 
             using var workingDirectory = new TempDirectory();
 
-            var template = Path.Combine(this.deepNestedStack.FullPath, "base-stack.json");
+            var template = Path.Combine(this.deepNestedStack, "base-stack.json");
 
             var packager = new PackagerUtils(
                 new TestPathResolver(),
@@ -85,7 +80,7 @@ namespace Firefly.PSCloudFormation.Tests.Unit
             var outputTemplatePath = await packager.ProcessTemplate(template, workingDirectory);
 
             this.output.WriteLine(string.Empty);
-            this.output.WriteLine(File.ReadAllText(outputTemplatePath));
+            this.output.WriteLine(await File.ReadAllTextAsync(outputTemplatePath));
 
             // Three objects should have been uploaded to S3
             mockS3.Verify(m => m.PutObjectAsync(It.IsAny<PutObjectRequest>(), default), Times.Exactly(3));
@@ -94,7 +89,7 @@ namespace Firefly.PSCloudFormation.Tests.Unit
         [Fact]
         public async Task ShouldUploadNewVersionOfArtifactWhenHashesDontMatch()
         {
-            var template = Path.Combine(this.deepNestedStack.FullPath, "base-stack.json");
+            var template = Path.Combine(this.deepNestedStack, "base-stack.json");
             var projectId = S3Util.GenerateProjectId(template);
 
             var logger = new TestLogger(this.output);
@@ -134,7 +129,6 @@ namespace Firefly.PSCloudFormation.Tests.Unit
 
             using var workingDirectory = new TempDirectory();
 
-
             var packager = new PackagerUtils(
                 new TestPathResolver(),
                 logger,
@@ -143,7 +137,7 @@ namespace Firefly.PSCloudFormation.Tests.Unit
             var outputTemplatePath = await packager.ProcessTemplate(template, workingDirectory);
 
             this.output.WriteLine(string.Empty);
-            this.output.WriteLine(File.ReadAllText(outputTemplatePath));
+            this.output.WriteLine(await File.ReadAllTextAsync(outputTemplatePath));
 
             // Three objects should have been uploaded to S3
             mockS3.Verify(m => m.PutObjectAsync(It.IsAny<PutObjectRequest>(), default), Times.Exactly(3));
@@ -153,7 +147,7 @@ namespace Firefly.PSCloudFormation.Tests.Unit
         public async Task ShouldNotUploadNewVersionOfTemplateArtifactWhenHashesMatch()
         {
             var templateDir = this.deepNestedStack;
-            var template = Path.Combine(templateDir.FullPath, "base-stack.json");
+            var template = Path.Combine(templateDir, "base-stack.json");
             var projectId = S3Util.GenerateProjectId(template);
             var logger = new TestLogger(this.output);
             var mockSts = TestHelpers.GetSTSMock();
@@ -182,7 +176,7 @@ namespace Firefly.PSCloudFormation.Tests.Unit
                     {
                         var resp = new GetObjectMetadataResponse();
 
-                        resp.Metadata.Add(S3Util.PackagerHashKey, GetModifiedTemplateHash(logger));
+                        resp.Metadata.Add(S3Util.PackagerHashKey, GetModifiedTemplateHash());
                         return resp;
                     });
 
@@ -201,14 +195,14 @@ namespace Firefly.PSCloudFormation.Tests.Unit
             var outputTemplatePath = await packager.ProcessTemplate(template, workingDirectory);
 
             this.output.WriteLine(string.Empty);
-            this.output.WriteLine(File.ReadAllText(outputTemplatePath));
+            this.output.WriteLine(await File.ReadAllTextAsync(outputTemplatePath));
 
             // Three objects should have been uploaded to S3
             mockS3.Verify(m => m.PutObjectAsync(It.IsAny<PutObjectRequest>(), default), Times.Exactly(2));
 
             // Bit hacky, but we need to know the hash of the template after modification.
             // Different on Windows and Linux due to line endings.
-            string GetModifiedTemplateHash(TestLogger logger)
+            string GetModifiedTemplateHash()
             {
                 var re = new Regex(@"sub-nested-2\.json.*Hash: (?<hash>[0-9a-f]+)");
 
@@ -228,12 +222,11 @@ namespace Firefly.PSCloudFormation.Tests.Unit
         [Fact]
         public async Task ShouldNotUploadNewVersionOfDirectoryArtifactWhenHashesMatch()
         {
-
             using var templateDir = this.deepNestedStack;
             // Hash of lambda directory content before zipping
             // Zips are not idempotent - fields e.g. timestamps in central directory change with successive zips of the same content.
-            var directoryHash = new DirectoryInfo(Path.Combine(templateDir.FullPath, "lambdacomplex")).MD5();
-            var template = Path.Combine(templateDir.FullPath, "base-stack.json");
+            var directoryHash = new DirectoryInfo(Path.Combine(templateDir, "lambdacomplex")).MD5();
+            var template = Path.Combine(templateDir, "base-stack.json");
             var projectId = S3Util.GenerateProjectId(template);
             var logger = new TestLogger(this.output);
             var mockSts = TestHelpers.GetSTSMock();
@@ -278,35 +271,10 @@ namespace Firefly.PSCloudFormation.Tests.Unit
             var outputTemplatePath = await packager.ProcessTemplate(template, workingDirectory);
 
             this.output.WriteLine(string.Empty);
-            this.output.WriteLine(File.ReadAllText(outputTemplatePath));
+            this.output.WriteLine(await File.ReadAllTextAsync(outputTemplatePath));
 
             // Three objects should have been uploaded to S3
             mockS3.Verify(m => m.PutObjectAsync(It.IsAny<PutObjectRequest>(), default), Times.Exactly(2));
-        }
-
-        [Theory]
-        [InlineData("json")]
-        [InlineData("yaml")]
-        public void ShouldParsePackageDependencies(string format)
-        {
-            var dependencyFile = Path.Combine(this.dependencyFiles.FullPath, $"lambda-dependencies.{format}");
-
-            var dependencies = PSCloudFormation.LambdaPackager.LoadDependencies(dependencyFile);
-            dependencies.Count.Should().Be(2);
-        }
-
-        [Theory]
-        [InlineData("json")]
-        [InlineData("yaml")]
-        public void ShouldResolveRelativeDependencies(string format)
-        {
-            var dependencyFile = Path.Combine(this.dependencyFiles.FullPath, $"lambda-dependencies.{format}");
-            var expectedDependencyPath = Path.GetFullPath(Path.Combine(new FileInfo(dependencyFile).DirectoryName, "../modules"));
-            
-            // Last entry in the lambda-dependencies files has a relative link
-            var relativeDependency = LambdaPackager.LoadDependencies(dependencyFile).Last();
-
-            relativeDependency.Location.Should().Be(expectedDependencyPath);
         }
 
         [Fact]
@@ -329,46 +297,6 @@ namespace Firefly.PSCloudFormation.Tests.Unit
         public void ShouldDetectStackDoesNotNeedPackagingWhenNoLocalFileReferences()
         {
             new PackagerUtils(this.pathResolver, new TestLogger(this.output), null).RequiresPackaging(this.noPackageStack).Should().BeFalse();
-        }
-
-        [Fact]
-        public async Task ShouldThrowWhenInlineLambdaHasMissingHandlerMethod()
-        {
-            var mockS3 = new Mock<IPSS3Util>();
-
-            using var template = ResourceLoader.GetFileResource("inlineHandlerBadHandlerMethod.yaml");
-
-            var parser = TemplateParser.Create(File.ReadAllText(template));
-            var function = parser.GetResources().FirstOrDefault(r => r.ResourceType == "AWS::Lambda::Function");
-
-            function.Should().NotBeNull("you broke the template!");
-
-            var artifact = new LambdaArtifact(new TestPathResolver(), template, function);
-            var packager = LambdaPackager.CreatePackager(artifact, mockS3.Object, new TestLogger(this.output));
-
-            Func<Task> act = async () => { await packager.Package(null); };
-
-            await act.Should().ThrowAsync<PackagerException>().WithMessage("*Cannot locate handler method*");
-        }
-
-        [Fact]
-        public async Task ShouldThrowWhenInlineServerlessLambdaHasMissingHandlerMethod()
-        {
-            var mockS3 = new Mock<IPSS3Util>();
-
-            using var template = ResourceLoader.GetFileResource("inlineHandlerBadHandlerMethod.yaml");
-
-            var parser = TemplateParser.Create(File.ReadAllText(template));
-            var function = parser.GetResources().FirstOrDefault(r => r.ResourceType == "AWS::Serverless::Function");
-
-            function.Should().NotBeNull("you broke the template!");
-
-            var artifact = new LambdaArtifact(new TestPathResolver(), template, function);
-            var packager = LambdaPackager.CreatePackager(artifact, mockS3.Object, new TestLogger(this.output));
-
-            Func<Task> act = async () => { await packager.Package(null); };
-
-            await act.Should().ThrowAsync<PackagerException>().WithMessage("*Cannot locate handler method*");
         }
 
         public void Dispose()
