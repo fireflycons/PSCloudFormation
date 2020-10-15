@@ -154,17 +154,14 @@
                 }
 
                 // Remove any __pycache__
-                foreach (var pycaches in dependencyEntry.Libraries
+                foreach (var pycache in dependencyEntry.Libraries
                     .Where(l => Directory.Exists(Path.Combine(this.packageDirectory.FullName, l))).Select(
                         l => Directory.GetDirectories(
                             Path.Combine(this.packageDirectory.FullName, l),
                             "*__pycache__",
-                            SearchOption.AllDirectories)))
+                            SearchOption.AllDirectories)).SelectMany(pycaches => pycaches))
                 {
-                    foreach (var pycache in pycaches)
-                    {
-                        Directory.Delete(pycache, true);
-                    }
+                    Directory.Delete(pycache, true);
                 }
             }
 
