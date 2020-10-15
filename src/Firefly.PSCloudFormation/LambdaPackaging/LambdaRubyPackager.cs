@@ -1,4 +1,4 @@
-﻿namespace Firefly.PSCloudFormation
+﻿namespace Firefly.PSCloudFormation.LambdaPackaging
 {
     using System.IO;
     using System.Text.RegularExpressions;
@@ -9,7 +9,7 @@
     /// <summary>
     /// Packager for Ruby lambda
     /// </summary>
-    /// <seealso cref="Firefly.PSCloudFormation.LambdaPackager" />
+    /// <seealso cref="LambdaPackager" />
     /// <seealso href="https://docs.aws.amazon.com/lambda/latest/dg/ruby-package.html"/>
     internal class LambdaRubyPackager : LambdaSiblingModulePackager
     {

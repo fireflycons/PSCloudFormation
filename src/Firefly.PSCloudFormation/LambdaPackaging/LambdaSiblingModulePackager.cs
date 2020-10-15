@@ -1,4 +1,4 @@
-﻿namespace Firefly.PSCloudFormation
+﻿namespace Firefly.PSCloudFormation.LambdaPackaging
 {
     using System.Collections.Generic;
     using System.IO;
@@ -14,7 +14,7 @@
     /// When the package is created, then <see cref="ArtifactPackager.PackageDirectory"/> will always be used on the directory
     /// where the handler script is located as dependencies are always in a sub-directory of this location.
     /// </remarks>
-    /// <seealso cref="Firefly.PSCloudFormation.LambdaPackager" />
+    /// <seealso cref="LambdaPackager" />
     internal abstract class LambdaSiblingModulePackager : LambdaPackager
     {
         /// <summary>

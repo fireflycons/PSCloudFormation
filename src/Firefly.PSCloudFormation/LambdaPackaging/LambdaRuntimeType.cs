@@ -1,4 +1,4 @@
-﻿namespace Firefly.PSCloudFormation
+﻿namespace Firefly.PSCloudFormation.LambdaPackaging
 {
     /// <summary>
     /// Supported runtimes for packaging dependencies

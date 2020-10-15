@@ -1,4 +1,4 @@
-﻿namespace Firefly.PSCloudFormation
+﻿namespace Firefly.PSCloudFormation.LambdaPackaging
 {
     using System.Collections.Generic;
     using System.IO;
@@ -11,7 +11,7 @@
     /// <summary>
     /// Packager for Node.JS lambda
     /// </summary>
-    /// <seealso cref="Firefly.PSCloudFormation.LambdaPackager" />
+    /// <seealso cref="LambdaPackager" />
     /// <seealso href="https://docs.aws.amazon.com/lambda/latest/dg/python-package.html"/>
     internal class LambdaPythonPackager : LambdaPackager
     {

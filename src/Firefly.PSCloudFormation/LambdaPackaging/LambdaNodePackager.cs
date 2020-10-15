@@ -1,8 +1,5 @@
-﻿namespace Firefly.PSCloudFormation
+﻿namespace Firefly.PSCloudFormation.LambdaPackaging
 {
-    using System;
-    using System.IO;
-    using System.Linq;
     using System.Text.RegularExpressions;
 
     using Firefly.CloudFormation;
@@ -11,7 +8,7 @@
     /// <summary>
     /// Packager for Node.JS lambda
     /// </summary>
-    /// <seealso cref="Firefly.PSCloudFormation.LambdaPackager" />
+    /// <seealso cref="LambdaPackager" />
     /// <seealso href="https://docs.aws.amazon.com/lambda/latest/dg/nodejs-package.html"/>
     internal class LambdaNodePackager : LambdaSiblingModulePackager
     {

@@ -8,6 +8,7 @@
 
     using Firefly.CloudFormation;
     using Firefly.CloudFormation.Parsers;
+    using Firefly.PSCloudFormation.LambdaPackaging;
 
     /// <summary>
     /// Manages the packaging of a template

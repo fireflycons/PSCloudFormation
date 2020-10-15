@@ -1,4 +1,4 @@
-﻿namespace Firefly.PSCloudFormation
+﻿namespace Firefly.PSCloudFormation.LambdaPackaging
 {
     using System;
 
@@ -8,7 +8,7 @@
     /// <summary>
     /// Plain packager for lambda without dependencies
     /// </summary>
-    /// <seealso cref="Firefly.PSCloudFormation.LambdaPackager" />
+    /// <seealso cref="LambdaPackager" />
     internal class LambdaPlainPackager : LambdaPackager
     {
         /// <summary>

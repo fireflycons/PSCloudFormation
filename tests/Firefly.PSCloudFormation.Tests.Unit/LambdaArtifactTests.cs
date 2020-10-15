@@ -9,6 +9,7 @@
     using Firefly.CloudFormation.Parsers;
     using Firefly.EmbeddedResourceLoader;
     using Firefly.EmbeddedResourceLoader.Materialization;
+    using Firefly.PSCloudFormation.LambdaPackaging;
     using Firefly.PSCloudFormation.Tests.Unit.Utils;
     using Firefly.PSCloudFormation.Utils;
 

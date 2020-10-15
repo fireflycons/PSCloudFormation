@@ -1,7 +1,6 @@
-﻿namespace Firefly.PSCloudFormation
+﻿namespace Firefly.PSCloudFormation.LambdaPackaging
 {
     using System;
-    using System.Collections.Generic;
     using System.IO;
     using System.Linq;
     using System.Text.RegularExpressions;
@@ -11,8 +10,6 @@
     using Firefly.PSCloudFormation.Utils;
 
     using ICSharpCode.SharpZipLib.Zip;
-
-    using Newtonsoft.Json;
 
     /// <summary>
     /// Abstract Lambda Packager
