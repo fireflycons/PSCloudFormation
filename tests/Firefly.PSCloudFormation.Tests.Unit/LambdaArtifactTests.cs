@@ -1,5 +1,7 @@
 ﻿namespace Firefly.PSCloudFormation.Tests.Unit
 {
+    #pragma warning disable 649
+
     using System;
     using System.Collections.Generic;
     using System.IO;
@@ -78,18 +80,28 @@
         [EmbeddedResource("LambdaHandler")]
         private TempDirectory handlerTestDirectory;
 
+        /// <summary>
+        /// The dependency files
+        /// </summary>
         [EmbeddedResource("DependencyFile")]
         private TempDirectory dependencyFiles;
 
-
+        /// <summary>
+        /// Initializes a new instance of the <see cref="LambdaArtifactTests"/> class.
+        /// </summary>
+        /// <param name="output">The output.</param>
         public LambdaArtifactTests(ITestOutputHelper output)
         {
             this.output = output;
         }
 
+        /// <summary>
+        /// Performs application-defined tasks associated with freeing, releasing, or resetting unmanaged resources.
+        /// </summary>
         public void Dispose()
         {
             this.handlerTestDirectory?.Dispose();
+            this.dependencyFiles?.Dispose();
         }
 
         [Fact]
@@ -99,7 +111,7 @@
 
             var template = Path.Combine(this.handlerTestDirectory, "zipped_lambda.yaml");
 
-            var parser = TemplateParser.Create(File.ReadAllText(template));
+            var parser = TemplateParser.Create(await File.ReadAllTextAsync(template));
             var function = parser.GetResources().FirstOrDefault(r => r.ResourceType == "AWS::Serverless::Function");
 
             function.Should().NotBeNull("you broke the template!");
@@ -288,7 +300,5 @@
 
             relativeDependency.Location.Should().Be(expectedDependencyPath);
         }
-
-
     }
 }
