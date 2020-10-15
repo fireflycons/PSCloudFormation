@@ -95,7 +95,6 @@
                                            KeyPrefix = s3.KeyPrefix
                                        };
 
-
                 if (await s3.ObjectChangedAsync(resourceToUpload))
                 {
                     logger.LogVerbose($"Zipping '{artifact.FullName}' to {Path.GetFileName(fileToUpload)}");

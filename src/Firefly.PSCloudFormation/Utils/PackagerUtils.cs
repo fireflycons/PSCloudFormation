@@ -8,6 +8,7 @@
 
     using Firefly.CloudFormation;
     using Firefly.CloudFormation.Parsers;
+    using Firefly.PSCloudFormation.LambdaPackaging;
 
     /// <summary>
     /// Manages the packaging of a template
@@ -183,14 +184,14 @@
                 };
 
         /// <summary>
-        /// The path resolver
-        /// </summary>
-        private readonly IPathResolver pathResolver;
-
-        /// <summary>
         /// The logger
         /// </summary>
         private readonly ILogger logger;
+
+        /// <summary>
+        /// The path resolver
+        /// </summary>
+        private readonly IPathResolver pathResolver;
 
         /// <summary>
         /// The s3 utility
@@ -212,93 +213,18 @@
             this.pathResolver = pathResolver;
         }
 
-        public bool TemplateIsFile(string template)
-        {
-            return File.Exists(this.pathResolver.ResolvePath(template));
-        }
-
-        /// <summary>
-        /// <para>
-        /// Determine if given template requires packaging, i.e. any resources of the types in <see cref="PackagerUtils.PackagedResources"/>
-        /// or any nested templates point to files.
-        /// </para>
-        /// <para>
-        /// Packaging applies only to templates of type file or input string. If the template is remote, then by definition it does not point to local resources.
-        /// </para>
-        /// </summary>
-        /// <param name="templatePath">File system path to template to process.</param>
-        /// <returns><c>true</c> if packaging is required; else <c>false</c>.</returns>
-        public bool RequiresPackaging(string templatePath)
-        {
-            if (!this.TemplateIsFile(templatePath))
-            {
-                // Applies to input string templates also
-                return false;
-            }
-
-            var parser = TemplateParser.Create(File.ReadAllText(templatePath));
-            var resources = parser.GetResources().ToList();
-
-            // Any nested stacks return not null for ResolveFileSystemResource point to files and thus need packaging.
-            if (resources.Where(r => r.ResourceType == CloudFormationStack).Any(
-                nestedStackResource => this.ResolveFileSystemResource(
-                                           templatePath,
-                                           nestedStackResource.GetResourcePropertyValue("TemplateURL")) != null))
-            {
-                return true;
-            }
-
-            // Process remaining resources
-            foreach (var resource in resources.Where(
-                r => r.ResourceType != PackagerUtils.CloudFormationStack
-                     && PackagerUtils.PackagedResources.ContainsKey(r.ResourceType)))
-            {
-                foreach (var propertyToCheck in PackagerUtils.PackagedResources[resource.ResourceType])
-                {
-                    string resourceFile;
-
-                    try
-                    {
-                        resourceFile = resource.GetResourcePropertyValue(propertyToCheck.PropertyPath);
-                    }
-                    catch (FormatException)
-                    {
-                        if (!propertyToCheck.Required)
-                        {
-                            // Property is missing, but CloudFormation does not require it.
-                            continue;
-                        }
-
-                        throw;
-                    }
-
-                    if (resourceFile == null)
-                    {
-                        // Property was not found, or was not a value type.
-                        continue;
-                    }
-
-                    var fsi = this.ResolveFileSystemResource(templatePath, resourceFile);
-
-                    if (fsi != null)
-                    {
-                        // Found a file system reference, therefore packaging required.
-                        return true;
-                    }
-                }
-            }
-
-            return false;
-        }
-
         /// <summary>
         /// Examines the given template property value and determines if it points to something in the file system.
         /// </summary>
+        /// <param name="pathResolver">The path resolver to use.</param>
         /// <param name="templatePath">Path to the template being processed.</param>
         /// <param name="propertyValue">Value of the resource property in the template</param>
         /// <returns>A <see cref="FileSystemInfo"/> pointing to the referenced file or directory; else <c>null</c> if not a file system resource.</returns>
         /// <exception cref="FileNotFoundException">The artifact looks like a path, but it cannot be found.</exception>
-        public FileSystemInfo ResolveFileSystemResource(string templatePath, string propertyValue)
+        public static FileSystemInfo ResolveFileSystemResource(
+            IPathResolver pathResolver,
+            string templatePath,
+            string propertyValue)
         {
             if (propertyValue == null)
             {
@@ -306,7 +232,7 @@
             }
 
             string fullPath = null;
-            var currentLocation = this.pathResolver.GetLocation();
+            var currentLocation = pathResolver.GetLocation();
 
             if (Path.IsPathRooted(propertyValue) || @"\".Equals(Path.GetPathRoot(propertyValue)))
             {
@@ -316,7 +242,7 @@
             {
                 try
                 {
-                    this.pathResolver.SetLocation(Path.GetDirectoryName(templatePath));
+                    pathResolver.SetLocation(Path.GetDirectoryName(templatePath));
 
                     try
                     {
@@ -343,12 +269,12 @@
                     if (fullPath == null)
                     {
                         // Assume we have a relative path, so convert to absolute
-                        fullPath = this.pathResolver.ResolvePath(propertyValue);
+                        fullPath = pathResolver.ResolvePath(propertyValue);
                     }
                 }
                 finally
                 {
-                    this.pathResolver.SetLocation(currentLocation);
+                    pathResolver.SetLocation(currentLocation);
                 }
             }
 
@@ -370,6 +296,118 @@
         }
 
         /// <summary>
+        /// Processes template and nested templates recursively, leaf first
+        /// </summary>
+        /// <param name="templatePath">The template path.</param>
+        /// <param name="workingDirectory">Working directory for files to upload.</param>
+        /// <returns>The path to the processed template.</returns>
+        public async Task<string> ProcessTemplate(string templatePath, string workingDirectory)
+        {
+            var outputTemplatePath = templatePath;
+            var parser = TemplateParser.Create(File.ReadAllText(templatePath));
+            var resources = parser.GetResources().ToList();
+            var templateModified = false;
+
+            // Process nested stacks first
+            foreach (var nestedStack in resources.Where(r => r.ResourceType == CloudFormationStack))
+            {
+                templateModified |= await this.ProcessNestedStack(nestedStack, templatePath, workingDirectory);
+            }
+
+            // Process remaining resources
+            foreach (var resource in resources.Where(
+                r => r.ResourceType != CloudFormationStack && PackagedResources.ContainsKey(r.ResourceType)))
+            {
+                templateModified |= await this.ProcessResource(resource, templatePath, workingDirectory);
+            }
+
+            if (templateModified)
+            {
+                // Generate a filename and save.
+                // The caller will upload the template to S3
+                outputTemplatePath = Path.Combine(workingDirectory, Path.GetFileName(templatePath));
+
+                parser.Save(outputTemplatePath);
+            }
+
+            return outputTemplatePath;
+        }
+
+        /// <summary>
+        /// <para>
+        /// Determine if given template requires packaging, i.e. any resources of the types in <see cref="PackagerUtils.PackagedResources"/>
+        /// or any nested templates point to files.
+        /// </para>
+        /// <para>
+        /// Packaging applies only to templates of type file or input string. If the template is remote, then by definition it does not point to local resources.
+        /// </para>
+        /// </summary>
+        /// <param name="templatePath">File system path to template to process.</param>
+        /// <returns><c>true</c> if packaging is required; else <c>false</c>.</returns>
+        public bool RequiresPackaging(string templatePath)
+        {
+            if (!File.Exists(this.pathResolver.ResolvePath(templatePath)))
+            {
+                // Applies to input string templates also
+                return false;
+            }
+
+            var parser = TemplateParser.Create(File.ReadAllText(templatePath));
+            var resources = parser.GetResources().ToList();
+
+            // Any nested stacks return not null for ResolveFileSystemResource point to files and thus need packaging.
+            if (resources.Where(r => r.ResourceType == CloudFormationStack).Any(
+                nestedStackResource => ResolveFileSystemResource(
+                                           this.pathResolver,
+                                           templatePath,
+                                           nestedStackResource.GetResourcePropertyValue("TemplateURL")) != null))
+            {
+                return true;
+            }
+
+            // Process remaining resources
+            foreach (var resource in resources.Where(
+                r => r.ResourceType != CloudFormationStack && PackagedResources.ContainsKey(r.ResourceType)))
+            {
+                foreach (var propertyToCheck in PackagedResources[resource.ResourceType])
+                {
+                    string resourceFile;
+
+                    try
+                    {
+                        resourceFile = resource.GetResourcePropertyValue(propertyToCheck.PropertyPath);
+                    }
+                    catch (FormatException)
+                    {
+                        if (!propertyToCheck.Required)
+                        {
+                            // Property is missing, but CloudFormation does not require it.
+                            continue;
+                        }
+
+                        throw;
+                    }
+
+                    if (resourceFile == null)
+                    {
+                        // Property was not found, or was not a value type.
+                        continue;
+                    }
+
+                    var fsi = ResolveFileSystemResource(this.pathResolver, templatePath, resourceFile);
+
+                    if (fsi != null)
+                    {
+                        // Found a file system reference, therefore packaging required.
+                        return true;
+                    }
+                }
+            }
+
+            return false;
+        }
+
+        /// <summary>
         /// Processes a nested stack.
         /// </summary>
         /// <param name="nestedStackResource">The nested stack.</param>
@@ -378,11 +416,12 @@
         /// <returns><c>true</c> if the containing template should be modified (to point to S3); else <c>false</c></returns>
         /// <exception cref="FileNotFoundException">Nested stack resource '{nestedStackResource.LogicalName}': TemplateURL cannot refer to a directory.</exception>
         private async Task<bool> ProcessNestedStack(
-            TemplateResource nestedStackResource,
+            ITemplateResource nestedStackResource,
             string templatePath,
             string workingDirectory)
         {
-            var nestedTemplateLocation = this.ResolveFileSystemResource(
+            var nestedTemplateLocation = ResolveFileSystemResource(
+                this.pathResolver,
                 templatePath,
                 nestedStackResource.GetResourcePropertyValue("TemplateURL"));
 
@@ -405,12 +444,12 @@
                     this.logger.LogDebug("\n\n{0}", File.ReadAllText(processedTemplate.FullName));
 
                     var resourceToUpload = new ResourceUploadSettings
-                    {
-                        File = processedTemplate,
-                        Hash = templateHash,
-                        KeyPrefix = this.s3Util.KeyPrefix,
-                        Metadata = this.s3Util.Metadata
-                    };
+                                               {
+                                                   File = processedTemplate,
+                                                   Hash = templateHash,
+                                                   KeyPrefix = this.s3Util.KeyPrefix,
+                                                   Metadata = this.s3Util.Metadata
+                                               };
 
                     if (await this.s3Util.ObjectChangedAsync(resourceToUpload))
                     {
@@ -442,62 +481,72 @@
         /// <exception cref="InvalidDataException">Unsupported derivative of FileSystemInfo</exception>
         /// <exception cref="MissingMethodException">Missing constructor for the replacement template artifact.</exception>
         private async Task<bool> ProcessResource(
-            TemplateResource resource,
+            ITemplateResource resource,
             string templatePath,
             string workingDirectory)
         {
             var templateModified = false;
 
-            foreach (var propertyToCheck in PackagerUtils.PackagedResources[resource.ResourceType])
+            foreach (var propertyToCheck in PackagedResources[resource.ResourceType])
             {
-                string resourceFile;
-
-                try
-                {
-                    resourceFile = resource.GetResourcePropertyValue(propertyToCheck.PropertyPath);
-                }
-                catch (FormatException)
-                {
-                    if (!propertyToCheck.Required)
-                    {
-                        // Property is missing, but CloudFormation does not require it.
-                        continue;
-                    }
-
-                    throw;
-                }
-
-                if (resourceFile == null)
-                {
-                    // Property was not found, or was not a value type.
-                    continue;
-                }
-
-                var fsi = this.ResolveFileSystemResource(templatePath, resourceFile);
-
-                if (fsi == null)
-                {
-                    // Property value did not resolve to a path in the file system
-                    continue;
-                }
-
                 ResourceUploadSettings resourceToUpload;
 
-                templateModified = true;
+                // See if we have a lambda
+                var lambdaResource = new LambdaArtifact(this.pathResolver, resource, templatePath);
 
-                // If this is a lambda, check for a dependency file in the same directory
-                if (resource.ResourceType == "AWS::Lambda::Function"
-                    || resource.ResourceType == "AWS::Serverless::Function")
+                if (lambdaResource.ArtifactType != LambdaArtifactType.NotLambda)
                 {
-                    var handler = resource.GetResourcePropertyValue("Runtime");
-
-                    using (var packager = LambdaPackager.CreatePackager(fsi, handler, this.s3Util, this.logger))
+                    // We do
+                    using (var packager = LambdaPackager.CreatePackager(lambdaResource, this.s3Util, this.logger))
                     {
                         resourceToUpload = await packager.Package(workingDirectory);
+
+                        if (resourceToUpload == null)
+                        {
+                            // Lambda syntax does not imply a template modification
+                            // i.e. it is inline code or already an S3 reference.
+                            continue;
+                        }
+
+                        // The template will be altered to an S3 location,
+                        // however the zip may or may not be uploaded.
+                        templateModified = true;
                     }
                 }
                 else
                 {
+                    string resourceFile;
+
+                    try
+                    {
+                        resourceFile = resource.GetResourcePropertyValue(propertyToCheck.PropertyPath);
+                    }
+                    catch (FormatException)
+                    {
+                        if (!propertyToCheck.Required)
+                        {
+                            // Property is missing, but CloudFormation does not require it.
+                            continue;
+                        }
+
+                        throw;
+                    }
+
+                    if (resourceFile == null)
+                    {
+                        // Property was not found, or was not a value type.
+                        continue;
+                    }
+
+                    var fsi = ResolveFileSystemResource(this.pathResolver, templatePath, resourceFile);
+
+                    if (fsi == null)
+                    {
+                        // Property value did not resolve to a path in the file system
+                        continue;
+                    }
+
+                    templateModified = true;
                     switch (fsi)
                     {
                         case FileInfo fi:
@@ -563,44 +612,6 @@
         }
 
         /// <summary>
-        /// Processes template and nested templates recursively, leaf first
-        /// </summary>
-        /// <param name="templatePath">The template path.</param>
-        /// <param name="workingDirectory">Working directory for files to upload.</param>
-        /// <returns>The path to the processed template.</returns>
-        public async Task<string> ProcessTemplate(string templatePath, string workingDirectory)
-        {
-            var outputTemplatePath = templatePath;
-            var parser = TemplateParser.Create(File.ReadAllText(templatePath));
-            var resources = parser.GetResources().ToList();
-            var templateModified = false;
-
-            // Process nested stacks first
-            foreach (var nestedStack in resources.Where(r => r.ResourceType == PackagerUtils.CloudFormationStack))
-            {
-                templateModified |= await this.ProcessNestedStack(nestedStack, templatePath, workingDirectory);
-            }
-
-            // Process remaining resources
-            foreach (var resource in resources.Where(
-                r => r.ResourceType != PackagerUtils.CloudFormationStack && PackagerUtils.PackagedResources.ContainsKey(r.ResourceType)))
-            {
-                templateModified |= await this.ProcessResource(resource, templatePath, workingDirectory);
-            }
-
-            if (templateModified)
-            {
-                // Generate a filename and save.
-                // The caller will upload the template to S3
-                outputTemplatePath = Path.Combine(workingDirectory, Path.GetFileName(templatePath));
-
-                parser.Save(outputTemplatePath);
-            }
-
-            return outputTemplatePath;
-        }
-
-        /// <summary>
         /// Describes where to find and how to treat a package artifact
         /// </summary>
         internal class PackagedResourceProperties
@@ -648,7 +659,6 @@
             /// Initializes a new instance of the <see cref="S3LocationLong" /> class.
             /// </summary>
             /// <param name="artifact">The S3 artifact.</param>
-
             // ReSharper disable once StyleCop.SA1305
             public S3LocationLong(S3Artifact artifact)
             {

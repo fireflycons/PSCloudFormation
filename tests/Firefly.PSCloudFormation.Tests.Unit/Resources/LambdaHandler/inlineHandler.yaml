@@ -1,0 +1,55 @@
+AWSTemplateFormatVersion: 2010-09-09
+Transform: AWS::Serverless-2016-10-31
+Description: Inline Handler
+
+Resources:
+
+  DummyRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service:
+                - lambda.amazonaws.com
+            Action: sts:AssumeRole
+      Policies:
+        - PolicyName: "root"
+          PolicyDocument:
+            Version: "2012-10-17"
+            Statement:
+            - Effect: "Deny"
+              Action: "*"
+              Resource: "*"
+
+  NodeLambdaFunction:
+    Type: AWS::Lambda::Function
+    Properties:
+      Handler: index.handler
+      Role: !GetAtt
+      - DummyRole
+      - Arn
+      Runtime: nodejs10.x
+      Code:
+        ZipFile: |
+          // test
+          exports.handler = function(event, context) {
+            console.log('hello')
+          }
+
+  PythonServerlessFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      InlineCode: |
+        # test
+        def handler(event, _):
+          pass
+      Handler: index.handler
+      Runtime: python3.7
+      Policies:
+        - Statement:
+          - Sid: root
+            Effect: Deny
+            Action: '*'
+            Resource: '*'

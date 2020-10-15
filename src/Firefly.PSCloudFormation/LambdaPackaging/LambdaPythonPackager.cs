@@ -1,8 +1,9 @@
-﻿namespace Firefly.PSCloudFormation
+﻿namespace Firefly.PSCloudFormation.LambdaPackaging
 {
     using System.Collections.Generic;
     using System.IO;
     using System.Linq;
+    using System.Text.RegularExpressions;
 
     using Firefly.CloudFormation;
     using Firefly.PSCloudFormation.Utils;
@@ -10,7 +11,7 @@
     /// <summary>
     /// Packager for Node.JS lambda
     /// </summary>
-    /// <seealso cref="Firefly.PSCloudFormation.LambdaPackager" />
+    /// <seealso cref="LambdaPackager" />
     /// <seealso href="https://docs.aws.amazon.com/lambda/latest/dg/python-package.html"/>
     internal class LambdaPythonPackager : LambdaPackager
     {
@@ -36,19 +37,30 @@
         /// Initializes a new instance of the <see cref="LambdaPythonPackager"/> class.
         /// </summary>
         /// <param name="lambdaArtifact">The lambda artifact to package</param>
-        /// <param name="dependencies">Dependencies of lambda, or <c>null</c> if none.</param>
-        /// <param name="runtimeVersion">Version of the lambda runtime.</param>
         /// <param name="s3">Interface to S3</param>
         /// <param name="logger">Interface to logger.</param>
-        public LambdaPythonPackager(
-            FileSystemInfo lambdaArtifact,
-            List<LambdaDependency> dependencies,
-            string runtimeVersion,
-            IPSS3Util s3,
-            ILogger logger)
-            : base(lambdaArtifact, dependencies, runtimeVersion, s3, logger)
+        public LambdaPythonPackager(LambdaArtifact lambdaArtifact, IPSS3Util s3, ILogger logger)
+            : base(lambdaArtifact, s3, logger)
         {
         }
+
+        /// <summary>
+        /// Gets the  regex to detect lambda handler.
+        /// </summary>
+        /// <value>
+        /// The handler regex.
+        /// </value>
+        protected override Regex HandlerRegex { get; } = new Regex(
+            @"^\s*def\s+(?<handler>[^\d\W]\w*)\s*\(\s*[^\d\W]\w*\s*,\s*[^\d\W]\w*\s*\)\s*:",
+            RegexOptions.Multiline);
+
+        /// <summary>
+        /// Gets the file extension of script files for the given lambda.
+        /// </summary>
+        /// <value>
+        /// The script file extension.
+        /// </value>
+        protected override string ScriptFileExtension { get; } = ".py";
 
         /// <summary>
         /// Releases unmanaged and - optionally - managed resources.
@@ -81,33 +93,36 @@
         /// </exception>
         protected override string PreparePackage(string workingDirectory)
         {
-            if (this.Dependencies == null)
+            var dependencies = this.LambdaArtifact.LoadDependencies();
+
+            if (!dependencies.Any())
             {
                 return null;
             }
 
-            this.packageDirectory =
-                new DirectoryInfo(Path.Combine(workingDirectory, this.LambdaArtifact.Name.Replace('.', '_')));
+            this.packageDirectory = new DirectoryInfo(
+                Path.Combine(workingDirectory, this.LambdaArtifact.LogicalName.Replace('.', '_')));
 
             // First, copy over the artifact
-            switch (this.LambdaArtifact)
+            switch (this.LambdaArtifact.ArtifactType)
             {
-                case FileInfo fi:
+                case LambdaArtifactType.CodeFile:
 
+                    FileInfo fi = this.LambdaArtifact;
                     Directory.CreateDirectory(this.packageDirectory.FullName);
                     fi.CopyTo(Path.Combine(this.packageDirectory.FullName, fi.Name));
                     break;
 
-                case DirectoryInfo di:
+                case LambdaArtifactType.Directory:
 
-                    CopyAll(di, this.packageDirectory);
+                    CopyAll(this.LambdaArtifact, this.packageDirectory);
                     break;
             }
 
             // Now accumulate dependencies
             List<string> virtualEnvDirectories = null;
 
-            foreach (var dependencyEntry in this.Dependencies)
+            foreach (var dependencyEntry in dependencies)
             {
                 if (IsVirtualEnv(dependencyEntry.Location))
                 {
@@ -139,17 +154,14 @@
                 }
 
                 // Remove any __pycache__
-                foreach (var pycaches in dependencyEntry.Libraries
+                foreach (var pycache in dependencyEntry.Libraries
                     .Where(l => Directory.Exists(Path.Combine(this.packageDirectory.FullName, l))).Select(
                         l => Directory.GetDirectories(
                             Path.Combine(this.packageDirectory.FullName, l),
                             "*__pycache__",
-                            SearchOption.AllDirectories)))
+                            SearchOption.AllDirectories)).SelectMany(pycaches => pycaches))
                 {
-                    foreach (var pycache in pycaches)
-                    {
-                        Directory.Delete(pycache, true);
-                    }
+                    Directory.Delete(pycache, true);
                 }
             }
 
@@ -185,7 +197,7 @@
         /// <exception cref="PackagerException">Module {library} not found in virtual env '{dependencyEntry.Location}'</exception>
         private void CopyDependenciesToPackageDirectory(
             LambdaDependency dependencyEntry,
-            List<string> dependencyLocations)
+            IReadOnlyCollection<string> dependencyLocations)
         {
             foreach (var library in dependencyEntry.Libraries)
             {

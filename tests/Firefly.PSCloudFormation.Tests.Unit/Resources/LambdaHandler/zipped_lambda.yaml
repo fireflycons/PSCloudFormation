@@ -1,0 +1,19 @@
+AWSTemplateFormatVersion: 2010-09-09
+Transform: AWS::Serverless-2016-10-31
+Description: Inline Handler
+
+Resources:
+
+
+  PythonServerlessFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: ruby_lambda.zip
+      Handler: my_lambda.handler
+      Runtime: ruby2.7
+      Policies:
+        - Statement:
+          - Sid: root
+            Effect: Deny
+            Action: '*'
+            Resource: '*'

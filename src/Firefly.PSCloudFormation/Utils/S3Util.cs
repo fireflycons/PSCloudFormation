@@ -493,8 +493,9 @@
         private async Task CheckBucket(string bucketName)
         {
             // ReSharper disable once StyleCop.SA1119
-            if ((bucketName == null || (bucketName == this.cloudFormationBucket.BucketName
-                                        && !this.cloudFormationBucket.Initialized)))
+            // ReSharper disable once ArrangeRedundantParentheses
+            if (bucketName == null || (bucketName == this.cloudFormationBucket.BucketName
+                                        && !this.cloudFormationBucket.Initialized))
             {
                 await this.GetCloudFormationBucketAsync();
             }

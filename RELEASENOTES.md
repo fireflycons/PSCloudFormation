@@ -1,21 +1,25 @@
 # Release Notes
 
+# 4.0.13
+
+* Enhancement - Verify lambda handlers where possible. [Issue link](https://github.com/fireflycons/PSCloudFormation/issues/76).
+
 # 4.0.12
 
-* Enhancement - Automatic packaging of templates that contain resources that require packaging, e.g. nested templates, lambdas with local filesystem references to code etc.
-* Fix - Incorrect error message when a template file is not found
+* Enhancement - Automatic packaging of templates that contain resources that require packaging, e.g. nested templates, lambdas with local filesystem references to code etc. [Issue link](https://github.com/fireflycons/PSCloudFormation/issues/77).
+* Fix - Incorrect error message when a template file is not found. [Issue link](https://github.com/fireflycons/PSCloudFormation/issues/78).
 
 # 4.0.11
 
-* Fix - Python packager should gather dependencies that are a single file rather than module direcory, e.g. `six`
+* Fix - Python packager should gather dependencies that are a single file rather than module direcory, e.g. `six`. [Issue link](https://github.com/fireflycons/PSCloudFormation/issues/75).
 
 # 4.0.10
 
-* Fix - Deleting SAM template stack that fails to create throws exception
+* Fix - Deleting SAM template stack that fails to create throws exception. [Issue link](https://github.com/fireflycons/PSCloudFormation/issues/74).
 
 # 4.0.9
 
-* Fix - On running stack update, if there are no resources changed, e.g. only outputs have been changed, then exception is thrown.
+* Fix - On running stack update, if there are no resources changed, e.g. only outputs have been changed, then exception is thrown. [Issue link](https://github.com/fireflycons/PSCloudFormation/issues/73).
 
 # 4.0.8
 
@@ -28,19 +32,19 @@
 # 4.0.6
 
 * Fix - Null reference exception when no template provided
-* Fix - Python lamdba packager with dependencies always uploading new version of package even when nothing has changed.
+* Fix - Python lambda packager with dependencies always uploading new version of package even when nothing has changed.
 
 # 4.0.5
 
-* Enhancement. Create a mechanism for packaging lambda dependencies.
+* Enhancement. Create a mechanism for packaging lambda dependencies. [Issue link](https://github.com/fireflycons/PSCloudFormation/issues/71).
 
 # 4.0.4
 
-* Fix: Packager is not checking whether packaged resource properties are required by CloudFomation and is incorrectly treating all as required.
+* Fix: Packager is not checking whether packaged resource properties are required by CloudFomation and is incorrectly treating all as required. [Issue link](https://github.com/fireflycons/PSCloudFormation/issues/70).
 
 # 4.0.3
 
-* Fix -ForceS3. Setting not being passed to Firefly.CloudFormation
+* Fix -ForceS3. Setting not being passed to Firefly.CloudFormation. [Issue link](https://github.com/fireflycons/PSCloudFormation/issues/69).
 * Fix exception thrown when Delete Stack is cancelled
 
 # 4.0.2

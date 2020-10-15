@@ -1,8 +1,6 @@
-﻿namespace Firefly.PSCloudFormation
+﻿namespace Firefly.PSCloudFormation.LambdaPackaging
 {
     using System;
-    using System.Collections.Generic;
-    using System.IO;
 
     using Firefly.CloudFormation;
     using Firefly.PSCloudFormation.Utils;
@@ -10,24 +8,17 @@
     /// <summary>
     /// Plain packager for lambda without dependencies
     /// </summary>
-    /// <seealso cref="Firefly.PSCloudFormation.LambdaPackager" />
+    /// <seealso cref="LambdaPackager" />
     internal class LambdaPlainPackager : LambdaPackager
     {
         /// <summary>
         /// Initializes a new instance of the <see cref="LambdaPlainPackager"/> class.
         /// </summary>
         /// <param name="lambdaArtifact">The lambda artifact to package</param>
-        /// <param name="dependencies">Dependencies of lambda, or <c>null</c> if none.</param>
-        /// <param name="runtimeVersion">Version of the lambda runtime.</param>
         /// <param name="s3">Interface to S3</param>
         /// <param name="logger">Interface to logger.</param>
-        public LambdaPlainPackager(
-            FileSystemInfo lambdaArtifact,
-            List<LambdaDependency> dependencies,
-            string runtimeVersion,
-            IPSS3Util s3,
-            ILogger logger)
-            : base(lambdaArtifact, dependencies, runtimeVersion, s3, logger)
+        public LambdaPlainPackager(LambdaArtifact lambdaArtifact, IPSS3Util s3, ILogger logger)
+            : base(lambdaArtifact, s3, logger)
         {
         }
 

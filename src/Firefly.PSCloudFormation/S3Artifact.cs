@@ -22,6 +22,14 @@
         public string Key { get; set; }
 
         /// <summary>
+        /// Gets or sets the object version.
+        /// </summary>
+        /// <value>
+        /// The object version.
+        /// </value>
+        public string ObjectVersion { get; set; }
+
+        /// <summary>
         /// Gets the S3 URL.
         /// </summary>
         /// <value>

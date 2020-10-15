@@ -424,7 +424,6 @@
                 this.Logger.LogVerbose($"Parameters to pass to stack: {string.Join(", ", this.StackParameters.Keys)}");
             }
 
-
             return null;
         }
 
