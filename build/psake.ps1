@@ -599,6 +599,9 @@ Task GenerateMarkdown -requiredVariables DefaultLocale, DocsRootDir {
 
         # Post process the generated markdown to add DFM YAML headers where not present
         Get-ChildItem -Path $DocsRootDir -Filter *.md |
+        Where-Object {
+            $_.Name -inotlike 'index*'
+        } |
         Sort-Object Name |
         Foreach-Object {
 
@@ -656,7 +659,15 @@ Task GenerateMarkdown -requiredVariables DefaultLocale, DocsRootDir {
             [IO.File]::WriteAllText($_.FullName, $content, [System.Text.UTF8Encoding]::new($false))
 
             # Update TOC
-            $toc.AppendLine("- name: $filename").AppendLine("  href: $($_.Name)") | Out-Null
+            if ($_.Name -like "$($ENV:BHProjectName)*")
+            {
+                $toc.AppendLine("- name: Module Index").AppendLine("  href: $($_.Name)") | Out-Null
+            }
+            else
+            {
+                $toc.AppendLine("- name: $filename").AppendLine("  href: $($_.Name)") | Out-Null
+            }
+
         }
 
         # Write TOC file
