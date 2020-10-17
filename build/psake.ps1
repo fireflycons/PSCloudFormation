@@ -30,7 +30,7 @@ Properties {
     }
 
     $DefaultLocale = 'en-US'
-    $DocsRootDir = Join-Path $env:BHProjectPath docs
+    $DocsRootDir = Join-Path $env:BHProjectPath 'docfx/cmdlets'
     $ModuleName = "PSCloudFormation"
 
 }
@@ -592,8 +592,75 @@ Task GenerateMarkdown -requiredVariables DefaultLocale, DocsRootDir {
         }
 
         # ErrorAction set to SilentlyContinue so this command will not overwrite an existing MD file.
-        New-MarkdownHelp -Module $ModuleName -Locale $DefaultLocale -OutputFolder (Join-Path $DocsRootDir $DefaultLocale) `
+        New-MarkdownHelp -Module $ModuleName -Locale $DefaultLocale -OutputFolder $DocsRootDir `
             -WithModulePage -ErrorAction SilentlyContinue -Verbose:$VerbosePreference > $null
+
+        $toc = New-Object System.Text.StringBuilder
+
+        # Post process the generated markdown to add DFM YAML headers where not present
+        Get-ChildItem -Path $DocsRootDir -Filter *.md |
+        Sort-Object Name |
+        Foreach-Object {
+
+            $fileName = [IO.Path]::GetFileNameWithoutExtension($_.Name)
+            $header = @{}
+
+            $headerFound = $false
+            foreach($line in (Get-Content $_.FullName))
+            {
+                if ($line -eq '---')
+                {
+                    if (-not $headerFound)
+                    {
+                        $headerFound = $true
+                        continue
+                    }
+
+                    # Got header now
+                    break
+                }
+
+                if ($headerFound -and $line -match '^(?<key>[\w\s]+):\s+(?<value>.*)')
+                {
+                    $header.Add($Matches.key, $matches.value)
+                }
+            }
+
+            # Add DFM keys
+            $header['uid'] = $fileName
+            $header['title'] = $filename
+
+            # Render header back to YAML
+            $sb = New-Object System.Text.StringBuilder
+            $sb.AppendLine('---') | Out-Null
+            $header.Keys |
+            ForEach-Object {
+                $sb.AppendLine("$($_): $($header[$_])") | Out-Null
+            }
+            $sb.AppendLine('---') | Out-Null
+
+            $content = Get-Content -Raw $_.FullName
+
+            if ($headerFound)
+            {
+                # Regex replace the new header
+                $content = [System.Text.RegularExpressions.Regex]::Replace($content, '^---(\r\n|\r|\n).*?(\r\n|\r|\n)---', $sb.ToString(), [System.Text.RegularExpressions.RegexOptions]::Singleline)
+            }
+            else
+            {
+                # Prepend new header
+                $content = $sb.ToString() + $content
+            }
+
+            # Write out modified file (UTF8 No BOM)
+            [IO.File]::WriteAllText($_.FullName, $content, [System.Text.UTF8Encoding]::new($false))
+
+            # Update TOC
+            $toc.AppendLine("- name: $filename").AppendLine("  href: $($_.Name)") | Out-Null
+        }
+
+        # Write TOC file
+        [IO.File]::WriteAllText((Join-Path $DocsRootDir toc.yml), $toc.ToString(), [System.Text.UTF8Encoding]::new($false))
     }
     finally
     {

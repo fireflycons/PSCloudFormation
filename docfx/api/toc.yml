@@ -1,0 +1,60 @@
+### YamlMime:TableOfContent
+- uid: Firefly.PSCloudFormation
+  name: Firefly.PSCloudFormation
+  items:
+  - uid: Firefly.PSCloudFormation.BaseCloudFormationCommand
+    name: BaseCloudFormationCommand
+  - uid: Firefly.PSCloudFormation.ChoiceResponse
+    name: ChoiceResponse
+  - uid: Firefly.PSCloudFormation.CloudFormationBucket
+    name: CloudFormationBucket
+  - uid: Firefly.PSCloudFormation.CloudFormationServiceCommand
+    name: CloudFormationServiceCommand
+  - uid: Firefly.PSCloudFormation.INewStackArguments
+    name: INewStackArguments
+  - uid: Firefly.PSCloudFormation.IPSAwsClientFactory
+    name: IPSAwsClientFactory
+  - uid: Firefly.PSCloudFormation.IPSCloudFormationContext
+    name: IPSCloudFormationContext
+  - uid: Firefly.PSCloudFormation.IRemoveStackArguments
+    name: IRemoveStackArguments
+  - uid: Firefly.PSCloudFormation.ITimestampGenerator
+    name: ITimestampGenerator
+  - uid: Firefly.PSCloudFormation.PackagerException
+    name: PackagerException
+  - uid: Firefly.PSCloudFormation.ProxySettings
+    name: ProxySettings
+  - uid: Firefly.PSCloudFormation.PSAwsClientFactory
+    name: PSAwsClientFactory
+  - uid: Firefly.PSCloudFormation.PSCloudFormationContext
+    name: PSCloudFormationContext
+  - uid: Firefly.PSCloudFormation.PSLogger
+    name: PSLogger
+  - uid: Firefly.PSCloudFormation.StackOperation
+    name: StackOperation
+  - uid: Firefly.PSCloudFormation.StackParameterCloudFormationCommand
+    name: StackParameterCloudFormationCommand
+  - uid: Firefly.PSCloudFormation.TemplateManager
+    name: TemplateManager
+- uid: Firefly.PSCloudFormation.Commands
+  name: Firefly.PSCloudFormation.Commands
+  items:
+  - uid: Firefly.PSCloudFormation.Commands.GetStackOutputsCommand
+    name: GetStackOutputsCommand
+  - uid: Firefly.PSCloudFormation.Commands.NewPackageCommand
+    name: NewPackageCommand
+  - uid: Firefly.PSCloudFormation.Commands.NewStackCommand
+    name: NewStackCommand
+  - uid: Firefly.PSCloudFormation.Commands.RemoveStackCommand
+    name: RemoveStackCommand
+  - uid: Firefly.PSCloudFormation.Commands.ResetStackCommand
+    name: ResetStackCommand
+  - uid: Firefly.PSCloudFormation.Commands.UpdateStackCommand
+    name: UpdateStackCommand
+- uid: Firefly.PSCloudFormation.Utils
+  name: Firefly.PSCloudFormation.Utils
+  items:
+  - uid: Firefly.PSCloudFormation.Utils.DirectoryInfoExtensions
+    name: DirectoryInfoExtensions
+  - uid: Firefly.PSCloudFormation.Utils.FileInfoExtensions
+    name: FileInfoExtensions
