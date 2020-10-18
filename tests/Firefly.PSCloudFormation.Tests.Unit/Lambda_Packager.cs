@@ -80,7 +80,8 @@
             var packager = new PackagerUtils(
                 new TestPathResolver(),
                 this.Logger,
-                new S3Util(this.ClientFactory, this.Context, template, "test-bucket", null, null));
+                new S3Util(this.ClientFactory, this.Context, template, "test-bucket", null, null),
+                new OSInfo());
 
             await packager.ProcessTemplate(template, workingDirectory);
 
@@ -111,7 +112,8 @@
             var packager = new PackagerUtils(
                 new TestPathResolver(),
                 this.Logger,
-                new S3Util(this.ClientFactory, this.Context, template, "test-bucket", null, null));
+                new S3Util(this.ClientFactory, this.Context, template, "test-bucket", null, null),
+                new OSInfo());
 
             await packager.ProcessTemplate(template, workingDirectory);
 
@@ -143,7 +145,8 @@
             var packager = new PackagerUtils(
                 new TestPathResolver(),
                 this.Logger,
-                new S3Util(this.ClientFactory, this.Context, template, "test-bucket", null, null));
+                new S3Util(this.ClientFactory, this.Context, template, "test-bucket", null, null),
+                new OSInfo());
 
             await packager.ProcessTemplate(template, workingDirectory);
 
@@ -179,7 +182,8 @@
             var packager = new PackagerUtils(
                 new TestPathResolver(),
                 this.Logger,
-                new S3Util(this.ClientFactory, this.Context, template, "test-bucket", null, null));
+                new S3Util(this.ClientFactory, this.Context, template, "test-bucket", null, null),
+                new OSInfo());
 
             await packager.ProcessTemplate(template, workingDirectory);
 
@@ -215,7 +219,8 @@
             var packager = new PackagerUtils(
                 new TestPathResolver(),
                 this.Logger,
-                new S3Util(this.ClientFactory, this.Context, template, "test-bucket", null, null));
+                new S3Util(this.ClientFactory, this.Context, template, "test-bucket", null, null),
+                new OSInfo());
 
             await packager.ProcessTemplate(template, workingDirectory);
 
@@ -256,7 +261,8 @@
             var packager = new PackagerUtils(
                 new TestPathResolver(),
                 this.Logger,
-                new S3Util(this.ClientFactory, this.Context, template, "test-bucket", null, null));
+                new S3Util(this.ClientFactory, this.Context, template, "test-bucket", null, null),
+                new OSInfo());
 
             await packager.ProcessTemplate(template, workingDirectory);
 
@@ -290,7 +296,8 @@
             var packager = new PackagerUtils(
                 new TestPathResolver(),
                 this.Logger,
-                new S3Util(this.ClientFactory, this.Context, template, "test-bucket", null, null));
+                new S3Util(this.ClientFactory, this.Context, template, "test-bucket", null, null),
+                new OSInfo());
 
             await packager.ProcessTemplate(template, workingDirectory);
 
@@ -325,7 +332,8 @@
             var packager = new PackagerUtils(
                 new TestPathResolver(),
                 this.Logger,
-                new S3Util(this.ClientFactory, this.Context, template, "test-bucket", null, null));
+                new S3Util(this.ClientFactory, this.Context, template, "test-bucket", null, null),
+                new OSInfo());
 
             await packager.ProcessTemplate(template, workingDirectory);
 
@@ -357,7 +365,8 @@
             var packager = new PackagerUtils(
                 new TestPathResolver(),
                 this.Logger,
-                new S3Util(this.ClientFactory, this.Context, template, "test-bucket", null, null));
+                new S3Util(this.ClientFactory, this.Context, template, "test-bucket", null, null),
+                new OSInfo());
 
             await packager.ProcessTemplate(template, workingDirectory);
 

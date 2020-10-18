@@ -13,7 +13,7 @@
     /// </summary>
     /// <seealso cref="LambdaPackager" />
     /// <seealso href="https://docs.aws.amazon.com/lambda/latest/dg/python-package.html"/>
-    internal class LambdaPythonPackager : LambdaPackager
+    internal abstract class LambdaPythonPackager : LambdaPackager
     {
         private const string IncludeDir = "include";
 
@@ -39,7 +39,7 @@
         /// <param name="lambdaArtifact">The lambda artifact to package</param>
         /// <param name="s3">Interface to S3</param>
         /// <param name="logger">Interface to logger.</param>
-        public LambdaPythonPackager(LambdaArtifact lambdaArtifact, IPSS3Util s3, ILogger logger)
+        protected LambdaPythonPackager(LambdaArtifact lambdaArtifact, IPSS3Util s3, ILogger logger)
             : base(lambdaArtifact, s3, logger)
         {
         }
@@ -124,7 +124,7 @@
 
             foreach (var dependencyEntry in dependencies)
             {
-                if (IsVirtualEnv(dependencyEntry.Location))
+                if (this.IsVirtualEnv(dependencyEntry.Location))
                 {
                     if (virtualEnvDirectories == null)
                     {
@@ -178,16 +178,7 @@
         /// <remarks>
         /// A virtual env should contain at least the following directories: Include, Lib or Lib64, Scripts
         /// </remarks>
-        private static bool IsVirtualEnv(string path)
-        {
-            var directories = Directory.GetDirectories(path, "*", SearchOption.TopDirectoryOnly)
-                .Select(d => Path.GetFileName(d).ToLowerInvariant()).ToList();
-
-            var inCommon = VenvDirectories.Intersect(directories).ToList();
-
-            return inCommon.Contains(ScriptsDir) && inCommon.Contains(IncludeDir)
-                                                 && (inCommon.Contains(Lib64Dir) || inCommon.Contains(LibDir));
-        }
+        protected abstract bool IsVirtualEnv(string path);
 
         /// <summary>
         /// Copies the dependencies to package directory.
