@@ -9,7 +9,7 @@
     /// <summary>
     /// Object describing the runtime of a lambda
     /// </summary>
-    [DebuggerDisplay("{runtime}")]
+    [DebuggerDisplay("{Runtime}")]
     internal class LambdaRuntimeInfo
     {
         /// <summary>
@@ -33,12 +33,6 @@
         private static readonly Regex RuntimeVersionRegex = new Regex(@"(?<lang>[a-z]+)(?<version>[\d\.][a-z0-9\.]*)?");
 
         /// <summary>
-        /// The runtime as read from the template
-        /// </summary>
-        // ReSharper disable once PrivateFieldCanBeConvertedToLocalVariable - used for debugger display
-        private readonly string runtime;
-
-        /// <summary>
         /// Initializes a new instance of the <see cref="LambdaRuntimeInfo"/> class.
         /// </summary>
         /// <param name="lambdaResource">The lambda resource.</param>
@@ -47,18 +41,18 @@
         /// </exception>
         public LambdaRuntimeInfo(ITemplateResource lambdaResource)
         {
-            this.runtime = lambdaResource.GetResourcePropertyValue("Runtime");
+            this.Runtime = lambdaResource.GetResourcePropertyValue("Runtime");
 
-            if (this.runtime == null)
+            if (this.Runtime == null)
             {
                 throw new PackagerException($"{lambdaResource.LogicalName}: Missing property 'Runtime'");
             }
 
-            var m = RuntimeVersionRegex.Match(this.runtime);
+            var m = RuntimeVersionRegex.Match(this.Runtime);
 
             if (!m.Success)
             {
-                throw new PackagerException($"{lambdaResource.LogicalName}: Unknown runtime '{this.runtime}'");
+                throw new PackagerException($"{lambdaResource.LogicalName}: Unknown runtime '{this.Runtime}'");
             }
 
             var lang = m.Groups["lang"].Value;
@@ -71,6 +65,12 @@
             this.RuntimeType = RuntimeTypes[lang];
             this.RuntimeVersion = m.Groups["version"].Value;
         }
+
+        /// <summary>
+        /// Gets the runtime as read from the template (e.g. python3.8
+        /// </summary>
+        // ReSharper disable once PrivateFieldCanBeConvertedToLocalVariable - used for debugger display
+        public string Runtime { get; }
 
         /// <summary>
         /// Gets or sets the runtime type.

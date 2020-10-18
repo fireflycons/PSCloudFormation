@@ -383,7 +383,8 @@
             var packager = new PackagerUtils(
                 this.PathResolver,
                 this.Logger,
-                this.Context.S3Util as IPSS3Util);
+                this.Context.S3Util as IPSS3Util,
+                new OSInfo());
 
             if (packager.RequiresPackaging(this.TemplateLocation))
             {

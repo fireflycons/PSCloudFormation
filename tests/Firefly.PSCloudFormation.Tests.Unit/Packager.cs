@@ -75,7 +75,8 @@ namespace Firefly.PSCloudFormation.Tests.Unit
             var packager = new PackagerUtils(
                 new TestPathResolver(),
                 logger,
-                new S3Util(mockClientFactory.Object, mockContext.Object, template, "test-bucket", null, null));
+                new S3Util(mockClientFactory.Object, mockContext.Object, template, "test-bucket", null, null),
+                new OSInfo());
 
             var outputTemplatePath = await packager.ProcessTemplate(template, workingDirectory);
 
@@ -132,7 +133,8 @@ namespace Firefly.PSCloudFormation.Tests.Unit
             var packager = new PackagerUtils(
                 new TestPathResolver(),
                 logger,
-                new S3Util(mockClientFactory.Object, mockContext.Object, template, "test-bucket", null, null));
+                new S3Util(mockClientFactory.Object, mockContext.Object, template, "test-bucket", null, null),
+                new OSInfo());
 
             var outputTemplatePath = await packager.ProcessTemplate(template, workingDirectory);
 
@@ -190,7 +192,8 @@ namespace Firefly.PSCloudFormation.Tests.Unit
             var packager = new PackagerUtils(
                 new TestPathResolver(),
                 logger,
-                new S3Util(mockClientFactory.Object, mockContext.Object, template, "test-bucket", null, null));
+                new S3Util(mockClientFactory.Object, mockContext.Object, template, "test-bucket", null, null),
+                new OSInfo());
 
             var outputTemplatePath = await packager.ProcessTemplate(template, workingDirectory);
 
@@ -266,7 +269,8 @@ namespace Firefly.PSCloudFormation.Tests.Unit
             var packager = new PackagerUtils(
                 new TestPathResolver(),
                 logger,
-                new S3Util(mockClientFactory.Object, mockContext.Object, template, "test-bucket", null, null));
+                new S3Util(mockClientFactory.Object, mockContext.Object, template, "test-bucket", null, null),
+                new OSInfo());
 
             var outputTemplatePath = await packager.ProcessTemplate(template, workingDirectory);
 
@@ -282,7 +286,7 @@ namespace Firefly.PSCloudFormation.Tests.Unit
         {
             var templateFile = Path.Combine(this.deepNestedStack, "base-stack.json");
 
-            new PackagerUtils(this.pathResolver, new TestLogger(this.output), null).RequiresPackaging(templateFile).Should().BeTrue();
+            new PackagerUtils(this.pathResolver, new TestLogger(this.output), null, new OSInfo()).RequiresPackaging(templateFile).Should().BeTrue();
         }
 
         [Fact]
@@ -290,13 +294,13 @@ namespace Firefly.PSCloudFormation.Tests.Unit
         {
             var templateFile = Path.Combine(this.deepNestedStack, "sub-nested-2.json");
 
-            new PackagerUtils(this.pathResolver, new TestLogger(this.output), null).RequiresPackaging(templateFile).Should().BeTrue();
+            new PackagerUtils(this.pathResolver, new TestLogger(this.output), null, new OSInfo()).RequiresPackaging(templateFile).Should().BeTrue();
         }
 
         [Fact]
         public void ShouldDetectStackDoesNotNeedPackagingWhenNoLocalFileReferences()
         {
-            new PackagerUtils(this.pathResolver, new TestLogger(this.output), null).RequiresPackaging(this.noPackageStack).Should().BeFalse();
+            new PackagerUtils(this.pathResolver, new TestLogger(this.output), null, new OSInfo()).RequiresPackaging(this.noPackageStack).Should().BeFalse();
         }
 
         public void Dispose()
