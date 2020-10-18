@@ -1,3 +1,3 @@
 # Articles and How-Tos
 
-In this section there are a few examples of how to use this library.
+This section describes the more advanced features of the PSCloudFormation module.

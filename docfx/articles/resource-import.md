@@ -83,14 +83,14 @@ Begin update of test-import-stack now?
 [Y] Yes [N] No [?] Help (default is "Yes"):
 Updating stack test-import-stack
 Waiting for update to complete
-TimeStamp StackName         Logical ID                               Status                                        Status Reason
---------- ---------         ----------                               ------                                        -------------
-21:31:01  test-import-stack test-import-stack                        IMPORT_IN_PROGRESS                            User Initiated
-21:31:04  test-import-stack ApplicationBucket                        IMPORT_IN_PROGRESS                            Resource import started.
-21:31:05  test-import-stack ApplicationBucket                        IMPORT_COMPLETE                               Resource import completed.
-21:31:06  test-import-stack ApplicationBucket                        UPDATE_IN_PROGRESS                            Apply stack-level tags to imported resource if applicable.
-21:31:26  test-import-stack ApplicationBucket                        UPDATE_COMPLETE                               -
-21:31:27  test-import-stack test-import-stack                        IMPORT_COMPLETE                               -
+TimeStamp StackName         Logical ID        Status              Status Reason
+--------- ---------         ----------        ------              -------------
+21:31:01  test-import-stack test-import-stack IMPORT_IN_PROGRESS  User Initiated
+21:31:04  test-import-stack ApplicationBucket IMPORT_IN_PROGRESS  Resource import started.
+21:31:05  test-import-stack ApplicationBucket IMPORT_COMPLETE     Resource import completed.
+21:31:06  test-import-stack ApplicationBucket UPDATE_IN_PROGRESS  Apply stack-level tags to imported resource if applicable.
+21:31:26  test-import-stack ApplicationBucket UPDATE_COMPLETE     -
+21:31:27  test-import-stack test-import-stack IMPORT_COMPLETE     -
 arn:aws:cloudformation:eu-west-1:104552851521:stack/test-import-stack/bae2a440-154a-11ea-b2ac-069dc79e2b34
 ```
 ## Further Reading

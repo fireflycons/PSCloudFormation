@@ -1,5 +1,9 @@
 - name: S3 Usage
   href: s3-usage.md
+- name: Dynamic Parameters
+  href: dynamic-parameters.md
+- name: Parameter Files
+  href: parameter-files.md
 - name: CloudFomation Packaging
   href: packager.md
 - name: Lambda Packaging

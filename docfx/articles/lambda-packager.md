@@ -4,9 +4,9 @@ title: Lambda Packager
 ---
 # Packaging Lambdas
 
-A feature that is glaringly absent from `aws cloudformation package` is the ability to specify dependent modules that should be included in the lambda zip package, therefore I have come up with my own implementation of this. It works by providing a file in the same directory as the script that contains the lambda handler function that lists all the dependent modules that should be packaged. This file is called `lambda-dependencies` and can have either a `.yaml` or `.json` extension.
+A feature that is glaringly absent from `aws cloudformation package` is the ability to specify dependent modules *outside* of the lambda code directory structure that should be included in the lambda zip package e.g. modules in a python venv, therefore I have come up with my own implementation of this. It works by providing a file in the same directory as the script that contains the lambda handler function that lists all the dependent modules that should be packaged. This file is called `lambda-dependencies` and can have either a `.yaml` or `.json` extension.
 
-Addtionally as part of the lambda packaging process, PSCloudFormation will, where possible, validate the lambda handler defined by the function resource. The lambda code file indicated by the handler is examined to check for the presence of a method within that has the correct name (defined by the Handler property) and signature for a handler function. This is especially useful when creating Custom Resouce functions, as a typo in the handler name can cause the deployment to lock up completely.
+Addtionally as part of the lambda packaging process, PSCloudFormation will, where possible, validate the lambda handler defined by the function resource. The lambda code file indicated by the handler is examined to check for the presence of a method within that has the correct name (defined by the Handler property) and signature for a handler function. This is especially useful when creating Custom Resource functions, as a typo in the handler name can cause the stack deployment to lock up completely.
 
 ## Dependency Specification
 
@@ -21,9 +21,9 @@ Note that the dependency system does not currently examine modules listed in `la
 
 Currently the following lambda runtimes are supported, which are basically the script runtimes. Compiled runtimes (Java, .NET and Go) would generally have a build process which can be made to target a zip file which would contain a full lambda package, and that zip file would be referred to in the CloudFormation template.
 
-* `python` - all versions
-* `nodejs` - all versions
-* `ruby` - all versions
+* `python` - all versions supported by AWS
+* `nodejs` - all versions supported by AWS
+* `ruby` - all versions supported by AWS
 
 ### Python
 
@@ -40,17 +40,37 @@ The easiest way to package Python dependencies is to build your Python lambda in
   - other_library
 ```
 
+Sample directory structure (Windows)
+
 ```
 lambda-project
 ├──template.yaml
 ├──lambda-function
-│  └── index.js
+│  └── index.py
 └── venv
     └── lib
         └── site-packages
             ├── yaml
             ├── PIL
             ├── six.py
+```
+
+Sample directory structure (Linux/Max), where `X.Y` is the Python runtime version e.g. `3.6`
+
+**CAVEAT**: Due to the versioned site packages in the venv, you need to develop using the same version of Python as the runtime version you intend to deploy your lambda to.
+
+```
+lambda-project
+├──template.yaml
+├──lambda-function
+│  └── index.py
+└── venv
+    └── lib
+        └── pythonX.Y
+            └── site-packages
+                ├── yaml
+                ├── PIL
+                ├── six.py
 ```
 
 ### NodeJS
