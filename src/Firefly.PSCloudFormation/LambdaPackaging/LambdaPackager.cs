@@ -3,6 +3,7 @@
     using System;
     using System.IO;
     using System.Linq;
+    using System.Runtime.InteropServices;
     using System.Text.RegularExpressions;
     using System.Threading.Tasks;
 
@@ -75,8 +76,13 @@
         /// <param name="lambdaArtifact">The lambda artifact to package</param>
         /// <param name="s3">Interface to S3</param>
         /// <param name="logger">Interface to logger.</param>
+        /// <param name="platform">Operating system platform</param>
         /// <returns>Runtime specific subclass of <see cref="LambdaPackager"/></returns>
-        public static LambdaPackager CreatePackager(LambdaArtifact lambdaArtifact, IPSS3Util s3, ILogger logger)
+        public static LambdaPackager CreatePackager(
+            LambdaArtifact lambdaArtifact,
+            IPSS3Util s3,
+            ILogger logger,
+            IOSInfo platform)
         {
             if (lambdaArtifact == null)
             {
@@ -93,7 +99,9 @@
 
                 case LambdaRuntimeType.Python:
 
-                    return new LambdaPythonPackager(lambdaArtifact, s3, logger);
+                    return platform.OSPlatform == OSPlatform.Windows
+                               ? (LambdaPythonPackager)new LambdaPythonPackagerWindows(lambdaArtifact, s3, logger)
+                               : new LambdaPythonPackagerLinux(lambdaArtifact, s3, logger);
 
                 case LambdaRuntimeType.Ruby:
 

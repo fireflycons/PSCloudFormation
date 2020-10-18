@@ -199,15 +199,19 @@
         // ReSharper disable once StyleCop.SA1305
         private readonly IPSS3Util s3Util;
 
+        private readonly IOSInfo platform;
+
         /// <summary>
         /// Initializes a new instance of the <see cref="PackagerUtils"/> class.
         /// </summary>
         /// <param name="pathResolver">The path resolver.</param>
         /// <param name="logger">Logging interface.</param>
         /// <param name="s3Util">S3 utility to use for pushing packaged objects.</param>
+        /// <param name="platform">The operating system platform</param>
         // ReSharper disable once StyleCop.SA1305
-        public PackagerUtils(IPathResolver pathResolver, ILogger logger, IPSS3Util s3Util)
+        public PackagerUtils(IPathResolver pathResolver, ILogger logger, IPSS3Util s3Util, IOSInfo platform)
         {
+            this.platform = platform;
             this.s3Util = s3Util;
             this.logger = logger;
             this.pathResolver = pathResolver;
@@ -497,7 +501,7 @@
                 if (lambdaResource.ArtifactType != LambdaArtifactType.NotLambda)
                 {
                     // We do
-                    using (var packager = LambdaPackager.CreatePackager(lambdaResource, this.s3Util, this.logger))
+                    using (var packager = LambdaPackager.CreatePackager(lambdaResource, this.s3Util, this.logger, this.platform))
                     {
                         resourceToUpload = await packager.Package(workingDirectory);
 

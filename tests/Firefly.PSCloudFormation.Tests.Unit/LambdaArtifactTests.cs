@@ -117,7 +117,7 @@
             function.Should().NotBeNull("you broke the template!");
 
             var artifact = new LambdaArtifact(new TestPathResolver(), function, template);
-            var packager = LambdaPackager.CreatePackager(artifact, mockS3.Object, new TestLogger(this.output));
+            var packager = LambdaPackager.CreatePackager(artifact, mockS3.Object, new TestLogger(this.output), new OSInfo());
 
             Func<Task> act = async () => { await packager.Package(null); };
             await act.Should().NotThrowAsync();
@@ -164,7 +164,7 @@
             artifact.HandlerInfo.MethodPart.Should().Be("handler");
 
             // Verify handler check
-            var packager = LambdaPackager.CreatePackager(artifact, mockS3.Object, new TestLogger(this.output));
+            var packager = LambdaPackager.CreatePackager(artifact, mockS3.Object, new TestLogger(this.output), new OSInfo());
             Func<Task> act = async () => { await packager.Package(null); };
 
             await act.Should().NotThrowAsync();
@@ -198,7 +198,7 @@
                 Directory.GetCurrentDirectory());
 
             // Verify parsing
-            var packager = LambdaPackager.CreatePackager(artifact, mockS3.Object, new TestLogger(this.output));
+            var packager = LambdaPackager.CreatePackager(artifact, mockS3.Object, new TestLogger(this.output), new OSInfo());
             artifact.HandlerInfo.MethodPart.Should().Be("mistyped_handler");
 
             Func<Task> act = async () => { await packager.Package(null); };
@@ -233,7 +233,7 @@
                 mockLambdaFunctionResource.Object,
                 Directory.GetCurrentDirectory());
 
-            var packager = LambdaPackager.CreatePackager(artifact, mockS3.Object, logger);
+            var packager = LambdaPackager.CreatePackager(artifact, mockS3.Object, logger, new OSInfo());
 
             Func<Task> act = async () => { await packager.Package(null); };
             await act.Should().NotThrowAsync();

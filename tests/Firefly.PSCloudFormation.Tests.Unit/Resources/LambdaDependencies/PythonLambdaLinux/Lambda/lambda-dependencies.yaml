@@ -1,0 +1,4 @@
+﻿- Location: '$VIRTUAL_ENV'
+  Libraries:
+  - mylibrary
+  - standalone_module

@@ -189,7 +189,7 @@
             {
                 using (var workingDirectory = new WorkingDirectory(this.Logger))
                 {
-                    var packager = new PackagerUtils(this.PathResolver, this.Logger, this.S3);
+                    var packager = new PackagerUtils(this.PathResolver, this.Logger, this.S3, new OSInfo());
                     var processedTemplatePath = packager.ProcessTemplate(this.TemplateFile, workingDirectory).Result;
 
                     // The base stack template was changed

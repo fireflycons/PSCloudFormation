@@ -359,3 +359,5 @@ build/module.ver
 
 # Integrated debugging
 Firefly.PSCloudFormation.debug.sln
+
+!tests/Firefly.PSCloudFormation.Tests.Unit/Resources/LambdaDependencies/PythonLambdaLinux/venv/bin
