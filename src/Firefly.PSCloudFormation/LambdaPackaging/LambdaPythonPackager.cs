@@ -9,25 +9,12 @@
     using Firefly.PSCloudFormation.Utils;
 
     /// <summary>
-    /// Packager for Node.JS lambda
+    /// Base packager for Python
     /// </summary>
     /// <seealso cref="LambdaPackager" />
     /// <seealso href="https://docs.aws.amazon.com/lambda/latest/dg/python-package.html"/>
     internal abstract class LambdaPythonPackager : LambdaPackager
     {
-        private const string IncludeDir = "include";
-
-        private const string Lib64Dir = "lib64";
-
-        private const string LibDir = "lib";
-
-        private const string ScriptsDir = "scripts";
-
-        /// <summary>
-        /// Directories that are found within a virtual env.
-        /// </summary>
-        private static readonly string[] VenvDirectories = { ScriptsDir, LibDir, Lib64Dir, IncludeDir };
-
         /// <summary>
         /// Path to temporary directory in which we build up the lambda package
         /// </summary>
@@ -43,6 +30,31 @@
             : base(lambdaArtifact, s3, logger)
         {
         }
+
+        /// <summary>
+        /// Gets the virtual env include directory.
+        /// </summary>
+        /// <value>
+        /// The include directory.
+        /// </value>
+        protected string IncludeDir { get; } = "Include";
+
+        /// <summary>
+        /// Gets the virtual env library directory.
+        /// </summary>
+        /// <value>
+        /// The library directory.
+        /// </value>
+        protected string LibDir { get; } = "lib";
+
+        /// <summary>
+        /// Gets the virtual env bin directory, which differs between Windows and non-Windows.
+        /// </summary>
+        /// <value>
+        /// The bin directory.
+        /// </value>
+        protected abstract string BinDir { get; }
+
 
         /// <summary>
         /// Gets the  regex to detect lambda handler.
@@ -120,37 +132,25 @@
             }
 
             // Now accumulate dependencies
-            List<string> virtualEnvDirectories = null;
+            string sitePackagesDirectory = null;
 
             foreach (var dependencyEntry in dependencies)
             {
                 if (this.IsVirtualEnv(dependencyEntry.Location))
                 {
-                    if (virtualEnvDirectories == null)
+                    if (sitePackagesDirectory == null)
                     {
-                        virtualEnvDirectories = Directory
-                            .GetDirectories(dependencyEntry.Location, "*site-packages", SearchOption.AllDirectories)
-                            .Concat(
-                                Directory.GetDirectories(
-                                    dependencyEntry.Location,
-                                    "*dist-packages",
-                                    SearchOption.AllDirectories)).ToList();
-
-                        if (!virtualEnvDirectories.Any())
-                        {
-                            throw new PackagerException(
-                                $"'{dependencyEntry.Location} looks like a virtual env, but no 'site-packages' or 'dist-packages' found.");
-                        }
+                        sitePackagesDirectory = this.GetSitePackagesDirectory(dependencyEntry);
                     }
 
-                    this.CopyDependenciesToPackageDirectory(dependencyEntry, virtualEnvDirectories);
+                    this.CopyDependenciesToPackageDirectory(dependencyEntry, sitePackagesDirectory);
                 }
                 else
                 {
                     // Package is directly beneath given location
                     this.CopyDependenciesToPackageDirectory(
                         dependencyEntry,
-                        new List<string> { dependencyEntry.Location });
+                        dependencyEntry.Location);
                 }
 
                 // Remove any __pycache__
@@ -169,6 +169,13 @@
         }
 
         /// <summary>
+        /// Gets the virtual env site-packages for the current OS platform.
+        /// </summary>
+        /// <param name="dependencyEntry">The dependency entry.</param>
+        /// <returns>virtual env site-packages</returns>
+        protected abstract string GetSitePackagesDirectory(LambdaDependency dependencyEntry);
+
+        /// <summary>
         /// Determines whether the specified path is a virtual env.
         /// </summary>
         /// <param name="path">The path.</param>
@@ -178,21 +185,36 @@
         /// <remarks>
         /// A virtual env should contain at least the following directories: Include, Lib or Lib64, Scripts
         /// </remarks>
-        protected abstract bool IsVirtualEnv(string path);
+        protected bool IsVirtualEnv(string path)
+        {
+            var venvDirectories = new[] { this.IncludeDir, this.LibDir, this.BinDir }.Select(d => d.ToLowerInvariant())
+                .OrderBy(d => d).ToList();
+
+            var sitePackages = Directory.GetDirectories(path, "*", SearchOption.TopDirectoryOnly)
+                .Select(d => Path.GetFileName(d).ToLowerInvariant()).OrderBy(d => d);
+
+            return venvDirectories
+                .Intersect(
+                    sitePackages)
+                .SequenceEqual(venvDirectories);
+        }
 
         /// <summary>
         /// Copies the dependencies to package directory.
         /// </summary>
         /// <param name="dependencyEntry">The dependency entry.</param>
-        /// <param name="dependencyLocations">The dependency locations - one or more directories where dependencies may be found.</param>
+        /// <param name="dependencyLocation">The dependency locations - one or more directories where dependencies may be found.</param>
         /// <exception cref="PackagerException">Module {library} not found in virtual env '{dependencyEntry.Location}'</exception>
         private void CopyDependenciesToPackageDirectory(
             LambdaDependency dependencyEntry,
-            IReadOnlyCollection<string> dependencyLocations)
+            string dependencyLocation)
         {
+            // Make this an array to use Linq to do path combine and existence check in one
+            var dependencyLocationArray = new[] { dependencyLocation };
+
             foreach (var library in dependencyEntry.Libraries)
             {
-                var libDirectory = dependencyLocations.Select(d => Path.Combine(d, library))
+                var libDirectory = dependencyLocationArray.Select(d => Path.Combine(d, library))
                     .FirstOrDefault(Directory.Exists);
 
                 if (libDirectory != null)
@@ -205,7 +227,7 @@
                 }
 
                 // Perhaps the dependency is a single file
-                var libFile = dependencyLocations.Select(d => Path.Combine(d, $"{library}.py"))
+                var libFile = dependencyLocationArray.Select(d => Path.Combine(d, $"{library}.py"))
                     .FirstOrDefault(File.Exists);
 
                 if (libFile == null)

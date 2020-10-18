@@ -1,50 +1,51 @@
 ﻿namespace Firefly.PSCloudFormation.LambdaPackaging
 {
+    using System.Collections.Generic;
     using System.IO;
     using System.Linq;
+
+    using Amazon.S3.Model.Internal.MarshallTransformations;
 
     using Firefly.CloudFormation;
     using Firefly.PSCloudFormation.Utils;
 
     internal class LambdaPythonPackagerWindows : LambdaPythonPackager
     {
-        private const string IncludeDir = "include";
-
-        private const string Lib64Dir = "lib64";
-
-        private const string LibDir = "lib";
-
-        private const string ScriptsDir = "scripts";
-
         /// <summary>
-        /// Directories that are found within a virtual env.
+        /// Initializes a new instance of the <see cref="LambdaPythonPackagerWindows"/> class.
         /// </summary>
-        private static readonly string[] VenvDirectories = { ScriptsDir, LibDir, Lib64Dir, IncludeDir };
-
+        /// <param name="lambdaArtifact">The lambda artifact to package</param>
+        /// <param name="s3">Interface to S3</param>
+        /// <param name="logger">Interface to logger.</param>
         public LambdaPythonPackagerWindows(LambdaArtifact lambdaArtifact, IPSS3Util s3, ILogger logger)
             : base(lambdaArtifact, s3, logger)
         {
         }
 
         /// <summary>
-        /// Determines whether the specified path is a virtual env.
+        /// Gets the virtual env bin directory, which differs between Windows and non-Windows.
         /// </summary>
-        /// <param name="path">The path.</param>
-        /// <returns>
-        ///   <c>true</c> if [is virtual env] [the specified path]; otherwise, <c>false</c>.
-        /// </returns>
-        /// <remarks>
-        /// A virtual env should contain at least the following directories: Include, Lib or Lib64, Scripts
-        /// </remarks>
-        protected override bool IsVirtualEnv(string path)
+        /// <value>
+        /// The bin directory.
+        /// </value>
+        protected override string BinDir { get; } = "scripts";
+
+        /// <summary>
+        /// Gets the virtual env site-packages for the current OS platform.
+        /// </summary>
+        /// <param name="dependencyEntry">The dependency entry.</param>
+        /// <returns>virtual env site-packages</returns>
+        protected override string GetSitePackagesDirectory(LambdaDependency dependencyEntry)
         {
-            var directories = Directory.GetDirectories(path, "*", SearchOption.TopDirectoryOnly)
-                .Select(d => Path.GetFileName(d).ToLowerInvariant()).ToList();
+            var sitePackages = Path.Combine(dependencyEntry.Location, this.LibDir, "site-packages");
 
-            var inCommon = VenvDirectories.Intersect(directories).ToList();
+            if (!Directory.Exists(sitePackages))
+            {
+                throw new PackagerException(
+                    $"'{dependencyEntry.Location} looks like a virtual env, but no 'site-packages' found.");
+            }
 
-            return inCommon.Contains(ScriptsDir) && inCommon.Contains(IncludeDir)
-                                                 && (inCommon.Contains(Lib64Dir) || inCommon.Contains(LibDir));
+            return sitePackages;
         }
     }
 }

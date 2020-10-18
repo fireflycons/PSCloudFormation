@@ -3,6 +3,7 @@
     using System;
     using System.Collections.Generic;
     using System.IO;
+    using System.Runtime.InteropServices;
     using System.Threading.Tasks;
 
     using Amazon;
@@ -36,7 +37,7 @@
         /// </summary>
         [EmbeddedResource(
             "LambdaDependencies",
-            DirectoryRenames = new[] { "site_packages", "site-packages", "_2_7_0", "2.7.0" })]
+            DirectoryRenames = new[] { "site_packages", "site-packages", "_2_7_0", "2.7.0", "python3_6", "python3.6" })]
         public TempDirectory LambdaDependencies;
 
         private readonly ListObjectsV2Response fileNotFound =
@@ -167,12 +168,18 @@
         /// Test that when the template refers to directory containing more than one script and a dependency file is present,
         /// then the lambda directory content and its dependencies are correctly packaged.
         /// </summary>
-        [Fact]
-        public async Task ShouldCorrectlyPackagePythonDirectoryLambdaWithDependency()
+        [InlineData("Windows")]
+        [InlineData("Linux")]
+        [Theory]
+        public async Task ShouldCorrectlyPackagePythonDirectoryLambdaWithDependency(string platform)
         {
-            var templateDir = Path.Combine(this.LambdaDependencies.FullPath, "PythonLambda");
+            var templateDir = Path.Combine(this.LambdaDependencies.FullPath, platform == "Windows" ? "PythonLambda" : "PythonLambdaLinux");
             var template = Path.Combine(templateDir, "template-complex.yaml");
             this.SetupMocks(template);
+
+            var mockOSInfo = new Mock<IOSInfo>();
+
+            mockOSInfo.Setup(i => i.OSPlatform).Returns(platform == "Windows" ? OSPlatform.Windows : OSPlatform.Linux);
 
             // Mock the virtualenv
             Environment.SetEnvironmentVariable("VIRTUAL_ENV", Path.Combine(templateDir, "venv"));
@@ -183,7 +190,7 @@
                 new TestPathResolver(),
                 this.Logger,
                 new S3Util(this.ClientFactory, this.Context, template, "test-bucket", null, null),
-                new OSInfo());
+                mockOSInfo.Object);
 
             await packager.ProcessTemplate(template, workingDirectory);
 
@@ -204,12 +211,18 @@
         /// Test that when the template refers to a single python script and a dependency file is present,
         /// then the script and its dependencies are correctly packaged.
         /// </summary>
-        [Fact]
-        public async Task ShouldCorrectlyPackagePythonSingleFileLambdaWithDependency()
+        [InlineData("Windows")]
+        [InlineData("Linux")]
+        [Theory]
+        public async Task ShouldCorrectlyPackagePythonSingleFileLambdaWithDependency(string platform)
         {
-            var templateDir = Path.Combine(this.LambdaDependencies.FullPath, "PythonLambda");
+            var templateDir = Path.Combine(this.LambdaDependencies.FullPath, platform == "Windows" ? "PythonLambda" : "PythonLambdaLinux");
             var template = Path.Combine(templateDir, "template.yaml");
             this.SetupMocks(template);
+
+            var mockOSInfo = new Mock<IOSInfo>();
+
+            mockOSInfo.Setup(i => i.OSPlatform).Returns(platform == "Windows" ? OSPlatform.Windows : OSPlatform.Linux);
 
             // Mock the virtualenv
             Environment.SetEnvironmentVariable("VIRTUAL_ENV", Path.Combine(templateDir, "venv"));
@@ -220,7 +233,7 @@
                 new TestPathResolver(),
                 this.Logger,
                 new S3Util(this.ClientFactory, this.Context, template, "test-bucket", null, null),
-                new OSInfo());
+                mockOSInfo.Object);
 
             await packager.ProcessTemplate(template, workingDirectory);
 
