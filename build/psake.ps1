@@ -427,43 +427,7 @@ Task Build -Depends Init {
 
 }
 
-Task CleanModule -Depends Build {
-
-    $lines
-
-    try
-    {
-        Push-Location (Split-Path -Parent $env:BHPSModuleManifest)
-
-        @(
-            'publish',
-            '*.pdb'
-            '*.json'
-            'debug.ps1'
-            'Firefly.PSCloudFormation.xml'
-        ) |
-        Where-Object {
-            Test-Path -Path $_
-        } |
-        Foreach-Object {
-
-            $recurse = @{}
-
-            if (Test-Path -Path $_ -PathType Container)
-            {
-                $recurse.Add('Recurse', $true)
-            }
-
-            Remove-Item $_ @recurse
-        }
-    }
-    finally
-    {
-        Pop-Location
-    }
-}
-
-Task UpdateManifest -Depends CleanModule {
+Task UpdateManifest {
 
     # Load the module, read the exported commands, update the psd1 CmdletsToExport
     try
@@ -504,15 +468,36 @@ Task UpdateManifest -Depends CleanModule {
     Update-Metadata -Path $env:BHPSModuleManifest -PropertyName ModuleVersion -Value (Get-Content -Raw (Join-Path $PSScriptRoot "module.ver")).Trim() -ErrorAction stop
 
     # Set file list
-    Update-Metadata -Path $env:BHPSModuleManifest -PropertyName FileList -Value (Get-ChildItem -Path (Split-Path -Parent $env:BHPSModuleManifest) -Exclude *.psd1).Name
+    $excludeList = Invoke-Command -NoNewScope {
+        Get-ExcludedFiles | Select-Object -ExpandProperty name
+        '*.psd1'
+    }
+
+    Update-Metadata -Path $env:BHPSModuleManifest -PropertyName FileList -Value (Get-ChildItem -Path (Split-Path -Parent $env:BHPSModuleManifest) -Exclude $excludeList).Name
 }
 
-Task Deploy -Depends Init {
+Task CleanModule {
+
+    Get-ExcludedFiles |
+    Foreach-Object {
+
+        $recurse = @{}
+
+        if (Test-Path -Path $_.FullName -PathType Container)
+        {
+            $recurse.Add('Recurse', $true)
+        }
+
+        Remove-Item $_.FullName @recurse
+    }
+}
+
+Task Deploy -Depends Init, CleanModule {
 
     $lines
 
     Write-Host "Testing module manifest"
-    Test-ModuleManifest -Path $env:BHPSModuleManifest
+    Test-ModuleManifest -Path $env:BHPSModuleManifest | Out-Null
 
     $deployParams = $(
 
@@ -733,4 +718,29 @@ function Invoke-WithRetry
     }
 
     throw $ex
+}
+
+function Get-ExcludedFiles
+{
+    try
+    {
+        Push-Location (Split-Path -Parent $env:BHPSModuleManifest)
+
+        Invoke-Command -NoNewScope {
+            Get-ChildItem -Filter AWS*
+            Get-ChildItem -Filter *.pdb
+            Get-ChildItem -Filter *.json
+            Get-Item publish -ErrorAction SilentlyContinue
+            Get-Item debug.ps1 -ErrorAction SilentlyContinue
+            Get-Item Firefly.PSCloudFormation.xml -ErrorAction SilentlyContinue
+            Get-Item System.Management.Automation.dll -ErrorAction SilentlyContinue
+        } |
+        Where-Object {
+            $null -ne $_ -and (Test-Path -Path $_.FullName)
+        }
+    }
+    finally
+    {
+        Pop-Location
+    }
 }
