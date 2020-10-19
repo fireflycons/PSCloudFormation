@@ -25,6 +25,8 @@ Currently the following lambda runtimes are supported, which are basically the s
 * `nodejs` - all versions supported by AWS
 * `ruby` - all versions supported by AWS
 
+Having said this, the PSCloudFormation packager will still correctly apply a local zip file target referenced from a template file, so for compiled languages simply point the template at the zip artifact created by the compiled project's build process.
+
 ### Python
 
 The easiest way to package Python dependencies is to build your Python lambda in a [virtual env](https://docs.python.org/3/library/venv.html) and then run PSCloudFormation cmdlets from within the virtual env, using the `VIRTUAL_ENV` environment variable in your `lambda-dependencies` file as the location for package dependencies. This environment variable is created when you activate your virtualenv.

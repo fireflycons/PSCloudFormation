@@ -4,7 +4,7 @@
   href: dynamic-parameters.md
 - name: Parameter Files
   href: parameter-files.md
-- name: CloudFomation Packaging
+- name: CloudFormation Packaging
   href: packager.md
 - name: Lambda Packaging
   href: lambda-packager.md
