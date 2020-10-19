@@ -1,35 +1,6 @@
 {
-  "metadata": [
-    {
-      "src": [
-        {
-          "files": [
-            "**/*.csproj"
-          ],
-          "exclude": [
-            "**/bin/**",
-            "**/obj/**"
-          ],
-          "src": "../src"
-        }
-      ],
-      "dest": "api",
-      "disableGitFeatures": false,
-      "disableDefaultFilter": false,
-      "properties": {
-        "TargetFramework": "netstandard2.0"
-      },
-      "filter": "filterConfig.yml"
-    }
-  ],
   "build": {
     "content": [
-      {
-        "files": [
-          "api/**.yml",
-          "api/index.md"
-        ]
-      },
       {
         "files": [
           "articles/**.md",
