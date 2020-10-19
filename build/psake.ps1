@@ -33,6 +33,8 @@ Properties {
     $DocsRootDir = Join-Path $env:BHProjectPath 'docfx/cmdlets'
     $ModuleName = "PSCloudFormation"
 
+    $DocFxDirectory = (Resolve-Path (Join-Path $PSScriptRoot ../docfx)).Path
+    $DocFxConfig = Join-Path $DocFxDirectory docfx.json
 }
 
 Task Default -Depends BuildHelp, Deploy
@@ -544,7 +546,7 @@ Task Deploy -Depends Init, CleanModule {
     }
 }
 
-Task BuildHelp -Depends Build, UpdateManifest, GenerateMarkdown {}
+Task BuildHelp -Depends Build, UpdateManifest, GenerateMarkdown, CompileDocfx {}
 
 Task GenerateMarkdown -requiredVariables DefaultLocale, DocsRootDir {
     if (!(Get-Module platyPS -ListAvailable))
@@ -664,6 +666,23 @@ Task GenerateMarkdown -requiredVariables DefaultLocale, DocsRootDir {
     }
 }
 
+Task CompileDocfx -requiredVariables DocFxDirectory, DocFxConfig {
+
+    if ($script:IsWindows)
+    {
+        Write-Host "DocFxConfig: $DocFxConfig"
+        $jsonConfig = Get-Content -Raw $DocFxConfig | ConvertFrom-Json
+        $docFxSite = Join-Path $DocFxDirectory $jsonConfig.build.dest
+
+        Write-Host "docFxSite: $docFxSite"
+        if (Test-Path -Path $docFxSite -PathType Container)
+        {
+            Remove-Item -Path $docFxSite -Recurse -Force
+        }
+
+        & docfx $DocFxConfig
+    }
+}
 
 function MD5HashFile([string] $filePath)
 {
