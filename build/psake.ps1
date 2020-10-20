@@ -39,7 +39,6 @@ Properties {
 
 Task Default -Depends BuildHelp, Deploy
 
-Task BuildAppVeyor -Depends UpdateManifest
 
 Task Init {
     $lines
@@ -546,7 +545,7 @@ Task Deploy -Depends Init, CleanModule {
     }
 }
 
-Task BuildHelp -Depends Build, UpdateManifest, GenerateMarkdown, CompileDocfx {}
+Task BuildAppVeyor -Depends Build, UpdateManifest, GenerateMarkdown, CompileDocfx {}
 
 Task GenerateMarkdown -requiredVariables DefaultLocale, DocsRootDir {
     if (!(Get-Module platyPS -ListAvailable))
@@ -681,6 +680,10 @@ Task CompileDocfx -requiredVariables DocFxDirectory, DocFxConfig {
         }
 
         & docfx $DocFxConfig
+    }
+    else
+    {
+        Write-Host "Nothing to do on non-Windows"
     }
 }
 

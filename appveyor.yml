@@ -7,7 +7,6 @@ environment:
     secure: w8H/kYnxC0NVBLhm4uXSLNH110FtIAQ1COq0Wl5RgwDCG3apzXfSCEfJcwSc44QQ
   GITHUB_EMAIL:
     secure: CxOftS/5wmEkPCDl0O/KIiKlF4KhUnGD9436K/1iQwY3RkDMZRCkCEny+dG5zCS+
-  FORCE_DOC_PUSH: true
 
 image:
   - Ubuntu
@@ -20,7 +19,7 @@ before_build:
   - ps: ./build/pre-build.ps1
 
 # Does the whole process
-test_script:
+build_script:
   - ps: . ./build/build.ps1 -Task BuildAppVeyor
 
 for:
@@ -38,8 +37,7 @@ skip_commits:
 matrix:
   fast_finish: true
 
-# No 'build' phase per-se
-build: false
+test: off
 
 on_success:
   - ps: ./build/publish-docs

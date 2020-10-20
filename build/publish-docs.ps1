@@ -1,3 +1,4 @@
+$ErrorActionPreference = 'Stop'
 
 if ($PSEdition -eq 'Core')
 {
