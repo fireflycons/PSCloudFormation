@@ -3,13 +3,21 @@ environment:
     secure: ZwF65Rl156oMAenHhi8BAY0LySWhhjDvNNt91dpU7D5N88E8ToZyZHCziktv7sz3
   APPVEYOR_SSH_KEY: ssh-rsa AAAAB3NzaC1yc2EAAAABJQAAAQEAnGF97nAjzT0pZn7JCrllP+2ao0k0hY9iAUH+kg8/gLrdEJhephXIynCjEuuSPeNB9XxSd1lwm8E80p55T0fYwuzP6LFX11GJVaIsnV4rH3SUFY//MuhILu7o2FxLINDT7Kjrc04VlNxQf6YDhYNeEcyJmK8JO/gVfZmfMuEPtbtbEw9v4v1qTJaotOlJ3gmaXg8kO580N5PYjKvqhirI1ygWe1HOyLny/k4xfKMCHlAvNxSIGXqJBU5OTwXvsXypgI0RQJw4DWv2XG3BSvJkvB/crdLBubZprWv+Q6RlyBzM8FysqXLxT289yGR7n57eq+NY3BSBLfdbYmSv15nFuQ==
   DISABLE_LOCALSTACK: true
+  GITHUB_PAT:
+    secure: w8H/kYnxC0NVBLhm4uXSLNH110FtIAQ1COq0Wl5RgwDCG3apzXfSCEfJcwSc44QQ
+  GITHUB_EMAIL:
+    secure: CxOftS/5wmEkPCDl0O/KIiKlF4KhUnGD9436K/1iQwY3RkDMZRCkCEny+dG5zCS+
+  FORCE_DOC_PUSH: true
 
 image:
   - Ubuntu
   - Visual Studio 2019
 
-#install:
-#  - ps: . ./build/psdeploy-install.ps1
+install:
+  - ps: ./build/install.ps1
+
+before_build:
+  - ps: ./build/pre-build.ps1
 
 # Does the whole process
 test_script:
@@ -32,3 +40,6 @@ matrix:
 
 # No 'build' phase per-se
 build: false
+
+on_success:
+  - ps: ./build/publish-docs

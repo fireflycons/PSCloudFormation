@@ -429,7 +429,7 @@ Task Build -Depends Init {
 
 }
 
-Task UpdateManifest {
+Task UpdateManifest -Depends Build {
 
     # Load the module, read the exported commands, update the psd1 CmdletsToExport
     try
