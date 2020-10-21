@@ -693,7 +693,10 @@ Task CopyDocumentationTo-github.io-clone -Depends CompileDocfx -PreCondition { $
         Remove-Item $outputDir -Recurse -Force
     }
 
-    Copy-Item "$($script:docFxSite)/*" $outputDir -Recurse
+    $src = "$($script:docFxSite)/*"
+    Write-Host "Copy-Item $src $outputDir -Recurse"
+
+    Copy-Item -Path $src -Destination $outputDir -Recurse
 }
 
 function MD5HashFile([string] $filePath)
