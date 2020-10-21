@@ -37,10 +37,7 @@ Up until v3.x, there were two versions of this module published, one for Windows
 The last version to support monolithic AWSPowerShell is v2.2.2 which can still be pulled from PSGallery.
 
 ### PowerShell (all platforms)
-![PowerShell Gallery](https://img.shields.io/powershellgallery/v/PSCloudFormation)
-
-https://www.powershellgallery.com/packages/PSCloudFormation
-
+[![PowerShell Gallery](https://img.shields.io/powershellgallery/v/PSCloudFormation)](https://www.powershellgallery.com/packages/PSCloudFormation)
 
 
 ## Module Cmdlets
@@ -71,67 +68,14 @@ Oversize templates in your local file system (file size >= 51,200 bytes) are dir
 
 ### Dynamic Template Parameter Arguments
 
-As mentioned above, once the CloudFormation template location is known, it is parsed in the background and everything in the `Parameters` block of the template is extracted and turned into cmdlet arguments. Consider the following stack definition, saved as vpc.json
+As mentioned above, once the CloudFormation template location is known, it is parsed in the background and everything in the `Parameters` block of the template is extracted and turned into cmdlet arguments
 
-```json
-{
-    "AWSTemplateFormatVersion": "2010-09-09",
-    "Parameters": {
-        "VpcCidr": {
-            "Description": "CIDR block for VPC",
-            "Type": "String",
-            "AllowedPattern": "^(([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])\\.){3}([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])(\/([0-9]|[1-2][0-9]|3[0-2]))$"
-        },
-        "DnsSupport": {
-            "Description": "Enable DNS Support",
-            "Type": "String",
-            "AllowedValues": [ "true", "false" ],
-            "Default": "false"
-        }
-    },
-    "Resources": {
-        "Vpc": {
-            "Type": "AWS::EC2::VPC",
-            "Properties": {
-                "CidrBlock": { "Ref": "VpcCidr" },
-                "EnableDnsSupport": { "Ref": "DnsSupport" }
-            }
-        }
-    }
-}
-```
-
-If we wanted to create a new stack from this, we could do
-```powershell
-New-PSCFNStack -StackName MyVpc -TemplateLocation vpc.json -Wait -VpcCidr 10.0.0.0/16 -DnsSupport true
-```
-
-- Once we have given the `-TemplateLocation` argument and it points to an  existing file, we can just use regular powershell tab completion to discover the remaining arguments including `Wait`, the common credential arguments and the parameters read from the template
-- The value you supply for `VpcCidr` will be asserted against the AllowedPattern regex _before_ the stack creation is initiated.
-- The value for `DnsSupport` can be tab-completed between allowed values `false` and `true`
-
-![New-PSCFNStack](images/New-PSCFNStack.gif?raw=true "New-PSCFNStack in action")
-
-Were you to omit a required stack parameter, you will be prompted for it and the help text for the parameter is extracted from its description in the template file:
-
-```powershell
-New-PSCFNStack -StackName MyVpc -TemplateLocation .\vpc.json
-```
-
-```
-cmdlet New-PSCFNStack at command pipeline position 1
-Supply values for the following parameters:
-(Type !? for Help.)
-VpcCidr: !?
-CIDR block for VPC
-VpcCidr:
-```
 
 #### Update-PSCFNStack and Dynamic Argumments
 
 When using `Update-PSCFNStack` you only need to supply values on the command line for stack parameters you wish to change. All remaining stack paramaeters will assume their previous values.
 
-#### Piped Template Body snd Dynamic Arguments
+#### Piped Template Body and Dynamic Arguments
 
 If you pass a template body to one of the cmdlets via the pipeline, it is not possible to use dynamic parameter arguments at all. The cmdlets will throw an exception saying that the cmdlet has no parameter of the given name. This is because at the time the dynamic parameter processing runs in the lifecycle of the cmdlet, the content of the template is not yet known, therefore the dynamic parameters cannot be built. You must in this case use a parameter file to define the template parameters (`-ParameterFile`)
 

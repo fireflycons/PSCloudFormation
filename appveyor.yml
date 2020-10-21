@@ -7,6 +7,7 @@ environment:
     secure: w8H/kYnxC0NVBLhm4uXSLNH110FtIAQ1COq0Wl5RgwDCG3apzXfSCEfJcwSc44QQ
   GITHUB_EMAIL:
     secure: CxOftS/5wmEkPCDl0O/KIiKlF4KhUnGD9436K/1iQwY3RkDMZRCkCEny+dG5zCS+
+  FORCE_DOC_PUSH: true
 
 image:
   - Ubuntu

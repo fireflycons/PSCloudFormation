@@ -30,14 +30,18 @@ Properties {
     }
 
     $DefaultLocale = 'en-US'
-    $DocsRootDir = Join-Path $env:BHProjectPath 'docfx/cmdlets'
+    $CmdletDocsOutputDir= Join-Path $env:BHProjectPath 'docfx/cmdlets'
     $ModuleName = "PSCloudFormation"
 
     $DocFxDirectory = (Resolve-Path (Join-Path $PSScriptRoot ../docfx)).Path
     $DocFxConfig = Join-Path $DocFxDirectory docfx.json
+
+    $DocumentationBaseUrl = "https://firefly-cons.github.io/$ModuleName"
+    # Dot-source vars describing environment
+    . (Join-Path $PSScriptRoot build-environment.ps1)
 }
 
-Task Default -Depends BuildHelp, Deploy
+Task Default -Depends BuildAppVeyor, Deploy
 
 
 Task Init {
@@ -547,7 +551,7 @@ Task Deploy -Depends Init, CleanModule {
 
 Task BuildAppVeyor -Depends Build, UpdateManifest, GenerateMarkdown, CompileDocfx {}
 
-Task GenerateMarkdown -requiredVariables DefaultLocale, DocsRootDir {
+Task GenerateMarkdown -requiredVariables DefaultLocale, CmdletDocsOutputDir {
     if (!(Get-Module platyPS -ListAvailable))
     {
         "platyPS module is not installed. Skipping $($psake.context.currentTaskName) task."
@@ -564,27 +568,27 @@ Task GenerateMarkdown -requiredVariables DefaultLocale, DocsRootDir {
             return
         }
 
-        if (!(Test-Path -LiteralPath $DocsRootDir))
+        if (!(Test-Path -LiteralPath $CmdletDocsOutputDir))
         {
-            New-Item $DocsRootDir -ItemType Directory > $null
+            New-Item $CmdletDocsOutputDir -ItemType Directory > $null
         }
 
-        if (Get-ChildItem -LiteralPath $DocsRootDir -Filter *.md -Recurse)
+        if (Get-ChildItem -LiteralPath $CmdletDocsOutputDir -Filter *.md -Recurse)
         {
-            Get-ChildItem -LiteralPath $DocsRootDir -Directory |
+            Get-ChildItem -LiteralPath $CmdletDocsOutputDir -Directory |
                 ForEach-Object {
                 Update-MarkdownHelp -Path $_.FullName -Verbose:$VerbosePreference > $null
             }
         }
 
         # ErrorAction set to SilentlyContinue so this command will not overwrite an existing MD file.
-        New-MarkdownHelp -Module $ModuleName -Locale $DefaultLocale -OutputFolder $DocsRootDir `
+        New-MarkdownHelp -Module $ModuleName -Locale $DefaultLocale -OutputFolder $CmdletDocsOutputDir `
             -WithModulePage -ErrorAction SilentlyContinue -Verbose:$VerbosePreference > $null
 
         $toc = New-Object System.Text.StringBuilder
 
         # Post process the generated markdown to add DFM YAML headers where not present
-        Get-ChildItem -Path $DocsRootDir -Filter *.md |
+        Get-ChildItem -Path $CmdletDocsOutputDir -Filter *.md |
         Where-Object {
             $_.Name -inotlike 'index*'
         } |
@@ -657,7 +661,7 @@ Task GenerateMarkdown -requiredVariables DefaultLocale, DocsRootDir {
         }
 
         # Write TOC file
-        [IO.File]::WriteAllText((Join-Path $DocsRootDir toc.yml), $toc.ToString(), [System.Text.UTF8Encoding]::new($false))
+        [IO.File]::WriteAllText((Join-Path $CmdletDocsOutputDir toc.yml), $toc.ToString(), [System.Text.UTF8Encoding]::new($false))
     }
     finally
     {
@@ -665,26 +669,31 @@ Task GenerateMarkdown -requiredVariables DefaultLocale, DocsRootDir {
     }
 }
 
-Task CompileDocfx -requiredVariables DocFxDirectory, DocFxConfig {
+Task CompileDocfx -requiredVariables DocFxDirectory, DocFxConfig -PreCondition { $script:IsWindows } {
 
-    if ($script:IsWindows)
+    $jsonConfig = Get-Content -Raw $DocFxConfig | ConvertFrom-Json
+    $script:docFxSite = Join-Path $DocFxDirectory $jsonConfig.build.dest
+
+    if (Test-Path -Path $script:docFxSite -PathType Container)
     {
-        Write-Host "DocFxConfig: $DocFxConfig"
-        $jsonConfig = Get-Content -Raw $DocFxConfig | ConvertFrom-Json
-        $docFxSite = Join-Path $DocFxDirectory $jsonConfig.build.dest
-
-        Write-Host "docFxSite: $docFxSite"
-        if (Test-Path -Path $docFxSite -PathType Container)
-        {
-            Remove-Item -Path $docFxSite -Recurse -Force
-        }
-
-        & docfx $DocFxConfig
+        Remove-Item -Path $script:docFxSite -Recurse -Force
     }
-    else
+
+    & docfx $DocFxConfig
+}
+
+Task CopyDocumentationTo-github.io-clone -Depends CompileDocfx -PreCondition { $script:IsWindows -and ($isReleasePublication -or $env:FORCE_DOC_PUSH) } {
+
+    $outputDir = $PSCmdlet.SessionState.Path.GetUnresolvedProviderPathFromPSPath([IO.Path]::Combine($env:APPVEYOR_BUILD_FOLDER, '..', 'fireflycons.github.io', $ModuleName))
+
+    Write-Host "Updating documentation in $outputDir"
+
+    if (Test-Path -Path $outputDir -PathType Container)
     {
-        Write-Host "Nothing to do on non-Windows"
+        Remove-Item $outputDir -Recurse -Force
     }
+
+    Copy-Item "$($script:docFxSite)/*" $outputDir -Recurse
 }
 
 function MD5HashFile([string] $filePath)

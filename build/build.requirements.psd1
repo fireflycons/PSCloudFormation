@@ -10,7 +10,7 @@
 
     'psake'                 = @{
         DependencyType = 'PSGalleryModule'
-        Version        = '4.7.4'
+        Version        = '4.9.0'
         Tags           = @('Desktop', 'Core')
     }
     'BuildHelpers'          = @{
