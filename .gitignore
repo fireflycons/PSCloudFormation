@@ -360,4 +360,8 @@ build/module.ver
 # Integrated debugging
 Firefly.PSCloudFormation.debug.sln
 
+# Include project resource that would otherwise be excluded by blanket "bin" dir
 !tests/Firefly.PSCloudFormation.Tests.Unit/Resources/LambdaDependencies/PythonLambdaLinux/venv/bin
+
+# Default docfx templae
+docfx/templates/_exported_templates/default
