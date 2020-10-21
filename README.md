@@ -20,7 +20,7 @@ Turning it into a binary module addresses the above problems and reduces complex
 * All properties of create, update and delete stack are now supported.
 * More complete support for determining AWS credentials from all sources.
 * [Resource Import](https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/resource-import.html) supported (since v3.x) - still not supported by AWS.Tools cmdlets at time of writing.
-* **Dependency Packaging** - For script based lambdas, it is possible to package dependent modules directly with `New-PSCFNPackage`. See [here](./static/lambda-dependencies.md)
+* **Dependency Packaging** - For script based lambdas, it is possible to package dependent modules directly with `New-PSCFNPackage`. See [here](https://fireflycons.github.io/PSCloudFormation/articles/lambda-packager.html)
 
 ### Gotchas
 
@@ -50,15 +50,15 @@ For full syntax and some examples, use `Get-Help` on the module's cmdlets.
 
 This module provides the following stack modification cmdlets
 
-- `New-PSCFNStack` - ([Documentation](docs/en-US/New-PSCFNStack.md)) Create a new stack.
-- `Update-PSCFNStack` - ([Documentation](docs/en-US/Update-PSCFNStack.md)) Update an existing stack.
-- `Remove-PSCFNStack` - ([Documentation](docs/en-US/Remove-PSCFNStack.md)) Delete one or more existing stacks.
-- `Reset-PSCFNStack` - ([Documentation](docs/en-US/Reset-PSCFNStack.md)) Delete, then redeploy an existing stack.
+- `New-PSCFNStack` - ([Documentation](https://fireflycons.github.io/PSCloudFormation/cmdlets/New-PSCFNStack.html)) Create a new stack.
+- `Update-PSCFNStack` - ([Documentation](https://fireflycons.github.io/PSCloudFormation/cmdlets/Update-PSCFNStack.html)) Update an existing stack.
+- `Remove-PSCFNStack` - ([Documentation](https://fireflycons.github.io/PSCloudFormation/cmdlets/Remove-PSCFNStack.html)) Delete one or more existing stacks.
+- `Reset-PSCFNStack` - ([Documentation](https://fireflycons.github.io/PSCloudFormation/cmdlets/Reset-PSCFNStack.html)) Delete, then redeploy an existing stack.
 
 ### Other Cmdlets
 
-- `Get-PSCFNStackOutputs` ([Documentation](docs/en-US/Get-PSCFNStackOutputs.md)) Retrieves the outputs of a stack in various useful formats for use in creation of new stack templates that will use or import these values.
-- `New-PSCFNPackage` ([Documentation](docs/en-US/New-PSCFNPackage.md)) Packages local artifacts, like `aws cloudformation package`
+- `Get-PSCFNStackOutputs` ([Documentation](https://fireflycons.github.io/PSCloudFormation/cmdlets/Get-PSCFNStackOutputs.html)) Retrieves the outputs of a stack in various useful formats for use in creation of new stack templates that will use or import these values.
+- `New-PSCFNPackage` ([Documentation](https://fireflycons.github.io/PSCloudFormation/cmdlets/New-PSCFNPackage.html)) Packages local artifacts, like `aws cloudformation package`
 
 ### Template Support
 
