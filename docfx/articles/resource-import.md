@@ -7,8 +7,10 @@ Resource Import is a new feature of CloudFormation as of November 2019. This all
 
 ## How to Detach a Resource
 
+In general - this works out the box using any CloudFormation deployment technique. By "detach" the meaning is to disassociate the given resource from a CloudFormation stack *without* deleting it.
+
 1. Open the CloudFormation template
-1. For the resources you want to detach, you should ensure these are not referenced by other resources within the stack that you wish to retain (i.e. `Ref`, `DependsOn` etc, or indirect references).
+1. For the resources you want to detach, you should ensure these are not referenced directly or indirectly by other resources within the stack that you wish to retain (i.e. `Ref`, `DependsOn`, `GetAtt` etc, or even `Outputs`).
 1. For the resources you want to detach, add the `DeletionPolicy` attribute with value of `Retain`.
 ```yaml
 AWSTemplateFormatVersion: 2010-09-09

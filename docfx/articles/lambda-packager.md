@@ -4,7 +4,7 @@ title: Lambda Packager
 ---
 # Packaging Lambdas
 
-A feature that is glaringly absent from `aws cloudformation package` is the ability to specify dependent modules *outside* of the lambda code directory structure that should be included in the lambda zip package e.g. modules in a python venv, therefore I have come up with my own implementation of this. It works by providing a file in the same directory as the script that contains the lambda handler function that lists all the dependent modules that should be packaged. This file is called `lambda-dependencies` and can have either a `.yaml` or `.json` extension.
+A feature that is glaringly absent from `aws cloudformation package` is the ability to specify dependent modules *outside* of the lambda code directory structure that should be included in the lambda zip package e.g. modules in a python venv, therefore I have come up with my own implementation of this. It works by providing a file in the same directory as the script that contains the lambda handler function that lists all the dependent modules that should be packaged. This file is called `lambda-dependencies` and can be0 either YAML or JSON format.
 
 Addtionally as part of the lambda packaging process, PSCloudFormation will, where possible, validate the lambda handler defined by the function resource. The lambda code file indicated by the handler is examined to check for the presence of a method within that has the correct name (defined by the Handler property) and signature for a handler function. This is especially useful when creating Custom Resource functions, as a typo in the handler name can cause the stack deployment to lock up completely.
 
@@ -13,9 +13,9 @@ Addtionally as part of the lambda packaging process, PSCloudFormation will, wher
 The schema for this file is that it is an array of dependency objects, where a dependency object has the following fields:
 
 * `Location` - A path or an environment variable containing a path to the directory containing modules. The path may resolve to an absolute location, or a location relative to the location of the dependency file. For Python lambdas, the `VIRTUAL_ENV` environment variable is especially useful here, provided that you create the package from within your virtual env. To specify an environment variable as a location, precede the variable name with `$`
-* `Libraries` - A list of module names to take from `Location`, i.e. subdirectories of `Location`
+* `Libraries` - A list of module names to take from `Location`, i.e. subdirectories of, or single script files mwithin `Location`
 
-Note that the dependency system does not currently examine modules listed in `lambda-dependencies` for any sub-dependencies. IT is up to you to identify the full dependency tree of any given module and ensure they ae all listed in the dependencies file.
+Note that the dependency system does not currently examine modules listed in `lambda-dependencies` for any sub-dependencies. It is up to you to identify the full dependency tree of any given module and ensure they ae all listed in the dependencies file.
 
 ## Supported Runtimes
 
@@ -25,7 +25,7 @@ Currently the following lambda runtimes are supported, which are basically the s
 * `nodejs` - all versions supported by AWS
 * `ruby` - all versions supported by AWS
 
-Having said this, the PSCloudFormation packager will still correctly apply a local zip file target referenced from a template file, so for compiled languages simply point the template at the zip artifact created by the compiled project's build process.
+Having said this, the PSCloudFormation packager will still correctly apply a local zip file target referenced from a template file. It will, for the above supported runtimes still attempt to validate the handler by looking inside the zip file, however for compiled languages simply point the template at the zip artifact created by the compiled project's build process.
 
 ### Python
 
@@ -42,7 +42,7 @@ The easiest way to package Python dependencies is to build your Python lambda in
   - other_library
 ```
 
-Sample directory structure (Windows)
+**Sample directory structure (Windows)**
 
 ```
 lambda-project
@@ -57,7 +57,9 @@ lambda-project
             ├── six.py
 ```
 
-Sample directory structure (Linux/Max), where `X.Y` is the Python runtime version e.g. `3.6`
+**Sample directory structure (Linux/Max)**
+
+...where `X.Y` is the Python runtime version e.g. `3.6`
 
 **CAVEAT**: Due to the versioned site packages in the venv, you need to develop using the same version of Python as the runtime version you intend to deploy your lambda to.
 
@@ -117,6 +119,8 @@ Given a directory structure for a lambda project as below, the easiest way to pa
 ```
 
 You can also provide a `lambda-dependencies` file in the same directory as `index.rb` to pull additional modules from other directories outside of the lambda project.
+
+**CAVEAT**: Due to the versioned cache directory within the bundle structure, you need to develop using the same version of Ruby as the runtime version you intend to deploy your lambda to.
 
 ```
 lambda-project

@@ -22,9 +22,9 @@ As per `aws cloudformation package` the following packageable resources ae handl
 * `AWS::Glue::Job`
 * `AWS::StepFunctions::StateMachine`
 
-In the case of `AWS::CloudFormation::Stack` the process is recursive so you can have any level of stack nesting, and any of the avoce resources found in nested stacks are also packaged.
+In the case of `AWS::CloudFormation::Stack` the process is recursive so you can have any level of stack nesting, and any of the above resources found in nested stacks are also packaged.
 
-Starting with Release 4.0.13, there is no longer the need to explicitly package templates that require it with [New-PSCFNPackage](xref:New-PSCFNPackage). [New-PSCFNStack](xref:New-PSCFNStack) and [Update-PSCFNStack](xref:Update-PSCFNStack) check the template first for any resources that require packaging and then run the packaging step prior to submitting the template to CloudFormation. This automatic packging step makes use of PSCloudFormation's private bucket, and does not allow you to specify bucket, key prefix or additional S3 metadata. Should you require this level of control, then use [New-PSCFNPackage](xref:New-PSCFNPackage) to pre-package the template.
+Starting with Release 4.0.13, there is no longer the need to explicitly package templates that require it with [New-PSCFNPackage](xref:New-PSCFNPackage). [New-PSCFNStack](xref:New-PSCFNStack) and [Update-PSCFNStack](xref:Update-PSCFNStack) check the template first for any resources that require packaging and then run the packaging step prior to submitting the template to CloudFormation. This automatic packging step makes use of PSCloudFormation's [private bucket](xref:private-bucket), and does not allow you to specify bucket, key prefix or additional S3 metadata. Should you require this level of control, then use [New-PSCFNPackage](xref:New-PSCFNPackage) to pre-package the template.
 
 **CAVEAT** Whilst [New-PSCFNPackage](xref:New-PSCFNPackage) gives you full control over the use of S3, if you pipe the output of it directly into [New-PSCFNStack](xref:New-PSCFNStack) or [Update-PSCFNStack](xref:Update-PSCFNStack), these cmdlets lose the ability to provide dynamic parameter support for the template's parameters. This is due to how PowerShell dynamic parameters work. The dynamic parameter system needs to be able to see the content of the template at the time you are entering the command at the command line. The template content is not yet known as it's being piped from `New-PSCFNPackage` at run time. You can do one of the following:
 
@@ -35,7 +35,7 @@ Packaging of lambdas is quite advanced (see [Lambda Packaging](xref:lambda_packa
 
 ## Packaging Examples
 
-Given a template `template.yaml` containing a nested template resource with simplified except below, it can be deployed three ways. The examples below show creation of a stack, however the technique is the same for both Update and Reset.
+Given a template `template.yaml` containing a nested template resource with simplified excerpt below, it can be deployed three ways. The examples below show creation of a stack, however the technique is the same for both Update and Reset.
 
 ```yaml
 AWSTemplateFormatVersion: 2010-09-09
@@ -56,7 +56,7 @@ The fact that the template contains file system references rather than S3 refere
 The nested template will be zipped and uploaded to the [private bucket](xref:private-bucket), the input template rewritten to a temporary file with the S3 location of the nested template inserted and the modifed template deployed. Following deployment the temporary copy of `template.yaml` is cleaned up.
 
 ```powershell
-New-PSCFNPackage -StacName test-stack -TemplateLocation template.yaml -VpcId vpc-12345678
+New-PSCFNPackage -StackName test-stack -TemplateLocation template.yaml -VpcId vpc-12345678
 ```
 
 ### Single Step with New-PSCFNPackage

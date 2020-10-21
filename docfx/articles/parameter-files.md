@@ -4,9 +4,9 @@ title: Parameter Files
 ---
 # Parameter Files
 
-Parameter files provide an alternative means of supplying parameters to the stack. They can be used in conjunction with or instead of dynamic command line arguments. If the same parameter is pesent in a file and on the command line, then the command line takes preference.
+Parameter files provide an alternative means of supplying parameters to the stack. They can be used in conjunction with or instead of dynamic command line arguments. If the same parameter is present in a file and on the command line, then the command line takes preference.
 
-Parameter files may me in either JSON or YAML and the format is an array of ParameterKey/ParameterValue objects
+Parameter files may be in either JSON or YAML and the format is an array of ParameterKey/ParameterValue objects
 
 ## YAML Format
 
