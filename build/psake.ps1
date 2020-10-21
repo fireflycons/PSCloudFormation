@@ -549,7 +549,7 @@ Task Deploy -Depends Init, CleanModule {
     }
 }
 
-Task BuildAppVeyor -Depends Build, UpdateManifest, GenerateMarkdown, CompileDocfx {}
+Task BuildAppVeyor -Depends Build, UpdateManifest, GenerateMarkdown, CompileDocfx, CopyDocumentationTo-github.io-clone {}
 
 Task GenerateMarkdown -requiredVariables DefaultLocale, CmdletDocsOutputDir {
     if (!(Get-Module platyPS -ListAvailable))
