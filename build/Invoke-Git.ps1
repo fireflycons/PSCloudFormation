@@ -17,7 +17,7 @@ function Invoke-Git
 
     try
     {
-        Write-Host -ForegroundColor Cyan ("git " + ($GitArgs -join ' ').Replace($env:GITHUB_PAT, "*****")).Replace($env:GITHUB_EMAIL, "*****")
+        Write-Host -ForegroundColor Cyan ("git " + ($GitArgs -join ' ').Replace([string]$env:GITHUB_PAT, "*****")).Replace([string]$env:GITHUB_EMAIL, "*****")
 
         & $git $GitArgs 2>&1 |
         ForEach-Object {
