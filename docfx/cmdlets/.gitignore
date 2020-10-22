@@ -1,0 +1,4 @@
+*.md
+*.yml
+!index.md
+!PSCloudFormation.md

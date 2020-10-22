@@ -5,6 +5,15 @@ param
 
 import-module (Join-Path $PSScriptRoot 'PSCloudFormation.psd1')
 
+C:\OneDrive\abm\OneDrive\Dev\Git\acg-challenge-2020-09\venv\Scripts\Activate.ps1
+Remove-PSCFNStack -StackName acg-test -Region eu-west-2
+#New-PSCFNStack -TemplateLocation "C:\OneDrive\abm\OneDrive\Dev\Git\acg-challenge-2020-09\cloudFormation.yaml" -Capabilities CAPABILITY_IAM,CAPABILITY_AUTO_EXPAND -Region eu-west-2
+
+
+Read-Host -Prompt "Press Enter" | Out-Null
+exit 0
+
+
 $stackName = 'test-stack-' + [Guid]::NewGuid().ToString().SubString(0,8)
 
 # Random names for resources to create

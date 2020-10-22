@@ -7,8 +7,10 @@ Resource Import is a new feature of CloudFormation as of November 2019. This all
 
 ## How to Detach a Resource
 
+In general - this works out the box using any CloudFormation deployment technique. By "detach" the meaning is to disassociate the given resource from a CloudFormation stack *without* deleting it.
+
 1. Open the CloudFormation template
-1. For the resources you want to detach, you should ensure these are not referenced by other resources within the stack that you wish to retain (i.e. `Ref`, `DependsOn` etc, or indirect references).
+1. For the resources you want to detach, you should ensure these are not referenced directly or indirectly by other resources within the stack that you wish to retain (i.e. `Ref`, `DependsOn`, `GetAtt` etc, or even `Outputs`).
 1. For the resources you want to detach, add the `DeletionPolicy` attribute with value of `Retain`.
 ```yaml
 AWSTemplateFormatVersion: 2010-09-09
@@ -50,7 +52,7 @@ At this point, the resource `import-bucket-123456789012` still exists, but are n
   ResourceIdentifier:
     BucketName: import-bucket-104552851521
 ```
-2. Add the resource into the importing stack's template. Note how the properties in the above resource file map into the resource in the stack CloudFormation. A deletion policy attribute _must_ be specified on resources to import. This can be removed later with a further update to the stack if desired.
+2. Add the resource into the importing stack's template. Note how the properties in the above resource file map into the resource in the stack CloudFormation. A deletion policy attribute _must_ be specified on resources to import. This can be removed later with a further update to the stack if desired. Note that you  __cannot__ make any other changes to the stack besides the resources that are being imported themselves. This includes changing the `Outputs` section. Any further updates related to the imported resouce must be done in a subsequent update to the stack.
 ```yaml
 AWSTemplateFormatVersion: 2010-09-09
 Resources:
@@ -83,14 +85,14 @@ Begin update of test-import-stack now?
 [Y] Yes [N] No [?] Help (default is "Yes"):
 Updating stack test-import-stack
 Waiting for update to complete
-TimeStamp StackName         Logical ID                               Status                                        Status Reason
---------- ---------         ----------                               ------                                        -------------
-21:31:01  test-import-stack test-import-stack                        IMPORT_IN_PROGRESS                            User Initiated
-21:31:04  test-import-stack ApplicationBucket                        IMPORT_IN_PROGRESS                            Resource import started.
-21:31:05  test-import-stack ApplicationBucket                        IMPORT_COMPLETE                               Resource import completed.
-21:31:06  test-import-stack ApplicationBucket                        UPDATE_IN_PROGRESS                            Apply stack-level tags to imported resource if applicable.
-21:31:26  test-import-stack ApplicationBucket                        UPDATE_COMPLETE                               -
-21:31:27  test-import-stack test-import-stack                        IMPORT_COMPLETE                               -
+TimeStamp StackName         Logical ID        Status              Status Reason
+--------- ---------         ----------        ------              -------------
+21:31:01  test-import-stack test-import-stack IMPORT_IN_PROGRESS  User Initiated
+21:31:04  test-import-stack ApplicationBucket IMPORT_IN_PROGRESS  Resource import started.
+21:31:05  test-import-stack ApplicationBucket IMPORT_COMPLETE     Resource import completed.
+21:31:06  test-import-stack ApplicationBucket UPDATE_IN_PROGRESS  Apply stack-level tags to imported resource if applicable.
+21:31:26  test-import-stack ApplicationBucket UPDATE_COMPLETE     -
+21:31:27  test-import-stack test-import-stack IMPORT_COMPLETE     -
 arn:aws:cloudformation:eu-west-1:104552851521:stack/test-import-stack/bae2a440-154a-11ea-b2ac-069dc79e2b34
 ```
 ## Further Reading

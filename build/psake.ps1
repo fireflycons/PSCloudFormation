@@ -30,14 +30,19 @@ Properties {
     }
 
     $DefaultLocale = 'en-US'
-    $DocsRootDir = Join-Path $env:BHProjectPath docs
+    $CmdletDocsOutputDir= Join-Path $env:BHProjectPath 'docfx/cmdlets'
     $ModuleName = "PSCloudFormation"
 
+    $DocFxDirectory = (Resolve-Path (Join-Path $PSScriptRoot ../docfx)).Path
+    $DocFxConfig = Join-Path $DocFxDirectory docfx.json
+
+    $DocumentationBaseUrl = "https://firefly-cons.github.io/$ModuleName"
+    # Dot-source vars describing environment
+    . (Join-Path $PSScriptRoot build-environment.ps1)
 }
 
-Task Default -Depends BuildHelp, Deploy
+Task Default -Depends BuildAppVeyor, Deploy
 
-Task BuildAppVeyor -Depends UpdateManifest
 
 Task Init {
     $lines
@@ -427,43 +432,7 @@ Task Build -Depends Init {
 
 }
 
-Task CleanModule -Depends Build {
-
-    $lines
-
-    try
-    {
-        Push-Location (Split-Path -Parent $env:BHPSModuleManifest)
-
-        @(
-            'publish',
-            '*.pdb'
-            '*.json'
-            'debug.ps1'
-            'Firefly.PSCloudFormation.xml'
-        ) |
-        Where-Object {
-            Test-Path -Path $_
-        } |
-        Foreach-Object {
-
-            $recurse = @{}
-
-            if (Test-Path -Path $_ -PathType Container)
-            {
-                $recurse.Add('Recurse', $true)
-            }
-
-            Remove-Item $_ @recurse
-        }
-    }
-    finally
-    {
-        Pop-Location
-    }
-}
-
-Task UpdateManifest -Depends CleanModule {
+Task UpdateManifest -Depends Build {
 
     # Load the module, read the exported commands, update the psd1 CmdletsToExport
     try
@@ -504,15 +473,36 @@ Task UpdateManifest -Depends CleanModule {
     Update-Metadata -Path $env:BHPSModuleManifest -PropertyName ModuleVersion -Value (Get-Content -Raw (Join-Path $PSScriptRoot "module.ver")).Trim() -ErrorAction stop
 
     # Set file list
-    Update-Metadata -Path $env:BHPSModuleManifest -PropertyName FileList -Value (Get-ChildItem -Path (Split-Path -Parent $env:BHPSModuleManifest) -Exclude *.psd1).Name
+    $excludeList = Invoke-Command -NoNewScope {
+        Get-ExcludedFiles | Select-Object -ExpandProperty name
+        '*.psd1'
+    }
+
+    Update-Metadata -Path $env:BHPSModuleManifest -PropertyName FileList -Value (Get-ChildItem -Path (Split-Path -Parent $env:BHPSModuleManifest) -Exclude $excludeList).Name
 }
 
-Task Deploy -Depends Init {
+Task CleanModule {
+
+    Get-ExcludedFiles |
+    Foreach-Object {
+
+        $recurse = @{}
+
+        if (Test-Path -Path $_.FullName -PathType Container)
+        {
+            $recurse.Add('Recurse', $true)
+        }
+
+        Remove-Item $_.FullName @recurse
+    }
+}
+
+Task Deploy -Depends Init, CleanModule {
 
     $lines
 
     Write-Host "Testing module manifest"
-    Test-ModuleManifest -Path $env:BHPSModuleManifest
+    Test-ModuleManifest -Path $env:BHPSModuleManifest | Out-Null
 
     $deployParams = $(
 
@@ -559,9 +549,9 @@ Task Deploy -Depends Init {
     }
 }
 
-Task BuildHelp -Depends Build, UpdateManifest, GenerateMarkdown {}
+Task BuildAppVeyor -Depends Build, UpdateManifest, GenerateMarkdown, CompileDocfx, CopyDocumentationTo-github.io-clone {}
 
-Task GenerateMarkdown -requiredVariables DefaultLocale, DocsRootDir {
+Task GenerateMarkdown -requiredVariables DefaultLocale, CmdletDocsOutputDir {
     if (!(Get-Module platyPS -ListAvailable))
     {
         "platyPS module is not installed. Skipping $($psake.context.currentTaskName) task."
@@ -578,22 +568,100 @@ Task GenerateMarkdown -requiredVariables DefaultLocale, DocsRootDir {
             return
         }
 
-        if (!(Test-Path -LiteralPath $DocsRootDir))
+        if (!(Test-Path -LiteralPath $CmdletDocsOutputDir))
         {
-            New-Item $DocsRootDir -ItemType Directory > $null
+            New-Item $CmdletDocsOutputDir -ItemType Directory > $null
         }
 
-        if (Get-ChildItem -LiteralPath $DocsRootDir -Filter *.md -Recurse)
+        if (Get-ChildItem -LiteralPath $CmdletDocsOutputDir -Filter *.md -Recurse)
         {
-            Get-ChildItem -LiteralPath $DocsRootDir -Directory |
+            Get-ChildItem -LiteralPath $CmdletDocsOutputDir -Directory |
                 ForEach-Object {
                 Update-MarkdownHelp -Path $_.FullName -Verbose:$VerbosePreference > $null
             }
         }
 
         # ErrorAction set to SilentlyContinue so this command will not overwrite an existing MD file.
-        New-MarkdownHelp -Module $ModuleName -Locale $DefaultLocale -OutputFolder (Join-Path $DocsRootDir $DefaultLocale) `
+        New-MarkdownHelp -Module $ModuleName -Locale $DefaultLocale -OutputFolder $CmdletDocsOutputDir `
             -WithModulePage -ErrorAction SilentlyContinue -Verbose:$VerbosePreference > $null
+
+        $toc = New-Object System.Text.StringBuilder
+
+        # Post process the generated markdown to add DFM YAML headers where not present
+        Get-ChildItem -Path $CmdletDocsOutputDir -Filter *.md |
+        Where-Object {
+            $_.Name -inotlike 'index*'
+        } |
+        Sort-Object Name |
+        Foreach-Object {
+
+            $fileName = [IO.Path]::GetFileNameWithoutExtension($_.Name)
+            $header = @{}
+
+            $headerFound = $false
+            foreach($line in (Get-Content $_.FullName))
+            {
+                if ($line -eq '---')
+                {
+                    if (-not $headerFound)
+                    {
+                        $headerFound = $true
+                        continue
+                    }
+
+                    # Got header now
+                    break
+                }
+
+                if ($headerFound -and $line -match '^(?<key>[\w\s]+):\s+(?<value>.*)')
+                {
+                    $header.Add($Matches.key, $matches.value)
+                }
+            }
+
+            # Add DFM keys
+            $header['uid'] = $fileName
+            $header['title'] = $filename
+
+            # Render header back to YAML
+            $sb = New-Object System.Text.StringBuilder
+            $sb.AppendLine('---') | Out-Null
+            $header.Keys |
+            ForEach-Object {
+                $sb.AppendLine("$($_): $($header[$_])") | Out-Null
+            }
+            $sb.AppendLine('---') | Out-Null
+
+            $content = Get-Content -Raw $_.FullName
+
+            if ($headerFound)
+            {
+                # Regex replace the new header
+                $content = [System.Text.RegularExpressions.Regex]::Replace($content, '^---(\r\n|\r|\n).*?(\r\n|\r|\n)---', $sb.ToString(), [System.Text.RegularExpressions.RegexOptions]::Singleline)
+            }
+            else
+            {
+                # Prepend new header
+                $content = $sb.ToString() + $content
+            }
+
+            # Write out modified file (UTF8 No BOM)
+            [IO.File]::WriteAllText($_.FullName, $content, [System.Text.UTF8Encoding]::new($false))
+
+            # Update TOC
+            if ($_.Name -like "$($ENV:BHProjectName)*")
+            {
+                $toc.AppendLine("- name: Module Index").AppendLine("  href: $($_.Name)") | Out-Null
+            }
+            else
+            {
+                $toc.AppendLine("- name: $filename").AppendLine("  href: $($_.Name)") | Out-Null
+            }
+
+        }
+
+        # Write TOC file
+        [IO.File]::WriteAllText((Join-Path $CmdletDocsOutputDir toc.yml), $toc.ToString(), [System.Text.UTF8Encoding]::new($false))
     }
     finally
     {
@@ -601,6 +669,35 @@ Task GenerateMarkdown -requiredVariables DefaultLocale, DocsRootDir {
     }
 }
 
+Task CompileDocfx -requiredVariables DocFxDirectory, DocFxConfig -PreCondition { $script:IsWindows } {
+
+    $jsonConfig = Get-Content -Raw $DocFxConfig | ConvertFrom-Json
+    $script:docFxSite = Join-Path $DocFxDirectory $jsonConfig.build.dest
+
+    if (Test-Path -Path $script:docFxSite -PathType Container)
+    {
+        Remove-Item -Path $script:docFxSite -Recurse -Force
+    }
+
+    & docfx $DocFxConfig
+}
+
+Task CopyDocumentationTo-github.io-clone -Depends CompileDocfx -PreCondition { $script:IsWindows -and ($isReleasePublication -or $env:FORCE_DOC_PUSH) } {
+
+    $outputDir = $PSCmdlet.SessionState.Path.GetUnresolvedProviderPathFromPSPath([IO.Path]::Combine($env:APPVEYOR_BUILD_FOLDER, '..', 'fireflycons.github.io', $ModuleName))
+
+    Write-Host "Updating documentation in $outputDir"
+
+    if (Test-Path -Path $outputDir -PathType Container)
+    {
+        Remove-Item $outputDir -Recurse -Force
+    }
+
+    $src = $script:docFxSite
+    Write-Host "Copy-Item $src $outputDir -Recurse"
+
+    Copy-Item -Path $src -Destination $outputDir -Recurse
+}
 
 function MD5HashFile([string] $filePath)
 {
@@ -655,4 +752,29 @@ function Invoke-WithRetry
     }
 
     throw $ex
+}
+
+function Get-ExcludedFiles
+{
+    try
+    {
+        Push-Location (Split-Path -Parent $env:BHPSModuleManifest)
+
+        Invoke-Command -NoNewScope {
+            Get-ChildItem -Filter AWS*
+            Get-ChildItem -Filter *.pdb
+            Get-ChildItem -Filter *.json
+            Get-Item publish -ErrorAction SilentlyContinue
+            Get-Item debug.ps1 -ErrorAction SilentlyContinue
+            Get-Item Firefly.PSCloudFormation.xml -ErrorAction SilentlyContinue
+            Get-Item System.Management.Automation.dll -ErrorAction SilentlyContinue
+        } |
+        Where-Object {
+            $null -ne $_ -and (Test-Path -Path $_.FullName)
+        }
+    }
+    finally
+    {
+        Pop-Location
+    }
 }

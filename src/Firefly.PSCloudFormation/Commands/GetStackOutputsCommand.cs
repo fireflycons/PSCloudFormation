@@ -1,4 +1,4 @@
-﻿namespace Firefly.PSCloudFormation
+﻿namespace Firefly.PSCloudFormation.Commands
 {
     using System;
     using System.Collections;

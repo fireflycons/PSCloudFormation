@@ -1,6 +1,10 @@
+---
+uid: private-bucket
+title: PSCloudFormation and S3
+---
 # PSCloudFormation and S3
 
-The CloudFormation APIs have a limitation on the maximum size of a template that can be submitted without requiring it to be uploaded to S3 first. This is currently 51,200 bytes. To make life easier on the user, this library automatically manages this for you by creating and managing its own private bucket for oversize template uploads. This bucket is also leveraged by the packaging system (`New-PSCFNPackage`).
+The CloudFormation APIs have a limitation on the maximum size of a template that can be submitted without requiring it to be uploaded to S3 first. This is currently 51,200 bytes. To make life easier on the user, this library automatically manages this for you by creating and managing its own private bucket for oversize template uploads. This bucket is also leveraged by the [packaging system](xref:packaging).
 
 When S3 is required, this module will check for its private bucket and if not found, will attempt to create it.
 
@@ -21,10 +25,10 @@ sts:GetCallerIdentity
 s3:CreateBucket
 ```
 
-Optional:
+Recommended:
 
 ```
-PutLifecycleConfiguration
+s3:PutLifecycleConfiguration
 ```
 
 ### Required Permission (Use)

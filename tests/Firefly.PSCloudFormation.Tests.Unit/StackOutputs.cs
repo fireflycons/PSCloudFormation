@@ -7,6 +7,7 @@
     using Amazon.CloudFormation.Model;
 
     using Firefly.CloudFormation;
+    using Firefly.PSCloudFormation.Commands;
     using Firefly.PSCloudFormation.Tests.Unit.Utils;
 
     using FluentAssertions;

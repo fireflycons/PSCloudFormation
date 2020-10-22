@@ -1,0 +1,7 @@
+apiRules:
+  - exclude:
+      uidRegex: ^Firefly\.PSCloudFormation.*$
+      type: Namespace
+  - include:
+      uidRegex: ^Firefly\.PSCloudFormation\.Commands$
+      type: Namespace

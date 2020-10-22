@@ -1,0 +1,6 @@
+- name: Cmdlet Reference
+  href: cmdlets/
+  homepage: cmdlets/PSCloudFormation.md
+- name: Articles
+  href: articles/
+  homepage: articles/index.md
