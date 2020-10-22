@@ -3,6 +3,7 @@
 # 4.0.13
 
 * Enhancement - Verify lambda handlers where possible. [Issue link](https://github.com/fireflycons/PSCloudFormation/issues/76).
+* Enhancement - Create a documentation site. [Issue link](https://github.com/fireflycons/PSCloudFormation/issues/81).
 * Fix - Python venv support not correct in Linux. [Issue link](https://github.com/fireflycons/PSCloudFormation/issues/82).
 
 # 4.0.12
