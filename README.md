@@ -7,6 +7,10 @@ This version is a complete re-write in C#. I found that it was becoming a cumber
 
 Turning it into a binary module addresses the above problems and reduces complexity given the cmdlets share many common arguments meaning that inheritance can be used to reduce code duplication. It also gives me the chance to showcase three of my other projects: [Filrefly.CloudFormation](https://github.com/fireflycons/Firefly.CloudFormation) which underpins this module, [PSDynamicParameters](https://github.com/fireflycons/PSDynamicParameters) which is a library for managing PowerShell Dynamic Parameters for C# cmdlets and [CrossPlatformZip](https://github.com/fireflycons/CrossPlatformZip) which creates zip files targeting Windows or Linux/Unix/MacOS from any source platform - needed for the packaging component of this module. Lambda does not like zip files that don't contain Unix permission attributes!
 
+### New Documentation Site
+
+Head over [here](https://fireflycons.github.io/PSCloudFormation/index.html) for further reading and moe in-depth discussion on the featues of this module.
+
 ### Breaking Changes
 
 * Minimum requirement Windows PowerShell 5.1. All NetCore versions are supported.
@@ -20,7 +24,7 @@ Turning it into a binary module addresses the above problems and reduces complex
 * All properties of create, update and delete stack are now supported.
 * More complete support for determining AWS credentials from all sources.
 * [Resource Import](https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/resource-import.html) supported (since v3.x) - still not supported by AWS.Tools cmdlets at time of writing.
-* **Dependency Packaging** - For script based lambdas, it is possible to package dependent modules directly with `New-PSCFNPackage`. See [here](https://fireflycons.github.io/PSCloudFormation/articles/lambda-packager.html)
+* Dependency Packaging - For script based lambdas, it is possible to package dependent modules directly with `New-PSCFNPackage`. See [here](https://fireflycons.github.io/PSCloudFormation/articles/lambda-packager.html)
 
 ### Gotchas
 
@@ -62,13 +66,13 @@ This module provides the following stack modification cmdlets
 
 ### Template Support
 
-Oversize templates in your local file system (file size >= 51,200 bytes) are directly supported. They will be siliently uploaded to an S3 bucket which is created as necessary prior to processing with a delete after 7 days lifecycle policy to prevent buildup of rubbish. The bucket is named `ps-templates-pscloudformation-region-accountid` where
+Oversize templates in your local file system (file size >= 51,200 bytes) are directly supported. They will be siliently uploaded to an S3 bucket which is [created as necessary](https://fireflycons.github.io/PSCloudFormation/articles/s3-usage.html) prior to processing with a delete after 7 days lifecycle policy to prevent buildup of rubbish. The bucket is named `ps-templates-pscloudformation-region-accountid` where
 * `region` is the region you are building the stack in, e.g. `eu-west-1`.
 * `accountid` is the numeric ID of the AWS account in which you are building the stack.
 
 ### Dynamic Template Parameter Arguments
 
-As mentioned above, once the CloudFormation template location is known, it is parsed in the background and everything in the `Parameters` block of the template is extracted and turned into cmdlet arguments
+Once the CloudFormation template location is known, it is parsed in the background and everything in the `Parameters` block of the template is extracted and turned into cmdlet arguments. Read moe [here](https://fireflycons.github.io/PSCloudFormation/articles/dynamic-parameters.html).
 
 
 #### Update-PSCFNStack and Dynamic Argumments
