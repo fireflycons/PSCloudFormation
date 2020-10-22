@@ -5,15 +5,15 @@
 
 This version is a complete re-write in C#. I found that it was becoming a cumbersome beast keeping it in pure PowerShell, taking longer to load the module, and certain parts of it were running quite slowly.
 
-Turning it into a binary module addresses the above problems and reduces complexity given the cmdlets share many common arguments meaning that inheritance can be used to reduce code duplication. It also gives me the chance to showcase three of my other projects: [Filrefly.CloudFormation](https://github.com/fireflycons/Firefly.CloudFormation) which underpins this module, [PSDynamicParameters](https://github.com/fireflycons/PSDynamicParameters) which is a library for managing PowerShell Dynamic Parameters for C# cmdlets and [CrossPlatformZip](https://github.com/fireflycons/CrossPlatformZip) which creates zip files targeting Windows or Linux/Unix/MacOS from any source platform - needed for the packaging component of this module. Lambda does not like zip files that don't contain Unix permission attributes!
+Turning it into a binary module addresses the above problems and reduces complexity given the cmdlets share many common arguments meaning that inheritance can be used to reduce code duplication. It also gives me the chance to showcase three of my other projects: [Firefly.CloudFormation](https://github.com/fireflycons/Firefly.CloudFormation) which underpins this module, [PSDynamicParameters](https://github.com/fireflycons/PSDynamicParameters) which is a library for managing PowerShell Dynamic Parameters for C# cmdlets and [CrossPlatformZip](https://github.com/fireflycons/CrossPlatformZip) which creates zip files targeting Windows or Linux/Unix/MacOS from any source platform - needed for the packaging component of this module. Lambda does not like zip files that don't contain Unix permission attributes!
 
 ### New Documentation Site
 
-Head over [here](https://fireflycons.github.io/PSCloudFormation/index.html) for further reading and moe in-depth discussion on the featues of this module.
+Head over [here](https://fireflycons.github.io/PSCloudFormation/index.html) for further reading and more in-depth discussion on the featues of this module.
 
 ### Breaking Changes
 
-* Minimum requirement Windows PowerShell 5.1. All NetCore versions are supported.
+* Minimum requirement Windows PowerShell 5.1. All PowerShell Core versions are supported.
 * Requires modular [AWS.Tools](https://github.com/aws/aws-tools-for-powershell/issues/67) - currently version `4.0.5.0`. Monolithic AWSPowerShell is no longer supported (since PSCloudFormation v3.x). I plan to start releasing builds of this in line and version locked with AWS Tools releases.
 * Meaning of `-Wait` parameter has changed. This only applies to `Update-PSCFNStack` and means that update should not begin if at the time the cmdlet is called, the target stack is found to be being updated by another process. In this case the update will wait for the other update to complete. All PSCloudFormation cmdlets will wait for their own operation to run to completion unless `-PassThru` is present.
 * Return type from the cmdlets has changed. Instead of being just a stack status or an ARN, it is a structure containing both, defined [here](https://fireflycons.github.io/Firefly-CloudFormation/api/Firefly.CloudFormation.Model.CloudFormationResult.html).
@@ -23,8 +23,8 @@ Head over [here](https://fireflycons.github.io/PSCloudFormation/index.html) for 
 * More use of colour in changeset and stack event display.
 * All properties of create, update and delete stack are now supported.
 * More complete support for determining AWS credentials from all sources.
-* [Resource Import](https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/resource-import.html) supported (since v3.x) - still not supported by AWS.Tools cmdlets at time of writing.
-* Dependency Packaging - For script based lambdas, it is possible to package dependent modules directly with `New-PSCFNPackage`. See [here](https://fireflycons.github.io/PSCloudFormation/articles/lambda-packager.html)
+* [Resource Import](https://fireflycons.github.io/PSCloudFormation/articles/resource-import.html) supported (since v3.x) - still not supported by AWS.Tools cmdlets at time of writing.
+* [Dependency Packaging](https://fireflycons.github.io/PSCloudFormation/articles/lambda-packager.html) - For script based lambdas, it is possible to package dependent modules directly.
 
 ### Gotchas
 
@@ -62,26 +62,18 @@ This module provides the following stack modification cmdlets
 ### Other Cmdlets
 
 - `Get-PSCFNStackOutputs` ([Documentation](https://fireflycons.github.io/PSCloudFormation/cmdlets/Get-PSCFNStackOutputs.html)) Retrieves the outputs of a stack in various useful formats for use in creation of new stack templates that will use or import these values.
-- `New-PSCFNPackage` ([Documentation](https://fireflycons.github.io/PSCloudFormation/cmdlets/New-PSCFNPackage.html)) Packages local artifacts, like `aws cloudformation package`
+- `New-PSCFNPackage` ([Documentation](https://fireflycons.github.io/PSCloudFormation/cmdlets/New-PSCFNPackage.html)) Packages local artifacts, like `aws cloudformation package`.
 
 ### Template Support
 
-Oversize templates in your local file system (file size >= 51,200 bytes) are directly supported. They will be siliently uploaded to an S3 bucket which is [created as necessary](https://fireflycons.github.io/PSCloudFormation/articles/s3-usage.html) prior to processing with a delete after 7 days lifecycle policy to prevent buildup of rubbish. The bucket is named `ps-templates-pscloudformation-region-accountid` where
+Oversize templates in your local file system (file size >= 51,200 bytes) are directly supported. They will be silently uploaded to an S3 bucket which is [created as necessary](https://fireflycons.github.io/PSCloudFormation/articles/s3-usage.html) prior to processing with a delete after 7 days lifecycle policy to prevent buildup of rubbish. The bucket is named `ps-templates-pscloudformation-region-accountid` where
 * `region` is the region you are building the stack in, e.g. `eu-west-1`.
 * `accountid` is the numeric ID of the AWS account in which you are building the stack.
 
 ### Dynamic Template Parameter Arguments
 
-Once the CloudFormation template location is known, it is parsed in the background and everything in the `Parameters` block of the template is extracted and turned into cmdlet arguments. Read moe [here](https://fireflycons.github.io/PSCloudFormation/articles/dynamic-parameters.html).
+Once the CloudFormation template location is known, it is parsed in the background and everything in the `Parameters` block of the template is extracted and turned into cmdlet arguments. Read more [here](https://fireflycons.github.io/PSCloudFormation/articles/dynamic-parameters.html).
 
-
-#### Update-PSCFNStack and Dynamic Argumments
-
-When using `Update-PSCFNStack` you only need to supply values on the command line for stack parameters you wish to change. All remaining stack paramaeters will assume their previous values.
-
-#### Piped Template Body and Dynamic Arguments
-
-If you pass a template body to one of the cmdlets via the pipeline, it is not possible to use dynamic parameter arguments at all. The cmdlets will throw an exception saying that the cmdlet has no parameter of the given name. This is because at the time the dynamic parameter processing runs in the lifecycle of the cmdlet, the content of the template is not yet known, therefore the dynamic parameters cannot be built. You must in this case use a parameter file to define the template parameters (`-ParameterFile`)
 
 # Notes
 
