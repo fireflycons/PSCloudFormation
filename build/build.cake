@@ -318,7 +318,7 @@ Version GetBuildVersionInner()
     }
 
     // Tagged, i.e. release build.
-    var m = Regex.Match(tag, @"^v(?<version>\d+\.\d+\.\d+)$", RegexOptions.IgnoreCase);
+    var m = Regex.Match(tag, @"^v(?<version>\d+\.\d+\.\d+(\.\d+)?)$", RegexOptions.IgnoreCase);
 
     if (m.Success)
     {
