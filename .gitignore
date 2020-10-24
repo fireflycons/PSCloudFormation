@@ -345,9 +345,9 @@ PSCloudFormation/en-US/PSCloudFormation-help.xml
 src/**/*.xml
 
 
-# Junction linked items
-src/Firefly.CloudFormation/
-tests/Firefly.CloudFormation.Tests.Unit/
+# symlinked items
+src/Firefly.CloudFormation
+tests/Firefly.CloudFormation.Tests.Unit
 
 # Compiled module location
 ModulePath.txt

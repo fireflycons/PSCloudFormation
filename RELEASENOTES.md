@@ -1,5 +1,9 @@
 # Release Notes
 
+# 4.1.2.0
+
+* Technical - Upgrade to AWS.Tools v4.1.2.0 and align PSCloudFormation version with AWS Tools dependency
+
 # 4.0.13
 
 * Enhancement - Verify lambda handlers where possible. [Issue link](https://github.com/fireflycons/PSCloudFormation/issues/76).
