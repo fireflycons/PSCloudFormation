@@ -30,17 +30,17 @@
     }
     'AWS.Tools.Common'         = @{
         DependencyType = 'PSGalleryModule'
-        Version        = '4.0.5.0'
+        Version        = '4.1.2.0'
         Tags           = @('Desktop', 'Core')
     }
     'AWS.Tools.CloudFormation'         = @{
         DependencyType = 'PSGalleryModule'
-        Version        = '4.0.5.0'
+        Version        = '4.1.2.0'
         Tags           = @('Desktop', 'Core')
     }
     'AWS.Tools.S3'         = @{
         DependencyType = 'PSGalleryModule'
-        Version        = '4.0.5.0'
+        Version        = '4.1.2.0'
         Tags           = @('Desktop', 'Core')
     }
 }
