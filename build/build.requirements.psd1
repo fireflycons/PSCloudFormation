@@ -28,4 +28,19 @@
         Version        = '0.14.0'
         Tags           = 'Desktop'
     }
+    'AWS.Tools.Common'         = @{
+        DependencyType = 'PSGalleryModule'
+        Version        = '4.0.5.0'
+        Tags           = @('Desktop', 'Core')
+    }
+    'AWS.Tools.CloudFormation'         = @{
+        DependencyType = 'PSGalleryModule'
+        Version        = '4.0.5.0'
+        Tags           = @('Desktop', 'Core')
+    }
+    'AWS.Tools.S3'         = @{
+        DependencyType = 'PSGalleryModule'
+        Version        = '4.0.5.0'
+        Tags           = @('Desktop', 'Core')
+    }
 }
