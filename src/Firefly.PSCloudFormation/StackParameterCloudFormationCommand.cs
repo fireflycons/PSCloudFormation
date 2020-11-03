@@ -380,28 +380,29 @@
                 }
 
                 // Override S3Util with one suitable for packaging
-                this.Context.S3Util = new S3Util(
+                using (var s3 = new S3Util(
                     this._ClientFactory,
                     this.Context,
                     this.templateLocation,
                     null,
                     null,
-                    null);
-
-                // Check whether template needs packaging
-                var packager = new PackagerUtils(
-                    this.PathResolver,
-                    this.Logger,
-                    this.Context.S3Util as IPSS3Util,
-                    new OSInfo());
-
-                if (packager.RequiresPackaging(this.TemplateLocation))
+                    null))
                 {
-                    this.Logger.LogInformation(
-                        "Template contains resources that require packaging. Packager will use default bucket for storage.");
-                    this.TemplateLocation = await packager.ProcessTemplate(
-                                                this.templateLocation,
-                                                this.WorkingDirectory);
+                    // Check whether template needs packaging
+                    var packager = new PackagerUtils(
+                        this.PathResolver,
+                        this.Logger,
+                        s3,
+                        new OSInfo());
+
+                    if (packager.RequiresPackaging(this.TemplateLocation))
+                    {
+                        this.Logger.LogInformation(
+                            "Template contains resources that require packaging. Packager will use default bucket for storage.");
+                        this.TemplateLocation = await packager.ProcessTemplate(
+                                                    this.templateLocation,
+                                                    this.WorkingDirectory);
+                    }
                 }
             }
 
