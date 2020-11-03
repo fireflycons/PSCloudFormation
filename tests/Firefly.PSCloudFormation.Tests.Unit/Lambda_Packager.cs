@@ -45,8 +45,6 @@
 
         private readonly ITestOutputHelper output;
 
-        private readonly IPathResolver pathResolver = new TestPathResolver();
-
         public Lambda_Packager(ITestOutputHelper output)
         {
             this.output = output;
