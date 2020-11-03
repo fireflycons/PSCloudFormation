@@ -371,26 +371,38 @@
         /// </returns>
         protected override async Task<object> OnProcessRecord()
         {
-            if (this.TemplateLocation == null)
+            // If using previous template, there is by definition nothing to package.
+            if (!this.UsePreviousTemplateFlag)
             {
-                throw new ArgumentException("Must supply -TemplateLocation");
-            }
+                if (this.TemplateLocation == null)
+                {
+                    throw new ArgumentException("Must supply -TemplateLocation");
+                }
 
-            // Override S3Util with one suitable for packaging
-            this.Context.S3Util = new S3Util(this._ClientFactory, this.Context, this.templateLocation, null, null, null);
+                // Override S3Util with one suitable for packaging
+                this.Context.S3Util = new S3Util(
+                    this._ClientFactory,
+                    this.Context,
+                    this.templateLocation,
+                    null,
+                    null,
+                    null);
 
-            // Check whether template needs packaging
-            var packager = new PackagerUtils(
-                this.PathResolver,
-                this.Logger,
-                this.Context.S3Util as IPSS3Util,
-                new OSInfo());
+                // Check whether template needs packaging
+                var packager = new PackagerUtils(
+                    this.PathResolver,
+                    this.Logger,
+                    this.Context.S3Util as IPSS3Util,
+                    new OSInfo());
 
-            if (packager.RequiresPackaging(this.TemplateLocation))
-            {
-                this.Logger.LogInformation(
-                    "Template contains resources that require packaging. Packager will use default bucket for storage.");
-                this.TemplateLocation = await packager.ProcessTemplate(this.templateLocation, this.WorkingDirectory);
+                if (packager.RequiresPackaging(this.TemplateLocation))
+                {
+                    this.Logger.LogInformation(
+                        "Template contains resources that require packaging. Packager will use default bucket for storage.");
+                    this.TemplateLocation = await packager.ProcessTemplate(
+                                                this.templateLocation,
+                                                this.WorkingDirectory);
+                }
             }
 
             // Read parameter file, if any
