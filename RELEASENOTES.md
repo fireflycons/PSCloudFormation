@@ -1,5 +1,10 @@
 # Release Notes
 
+# 4.1.2.1 
+
+* Fix - Incorporate Firefly.CloudFormation [issue 4](https://github.com/fireflycons/Firefly.CloudFormation/issues/4)
+* Fix - Reinstate broken `-UsePreviousTemplate` argument. [Issue link](https://github.com/fireflycons/PSCloudFormation/issues/85)
+
 # 4.1.2.0
 
 * Technical - Upgrade to AWS.Tools v4.1.2.0 and align PSCloudFormation version with AWS Tools dependency
