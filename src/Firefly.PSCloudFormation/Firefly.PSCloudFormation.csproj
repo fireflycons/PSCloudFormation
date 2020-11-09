@@ -12,7 +12,7 @@
     <AwsToolsVersion>4.1.2.0</AwsToolsVersion>
   </PropertyGroup>
   <PropertyGroup Condition="'$(OS)' == 'Windows_NT'">
-    <CurrentUserAwsTools>$(USERPROFILE)\Documents\WindowsPowerShell\Modules\AWS.Tools.Common\$(AwsToolsVersion)\AWS.Tools.Common.dll</CurrentUserAwsTools>
+    <CurrentUserAwsTools>$([System.Environment]::GetFolderPath(SpecialFolder.MyDocuments))\WindowsPowerShell\Modules\AWS.Tools.Common\$(AwsToolsVersion)\AWS.Tools.Common.dll</CurrentUserAwsTools>
     <AllUsersAwsTools>C:\Program Files\WindowsPowerShell\Modules\AWS.Tools.Common\$(AwsToolsVersion)\AWS.Tools.Common.dll</AllUsersAwsTools>
     <AwsTools Condition="'$(AwsTools)' == '' AND Exists('$(CurrentUserAwsTools)')">$(CurrentUserAwsTools)</AwsTools>
     <AwsTools Condition="'$(AwsTools)' == '' AND Exists('$(AllUsersAwsTools)')">$(AllUsersAwsTools)</AwsTools>
