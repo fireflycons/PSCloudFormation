@@ -1,57 +1,27 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
 <Project Sdk="Microsoft.NET.Sdk">
-  <UsingTask TaskName="DetectAwsTools" TaskFactory="RoslynCodeTaskFactory" AssemblyFile="$(MSBuildBinPath)\Microsoft.Build.Tasks.Core.dll">
-    <ParameterGroup>
-      <AwsTools ParameterType="System.String" Output="true" />
-    </ParameterGroup>
-    <Task>
-      <Using Namespace="System" />
-      <Using Namespace="System.Collections.Generic" />
-      <Using Namespace="System.IO" />
-      <Using Namespace="System.Linq" />
-      <Code Type="Fragment" Language="C#">
-        <![CDATA[
-                var searchDirs = new List<string>();
-
-                switch (Environment.OSVersion.Platform)
-                {
-                    case PlatformID.Unix:
-                    case PlatformID.MacOSX:
-
-                        searchDirs.Add("/usr/local/share/powershell/Modules/AWS.Tools.Common");
-                        searchDirs.Add("~/.local/share/powershell/Modules/AWS.Tools.Common");
-                        break;
-
-                    default:
-
-                        searchDirs.Add(@"C:\Program Files\WindowsPowerShell\Modules\AWS.Tools.Common");
-                        searchDirs.Add(Path.Combine(
-                            Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments),
-                            @"WindowsPowerShell\Modules\AWS.Tools.Common"));
-                        searchDirs.Add(@"C:\Program Files\PowerShell\Modules\AWS.Tools.Common");
-                        searchDirs.Add(Path.Combine(
-                            Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments),
-                            @"PowerShell\Modules\AWS.Tools.Common"));
-                        break;
-                }
-
-                AwsTools = (from dir in searchDirs
-                        where Directory.Exists(dir)
-                        let dirs = Directory.GetDirectories(dir, "*", SearchOption.TopDirectoryOnly)
-                            .Select(d => new Version(Path.GetFileName(d))).OrderByDescending(d => d).ToList()
-                        where dirs.Any()
-                        select Path.Combine(dir, dirs.First().ToString(), "AWS.Tools.Common.dll"))
-                    .FirstOrDefault(File.Exists);
-            ]]>
-      </Code>
-    </Task>
-  </UsingTask>
   <PropertyGroup>
     <TargetFramework>netstandard2.0</TargetFramework>
     <CopyLocalLockFileAssemblies>true</CopyLocalLockFileAssemblies>
     <Version>4.0.37</Version>
     <AssemblyVersion>4.0.0.0</AssemblyVersion>
     <FileVersion>4.0.37.0</FileVersion>
+  </PropertyGroup>
+  <PropertyGroup>
+    <AwsTools>$(AWS_TOOLS_COMMON)</AwsTools>
+    <AwsToolsVersion>4.1.2.0</AwsToolsVersion>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(OS)' == 'Windows_NT'">
+    <CurrentUserAwsTools>$([System.Environment]::GetFolderPath(SpecialFolder.MyDocuments))\WindowsPowerShell\Modules\AWS.Tools.Common\$(AwsToolsVersion)\AWS.Tools.Common.dll</CurrentUserAwsTools>
+    <AllUsersAwsTools>C:\Program Files\WindowsPowerShell\Modules\AWS.Tools.Common\$(AwsToolsVersion)\AWS.Tools.Common.dll</AllUsersAwsTools>
+    <AwsTools Condition="'$(AwsTools)' == '' AND Exists('$(CurrentUserAwsTools)')">$(CurrentUserAwsTools)</AwsTools>
+    <AwsTools Condition="'$(AwsTools)' == '' AND Exists('$(AllUsersAwsTools)')">$(AllUsersAwsTools)</AwsTools>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(OS)' != 'Windows_NT'">
+    <CurrentUserAwsTools>~/.local/share/powershell/Modules/AWS.Tools.Common/$(AwsToolsVersion)/AWS.Tools.Common.dll</CurrentUserAwsTools>
+    <AllUsersAwsTools>/usr/local/share/powershell/Modules/AWS.Tools.Common/$(AwsToolsVersion)/AWS.Tools.Common.dll</AllUsersAwsTools>
+    <AwsTools Condition="'$(AwsTools)' == '' AND Exists('$(CurrentUserAwsTools)')">$(CurrentUserAwsTools)</AwsTools>
+    <AwsTools Condition="'$(AwsTools)' == '' AND Exists('$(AllUsersAwsTools)')">$(AllUsersAwsTools)</AwsTools>
   </PropertyGroup>
   <PropertyGroup>
     <DocumentationFile>$(ProjectDir)Firefly.PSCloudFormation.xml</DocumentationFile>
@@ -80,6 +50,11 @@
     <PackageReference Include="Firefly.CloudFormation" Version="0.3.1" />
   </ItemGroup>
   <ItemGroup>
+    <Reference Include="AWS.Tools.Common">
+      <HintPath>$(AwsTools)</HintPath>
+    </Reference>
+  </ItemGroup>
+  <ItemGroup>
     <None Update="debug.ps1">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </None>
@@ -92,16 +67,7 @@
     <Exec Command="echo $(TargetDir) &gt; &quot;$(SolutionDir)ModulePath.txt&quot;" />
   </Target>
   <Target Name="PreBuild" BeforeTargets="PreBuildEvent">
-    <DetectAwsTools >
-      <Output TaskParameter="AwsTools" PropertyName="AwsTools" />
-    </DetectAwsTools>
     <Error Condition="'$(AwsTools)' == ''" Text="Cannot locate AWS Tools" />
-    <Message Importance="High" Text="AWS TOOLS: $(AwsTools)" />
     <Message Importance="High" Text="TargetDir: $(TargetDir)" />
-    <ItemGroup>
-      <Reference Include="AWS.Tools.Common">
-        <HintPath>$(AwsTools)</HintPath>
-      </Reference>
-    </ItemGroup>
   </Target>
 </Project>
