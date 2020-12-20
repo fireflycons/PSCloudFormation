@@ -1,5 +1,9 @@
 # Release Notes
 
+# 4.1.2.2
+
+* Enhancement - Mechanism to cancel stack update. [Issue link](https://github.com/fireflycons/PSCloudFormation/issues/87)
+
 # 4.1.2.1 
 
 * Fix - Incorporate Firefly.CloudFormation [issue 4](https://github.com/fireflycons/Firefly.CloudFormation/issues/4)

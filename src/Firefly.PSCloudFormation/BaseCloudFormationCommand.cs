@@ -4,6 +4,7 @@
     using System.Collections.ObjectModel;
     using System.Management.Automation;
     using System.Management.Automation.Host;
+    using System.Threading;
     using System.Threading.Tasks;
 
     using Firefly.CloudFormation;
@@ -143,10 +144,25 @@
         protected abstract Task<object> OnProcessRecord();
 
         /// <summary>
+        /// Cancels the update task.
+        /// </summary>
+        /// <param name="cancellationToken">The cancellation token.</param>
+        /// <returns><c>0</c> if the task exited normally, <c>1</c> if it was cancelled by the token, or <c>2</c> if user aborted stack update</returns>
+        protected virtual Task<object> CancelUpdateTask(CancellationToken cancellationToken)
+        {
+            // ReSharper disable once MethodSupportsCancellation
+            return Task.Run(
+                () => (object)0);
+        }
+
+        /// <summary>
         /// Processes the record.
         /// </summary>
         protected override void ProcessRecord()
         {
+            const int StackOperationTask = 0;
+            const int UpdateCancelTask = 1;
+
             base.ProcessRecord();
 
             if (this.Logger == null)
@@ -156,11 +172,28 @@
 
             using (this.WorkingDirectory = new WorkingDirectory(this.Logger))
             {
-                var task = this.OnProcessRecord();
+                var tokenSource = new CancellationTokenSource();
+
+                var tasks = new Task[] { this.OnProcessRecord(), this.CancelUpdateTask(tokenSource.Token) };
 
                 try
                 {
-                    task.Wait();
+                    var completedTask = Task.WaitAny(tasks);
+
+                    if (completedTask == StackOperationTask)
+                    {
+                        // Stack operation is now complete, so kill CancelUpdateTask if it is still running
+                        if ((int)tasks[UpdateCancelTask].Status <= 4)
+                        {
+                            tokenSource.Cancel();
+                        }
+                    }
+                    else
+                    {
+                        // Stack operation still running, wait it out.
+                        // ReSharper disable once MethodSupportsCancellation
+                        tasks[StackOperationTask].Wait();
+                    }
                 }
                 catch (Exception ex)
                 {
@@ -168,9 +201,11 @@
                     return;
                 }
 
-                if (task.Result != null)
+                var stackOperation = (Task<object>)tasks[StackOperationTask];
+
+                if (stackOperation.Result != null)
                 {
-                    var stackResult = (CloudFormationResult)task.Result;
+                    var stackResult = (CloudFormationResult)stackOperation.Result;
                     this.WriteObject(stackResult);
                 }
             }

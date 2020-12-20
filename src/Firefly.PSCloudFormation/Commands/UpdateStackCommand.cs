@@ -1,10 +1,15 @@
 ﻿namespace Firefly.PSCloudFormation.Commands
 {
     using System;
+    using System.Linq;
     using System.Management.Automation;
+    using System.Runtime.InteropServices;
+    using System.Threading;
     using System.Threading.Tasks;
 
+    using Amazon.CloudFormation;
     using Amazon.CloudFormation.Model;
+    using Amazon.S3.Model.Internal.MarshallTransformations;
 
     using Firefly.CloudFormation;
     using Firefly.CloudFormation.Model;
@@ -20,6 +25,10 @@
     /// <para type="description">
     /// If -Wait is present, and a stack is found to be updating as a result of another process, this command will wait for that operation to complete
     /// following the stack events, prior to submitting the change set request.
+    /// </para>
+    /// <para type="description">
+    /// While a stack is in the UPDATE_IN_PROGRESS phase, pressing ESC 3 times in the space of a second will cancel the update forcing all modifications to roll back.
+    /// Once the state transitions to UPDATE_COMPLETE_CLEANUP_IN_PROGRESS, the update can no longer be cancelled.
     /// </para>
     /// <para type="link" uri="https://github.com/fireflycons/PSCloudFormation/blob/master/static/s3-usage.md">PSCloudFormation private S3 bucket</para>
     /// <para type="link" uri="https://github.com/fireflycons/PSCloudFormation/blob/master/static/resource-import.md">Resource Import (PSCloudFormation)</para>
@@ -161,6 +170,112 @@
         }
 
         /// <summary>
+        /// Cancels the update task. ESC must be pressed 3 times within one second to initiate update stack cancellation.
+        /// </summary>
+        /// <param name="cancellationToken">The cancellation token.</param>
+        /// <returns>
+        ///   <c>0</c> if the task exited normally, <c>1</c> if it was cancelled by the token, or <c>2</c> if user aborted stack update
+        /// </returns>
+        protected override Task<object> CancelUpdateTask(CancellationToken cancellationToken)
+        {
+            // This is a bit weird. If this method is declared async, the task runs however the status remains WaitingForActivation 
+            // and Task.WaitAny() blocks indefinitely waiting for this to go to Running.
+            return Task.Run(
+                () =>
+                    {
+                        if (!string.IsNullOrEmpty(this.ResourcesToImport))
+                        {
+                            // Docs say only UPDATE_IN_PROGRESS can be interrupted, so no need to run this thread.
+                            return 0;
+                        }
+                            
+                        var lastPress = new DateTime(1900, 1, 1);
+
+                        var pressCount = 0;
+
+                        while (true)
+                        {
+                            if (cancellationToken.IsCancellationRequested)
+                            {
+                                return (object)1;
+                            }
+
+                            if (Console.KeyAvailable)
+                            {
+                                var keyInfo = Console.ReadKey();
+                                if (keyInfo.Key == ConsoleKey.Escape)
+                                {
+                                    Console.Error.WriteLine(" AESC");
+                                    lastPress = DateTime.Now;
+                                    ++pressCount;
+
+                                    Beep(pressCount);
+
+                                    if (pressCount == 3)
+                                    {
+                                        // Interrupt update
+                                        using (var cfn = this._ClientFactory.CreateCloudFormationClient())
+                                        {
+                                            Stack stack;
+
+                                            try
+                                            {
+                                                // If we really are in the middle of an update operation, the stack will exist and this block won't throw.
+                                                // ReSharper disable once MethodSupportsCancellation
+                                                stack = cfn.DescribeStacksAsync(
+                                                        new DescribeStacksRequest { StackName = this.StackName }).Result
+                                                    .Stacks.First();
+                                            }
+                                            catch
+                                            {
+                                                // ESC pressed before stack existence was verified.
+                                                pressCount = 0;
+                                                continue;
+                                            }
+
+                                            if (stack.StackStatus == StackStatus.UPDATE_IN_PROGRESS)
+                                            {
+                                                Console.Error.WriteLine("** Aborting Update **");
+
+                                                // ReSharper disable once MethodSupportsCancellation
+                                                var res = cfn.CancelUpdateStackAsync(
+                                                    new CancelUpdateStackRequest { StackName = this.StackName }).Result;
+
+                                                return 2;
+                                            }
+
+                                            if (stack.StackStatus.Value.Contains("CLEANUP"))
+                                            {
+                                                Console.Error.Write("\n** Too Late! Update phase is complete.\n");
+                                                return 2;
+                                            }
+
+                                            if (stack.StackStatus.Value.Contains("ROLLBACK"))
+                                            {
+                                                Console.Error.Write("\n** Update already rolling back.\n");
+                                                return 2;
+                                            }
+
+                                            // Stack is not yet updating, so reset press count.
+                                            pressCount = 0;
+                                        }
+                                    }
+                                }
+                            }
+
+                            Thread.Sleep(10);
+
+                            if ((DateTime.Now - lastPress).TotalSeconds > 1)
+                            {
+                                pressCount = 0;
+                            }
+                        }
+                    },
+                cancellationToken);
+        }
+
+
+        /// <summary>
         /// New handler for ProcessRecord. Ensures CloudFormation client is properly disposed.
         /// </summary>
         /// <returns>
@@ -188,23 +303,45 @@
         }
 
         /// <summary>
+        /// Beeps the console in line with specified press count.
+        /// </summary>
+        /// <param name="pressCount">The press count.</param>
+        private static void Beep(int pressCount)
+        {
+            if (!RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
+            {
+                return;
+            }
+
+            Console.Beep(400 * (int)Math.Pow(2, pressCount - 1), 100);
+        }
+
+        /// <summary>
         /// Callback method for Update Stack to allow user to accept the change set.
         /// </summary>
         /// <param name="changeset">The change set details.</param>
         /// <returns><c>true</c> if update should proceed; else <c>false</c></returns>
         private bool AcceptChangeset(DescribeChangeSetResponse changeset)
         {
-            if (this.Force)
+            var accept = true;
+
+            if (!this.Force)
             {
-                return true;
+                accept = this.AskYesNo(
+                             $"Begin update of {this.StackName} now?",
+                             null,
+                             ChoiceResponse.Yes,
+                             "Start rebuild now.",
+                             "Cancel operation.") == ChoiceResponse.Yes;
             }
 
-            return this.AskYesNo(
-                       $"Begin update of {this.StackName} now?",
-                       null,
-                       ChoiceResponse.Yes,
-                       "Start rebuild now.",
-                       "Cancel operation.") == ChoiceResponse.Yes;
+            if (string.IsNullOrEmpty(this.ResourcesToImport))
+            {
+                // Docs say only UPDATE_IN_PROGRESS can be interrupted.
+                Console.WriteLine("Press ESC 3 times within one second to cancel update while update in progress");
+            }
+
+            return accept;
         }
     }
 }
