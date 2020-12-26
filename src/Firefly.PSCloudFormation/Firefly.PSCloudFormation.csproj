@@ -3,9 +3,9 @@
   <PropertyGroup>
     <TargetFramework>netstandard2.0</TargetFramework>
     <CopyLocalLockFileAssemblies>true</CopyLocalLockFileAssemblies>
-    <Version>4.0.37</Version>
+    <Version>4.0.24</Version>
     <AssemblyVersion>4.0.0.0</AssemblyVersion>
-    <FileVersion>4.0.37.0</FileVersion>
+    <FileVersion>4.0.24.0</FileVersion>
   </PropertyGroup>
   <PropertyGroup>
     <AwsTools>$(AWS_TOOLS_COMMON)</AwsTools>
@@ -47,7 +47,7 @@
     <ProjectReference Include="..\Firefly.CloudFormation\Firefly.CloudFormation.csproj" />
   </ItemGroup>
   <ItemGroup Condition="'$(SolutionName)' == 'Firefly.PSCloudFormation'">
-    <PackageReference Include="Firefly.CloudFormation" Version="0.3.1" />
+    <PackageReference Include="Firefly.CloudFormation" Version="0.3.2" />
   </ItemGroup>
   <ItemGroup>
     <Reference Include="AWS.Tools.Common">
@@ -68,6 +68,7 @@
   </Target>
   <Target Name="PreBuild" BeforeTargets="PreBuildEvent">
     <Error Condition="'$(AwsTools)' == ''" Text="Cannot locate AWS Tools" />
+    <Message Importance="High" Text="AWS_TOOLS_COMMON: $(AWS_TOOLS_COMMON)" />
     <Message Importance="High" Text="TargetDir: $(TargetDir)" />
   </Target>
 </Project>

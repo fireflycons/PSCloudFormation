@@ -1,5 +1,9 @@
 # Release Notes
 
+# 4.1.2.3
+
+* Fix - Stack update/delete should proceed even when "broken". [Issue link](https://github.com/fireflycons/PSCloudFormation/issues/88)
+
 # 4.1.2.2
 
 * Enhancement - Mechanism to cancel stack update. [Issue link](https://github.com/fireflycons/PSCloudFormation/issues/87)
