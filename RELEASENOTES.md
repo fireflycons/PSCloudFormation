@@ -1,5 +1,10 @@
 # Release Notes
 
+# 4.1.6.0
+
+* Technical - Update to AWS.Tools 4.1.6.0
+* Enhancement - Support IncludeNestedStacks for changeset geneeration. [Issue link](https://github.com/fireflycons/PSCloudFormation/issues/89)
+
 # 4.1.2.3
 
 * Fix - Stack update/delete should proceed even when "broken". [Issue link](https://github.com/fireflycons/PSCloudFormation/issues/88)
@@ -8,7 +13,7 @@
 
 * Enhancement - Mechanism to cancel stack update. [Issue link](https://github.com/fireflycons/PSCloudFormation/issues/87)
 
-# 4.1.2.1 
+# 4.1.2.1
 
 * Fix - Incorporate Firefly.CloudFormation [issue 4](https://github.com/fireflycons/Firefly.CloudFormation/issues/4)
 * Fix - Reinstate broken `-UsePreviousTemplate` argument. [Issue link](https://github.com/fireflycons/PSCloudFormation/issues/85)

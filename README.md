@@ -1,6 +1,14 @@
 # PSCloudFormation
 [![Build status](https://ci.appveyor.com/api/projects/status/fgt7d0icj7emc6hl/branch/master?svg=true)](https://ci.appveyor.com/project/fireflycons/pscloudformation/branch/master)
 
+This module depends on [AWS.Tools](https://docs.aws.amazon.com/powershell/latest/userguide/pstools-welcome.html) 4.1.6.0 which you should install/upgrade first
+
+Required AWS.Tools modules:
+
+* AWS.Tools.Common
+* AWS.Tools.CloudFormation
+* AWS.Tools.S3
+
 ## Version 4 is here!
 
 This version is a complete re-write in C#. I found that it was becoming a cumbersome beast keeping it in pure PowerShell, taking longer to load the module, and certain parts of it were running quite slowly.
