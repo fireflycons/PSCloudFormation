@@ -313,8 +313,22 @@
             if (rawUi.WindowSize.Width < minWidth)
             {
                 var buf = rawUi.WindowSize;
-                buf.Width = minWidth;
-                rawUi.WindowSize = buf;
+                try
+                {
+                    buf.Width = minWidth;
+                    rawUi.WindowSize = buf;
+                }
+                catch (PSArgumentOutOfRangeException e)
+                {
+                    var re = new Regex(@"^Window cannot be wider than (?<width>\d+)\.");
+                    var m = re.Match(e.Message);
+
+                    if (m.Success)
+                    {
+                        buf.Width = int.Parse(m.Groups["width"].Value);
+                        rawUi.WindowSize = buf;
+                    }
+                }
             }
         }
     }

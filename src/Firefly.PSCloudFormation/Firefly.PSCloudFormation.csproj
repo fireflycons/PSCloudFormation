@@ -9,7 +9,7 @@
   </PropertyGroup>
   <PropertyGroup>
     <AwsTools>$(AWS_TOOLS_COMMON)</AwsTools>
-    <AwsToolsVersion>4.1.2.0</AwsToolsVersion>
+    <AwsToolsVersion>4.1.6.0</AwsToolsVersion>
   </PropertyGroup>
   <PropertyGroup Condition="'$(OS)' == 'Windows_NT'">
     <CurrentUserAwsTools>$([System.Environment]::GetFolderPath(SpecialFolder.MyDocuments))\WindowsPowerShell\Modules\AWS.Tools.Common\$(AwsToolsVersion)\AWS.Tools.Common.dll</CurrentUserAwsTools>
@@ -31,8 +31,8 @@
     <OutputPath>$(SolutionDir)PSCloudFormation</OutputPath>
   </PropertyGroup>
   <ItemGroup>
-    <PackageReference Include="AWSSDK.S3" Version="3.5.0.*" />
-    <PackageReference Include="AWSSDK.SecurityToken" Version="3.5.0.*" />
+    <PackageReference Include="AWSSDK.S3" Version="3.5.7.*" />
+    <PackageReference Include="AWSSDK.SecurityToken" Version="3.5.1.*" />
     <PackageReference Include="Firefly.CrossPlatformZip" Version="0.5.0" />
     <PackageReference Include="Firefly.PowerShell.DynamicParameters" Version="0.2.1" />
     <PackageReference Include="PowerShellStandard.Library" Version="5.1.0" />
@@ -44,10 +44,10 @@
     </PackageReference>
   </ItemGroup>
   <ItemGroup Condition="'$(SolutionName)' == 'Firefly.PSCloudFormation.debug'">
-    <ProjectReference Include="..\Firefly.CloudFormation\Firefly.CloudFormation.csproj" />
+    <ProjectReference Include="..\..\..\Firefly.CloudFormation\src\Firefly.CloudFormation\Firefly.CloudFormation.csproj" />
   </ItemGroup>
   <ItemGroup Condition="'$(SolutionName)' == 'Firefly.PSCloudFormation'">
-    <PackageReference Include="Firefly.CloudFormation" Version="0.3.2" />
+    <PackageReference Include="Firefly.CloudFormation" Version="0.4.0" />
   </ItemGroup>
   <ItemGroup>
     <Reference Include="AWS.Tools.Common">

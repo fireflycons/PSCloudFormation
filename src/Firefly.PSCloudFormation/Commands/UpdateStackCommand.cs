@@ -76,6 +76,19 @@
         private string resourcesToImport;
 
         /// <summary>
+        /// Gets or sets the include nested stacks.
+        /// <para type="description">
+        /// Creates a change set for the all nested stacks specified in the template.
+        /// </para>
+        /// </summary>
+        /// <value>
+        /// The include nested stacks.
+        /// </value>
+        [Parameter(ValueFromPipelineByPropertyName = true)]
+        [Alias("IncludeNestedStack")]
+        public SwitchParameter IncludeNestedStacks { get; set; }
+
+        /// <summary>
         /// Gets or sets the stack policy during update location.
         /// <para type="description">
         /// Structure containing the temporary overriding stack policy body. For more information, go to Prevent Updates to Stack Resources in the AWS CloudFormation User Guide.
@@ -296,6 +309,7 @@
                 .WithStackPolicyDuringUpdate(this.StackPolicyDuringUpdateLocation)
                 .WithUsePreviousTemplate(this.UsePreviousTemplateFlag)
                 .WithResourceImports(this.ResourcesToImport)
+                .WithIncludeNestedStacks(this.IncludeNestedStacks)
                 .Build())
             {
                 return await runner.UpdateStackAsync(this.AcceptChangeset);
@@ -323,16 +337,17 @@
         /// <returns><c>true</c> if update should proceed; else <c>false</c></returns>
         private bool AcceptChangeset(DescribeChangeSetResponse changeset)
         {
-            var accept = true;
-
             if (!this.Force)
             {
-                accept = this.AskYesNo(
-                             $"Begin update of {this.StackName} now?",
-                             null,
-                             ChoiceResponse.Yes,
-                             "Start rebuild now.",
-                             "Cancel operation.") == ChoiceResponse.Yes;
+                if (this.AskYesNo(
+                        $"Begin update of {this.StackName} now?",
+                        null,
+                        ChoiceResponse.Yes,
+                        "Start rebuild now.",
+                        "Cancel operation.") == ChoiceResponse.No)
+                {
+                    return false;
+                }
             }
 
             if (string.IsNullOrEmpty(this.ResourcesToImport))
@@ -341,7 +356,7 @@
                 Console.WriteLine("Press ESC 3 times within one second to cancel update while update in progress");
             }
 
-            return accept;
+            return true;
         }
     }
 }
