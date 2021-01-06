@@ -173,8 +173,8 @@
             using (this.WorkingDirectory = new WorkingDirectory(this.Logger))
             {
                 var tokenSource = new CancellationTokenSource();
-
                 var tasks = new Task[] { this.OnProcessRecord(), this.CancelUpdateTask(tokenSource.Token) };
+                var stackOperation = (Task<object>)tasks[StackOperationTask];
 
                 try
                 {
@@ -192,7 +192,19 @@
                     {
                         // Stack operation still running, wait it out.
                         // ReSharper disable once MethodSupportsCancellation
-                        tasks[StackOperationTask].Wait();
+                        stackOperation.Wait();
+                    }
+
+                    // The Wait() wont throw, so check for contained exception and throw it so it's processed by ThrowExecutionError
+                    if (stackOperation.IsFaulted)
+                    {
+                        var ex = stackOperation.Exception;
+
+                        if (ex != null)
+                        {
+                            // ReSharper disable once PossibleNullReferenceException - by definition an AggregateException will contain an inner exception
+                            throw ex.InnerException;
+                        }
                     }
                 }
                 catch (Exception ex)
@@ -200,8 +212,6 @@
                     this.ThrowExecutionError(ex.Message, this, ex);
                     return;
                 }
-
-                var stackOperation = (Task<object>)tasks[StackOperationTask];
 
                 if (stackOperation.Result != null)
                 {

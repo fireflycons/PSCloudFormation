@@ -1,5 +1,9 @@
 # Release Notes
 
+# 4.1.6.1
+
+* Fix - Error message is unhelpful when stack requires capabilities. [Issue link](https://github.com/fireflycons/PSCloudFormation/issues/91)
+
 # 4.1.6.0
 
 * Technical - Update to AWS.Tools 4.1.6.0
