@@ -1,5 +1,9 @@
 # Release Notes
 
+# 4.1.6.2
+
+* Fix - Parameters with SSM types should be included on command line. [issue link](https://github.com/fireflycons/PSCloudFormation/issues/92)
+
 # 4.1.6.1
 
 * Fix - Error message is unhelpful when stack requires capabilities. [Issue link](https://github.com/fireflycons/PSCloudFormation/issues/91)

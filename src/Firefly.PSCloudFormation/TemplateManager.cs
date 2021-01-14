@@ -126,7 +126,7 @@
 
             try
             {
-                foreach (var param in this.TemplateParameters.Where(p => !p.IsSsmParameter))
+                foreach (var param in this.TemplateParameters)
                 {
                     var builder = new RuntimeDefinedParameterBuilder(param.Name, GetClrTypeFromAwsType(param.Type));
 
@@ -141,7 +141,14 @@
                         builder.WithHelpMessage(param.Description);
                     }
 
-                    if (param.Type.Contains("AWS::"))
+                    if (param.IsSsmParameter)
+                    {
+                        // For all AWS::SSM::Parameter types, the value is a string which is the referenced parameter key.
+                        // Validation of the actual SSM parameter _value_ is done by CF when the parameter is fetched.
+                        builder.WithValidatePattern(new Regex(@"[\w\.\-/]+"));
+                        builder.WithValidateLength(1, 2048);
+                    }
+                    else if (param.Type.Contains("AWS::"))
                     {
                         // Set a ValidatePattern for the given AWS type
                         var baseType = param.Type;
