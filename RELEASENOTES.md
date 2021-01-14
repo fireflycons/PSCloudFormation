@@ -1,5 +1,9 @@
 # Release Notes
 
+# 4.1.6.3
+
+* Enhancement - ROLLBACK operations should be in red. [issue link](https://github.com/fireflycons/PSCloudFormation/issues/93)
+
 # 4.1.6.2
 
 * Fix - Parameters with SSM types should be included on command line. [issue link](https://github.com/fireflycons/PSCloudFormation/issues/92)

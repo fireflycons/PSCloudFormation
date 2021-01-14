@@ -222,13 +222,13 @@
             var fg = ui.RawUI.ForegroundColor;
             var status = @event.ResourceStatus.Value;
 
-            if (status.EndsWith("IN_PROGRESS"))
-            {
-                fg = ConsoleColor.Cyan;
-            }
-            else if (ErrorStatus.IsMatch(status))
+            if (status.Contains("ROLLBACK") || ErrorStatus.IsMatch(status))
             {
                 fg = ConsoleColor.Red;
+            }
+            else if (status.EndsWith("IN_PROGRESS"))
+            {
+                fg = ConsoleColor.Cyan;
             }
             else if (status.EndsWith("COMPLETE"))
             {
