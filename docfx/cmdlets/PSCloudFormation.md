@@ -9,13 +9,6 @@ Module Name: PSCloudFormation
 ---
 
 
-
-
-
-
-
-
-
 # PSCloudFormation Module
 ## Description
 Easy CloudFormation deployments from the PowerShell command line.

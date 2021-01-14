@@ -1,5 +1,7 @@
 # PSCloudFormation
 
+[Go to code](https://github.com/fireflycons/PSCloudFormation).
+
 ## What is it?
 
 When I began developing templates, I quickly became frustrated with the the length of time and complexity involved with deploying a change to a template to CloudFormation. A simple one-line fix would involve either using one of the command line tools, then jumping into the console to see how the update is progressing, or using the console itself and going through the half dozen or so screens just to get the thing uploaded and submitted.
