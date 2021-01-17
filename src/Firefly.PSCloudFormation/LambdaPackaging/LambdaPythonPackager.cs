@@ -1,6 +1,5 @@
 ﻿namespace Firefly.PSCloudFormation.LambdaPackaging
 {
-    using System.Collections.Generic;
     using System.IO;
     using System.Linq;
     using System.Text.RegularExpressions;
@@ -54,7 +53,6 @@
         /// The bin directory.
         /// </value>
         protected abstract string BinDir { get; }
-
 
         /// <summary>
         /// Gets the  regex to detect lambda handler.

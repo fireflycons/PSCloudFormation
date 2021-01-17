@@ -131,7 +131,7 @@
                 // In following with PowerShell conventions, do a case insensitive compare on parameter names.
                 var property = this.GetType().GetProperties(BindingFlags.Instance | BindingFlags.Public).FirstOrDefault(
                     p => string.Compare(p.Name, paramName, StringComparison.OrdinalIgnoreCase) == 0
-                         && p.GetCustomAttribute<System.Management.Automation.ParameterAttribute>() != null);
+                         && p.GetCustomAttribute<ParameterAttribute>() != null);
 
                 if (property != null)
                 {

@@ -578,6 +578,7 @@ namespace Firefly.PSCloudFormation
                 this.ThrowTerminatingError(
                     new ErrorRecord(
                         resolvedException,
+                        // ReSharper disable once PossibleNullReferenceException - aggregates always have at least one inner exception
                         resolvedException.GetType().ToString(),
                         ErrorCategory.InvalidOperation,
                         errorSource));
@@ -862,7 +863,7 @@ namespace Firefly.PSCloudFormation
                 return (AWSCredentials)prop.GetMethod.Invoke(psCredentials, null);
             }
 
-            throw new InvalidOperationException($"Property 'Credentials' not found on {typeof(AWSPSCredentials).Name}");
+            throw new InvalidOperationException($"Property 'Credentials' not found on {nameof(AWSPSCredentials)}");
         }
 
         /// <summary>

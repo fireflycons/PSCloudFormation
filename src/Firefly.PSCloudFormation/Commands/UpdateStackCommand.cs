@@ -9,7 +9,6 @@
 
     using Amazon.CloudFormation;
     using Amazon.CloudFormation.Model;
-    using Amazon.S3.Model.Internal.MarshallTransformations;
 
     using Firefly.CloudFormation;
     using Firefly.CloudFormation.Model;
@@ -101,6 +100,7 @@
         /// </value>
         [Parameter(ValueFromPipelineByPropertyName = true)]
         [Alias("StackPolicyDuringUpdateBody", "StackPolicyDuringUpdateURL")]
+        // ReSharper disable once UnusedMember.Global
         public string StackPolicyDuringUpdateLocation
         {
             get => this.stackPolicyDuringUpdateLocation;
@@ -148,6 +148,7 @@
         /// The resources to import.
         /// </value>
         [Parameter(ValueFromPipelineByPropertyName = true)]
+        // ReSharper disable once UnusedMember.Global
         public string ResourcesToImport
         {
             get => this.resourcesToImport;
@@ -294,6 +295,7 @@
                                                 Console.Error.WriteLine("** Aborting Update **");
 
                                                 // ReSharper disable once MethodSupportsCancellation
+                                                // ReSharper disable once UnusedVariable
                                                 var res = cfn.CancelUpdateStackAsync(
                                                     new CancelUpdateStackRequest { StackName = this.StackName }).Result;
 

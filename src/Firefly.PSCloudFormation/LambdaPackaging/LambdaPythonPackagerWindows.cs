@@ -1,10 +1,6 @@
 ﻿namespace Firefly.PSCloudFormation.LambdaPackaging
 {
-    using System.Collections.Generic;
     using System.IO;
-    using System.Linq;
-
-    using Amazon.S3.Model.Internal.MarshallTransformations;
 
     using Firefly.CloudFormation;
     using Firefly.PSCloudFormation.Utils;

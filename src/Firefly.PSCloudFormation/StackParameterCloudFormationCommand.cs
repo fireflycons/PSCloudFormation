@@ -10,7 +10,6 @@
 
     using Amazon.CloudFormation;
     using Amazon.CloudFormation.Model;
-    using Amazon.S3.Model;
 
     using Firefly.CloudFormation;
     using Firefly.CloudFormation.Model;
@@ -20,7 +19,6 @@
     using Firefly.PSCloudFormation.Commands;
     using Firefly.PSCloudFormation.Utils;
 
-    using Stack = System.Collections.Stack;
     using Tag = Amazon.CloudFormation.Model.Tag;
 
     /// <summary>
@@ -138,6 +136,7 @@
         /// The parameter file.
         /// </value>
         [Parameter(ValueFromPipelineByPropertyName = true)]
+        // ReSharper disable once UnusedMember.Global
         public string ParameterFile
         {
             get => this.parameterFile; 
@@ -210,6 +209,7 @@
         /// </value>
         [Parameter(ValueFromPipelineByPropertyName = true)]
         [Alias("StackPolicyBody", "StackPolicyURL")]
+        // ReSharper disable once UnusedMember.Global
         public string StackPolicyLocation
         {
             get => this.stackPolicyLocation; 
@@ -251,6 +251,7 @@
         /// </value>
         [Parameter(ValueFromPipelineByPropertyName = true, ValueFromPipeline = true)]
         [Alias("TemplateBody", "TemplateURL")]
+        // ReSharper disable once UnusedMember.Global
         public string TemplateLocation
         {
             get => this.templateLocation;
