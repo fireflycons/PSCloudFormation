@@ -141,7 +141,12 @@
         public string ParameterFile
         {
             get => this.parameterFile; 
-            set => this.parameterFile = this.PathResolver.ResolvePath(value);
+
+            set
+            {
+                this.parameterFile = value;
+                this.ResolvedParameterFile = this.PathResolver.ResolvePath(value);
+            }
         }
 
         /// <summary>
@@ -208,7 +213,12 @@
         public string StackPolicyLocation
         {
             get => this.stackPolicyLocation; 
-            set => this.stackPolicyLocation = this.PathResolver.ResolvePath(value);
+
+            set
+            {
+                this.stackPolicyLocation = value;
+                this.ResolvedStackPolicyLocation = this.PathResolver.ResolvePath(value);
+            }
         }
 
         /// <summary>
@@ -245,9 +255,38 @@
         {
             get => this.templateLocation;
 
-            // Try to resolve as a path through the file system provider. PS and .NET may have different ideas about the current directory.
-            set => this.templateLocation = this.PathResolver.ResolvePath(value);
+            set
+            {
+                this.templateLocation = value;
+
+                // Try to resolve as a path through the file system provider. PS and .NET may have different ideas about the current directory.
+                this.ResolvedTemplateLocation = this.PathResolver.ResolvePath(value);
+            }
         }
+
+        /// <summary>
+        /// Gets or sets the resolved parameter file.
+        /// </summary>
+        /// <value>
+        /// The resolved parameter file.
+        /// </value>
+        protected string ResolvedParameterFile { get; set; }
+
+        /// <summary>
+        /// Gets or sets the resolved stack policy location.
+        /// </summary>
+        /// <value>
+        /// The resolved stack policy location.
+        /// </value>
+        protected string ResolvedStackPolicyLocation { get; set; }
+
+        /// <summary>
+        /// Gets or sets the resolved template location.
+        /// </summary>
+        /// <value>
+        /// The resolved template location.
+        /// </value>
+        protected string ResolvedTemplateLocation { get; set; }
 
         /// <summary>
         /// Gets the stack operation.
@@ -288,7 +327,7 @@
         /// <returns>A <see cref="RuntimeDefinedParameterDictionary"/></returns>
         public object GetDynamicParameters()
         {
-            if (this.TemplateLocation == null && !this.UsePreviousTemplateFlag)
+            if (this.ResolvedTemplateLocation == null && !this.UsePreviousTemplateFlag)
             {
                 // We can also get called when user is tab-completing the cmdlet name.
                 // Clearly we have no arguments yet.
@@ -304,7 +343,7 @@
 
             try
             {
-                var task = templateResolver.ResolveFileAsync(this.TemplateLocation);
+                var task = templateResolver.ResolveFileAsync(this.ResolvedTemplateLocation);
                 task.Wait();
             }
             catch (AggregateException e)
@@ -331,7 +370,7 @@
         /// <returns>Dictionary of parameter key/parameter value.</returns>
         internal IDictionary<string, string> ReadParameterFile()
         {
-            return string.IsNullOrEmpty(this.ParameterFile)
+            return string.IsNullOrEmpty(this.ResolvedParameterFile)
                        ? new Dictionary<string, string>()
                        : ParameterFileParser.CreateParser(this.ResolveParameterFileContent()).ParseParameterFile();
         }
@@ -388,13 +427,13 @@
 
             // Can't add parameters till dynamic parameters have been resolved.
             return base.GetBuilder()
-                .WithTemplateLocation(this.TemplateLocation)
+                .WithTemplateLocation(this.ResolvedTemplateLocation)
                 .WithTags(this.Tag)
                 .WithNotificationARNs(this.NotificationARNs)
                 .WithCapabilities(this.Capabilities?.Select(Capability.FindValue))
                 .WithRollbackConfiguration(rollbackConfiguration)
                 .WithResourceType(this.ResourceType)
-                .WithStackPolicy(this.StackPolicyLocation)
+                .WithStackPolicy(this.ResolvedStackPolicyLocation)
                 .WithParameters(this.StackParameters)
                 .WithForceS3(this.ForceS3);
         }
@@ -410,7 +449,7 @@
             // If using previous template, there is by definition nothing to package.
             if (!this.UsePreviousTemplateFlag)
             {
-                if (this.TemplateLocation == null)
+                if (this.ResolvedTemplateLocation == null)
                 {
                     throw new ArgumentException("Must supply -TemplateLocation");
                 }
@@ -419,7 +458,7 @@
                 using (var s3 = new S3Util(
                     this._ClientFactory,
                     this.Context,
-                    this.templateLocation,
+                    this.ResolvedTemplateLocation,
                     null,
                     null,
                     null))
@@ -431,12 +470,12 @@
                         s3,
                         new OSInfo());
 
-                    if (packager.RequiresPackaging(this.TemplateLocation))
+                    if (packager.RequiresPackaging(this.ResolvedTemplateLocation))
                     {
                         this.Logger.LogInformation(
                             "Template contains resources that require packaging. Packager will use default bucket for storage.");
-                        this.TemplateLocation = await packager.ProcessTemplate(
-                                                    this.templateLocation,
+                        this.ResolvedTemplateLocation = await packager.ProcessTemplate(
+                                                    this.ResolvedTemplateLocation,
                                                     this.WorkingDirectory);
                     }
                 }
@@ -484,12 +523,12 @@
         /// <exception cref="ArgumentException">Parameter file cannot be in S3 - ParameterFile</exception>
         private string ResolveParameterFileContent()
         {
-            if (File.Exists(this.ParameterFile))
+            if (File.Exists(this.ResolvedParameterFile))
             {
-                return File.ReadAllText(this.ParameterFile);
+                return File.ReadAllText(this.ResolvedParameterFile);
             }
 
-            if (Uri.TryCreate(this.ParameterFile, UriKind.Absolute, out var uri)
+            if (Uri.TryCreate(this.ResolvedParameterFile, UriKind.Absolute, out var uri)
                 && !string.IsNullOrEmpty(uri.Scheme))
             {
                 // ReSharper disable once NotResolvedInText - This is a cmdlet argument rather than local method
@@ -497,7 +536,7 @@
             }
 
             // It is string content
-            return this.ParameterFile.Unquote();
+            return this.ResolvedParameterFile.Unquote();
         }
     }
 }

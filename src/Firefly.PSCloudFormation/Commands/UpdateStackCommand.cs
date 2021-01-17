@@ -104,7 +104,12 @@
         public string StackPolicyDuringUpdateLocation
         {
             get => this.stackPolicyDuringUpdateLocation;
-            set => this.stackPolicyDuringUpdateLocation = this.PathResolver.ResolvePath(value);
+
+            set
+            {
+                this.stackPolicyDuringUpdateLocation = value;
+                this.ResolvedStackPolicyDuringUpdateLocation = this.PathResolver.ResolvePath(value);
+            }
         }
 
         /// <summary>
@@ -145,8 +150,13 @@
         [Parameter(ValueFromPipelineByPropertyName = true)]
         public string ResourcesToImport
         {
-            get => this.resourcesToImport; 
-            set => this.resourcesToImport = this.PathResolver.ResolvePath(value);
+            get => this.resourcesToImport;
+
+            set
+            {
+                this.resourcesToImport = value;
+                this.ResolvedResourcesToImport = this.PathResolver.ResolvePath(value);
+            }
         }
 
         /// <summary>
@@ -156,7 +166,7 @@
         /// Specifying 'arn' will return the stack's ARN.
         /// Specifying 'result' will return the stack operation result.
         /// Specifying 'outputs' will return any stack outputs as a hashtable.
-        /// Specifying '*' will return an object containing a property for each of the above.
+        /// Specifying '*' will return a hash table containing a key for each of the above.
         /// Specifying -Select '^ParameterName' will result in the cmdlet returning the selected cmdlet parameter value.
         /// </para>
         /// </summary>
@@ -180,6 +190,22 @@
         public SwitchParameter Wait { get; set; }
 
         /// <summary>
+        /// Gets or sets the resolved stack policy during update location.
+        /// </summary>
+        /// <value>
+        /// The resolved stack policy during update location.
+        /// </value>
+        protected string ResolvedStackPolicyDuringUpdateLocation { get; set; }
+
+        /// <summary>
+        /// Gets or sets the resolved resources to import.
+        /// </summary>
+        /// <value>
+        /// The resolved resources to import.
+        /// </value>
+        protected string ResolvedResourcesToImport { get; set; }
+
+        /// <summary>
         /// Gets the stack operation.
         /// </summary>
         /// <value>
@@ -195,7 +221,7 @@
         /// </returns>
         protected override CloudFormationBuilder GetBuilder()
         {
-            return base.GetBuilder().WithStackPolicyDuringUpdate(this.StackPolicyDuringUpdateLocation)
+            return base.GetBuilder().WithStackPolicyDuringUpdate(this.ResolvedStackPolicyDuringUpdateLocation)
                 .WithUsePreviousTemplate(this.UsePreviousTemplateFlag).WithWaitForInProgressUpdate(this.Wait);
         }
 
@@ -213,7 +239,7 @@
             return Task.Run(
                 () =>
                     {
-                        if (!string.IsNullOrEmpty(this.ResourcesToImport))
+                        if (!string.IsNullOrEmpty(this.ResolvedResourcesToImport))
                         {
                             // Docs say only UPDATE_IN_PROGRESS can be interrupted, so no need to run this thread.
                             return 0;
@@ -303,8 +329,7 @@
                     },
                 cancellationToken);
         }
-
-
+        
         /// <summary>
         /// New handler for ProcessRecord. Ensures CloudFormation client is properly disposed.
         /// </summary>
@@ -315,7 +340,7 @@
         {
             this.Logger = new PSLogger(this);
 
-            if (this.TemplateLocation == null && !this.UsePreviousTemplate)
+            if (this.ResolvedTemplateLocation == null && !this.UsePreviousTemplate)
             {
                 throw new ArgumentException("Must supply one of -TemplateLocation, -UsePreviousTemplate");
             }
@@ -323,9 +348,9 @@
             await base.OnProcessRecord();
 
             using (var runner = this.GetBuilder()
-                .WithStackPolicyDuringUpdate(this.StackPolicyDuringUpdateLocation)
+                .WithStackPolicyDuringUpdate(this.ResolvedStackPolicyDuringUpdateLocation)
                 .WithUsePreviousTemplate(this.UsePreviousTemplateFlag)
-                .WithResourceImports(this.ResourcesToImport)
+                .WithResourceImports(this.ResolvedResourcesToImport)
                 .WithIncludeNestedStacks(this.IncludeNestedStacks)
                 .Build())
             {
@@ -367,7 +392,7 @@
                 }
             }
 
-            if (string.IsNullOrEmpty(this.ResourcesToImport))
+            if (string.IsNullOrEmpty(this.ResolvedResourcesToImport))
             {
                 // Docs say only UPDATE_IN_PROGRESS can be interrupted.
                 Console.WriteLine("Press ESC 3 times within one second to cancel update while update in progress");
