@@ -1,6 +1,7 @@
 ﻿namespace Firefly.PSCloudFormation
 {
     using System;
+    using System.Collections;
     using System.Collections.Generic;
     using System.IO;
     using System.Linq;
@@ -9,13 +10,18 @@
 
     using Amazon.CloudFormation;
     using Amazon.CloudFormation.Model;
+    using Amazon.S3.Model;
 
     using Firefly.CloudFormation;
     using Firefly.CloudFormation.Model;
     using Firefly.CloudFormation.Parsers;
     using Firefly.CloudFormation.Resolvers;
     using Firefly.CloudFormation.Utils;
+    using Firefly.PSCloudFormation.Commands;
     using Firefly.PSCloudFormation.Utils;
+
+    using Stack = System.Collections.Stack;
+    using Tag = Amazon.CloudFormation.Model.Tag;
 
     /// <summary>
     /// <para>
@@ -328,6 +334,36 @@
             return string.IsNullOrEmpty(this.ParameterFile)
                        ? new Dictionary<string, string>()
                        : ParameterFileParser.CreateParser(this.ResolveParameterFileContent()).ParseParameterFile();
+        }
+
+        /// <summary>
+        /// Accumulate all outputs for -Select *.
+        /// </summary>
+        /// <param name="stack"><see cref="Amazon.CloudFormation.Model.Stack" /> object, which will be <c>null</c> in the case of <see cref="RemoveStackCommand" />.</param>
+        /// <returns>
+        ///   <see cref="Hashtable" /> of outputs
+        /// </returns>
+        protected override Hashtable SelectStar(Amazon.CloudFormation.Model.Stack stack)
+        {
+            var returnValue = base.SelectStar(stack);
+
+            returnValue.Add("Outputs", new Hashtable(stack.Outputs.ToDictionary(o => o.OutputKey, o => o.OutputValue)));
+
+            return returnValue;
+        }
+
+        /// <summary>
+        /// Gets the valid values for select argument.
+        /// </summary>
+        /// <returns>
+        /// List of acceptable values
+        /// </returns>
+        protected override List<string> GetSelectArgumentValues()
+        {
+            // At this level, we can also include outputs
+            var values = base.GetSelectArgumentValues();
+            values.Add("outputs");
+            return values;
         }
 
         /// <summary>

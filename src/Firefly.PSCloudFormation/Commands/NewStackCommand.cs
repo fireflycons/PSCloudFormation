@@ -103,6 +103,19 @@
         public OnFailure OnFailure { get; set; }
 
         /// <summary>
+        /// Gets or sets the select.
+        /// <para type="description">
+        /// Use the -Select parameter to control the cmdlet output. The cmdlet doesn't have a return value by default.
+        /// Specifying -Select '^ParameterName' will result in the cmdlet returning the selected cmdlet parameter value.
+        /// </para>
+        /// </summary>
+        /// <value>
+        /// The select.
+        /// </value>
+        [Parameter(ValueFromPipelineByPropertyName = true)]
+        public override string Select { get; set; }
+
+        /// <summary>
         /// Gets or sets the timeout in minutes.
         /// <para type="description">
         /// The amount of time that can pass before the stack status becomes CREATE_FAILED; if <c>DisableRollback</c> is not set or is set to <c>false</c>, the stack will be rolled back.

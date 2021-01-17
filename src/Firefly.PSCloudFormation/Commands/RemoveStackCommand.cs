@@ -66,6 +66,19 @@
         public string[] RetainResource { get; set; }
 
         /// <summary>
+        /// Gets or sets the select.
+        /// <para type="description">
+        /// Use the -Select parameter to control the cmdlet output. The cmdlet doesn't have a return value by default.
+        /// Specifying -Select '^ParameterName' will result in the cmdlet returning the selected cmdlet parameter value.
+        /// </para>
+        /// </summary>
+        /// <value>
+        /// The select.
+        /// </value>
+        [Parameter(ValueFromPipelineByPropertyName = true)]
+        public override string Select { get; set; }
+
+        /// <summary>
         /// Gets the builder for <see cref="CloudFormationRunner" /> and populates the fields pertinent to this level.
         /// </summary>
         /// <returns>

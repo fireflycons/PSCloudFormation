@@ -38,7 +38,7 @@ namespace Firefly.PSCloudFormation
     /// </para>
     /// </summary>
     /// <seealso cref="System.Management.Automation.PSCmdlet" />
-    public class CloudFormationServiceCommand : PSCmdlet
+    public abstract class CloudFormationServiceCommand : PSCmdlet
     {
         /// <summary>
         /// The path resolver

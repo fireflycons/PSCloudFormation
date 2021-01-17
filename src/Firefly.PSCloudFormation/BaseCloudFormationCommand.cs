@@ -1,14 +1,19 @@
 ﻿namespace Firefly.PSCloudFormation
 {
     using System;
+    using System.Collections;
+    using System.Collections.Generic;
     using System.Collections.ObjectModel;
+    using System.Linq;
     using System.Management.Automation;
     using System.Management.Automation.Host;
+    using System.Reflection;
     using System.Threading;
     using System.Threading.Tasks;
 
     using Firefly.CloudFormation;
     using Firefly.CloudFormation.Model;
+    using Firefly.PSCloudFormation.Commands;
     using Firefly.PSCloudFormation.Utils;
 
     /// <summary>
@@ -78,6 +83,14 @@
         public string RoleARN { get; set; }
 
         /// <summary>
+        /// Gets or sets the select.
+        /// </summary>
+        /// <value>
+        /// The select.
+        /// </value>
+        public abstract string Select { get; set; }
+
+        /// <summary>
         /// Gets or sets the name of the stack.
         /// <para type="description">
         /// The name that is associated with the stack. The name must be unique in the Region in which you are creating the stack.A stack name can contain only alphanumeric characters (case sensitive) and hyphens.
@@ -98,6 +111,44 @@
         /// The working directory.
         /// </value>
         internal WorkingDirectory WorkingDirectory { get; private set; }
+
+        /// <summary>
+        /// Processes the -Select argument.
+        /// </summary>
+        /// <returns><c>null</c> if no -Select parameter else a <see cref="SelectParameterOption"/> indicating what the caller wants.</returns>
+        /// <exception cref="ArgumentException">Invalid value for -Select parameter.</exception>
+        internal SelectParameterOption ProcessSelectArgument()
+        {
+            if (this.Select == null)
+            {
+                return null;
+            }
+
+            if (this.Select.StartsWith("^"))
+            {
+                var paramName = this.Select.Substring(1);
+
+                // In following with PowerShell conventions, do a case insensitive compare on parameter names.
+                var property = this.GetType().GetProperties(BindingFlags.Instance | BindingFlags.Public).FirstOrDefault(
+                    p => string.Compare(p.Name, paramName, StringComparison.OrdinalIgnoreCase) == 0
+                         && p.GetCustomAttribute<System.Management.Automation.ParameterAttribute>() != null);
+
+                if (property != null)
+                {
+                    return new SelectParameterOption { SelectedProperty = property };
+                }
+            }
+            else if (this.Select == "*")
+            {
+                return new SelectParameterOption { SelectedOutput = "*" };
+            }
+            else if (this.GetSelectArgumentValues().Contains(this.Select.ToLowerInvariant()))
+            {
+                return new SelectParameterOption { SelectedOutput = this.Select.ToLowerInvariant() };
+            }
+
+            throw new ArgumentException("Invalid value for -Select parameter.");
+        }
 
         /// <summary>
         /// Asks a yes/no question.
@@ -156,12 +207,26 @@
         }
 
         /// <summary>
+        /// Accumulate all outputs for -Select *.
+        /// </summary>
+        /// <param name="stack"><see cref="Amazon.CloudFormation.Model.Stack"/> object, which will be <c>null</c> in the case of <see cref="RemoveStackCommand"/>.</param>
+        /// <returns><see cref="Hashtable"/> of outputs</returns>
+        protected virtual Hashtable SelectStar(Amazon.CloudFormation.Model.Stack stack)
+        {
+            // At this level, nothing to do
+            return new Hashtable();
+        }
+
+        /// <summary>
         /// Processes the record.
         /// </summary>
         protected override void ProcessRecord()
         {
             const int StackOperationTask = 0;
             const int UpdateCancelTask = 1;
+
+            var ops = new CloudFormationOperations(this._ClientFactory, this.Context);
+            var selectParameterOption = this.ProcessSelectArgument();
 
             base.ProcessRecord();
 
@@ -213,12 +278,75 @@
                     return;
                 }
 
-                if (stackOperation.Result != null)
+                // Handle output according to -Select
+                object outputObject = null;
+                var stackArn = ((CloudFormationResult)stackOperation.Result)?.StackArn;
+
+                if (selectParameterOption != null)
                 {
-                    var stackResult = (CloudFormationResult)stackOperation.Result;
-                    this.WriteObject(stackResult);
+                    if (selectParameterOption.SelectedProperty != null)
+                    {
+                        outputObject = selectParameterOption.SelectedProperty.GetValue(this);
+                    }
+                    else
+                    {
+                        switch (selectParameterOption.SelectedOutput)
+                        {
+                            case "outputs":
+
+                                outputObject = new Hashtable(ops.GetStackAsync(this.StackName).Result.Outputs.ToDictionary(o => o.OutputKey, o => o.OutputValue));
+                                break;
+
+                            case "arn":
+                                outputObject = stackArn;
+                                break;
+
+                            case "result":
+
+                                if (stackOperation.Result != null)
+                                {
+                                    outputObject = (CloudFormationResult)stackOperation.Result;
+                                }
+
+                                break;
+
+                            case "*":
+
+                                var stack = this is RemoveStackCommand ? null : ops.GetStackAsync(this.StackName).Result;
+
+                                outputObject = new Hashtable
+                                                   {
+                                                       { "Status", (CloudFormationResult)stackOperation.Result },
+                                                       { "Arn", stackArn }
+                                                   };
+
+                                var additionalOutputs = this.SelectStar(stack);
+
+                                foreach (DictionaryEntry kv in additionalOutputs)
+                                {
+                                    ((Hashtable)outputObject).Add(kv.Key, kv.Value);
+                                }
+
+                                break;
+                        }
+                    }
+                }
+
+                if (outputObject != null)
+                {
+                    this.WriteObject(outputObject);
                 }
             }
+        }
+
+        /// <summary>
+        /// Gets the valid values for select argument.
+        /// </summary>
+        /// <returns>List of acceptable values</returns>
+        protected virtual List<string> GetSelectArgumentValues()
+        {
+            // At this level, stack ARN or result can be returned
+            return new List<string> { "arn", "result" };
         }
 
         /// <summary>
