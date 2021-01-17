@@ -77,6 +77,7 @@
     /// </summary>
     /// <seealso cref="Firefly.PSCloudFormation.CloudFormationServiceCommand" />
     [Cmdlet(VerbsCommon.New, "PSCFNPackage")]
+    // ReSharper disable once UnusedMember.Global
     public class NewPackageCommand : CloudFormationServiceCommand
     {
         /// <summary>

@@ -109,6 +109,23 @@
         protected override StackOperation StackOperation { get; } = StackOperation.Create;
 
         /// <summary>
+        /// Gets or sets the select.
+        /// <para type="description">
+        /// Use the -Select parameter to control the cmdlet output. The cmdlet doesn't have a return value by default.
+        /// Specifying 'arn' will return the stack's ARN.
+        /// Specifying 'result' will return the stack operation result.
+        /// Specifying 'outputs' will return any stack outputs as a hashtable.
+        /// Specifying '*' will return a hash table containing a key for each of the above.
+        /// Specifying -Select '^ParameterName' will result in the cmdlet returning the selected cmdlet parameter value.
+        /// </para>
+        /// </summary>
+        /// <value>
+        /// The select.
+        /// </value>
+        [Parameter(ValueFromPipelineByPropertyName = true)]
+        public override string Select { get; set; }
+
+        /// <summary>
         /// New handler for ProcessRecord. Ensures CloudFormation client is properly disposed.
         /// </summary>
         /// <returns>
