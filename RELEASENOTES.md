@@ -1,5 +1,9 @@
 # Release Notes
 
+# 4.1.6.4
+
+* Enhancement - Add `-Select` parameter to stack modification cmdlets. [Issue link](https://github.com/fireflycons/PSCloudFormation/issues/94)
+
 # 4.1.6.3
 
 * Enhancement - ROLLBACK operations should be in red. [issue link](https://github.com/fireflycons/PSCloudFormation/issues/93)
