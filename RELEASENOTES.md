@@ -1,5 +1,9 @@
 # Release Notes
 
+# 4.1.6.5 
+
+* Fix - Lambda handler detection fails if handler contains additional arguments (Python). [Issue link](https://github.com/fireflycons/PSCloudFormation/issues/97)
+
 # 4.1.6.4
 
 * Enhancement - Add `-Select` parameter to stack modification cmdlets. [Issue link](https://github.com/fireflycons/PSCloudFormation/issues/94)
