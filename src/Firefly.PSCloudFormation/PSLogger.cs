@@ -2,6 +2,7 @@
 {
     using System;
     using System.Collections.Generic;
+    using System.IO;
     using System.Linq;
     using System.Management.Automation;
     using System.Text.RegularExpressions;
@@ -11,6 +12,7 @@
 
     using Firefly.CloudFormation;
     using Firefly.CloudFormation.Utils;
+    using Firefly.PSCloudFormation.Utils;
 
     using Newtonsoft.Json;
     using Newtonsoft.Json.Linq;
@@ -37,6 +39,8 @@
         /// </summary>
         private bool isFirstEvent = true;
 
+        private string changesetLogger;
+
         /// <summary>
         /// Initializes a new instance of the <see cref="PSLogger"/> class.
         /// </summary>
@@ -62,7 +66,20 @@
                 return new Dictionary<string, int>();
             }
 
-            var json = JsonConvert.SerializeObject(changes.Changes, Formatting.Indented, new ConstantClassJsonConverter());
+            if (this.changesetLogger != null)
+            {
+                var di = new DirectoryInfo(Path.GetDirectoryName(this.changesetLogger));
+
+                di.CreateIfNotExists();
+
+                var json = JsonConvert.SerializeObject(
+                    changes.Changes,
+                    Formatting.Indented,
+                    new ConstantClassJsonConverter());
+
+                File.WriteAllText(this.changesetLogger, json);
+                this.LogInformation($"Changeset detail written to '{this.changesetLogger}'");
+            }
 
             var columnWidths = base.LogChangeset(changes);
             var foregroundColorMap = new Dictionary<string, ConsoleColor>
@@ -289,6 +306,15 @@
         public override void LogWarning(string message, params object[] args)
         {
             this.cmdlet.Host.UI.WriteWarningLine(string.Format(message, args));
+        }
+
+        /// <summary>
+        /// Registers the changeset logger.
+        /// </summary>
+        /// <param name="changesetLoggerValue">The changeset logger passed as an argument.</param>
+        public void RegisterChangesetLogger(string changesetLoggerValue)
+        {
+            this.changesetLogger = changesetLoggerValue;
         }
 
         /// <summary>

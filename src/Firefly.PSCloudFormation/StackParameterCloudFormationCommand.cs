@@ -352,8 +352,8 @@
                 throw e.InnerExceptions.FirstOrDefault() ?? e;
             }
 
-            var templateManager = new TemplateManager(templateResolver, this.StackOperation, new PSLogger(this));
-
+            var templateManager = new TemplateManager(templateResolver, this.StackOperation, this.Logger);
+            
             var paramsDictionary = templateManager.GetStackDynamicParameters(this.ReadParameterFile());
 
             // All parameters parsed from the template

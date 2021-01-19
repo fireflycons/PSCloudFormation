@@ -230,11 +230,6 @@
 
             base.ProcessRecord();
 
-            if (this.Logger == null)
-            {
-                this.Logger = new PSLogger(this);
-            }
-
             using (this.WorkingDirectory = new WorkingDirectory(this.Logger))
             {
                 var tokenSource = new CancellationTokenSource();

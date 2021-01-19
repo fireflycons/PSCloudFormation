@@ -45,6 +45,11 @@ namespace Firefly.PSCloudFormation
         /// </summary>
         private IPathResolver pathResolver;
 
+        protected CloudFormationServiceCommand()
+        {
+            this.Logger = new PSLogger(this);
+        }
+
         /// <summary>
         /// Gets or sets the access key.
         /// <para type="description">
@@ -354,7 +359,6 @@ namespace Firefly.PSCloudFormation
                 }
             }
 
-            this.Logger = new PSLogger(this);
             this.Context = new PSCloudFormationContext
                                {
                                    Region = this._RegionEndpoint,

@@ -75,6 +75,37 @@
         private string resourcesToImport;
 
         /// <summary>
+        /// The changeset detail output
+        /// </summary>
+        private string changesetDetail;
+
+        /// <summary>
+        /// Gets or sets the changeset detail.
+        /// <para type="description">
+        /// Specifies a path to a file into which to write detailed JSON change information.
+        /// This can be useful in situations where you need to get other people to review changes, or you want to add the changeset information to e.g. git.
+        /// </para>
+        /// <para type="description">
+        /// The output is always JSON.
+        /// </para>
+        /// </summary>
+        /// <value>
+        /// The changeset detail.
+        /// </value>
+        [Parameter(ValueFromPipelineByPropertyName = true)]
+
+        public string ChangesetDetail
+        {
+            get => this.changesetDetail;
+
+            set
+            {
+                this.changesetDetail = value;
+                this.ResolvedChangesetDetail = this.PathResolver.ResolvePath(value);
+            }
+        }
+
+        /// <summary>
         /// Gets or sets the include nested stacks.
         /// <para type="description">
         /// Creates a change set for the all nested stacks specified in the template.
@@ -189,6 +220,14 @@
         /// </value>
         [Parameter(ValueFromPipelineByPropertyName = true)]
         public SwitchParameter Wait { get; set; }
+
+        /// <summary>
+        /// Gets or sets the resolved changeset detail.
+        /// </summary>
+        /// <value>
+        /// The resolved changeset detail.
+        /// </value>
+        protected string ResolvedChangesetDetail { get; set; }
 
         /// <summary>
         /// Gets or sets the resolved stack policy during update location.
@@ -340,7 +379,7 @@
         /// </returns>
         protected override async Task<object> OnProcessRecord()
         {
-            this.Logger = new PSLogger(this);
+            ((PSLogger)this.Logger).RegisterChangesetLogger(this.ResolvedChangesetDetail);
 
             if (this.ResolvedTemplateLocation == null && !this.UsePreviousTemplate)
             {
