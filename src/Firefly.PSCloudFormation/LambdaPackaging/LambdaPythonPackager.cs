@@ -61,7 +61,7 @@
         /// The handler regex.
         /// </value>
         protected override Regex HandlerRegex { get; } = new Regex(
-            @"^\s*def\s+(?<handler>[^\d\W]\w*)\s*\(\s*[^\d\W]\w*\s*,\s*[^\d\W]\w*\s*\)\s*:",
+            @"^\s*def\s+(?<handler>[^\d\W]\w*)\s*\(\s*[^\d\W]\w*\s*,\s*[^\d\W]\w*\s*(,\s*[^\d\W]\w*\s*=\s*\w*\s*)*\)\s*:",
             RegexOptions.Multiline);
 
         /// <summary>

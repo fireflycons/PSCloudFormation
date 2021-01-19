@@ -1,2 +1,2 @@
-﻿def handler(event, context):
+﻿def handler(event, context, debug_var=1):
     print('hi')
