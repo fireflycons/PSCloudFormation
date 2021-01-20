@@ -420,6 +420,9 @@
         /// <returns><c>true</c> if update should proceed; else <c>false</c></returns>
         private bool AcceptChangeset(DescribeChangeSetResponse changeset)
         {
+            // Write out all changeset details
+            ((PSLogger)this.Logger).WriteChangesetDetails();
+
             if (!this.Force)
             {
                 if (this.AskYesNo(
@@ -435,7 +438,7 @@
 
             if (string.IsNullOrEmpty(this.ResolvedResourcesToImport))
             {
-                // Docs say only UPDATE_IN_PROGRESS can be interrupted.
+                // Docs say only UPDATE_IN_PROGRESS can be interrupted, so not import.
                 Console.WriteLine("Press ESC 3 times within one second to cancel update while update in progress");
             }
 

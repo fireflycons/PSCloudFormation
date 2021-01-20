@@ -1,14 +1,19 @@
 ﻿namespace Firefly.PSCloudFormation
 {
     using System;
+    using System.CodeDom.Compiler;
     using System.Collections.Generic;
     using System.IO;
     using System.Linq;
     using System.Management.Automation;
+    using System.Runtime.CompilerServices;
     using System.Text.RegularExpressions;
+    using System.Xml;
+    using System.Xml.Serialization;
 
     using Amazon.CloudFormation.Model;
     using Amazon.Runtime;
+    using Amazon.S3.Model;
 
     using Firefly.CloudFormation;
     using Firefly.CloudFormation.Utils;
@@ -16,6 +21,8 @@
 
     using Newtonsoft.Json;
     using Newtonsoft.Json.Linq;
+
+    using Formatting = Newtonsoft.Json.Formatting;
 
     /// <summary>
     /// Concrete logger implementation for PowerShell
@@ -33,6 +40,8 @@
         /// The <see cref="PSCmdlet"/> object.
         /// </summary>
         private readonly PSCmdlet cmdlet;
+
+        private List<ChangesetDetails> changesetDetails;
 
         /// <summary>
         /// Flag to output event headers
@@ -68,17 +77,15 @@
 
             if (this.changesetLogger != null)
             {
-                var di = new DirectoryInfo(Path.GetDirectoryName(this.changesetLogger));
-
-                di.CreateIfNotExists();
-
-                var json = JsonConvert.SerializeObject(
-                    changes.Changes,
-                    Formatting.Indented,
-                    new ConstantClassJsonConverter());
-
-                File.WriteAllText(this.changesetLogger, json);
-                this.LogInformation($"Changeset detail written to '{this.changesetLogger}'");
+                this.changesetDetails.Add(
+                    new ChangesetDetails
+                        {
+                            Changes = changes.Changes,
+                            ChangeSetName = changes.ChangeSetName,
+                            CreationTime = changes.CreationTime,
+                            Description = changes.Description,
+                            StackName = changes.StackName
+                        });
             }
 
             var columnWidths = base.LogChangeset(changes);
@@ -314,7 +321,32 @@
         /// <param name="changesetLoggerValue">The changeset logger passed as an argument.</param>
         public void RegisterChangesetLogger(string changesetLoggerValue)
         {
+            this.changesetDetails = new List<ChangesetDetails>();
             this.changesetLogger = changesetLoggerValue;
+        }
+
+        /// <summary>
+        /// Write out changeset details if any to given output.
+        /// </summary>
+        public void WriteChangesetDetails()
+        {
+            if (!this.changesetDetails.Any())
+            {
+                return;
+            }
+
+            var di = new DirectoryInfo(Path.GetDirectoryName(this.changesetLogger));
+
+            di.CreateIfNotExists();
+
+            var json = JsonConvert.SerializeObject(
+                this.changesetDetails,
+                Formatting.Indented,
+                new ConstantClassJsonConverter());
+
+            File.WriteAllText(this.changesetLogger, json);
+            this.LogInformation($"Changeset detail written to '{this.changesetLogger}'");
+
         }
 
         /// <summary>
@@ -368,7 +400,7 @@
         /// <see cref="JsonConverter"/> class to squash <see cref="ConstantClass"/> values into a <see cref="JValue"/>
         /// </summary>
         /// <seealso cref="Newtonsoft.Json.JsonConverter" />
-        private class ConstantClassJsonConverter : JsonConverter
+        public class ConstantClassJsonConverter : JsonConverter
         {
             /// <summary>
             /// Gets a value indicating whether this <see cref="T:Newtonsoft.Json.JsonConverter" /> can read JSON.
@@ -416,6 +448,19 @@
             {
                 return objectType.IsSubclassOf(typeof(ConstantClass));
             }
+        }
+
+        public class ChangesetDetails
+        {
+            public string StackName { get; set; }
+
+            public string ChangeSetName { get; set; }
+
+            public string Description { get; set; }
+
+            public DateTime CreationTime { get; set; }
+
+            public List<Change> Changes { get; set; }
         }
     }
 }
