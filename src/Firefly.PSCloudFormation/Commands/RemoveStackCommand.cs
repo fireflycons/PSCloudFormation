@@ -17,7 +17,7 @@
     /// </summary>
     /// <example>
     /// <code>
-    /// Remove-PSFNStack -StackName my-stack
+    /// Remove-PSCFNStack -StackName my-stack
     /// </code>
     /// <para>
     /// Deletes the specified stack
@@ -25,7 +25,7 @@
     /// </example>
     /// <example>
     /// <code>
-    /// Remove-PSFNStack -StackName my-stack -PassThru
+    /// Remove-PSCFNStack -StackName my-stack -PassThru
     /// </code>
     /// <para>
     /// Deletes the specified stack. Don't wait for the deletion to complete.
@@ -33,7 +33,7 @@
     /// </example>
     /// <example>
     /// <code>
-    /// Remove-PSFNStack -StackName my-stack -RetainResource my-bucket, my-security-group
+    /// Remove-PSCFNStack -StackName my-stack -RetainResource my-bucket, my-security-group
     /// </code>
     /// <para>
     /// Deletes the specified stack, retaining the specified resources.

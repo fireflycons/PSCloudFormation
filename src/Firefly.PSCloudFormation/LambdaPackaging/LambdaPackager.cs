@@ -99,6 +99,7 @@
 
                 case LambdaRuntimeType.Python:
 
+                    // Python treats Linux and OSX the same so if not Windows, then Linux packager
                     return platform.OSPlatform == OSPlatform.Windows
                                ? (LambdaPythonPackager)new LambdaPythonPackagerWindows(lambdaArtifact, s3, logger)
                                : new LambdaPythonPackagerLinux(lambdaArtifact, s3, logger);
@@ -204,7 +205,7 @@
                 fi.CopyTo(Path.Combine(target.FullName, fi.Name), true);
             }
 
-            // Copy each subdirectory using recursion.
+            // Copy each sub-directory using recursion.
             foreach (var sourceSubDir in source.GetDirectories())
             {
                 var nextTargetSubDir = target.CreateSubdirectory(sourceSubDir.Name);

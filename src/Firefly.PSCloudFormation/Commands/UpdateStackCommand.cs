@@ -1,8 +1,10 @@
 ﻿namespace Firefly.PSCloudFormation.Commands
 {
     using System;
+    using System.Collections.Generic;
     using System.Linq;
     using System.Management.Automation;
+    using System.Management.Automation.Host;
     using System.Runtime.InteropServices;
     using System.Threading;
     using System.Threading.Tasks;
@@ -62,7 +64,7 @@
     [Cmdlet(VerbsData.Update, "PSCFNStack")]
     [OutputType(typeof(CloudFormationResult))]
     // ReSharper disable once UnusedMember.Global
-    public class UpdateStackCommand : StackParameterCloudFormationCommand
+    public class UpdateStackCommand : StackParameterCloudFormationCommand, IChangesetArguments
     {
         /// <summary>
         /// The stack policy during update location
@@ -93,7 +95,7 @@
         /// The changeset detail.
         /// </value>
         [Parameter(ValueFromPipelineByPropertyName = true)]
-
+        // ReSharper disable once UnusedMember.Global
         public string ChangesetDetail
         {
             get => this.changesetDetail;
@@ -222,28 +224,12 @@
         public SwitchParameter Wait { get; set; }
 
         /// <summary>
-        /// Gets or sets the resolved changeset detail.
-        /// </summary>
-        /// <value>
-        /// The resolved changeset detail.
-        /// </value>
-        protected string ResolvedChangesetDetail { get; set; }
-
-        /// <summary>
         /// Gets or sets the resolved stack policy during update location.
         /// </summary>
         /// <value>
         /// The resolved stack policy during update location.
         /// </value>
         protected string ResolvedStackPolicyDuringUpdateLocation { get; set; }
-
-        /// <summary>
-        /// Gets or sets the resolved resources to import.
-        /// </summary>
-        /// <value>
-        /// The resolved resources to import.
-        /// </value>
-        protected string ResolvedResourcesToImport { get; set; }
 
         /// <summary>
         /// Gets the stack operation.
@@ -379,8 +365,6 @@
         /// </returns>
         protected override async Task<object> OnProcessRecord()
         {
-            ((PSLogger)this.Logger).RegisterChangesetLogger(this.ResolvedChangesetDetail);
-
             if (this.ResolvedTemplateLocation == null && !this.UsePreviousTemplate)
             {
                 throw new ArgumentException("Must supply one of -TemplateLocation, -UsePreviousTemplate");
@@ -420,19 +404,52 @@
         /// <returns><c>true</c> if update should proceed; else <c>false</c></returns>
         private bool AcceptChangeset(DescribeChangeSetResponse changeset)
         {
+            var logger = (PSLogger)this.Logger;
+
+            List<ChoiceDescription> additionalChoices = null;
+
+            if (logger.CanViewChangesetInBrowser())
+            {
+                additionalChoices = new List<ChoiceDescription>
+                                        {
+                                            new ChoiceDescription("&View in Browser", "View detailed changeset in browser.")
+                                        };
+            }
+
+
             // Write out all changeset details
-            ((PSLogger)this.Logger).WriteChangesetDetails();
+            logger.WriteChangesetDetails(this.ResolvedChangesetDetail);
 
             if (!this.Force)
             {
-                if (this.AskYesNo(
+                var accept = false;
+
+                while (!accept)
+                {
+                    var choice = this.AskYesNo(
                         $"Begin update of {this.StackName} now?",
                         null,
                         ChoiceResponse.Yes,
                         "Start rebuild now.",
-                        "Cancel operation.") == ChoiceResponse.No)
-                {
-                    return false;
+                        "Cancel operation.",
+                        additionalChoices);
+
+                    switch (choice)
+                    {
+                        case ChoiceResponse.No:
+
+                            return false;
+
+                        case ChoiceResponse.Yes:
+
+                            accept = true;
+                            break;
+
+                        case ChoiceResponse.ViewInBrowser:
+
+                            logger.ViewChangesetInBrowser();
+                            break;
+                    }
                 }
             }
 

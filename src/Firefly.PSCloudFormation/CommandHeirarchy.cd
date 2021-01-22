@@ -10,21 +10,22 @@
   <Class Name="Firefly.PSCloudFormation.BaseCloudFormationCommand" Collapsed="true">
     <Position X="7.5" Y="2.75" Width="1.5" />
     <TypeIdentifier>
-      <HashCode>IAACAAABAIABAAgQAAAgAAAAAEAAIAACAAAIQAQKAAA=</HashCode>
+      <HashCode>IAACAAABAIABAAgQAAAgAAAAAEAgoAACAAAIQAQKAAA=</HashCode>
       <FileName>BaseCloudFormationCommand.cs</FileName>
     </TypeIdentifier>
   </Class>
   <Class Name="Firefly.PSCloudFormation.Commands.UpdateStackCommand" Collapsed="true">
     <Position X="5" Y="6" Width="1.5" />
     <TypeIdentifier>
-      <HashCode>AAAAABAAABABAAABAAIAAAACAEQAIAAAAAGgQAAAgAA=</HashCode>
+      <HashCode>AAAAABAAABABIAABAAIAAAACAEQBIAAAAAGgQAAggAA=</HashCode>
       <FileName>Commands\UpdateStackCommand.cs</FileName>
     </TypeIdentifier>
+    <Lollipop Position="0.2" />
   </Class>
   <Class Name="Firefly.PSCloudFormation.StackParameterCloudFormationCommand" Collapsed="true">
     <Position X="7.5" Y="4.5" Width="1.5" />
     <TypeIdentifier>
-      <HashCode>oAAAAAAhEBAxAgAQAAAASAAARQgAIAIAAAkCQBAAAAA=</HashCode>
+      <HashCode>oAAAAAAhEBAxAgAQAAAASAAARQgAIAJAAAkCQJAAAAA=</HashCode>
       <FileName>StackParameterCloudFormationCommand.cs</FileName>
     </TypeIdentifier>
     <Lollipop Position="0.2" />
@@ -64,6 +65,14 @@
     <TypeIdentifier>
       <HashCode>AAAAAAAAABABAAACAAAAAABAAEAAEAAIAAAAQAAAAAA=</HashCode>
       <FileName>Commands\ResetStackCommand.cs</FileName>
+    </TypeIdentifier>
+    <Lollipop Position="0.2" />
+  </Class>
+  <Class Name="Firefly.PSCloudFormation.Commands.NewChangesetCommand" Collapsed="true">
+    <Position X="2.75" Y="6" Width="1.5" />
+    <TypeIdentifier>
+      <HashCode>AAAAABAAABABIAAAAAAAAAAAAAAAAAAAAACAQAAgAAA=</HashCode>
+      <FileName>Commands\NewChangesetCommand.cs</FileName>
     </TypeIdentifier>
     <Lollipop Position="0.2" />
   </Class>

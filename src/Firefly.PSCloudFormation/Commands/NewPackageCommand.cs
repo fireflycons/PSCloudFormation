@@ -52,7 +52,7 @@
     /// </example>
     /// <example>
     /// <code>
-    /// New-PSCFNPackage -TemplateFile my-template.json -OutputTemplateFile my-modified-template.json -S3Bucket my-bucket -S3Prefix template-resouces
+    /// New-PSCFNPackage -TemplateFile my-template.json -OutputTemplateFile my-modified-template.json -S3Bucket my-bucket -S3Prefix template-resources
     /// </code>
     /// <para>
     /// Reads the template, recursively walking any <c>AWS::CloudFormation::Stack</c> resources, uploading code artifacts and nested templates to S3,
