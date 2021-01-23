@@ -71,264 +71,274 @@
                         </div>
                     </div>
                     <xsl:for-each select="Stack">
-                        <div class="row">
-                            <div class="col">
-                                <table class="vert mb-3">
-                                    <tr>
-                                        <td class="left">Stack Name</td>
-                                        <td>
-                                            <xsl:value-of select="StackName"/>
-                                        </td>
-                                    </tr>
-                                    <tr>
-                                        <td class="left">Changeset Name</td>
-                                        <td>
-                                            <xsl:value-of select="ChangeSetName"/>
-                                        </td>
-                                    </tr>
-                                    <xsl:if test="Description != ''">
+                        <div class="mb-4">
+                            <div class="row">
+                                <div class="col">
+                                    <table class="vert mb-3">
                                         <tr>
-                                            <td class="left">Description</td>
+                                            <td class="left">Stack Name</td>
                                             <td>
-                                                <xsl:value-of select="Description"/>
+                                                <xsl:value-of select="StackName"/>
                                             </td>
                                         </tr>
-                                    </xsl:if>
-                                    <tr>
-                                        <td class="left">CreationTime</td>
-                                        <td>
-                                            <xsl:value-of select="CreationTime"/>
-                                        </td>
-                                    </tr>
-                                </table>
-                            </div>
-                        </div>
-                        <xsl:for-each select="Changes">
-                            <div class="row">
-                                <div class="col">
-                                    <div class="card card-body bg-dark mb-1">
-                                        <table class="vert mb-3">
+                                        <tr>
+                                            <td class="left">Changeset Name</td>
+                                            <td>
+                                                <xsl:value-of select="ChangeSetName"/>
+                                            </td>
+                                        </tr>
+                                        <xsl:if test="Description != ''">
                                             <tr>
-                                                <td class="left">Action</td>
-                                                <xsl:choose>
-                                                    <xsl:when test="ResourceChange/Action = 'Add'">
-                                                        <td class="green">
-                                                            <xsl:value-of select="ResourceChange/Action"/>
-                                                        </td>
-                                                    </xsl:when>
-                                                    <xsl:when test="ResourceChange/Action = 'Modify'">
-                                                        <td class="yellow">
-                                                            <xsl:value-of select="ResourceChange/Action"/>
-                                                        </td>
-                                                    </xsl:when>
-                                                    <xsl:when test="ResourceChange/Action = 'Remove'">
-                                                        <td class="Red">
-                                                            <xsl:value-of select="ResourceChange/Action"/>
-                                                        </td>
-                                                    </xsl:when>
-                                                    <xsl:when test="ResourceChange/Action = 'Import'">
-                                                        <td class="Cyan">
-                                                            <xsl:value-of select="ResourceChange/Action"/>
-                                                        </td>
-                                                    </xsl:when>
-                                                    <xsl:otherwise>
-                                                        <td>
-                                                            <xsl:value-of select="ResourceChange/Action"/>
-                                                        </td>
-                                                    </xsl:otherwise>
-                                                </xsl:choose>
-                                            </tr>
-                                            <tr>
-                                                <td class="left">Logical Id</td>
+                                                <td class="left">Description</td>
                                                 <td>
-                                                    <xsl:value-of select="ResourceChange/LogicalResourceId"/>
+                                                    <xsl:value-of select="Description"/>
                                                 </td>
                                             </tr>
-                                            <tr>
-                                                <td class="left">Type</td>
-                                                <td>
-                                                    <xsl:value-of select="ResourceChange/ResourceType"/>
-                                                </td>
-                                            </tr>
-                                            <tr>
-                                                <td class="left">Replacement</td>
-                                                <xsl:choose>
-                                                    <xsl:when test="ResourceChange/Replacement = 'False'">
-                                                        <td class="green">
-                                                            <xsl:value-of select="ResourceChange/Replacement"/>
-                                                        </td>
-                                                    </xsl:when>
-                                                    <xsl:when test="ResourceChange/Replacement = 'Conditional'">
-                                                        <td class="yellow">
-                                                            <xsl:value-of select="ResourceChange/Replacement"/>
-                                                        </td>
-                                                    </xsl:when>
-                                                    <xsl:when test="ResourceChange/Replacement = 'True'">
-                                                        <td class="Red">
-                                                            <xsl:value-of select="ResourceChange/Replacement"/>
-                                                        </td>
-                                                    </xsl:when>
-                                                    <xsl:otherwise>
-                                                        <td>
-                                                            <xsl:value-of select="ResourceChange/Replacement"/>
-                                                        </td>
-                                                    </xsl:otherwise>
-                                                </xsl:choose>
-                                            </tr>
-                                            <tr>
-                                                <td class="left">Physical ID</td>
-                                                <td>
-                                                    <xsl:value-of select="ResourceChange/PhysicalResourceId"/>
-                                                </td>
-                                            </tr>
-                                        </table>
-                                        <a class="btn btn-primary btn-sm detail-btn mt-2" data-toggle="collapse" href="#{generate-id(ResourceChange/LogicalResourceId)}" role="button" aria-expanded="false" aria-controls="{generate-id(ResourceChange/LogicalResourceId)}">Show Detail</a>
-                                    </div>
+                                        </xsl:if>
+                                        <tr>
+                                            <td class="left">CreationTime</td>
+                                            <td>
+                                                <xsl:value-of select="CreationTime"/>
+                                            </td>
+                                        </tr>
+                                    </table>
                                 </div>
                             </div>
-                            <div class="row">
-                                <div class="col">
-                                    <div class="collapse multi-collapse" id="{generate-id(ResourceChange/LogicalResourceId)}">
+                            <xsl:for-each select="Changes">
+                                <div class="row">
+                                    <div class="col">
                                         <div class="card card-body bg-dark mb-1">
-                                            <h5>Additional Properties</h5>
                                             <table class="vert mb-3">
+                                                <tr>
+                                                    <td class="left">Action</td>
+                                                    <xsl:choose>
+                                                        <xsl:when test="ResourceChange/Action = 'Add'">
+                                                            <td class="green">
+                                                                <xsl:value-of select="ResourceChange/Action"/>
+                                                            </td>
+                                                        </xsl:when>
+                                                        <xsl:when test="ResourceChange/Action = 'Modify'">
+                                                            <td class="yellow">
+                                                                <xsl:value-of select="ResourceChange/Action"/>
+                                                            </td>
+                                                        </xsl:when>
+                                                        <xsl:when test="ResourceChange/Action = 'Remove'">
+                                                            <td class="Red">
+                                                                <xsl:value-of select="ResourceChange/Action"/>
+                                                            </td>
+                                                        </xsl:when>
+                                                        <xsl:when test="ResourceChange/Action = 'Import'">
+                                                            <td class="Cyan">
+                                                                <xsl:value-of select="ResourceChange/Action"/>
+                                                            </td>
+                                                        </xsl:when>
+                                                        <xsl:otherwise>
+                                                            <td>
+                                                                <xsl:value-of select="ResourceChange/Action"/>
+                                                            </td>
+                                                        </xsl:otherwise>
+                                                    </xsl:choose>
+                                                </tr>
+                                                <tr>
+                                                    <td class="left">Logical Id</td>
+                                                    <td>
+                                                        <xsl:value-of select="ResourceChange/LogicalResourceId"/>
+                                                    </td>
+                                                </tr>
                                                 <tr>
                                                     <td class="left">Type</td>
                                                     <td>
-                                                        <xsl:value-of select="Type"/>
+                                                        <xsl:value-of select="ResourceChange/ResourceType"/>
                                                     </td>
                                                 </tr>
-                                                <xsl:if test="ChangeSetId != ''">
-                                                    <tr>
-                                                        <td class="left">Changeset ID</td>
-                                                        <td>
-                                                            <xsl:value-of select="ChangeSetId"/>
-                                                        </td>
-                                                    </tr>
-                                                </xsl:if>
-                                                <xsl:if test="ModuleInfo != ''">
-                                                    <tr>
-                                                        <td class="left">Module Info</td>
-                                                        <td>
-                                                            <table>
-                                                                <tr>
-                                                                    <td>Logical ID Hierarchy</td>
-                                                                    <td>
-                                                                        <xsl:value-of select="ModuleInfo/LogicalIdHierarchy"/>
+                                                <xsl:if test="ResourceChange/Action != 'Add'">
+                                                    <xsl:if test="ResourceChange/Action != 'Remove'">
+                                                        <tr>
+                                                            <td class="left">Replacement</td>
+                                                            <xsl:choose>
+                                                                <xsl:when test="ResourceChange/Replacement = 'False'">
+                                                                    <td class="green">
+                                                                        <xsl:value-of select="ResourceChange/Replacement"/>
                                                                     </td>
-                                                                </tr>
-                                                                <tr>
-                                                                    <td>Type Hierarchy</td>
-                                                                    <td>
-                                                                        <xsl:value-of select="ModuleInfo/TypeHierarchy"/>
+                                                                </xsl:when>
+                                                                <xsl:when test="ResourceChange/Replacement = 'Conditional'">
+                                                                    <td class="yellow">
+                                                                        <xsl:value-of select="ResourceChange/Replacement"/>
                                                                     </td>
-                                                                </tr>
-                                                            </table>
+                                                                </xsl:when>
+                                                                <xsl:when test="ResourceChange/Replacement = 'True'">
+                                                                    <td class="Red">
+                                                                        <xsl:value-of select="ResourceChange/Replacement"/>
+                                                                    </td>
+                                                                </xsl:when>
+                                                                <xsl:otherwise>
+                                                                    <td>
+                                                                        <xsl:value-of select="ResourceChange/Replacement"/>
+                                                                    </td>
+                                                                </xsl:otherwise>
+                                                            </xsl:choose>
+                                                        </tr>
+                                                    </xsl:if>
+                                                    <tr>
+                                                        <td class="left">Physical ID</td>
+                                                        <td>
+                                                            <xsl:value-of select="ResourceChange/PhysicalResourceId"/>
                                                         </td>
                                                     </tr>
                                                 </xsl:if>
                                             </table>
-                                            <xsl:if test="ResourceChange/Scope != ''">
-                                                <h5>Scope</h5>
-                                                <ul>
-                                                    <xsl:for-each select="ResourceChange/Scope">
-                                                        <li>
-                                                            <xsl:value-of select="."/>
-                                                        </li>
-                                                    </xsl:for-each>
-                                                </ul>
+                                            <xsl:if test="(ResourceChange/Action = 'Modify') or (ResourceChange/ModuleInfo != '')">
+                                                <a class="btn btn-primary btn-sm detail-btn mt-2" data-toggle="collapse" href="#{generate-id(ResourceChange/LogicalResourceId)}" role="button" aria-expanded="false" aria-controls="{generate-id(ResourceChange/LogicalResourceId)}">Show Detail</a>
                                             </xsl:if>
-                                            <h5>Change Detail</h5>
-                                            <ol>
-                                                <xsl:for-each select="ResourceChange/Details">
-                                                    <li>
-                                                        <span>
-                                                            <h6>Source</h6>
-                                                            <table class="vert mb-3">
-                                                                <xsl:if test="CausingEntity != ''">
-                                                                    <tr>
-                                                                        <td class="left">Causing Entity</td>
-                                                                        <td>
-                                                                            <xsl:value-of select="CausingEntity"/>
-                                                                        </td>
-                                                                    </tr>
-                                                                </xsl:if>
-                                                                <tr>
-                                                                    <td class="left">Change Source</td>
-                                                                    <td>
-                                                                        <xsl:value-of select="ChangeSource"/>
-                                                                    </td>
-                                                                </tr>
-                                                                <tr>
-                                                                    <td class="left">Evaluation</td>
-                                                                    <td>
-                                                                        <xsl:value-of select="Evaluation"/>
-                                                                    </td>
-                                                                </tr>
-                                                            </table>
-                                                            <h6>Target</h6>
-                                                            <table class="vert mb-3">
-                                                                <tr>
-                                                                    <td class="left">Attribute</td>
-                                                                    <td>
-                                                                        <xsl:value-of select="Target/Attribute"/>
-                                                                    </td>
-                                                                </tr>
-                                                                <xsl:if test="Target/Name != ''">
-                                                                    <tr>
-                                                                        <td class="left">Name</td>
-                                                                        <td>
-                                                                            <xsl:value-of select="Target/Name"/>
-                                                                        </td>
-                                                                    </tr>
-                                                                </xsl:if>
-                                                                <tr>
-                                                                    <td class="left">Requires Recreation</td>
-                                                                    <xsl:choose>
-                                                                        <xsl:when test="Target/RequiresRecreation = 'Never'">
-                                                                            <td class="green">
-                                                                                <xsl:value-of select="Target/RequiresRecreation"/>
-                                                                            </td>
-                                                                        </xsl:when>
-                                                                        <xsl:when test="Target/RequiresRecreation = 'Conditionally'">
-                                                                            <td class="yellow">
-                                                                                <xsl:value-of select="Target/RequiresRecreation"/>
-                                                                            </td>
-                                                                        </xsl:when>
-                                                                        <xsl:when test="Target/RequiresRecreation = 'Always'">
-                                                                            <td class="Red">
-                                                                                <xsl:value-of select="Target/RequiresRecreation"/>
-                                                                            </td>
-                                                                        </xsl:when>
-                                                                        <xsl:otherwise>
-                                                                            <td>
-                                                                                <xsl:value-of select="Target/RequiresRecreation"/>
-                                                                            </td>
-                                                                        </xsl:otherwise>
-                                                                    </xsl:choose>
-                                                                </tr>
-                                                            </table>
-                                                        </span>
-                                                    </li>
-                                                </xsl:for-each>
-                                            </ol>
                                         </div>
                                     </div>
                                 </div>
-                            </div>
-                        </xsl:for-each>
+                                <xsl:if test="(ResourceChange/Action = 'Modify') or (ResourceChange/ModuleInfo != '')">
+                                    <div class="row">
+                                        <div class="col">
+                                            <div class="collapse multi-collapse" id="{generate-id(ResourceChange/LogicalResourceId)}">
+                                                <div class="card card-body bg-dark mb-1">
+                                                    <h5>Additional Properties</h5>
+                                                    <table class="vert mb-3">
+                                                        <tr>
+                                                            <td class="left">Type</td>
+                                                            <td>
+                                                                <xsl:value-of select="Type"/>
+                                                            </td>
+                                                        </tr>
+                                                        <xsl:if test="ResourceChange/ChangeSetId != ''">
+                                                            <tr>
+                                                                <td class="left">Changeset ID</td>
+                                                                <td>
+                                                                    <xsl:value-of select="ResourceChange/ChangeSetId"/>
+                                                                </td>
+                                                            </tr>
+                                                        </xsl:if>
+                                                        <xsl:if test="ResourceChange/ModuleInfo != ''">
+                                                            <tr>
+                                                                <td class="left">Module Info</td>
+                                                                <td>
+                                                                    <table>
+                                                                        <tr>
+                                                                            <td>Logical ID Hierarchy</td>
+                                                                            <td>
+                                                                                <xsl:value-of select="ResourceChangeModuleInfo/LogicalIdHierarchy"/>
+                                                                            </td>
+                                                                        </tr>
+                                                                        <tr>
+                                                                            <td>Type Hierarchy</td>
+                                                                            <td>
+                                                                                <xsl:value-of select="ResourceChange/ModuleInfo/TypeHierarchy"/>
+                                                                            </td>
+                                                                        </tr>
+                                                                    </table>
+                                                                </td>
+                                                            </tr>
+                                                        </xsl:if>
+                                                    </table>
+                                                    <xsl:if test="ResourceChange/Scope != ''">
+                                                        <h5>Scope</h5>
+                                                        <ul>
+                                                            <xsl:for-each select="ResourceChange/Scope">
+                                                                <li>
+                                                                    <xsl:value-of select="."/>
+                                                                </li>
+                                                            </xsl:for-each>
+                                                        </ul>
+                                                    </xsl:if>
+                                                    <h5>Change Detail</h5>
+                                                    <ol>
+                                                        <xsl:for-each select="ResourceChange/Details">
+                                                            <li>
+                                                                <span>
+                                                                    <h6>Source</h6>
+                                                                    <table class="vert mb-3">
+                                                                        <xsl:if test="CausingEntity != ''">
+                                                                            <tr>
+                                                                                <td class="left">Causing Entity</td>
+                                                                                <td>
+                                                                                    <xsl:value-of select="CausingEntity"/>
+                                                                                </td>
+                                                                            </tr>
+                                                                        </xsl:if>
+                                                                        <tr>
+                                                                            <td class="left">Change Source</td>
+                                                                            <td>
+                                                                                <xsl:value-of select="ChangeSource"/>
+                                                                            </td>
+                                                                        </tr>
+                                                                        <tr>
+                                                                            <td class="left">Evaluation</td>
+                                                                            <td>
+                                                                                <xsl:value-of select="Evaluation"/>
+                                                                            </td>
+                                                                        </tr>
+                                                                    </table>
+                                                                    <h6>Target</h6>
+                                                                    <table class="vert mb-3">
+                                                                        <tr>
+                                                                            <td class="left">Attribute</td>
+                                                                            <td>
+                                                                                <xsl:value-of select="Target/Attribute"/>
+                                                                            </td>
+                                                                        </tr>
+                                                                        <xsl:if test="Target/Name != ''">
+                                                                            <tr>
+                                                                                <td class="left">Name</td>
+                                                                                <td>
+                                                                                    <xsl:value-of select="Target/Name"/>
+                                                                                </td>
+                                                                            </tr>
+                                                                        </xsl:if>
+                                                                        <tr>
+                                                                            <td class="left">Requires Recreation</td>
+                                                                            <xsl:choose>
+                                                                                <xsl:when test="Target/RequiresRecreation = 'Never'">
+                                                                                    <td class="green">
+                                                                                        <xsl:value-of select="Target/RequiresRecreation"/>
+                                                                                    </td>
+                                                                                </xsl:when>
+                                                                                <xsl:when test="Target/RequiresRecreation = 'Conditionally'">
+                                                                                    <td class="yellow">
+                                                                                        <xsl:value-of select="Target/RequiresRecreation"/>
+                                                                                    </td>
+                                                                                </xsl:when>
+                                                                                <xsl:when test="Target/RequiresRecreation = 'Always'">
+                                                                                    <td class="Red">
+                                                                                        <xsl:value-of select="Target/RequiresRecreation"/>
+                                                                                    </td>
+                                                                                </xsl:when>
+                                                                                <xsl:otherwise>
+                                                                                    <td>
+                                                                                        <xsl:value-of select="Target/RequiresRecreation"/>
+                                                                                    </td>
+                                                                                </xsl:otherwise>
+                                                                            </xsl:choose>
+                                                                        </tr>
+                                                                    </table>
+                                                                </span>
+                                                            </li>
+                                                        </xsl:for-each>
+                                                    </ol>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </xsl:if>
+                            </xsl:for-each>
+                        </div>
                     </xsl:for-each>
                 </div>
                 <script language="JavaScript">
                     $(document).ready(function() {
-                        $('.detail-btn').on('click', function() {
-                            var text = $(this).text();
-                            if (text === "Show Detail") {
-                                $(this).html('Hide Detail');
-                            } else {
-                                $(this).text('Show Detail');
-                            }
-                        });
+                    $('.detail-btn').on('click', function() {
+                    var text = $(this).text();
+                    if (text === "Show Detail") {
+                    $(this).html('Hide Detail');
+                    } else {
+                    $(this).text('Show Detail');
+                    }
+                    });
                     });
                 </script>
             </body>
