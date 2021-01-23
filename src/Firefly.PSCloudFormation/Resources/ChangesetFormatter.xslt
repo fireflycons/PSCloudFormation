@@ -182,23 +182,52 @@
                                 <div class="col">
                                     <div class="collapse multi-collapse" id="{generate-id(ResourceChange/LogicalResourceId)}">
                                         <div class="card card-body bg-dark mb-3">
+                                            <h4>Additional Properties</h4>
+                                            <table class="vert mb-3">
+                                                <tr>
+                                                    <td class="left">Type</td>
+                                                    <td>
+                                                        <xsl:value-of select="Type"/>
+                                                    </td>
+                                                </tr>
+                                                <xsl:if test="ChangeSetId != ''">
+                                                    <tr>
+                                                        <td class="left">Changeset ID</td>
+                                                        <td>
+                                                            <xsl:value-of select="ChangeSetId"/>
+                                                        </td>
+                                                    </tr>
+                                                </xsl:if>
+                                                <xsl:if test="ModuleInfo != ''">
+                                                    <tr>
+                                                        <td class="left">Module Info</td>
+                                                        <td>
+                                                            <table>
+                                                                <tr>
+                                                                    <td>Logical ID Hierarchy</td>
+                                                                    <td>
+                                                                        <xsl:value-of select="ModuleInfo/LogicalIdHierarchy"/>
+                                                                    </td>
+                                                                </tr>
+                                                                <tr>
+                                                                    <td>Type Hierarchy</td>
+                                                                    <td>
+                                                                        <xsl:value-of select="ModuleInfo/TypeHierarchy"/>
+                                                                    </td>
+                                                                </tr>
+                                                            </table>
+                                                        </td>
+                                                    </tr>
+                                                </xsl:if>
+                                            </table>
                                             <xsl:if test="ResourceChange/Scope != ''">
                                                 <h4>Scope</h4>
                                                 <ul>
-                                                    <xsl:choose>
-                                                        <xsl:when test="ResourceChange/Scope/Item != ''">
-                                                            <xsl:for-each select="ResourceChange/Scope/Item">
-                                                                <li>
-                                                                    <xsl:value-of select="."/>
-                                                                </li>
-                                                            </xsl:for-each>
-                                                        </xsl:when>
-                                                        <xsl:otherwise>
-                                                            <li>
-                                                                <xsl:value-of select="ResourceChange/Scope"/>
-                                                            </li>
-                                                        </xsl:otherwise>
-                                                    </xsl:choose>
+                                                    <xsl:for-each select="ResourceChange/Scope">
+                                                        <li>
+                                                            <xsl:value-of select="."/>
+                                                        </li>
+                                                    </xsl:for-each>
                                                 </ul>
                                             </xsl:if>
                                             <h4>Change Detail</h4>
