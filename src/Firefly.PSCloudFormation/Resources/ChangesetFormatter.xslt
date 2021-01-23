@@ -39,7 +39,7 @@
                     padding: 4px;
                     }*/
                     .yellow {
-                    color: yellow;
+                    color: #ffc107;
                     }
 
                     .red {
@@ -51,7 +51,7 @@
                     }
 
                     .green {
-                    color: lightgreen;
+                    color: #34d659;
                     }
 
                     .left {
@@ -67,7 +67,7 @@
                 <div class="container">
                     <div class="row">
                         <div class="col">
-                            <h1>Detailed Changeset Information</h1>
+                            <h3>Detailed Changeset Information</h3>
                         </div>
                     </div>
                     <xsl:for-each select="Stack">
@@ -107,13 +107,9 @@
                             <div class="row">
                                 <div class="col">
                                     <div class="card card-body bg-dark mb-1">
-                                        <table class="change-summary">
-                                            <th>Action</th>
-                                            <th>Logical Id</th>
-                                            <th>Type</th>
-                                            <th>Replacement</th>
-                                            <th>Physical ID</th>
+                                        <table class="vert mb-3">
                                             <tr>
+                                                <td class="left">Action</td>
                                                 <xsl:choose>
                                                     <xsl:when test="ResourceChange/Action = 'Add'">
                                                         <td class="green">
@@ -141,12 +137,21 @@
                                                         </td>
                                                     </xsl:otherwise>
                                                 </xsl:choose>
+                                            </tr>
+                                            <tr>
+                                                <td class="left">Logical Id</td>
                                                 <td>
                                                     <xsl:value-of select="ResourceChange/LogicalResourceId"/>
                                                 </td>
+                                            </tr>
+                                            <tr>
+                                                <td class="left">Type</td>
                                                 <td>
                                                     <xsl:value-of select="ResourceChange/ResourceType"/>
                                                 </td>
+                                            </tr>
+                                            <tr>
+                                                <td class="left">Replacement</td>
                                                 <xsl:choose>
                                                     <xsl:when test="ResourceChange/Replacement = 'False'">
                                                         <td class="green">
@@ -169,6 +174,9 @@
                                                         </td>
                                                     </xsl:otherwise>
                                                 </xsl:choose>
+                                            </tr>
+                                            <tr>
+                                                <td class="left">Physical ID</td>
                                                 <td>
                                                     <xsl:value-of select="ResourceChange/PhysicalResourceId"/>
                                                 </td>
@@ -181,8 +189,8 @@
                             <div class="row">
                                 <div class="col">
                                     <div class="collapse multi-collapse" id="{generate-id(ResourceChange/LogicalResourceId)}">
-                                        <div class="card card-body bg-dark mb-3">
-                                            <h4>Additional Properties</h4>
+                                        <div class="card card-body bg-dark mb-1">
+                                            <h5>Additional Properties</h5>
                                             <table class="vert mb-3">
                                                 <tr>
                                                     <td class="left">Type</td>
@@ -221,7 +229,7 @@
                                                 </xsl:if>
                                             </table>
                                             <xsl:if test="ResourceChange/Scope != ''">
-                                                <h4>Scope</h4>
+                                                <h5>Scope</h5>
                                                 <ul>
                                                     <xsl:for-each select="ResourceChange/Scope">
                                                         <li>
@@ -230,12 +238,12 @@
                                                     </xsl:for-each>
                                                 </ul>
                                             </xsl:if>
-                                            <h4>Change Detail</h4>
+                                            <h5>Change Detail</h5>
                                             <ol>
                                                 <xsl:for-each select="ResourceChange/Details">
                                                     <li>
                                                         <span>
-                                                            <h5>Source</h5>
+                                                            <h6>Source</h6>
                                                             <table class="vert mb-3">
                                                                 <xsl:if test="CausingEntity != ''">
                                                                     <tr>
@@ -258,7 +266,7 @@
                                                                     </td>
                                                                 </tr>
                                                             </table>
-                                                            <h5>Target</h5>
+                                                            <h6>Target</h6>
                                                             <table class="vert mb-3">
                                                                 <tr>
                                                                     <td class="left">Attribute</td>
