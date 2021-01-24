@@ -31,9 +31,10 @@
     /// While a stack is in the UPDATE_IN_PROGRESS phase, pressing ESC 3 times in the space of a second will cancel the update forcing all modifications to roll back.
     /// Once the state transitions to UPDATE_COMPLETE_CLEANUP_IN_PROGRESS, the update can no longer be cancelled.
     /// </para>
-    /// <para type="link" uri="https://github.com/fireflycons/PSCloudFormation/blob/master/static/s3-usage.md">PSCloudFormation private S3 bucket</para>
-    /// <para type="link" uri="https://github.com/fireflycons/PSCloudFormation/blob/master/static/resource-import.md">Resource Import (PSCloudFormation)</para>
+    /// <para type="link" uri="https://fireflycons.github.io/PSCloudFormation/articles/s3-usage.html">PSCloudFormation private S3 bucket</para>
+    /// <para type="link" uri="https://fireflycons.github.io/PSCloudFormation/articles/resource-import.html">Resource Import (PSCloudFormation)</para>
     /// <para type="link" uri="(https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/resource-import.html)">Resource Import (AWS docs)</para>
+    /// <para type="link" uri="https://fireflycons.github.io/PSCloudFormation/articles/changesets.html">Changeset documentation (PSCloudFormation)</para>
     /// </summary>
     /// <example>
     /// <code>Update-PSCFNStack -StackName "my-stack" -TemplateBody "{TEMPLATE CONTENT HERE}" -PK1 PV1 -PK2 PV2</code>
@@ -127,6 +128,7 @@
         /// If you want to update protected resources, specify a temporary overriding stack policy during this update. If you do not specify a stack policy, the current policy that is associated with the stack will be used.
         /// You can specify either a string, path to a file, or URL of a object in S3 that contains the policy body.
         /// </para>
+        /// <para type="link" uri="https://fireflycons.github.io/PSCloudFormation/articles/changesets.html">Changeset documentation (PSCloudFormation)</para>
         /// </summary>
         /// <value>
         /// The stack policy during update location.

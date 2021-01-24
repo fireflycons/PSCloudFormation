@@ -19,7 +19,7 @@
     /// <para>
     /// Valid arguments for this cmdlet are a combination of those for <c>Remove-PSCFNStack</c> and <c>New-PSCFNStack</c>.
     /// </para>
-    /// <para type="link" uri="https://github.com/fireflycons/PSCloudFormation/blob/master/static/s3-usage.md">PSCloudFormation private S3 bucket</para>
+    /// <para type="link" uri="https://fireflycons.github.io/PSCloudFormation/articles/s3-usage.html">PSCloudFormation private S3 bucket</para>
     /// </summary>
     /// <example>
     /// <code>Reset-PSCFNStack -StackName "my-stack" -TemplateBody "{TEMPLATE CONTENT HERE}" -PK1 PV1 -PK2 PV2 -DisableRollback</code>

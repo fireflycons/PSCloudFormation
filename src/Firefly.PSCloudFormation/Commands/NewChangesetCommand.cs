@@ -85,10 +85,11 @@
         /// If you created an AWS resource outside of AWS CloudFormation management, you can bring this existing resource into AWS CloudFormation management using resource import.
         /// You can manage your resources using AWS CloudFormation regardless of where they were created without having to delete and re-create them as part of a stack.
         /// Note that when performing an import, this is the only change that can happen to the stack. If any other resources are changed, the changeset will fail to create.
+        /// </para>
         /// <para type="description">
         /// You can specify either a string, path to a file, or URL of a object in S3 that contains the resource import body as JSON or YAML.
         /// </para>
-        /// </para>
+        /// <para type="link" uri="https://fireflycons.github.io/PSCloudFormation/articles/changesets.html">Changeset documentation (PSCloudFormation)</para>
         /// </summary>
         /// <value>
         /// The resources to import.
@@ -111,6 +112,7 @@
         /// <para type="description">
         /// If set and a GUI is detected, display the changeset detail in the default browser.
         /// </para>
+        /// <para type="link" uri="https://fireflycons.github.io/PSCloudFormation/articles/changesets.html">Changeset documentation (PSCloudFormation)</para>
         /// </summary>
         /// <value>
         /// The show in browser.
@@ -221,30 +223,6 @@
             }
 
             return ((PSLogger)this.Logger).GetJsonChanges();
-        }
-
-        /// <summary>
-        /// Processes the changeset.
-        /// </summary>
-        /// <param name="changeset">The changeset.</param>
-        /// <returns>Always <c>true</c> so the generated changeset is not deleted.</returns>
-        private bool ProcessChangeset(DescribeChangeSetResponse changeset)
-        {
-            var logger = (PSLogger)this.Logger;
-
-            if (this.ShowInBrowser)
-            {
-                if (logger.CanViewChangesetInBrowser())
-                {
-                    logger.ViewChangesetInBrowser();
-                }
-                else
-                {
-                    logger.LogWarning("Failed to detect a GUI. If you think this is incorrect, please raise an issue.");
-                }
-            }
-
-            return true;
         }
     }
 }
