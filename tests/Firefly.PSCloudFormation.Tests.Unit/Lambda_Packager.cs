@@ -177,7 +177,7 @@
 
             var mockOSInfo = new Mock<IOSInfo>();
 
-            mockOSInfo.Setup(i => i.OSPlatform).Returns(platform == "Windows" ? OSPlatform.Windows : OSPlatform.Linux);
+            mockOSInfo.Setup(i => i.OSPlatform).Returns(platform == "Windows" ? OSPlatform.Windows : OSPlatform.OSX);
 
             // Mock the virtualenv
             Environment.SetEnvironmentVariable("VIRTUAL_ENV", Path.Combine(templateDir, "venv"));

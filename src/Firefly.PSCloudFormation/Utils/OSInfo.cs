@@ -14,9 +14,8 @@
         public OSInfo()
         {
             // For the purpose of Python venv directory structure, it's Windows or not Windows.
-            this.OSPlatform = RuntimeInformation.IsOSPlatform(OSPlatform.Windows)
-                                  ? OSPlatform.Windows
-                                  : OSPlatform.Linux;
+            this.OSPlatform = RuntimeInformation.IsOSPlatform(OSPlatform.Windows) ? OSPlatform.Windows :
+                              RuntimeInformation.IsOSPlatform(OSPlatform.OSX) ? OSPlatform.OSX : OSPlatform.Linux;
         }
 
         /// <summary>

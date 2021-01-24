@@ -113,6 +113,22 @@
         internal WorkingDirectory WorkingDirectory { get; private set; }
 
         /// <summary>
+        /// Gets or sets the resolved changeset detail.
+        /// </summary>
+        /// <value>
+        /// The resolved changeset detail.
+        /// </value>
+        protected string ResolvedChangesetDetail { get; set; }
+
+        /// <summary>
+        /// Gets or sets the resolved resources to import.
+        /// </summary>
+        /// <value>
+        /// The resolved resources to import.
+        /// </value>
+        protected string ResolvedResourcesToImport { get; set; }
+
+        /// <summary>
         /// Processes the -Select argument.
         /// </summary>
         /// <returns><c>null</c> if no -Select parameter else a <see cref="SelectParameterOption"/> indicating what the caller wants.</returns>
@@ -158,22 +174,34 @@
         /// <param name="defaultResponse">The default response.</param>
         /// <param name="helpYes">Help message for Yes response</param>
         /// <param name="helpNo">Help message for No response</param>
+        /// <param name="additionalChoices">Any additional choices</param>
         /// <returns>User choice</returns>
         protected ChoiceResponse AskYesNo(
             string caption,
             string message,
             ChoiceResponse defaultResponse,
             string helpYes,
-            string helpNo)
+            string helpNo,
+            List<ChoiceDescription> additionalChoices = null)
         {
+            var choices = new Collection<ChoiceDescription>
+                              {
+                                  new ChoiceDescription($"&{ChoiceResponse.Yes}", helpYes),
+                                  new ChoiceDescription($"&{ChoiceResponse.No}", helpNo)
+                              };
+
+            if (additionalChoices != null)
+            {
+                foreach (var choiceDescription in additionalChoices)
+                {
+                    choices.Add(choiceDescription);
+                }
+            }
+
             return (ChoiceResponse)this.Host.UI.PromptForChoice(
                 caption,
                 message,
-                new Collection<ChoiceDescription>
-                    {
-                        new ChoiceDescription($"&{ChoiceResponse.Yes}", helpYes),
-                        new ChoiceDescription($"&{ChoiceResponse.No}", helpNo)
-                    },
+                choices,
                 (int)defaultResponse);
         }
 
@@ -229,11 +257,6 @@
             var selectParameterOption = this.ProcessSelectArgument();
 
             base.ProcessRecord();
-
-            if (this.Logger == null)
-            {
-                this.Logger = new PSLogger(this);
-            }
 
             using (this.WorkingDirectory = new WorkingDirectory(this.Logger))
             {
@@ -328,6 +351,11 @@
                                 }
 
                                 break;
+
+                            default:
+
+                                outputObject = this.GetSelectedOutput(selectParameterOption.SelectedOutput);
+                                break;
                         }
                     }
                 }
@@ -347,6 +375,17 @@
         {
             // At this level, stack ARN or result can be returned
             return new List<string> { "arn", "result" };
+        }
+
+        /// <summary>
+        /// Gets the selected output.
+        /// </summary>
+        /// <param name="outputName">Name of the output.</param>
+        /// <returns>The value for the selected output.</returns>
+        /// <exception cref="ArgumentException">Invalid value for -Select parameter.</exception>
+        protected virtual object GetSelectedOutput(string outputName)
+        {
+            throw new ArgumentException("Invalid value for -Select parameter.");
         }
 
         /// <summary>

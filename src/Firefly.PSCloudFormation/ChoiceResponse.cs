@@ -1,7 +1,7 @@
 ﻿namespace Firefly.PSCloudFormation
 {
     /// <summary>
-    /// Response for yes/no questions raised to user interface
+    /// Responses for questions raised to user interface
     /// </summary>
     public enum ChoiceResponse
     {
@@ -13,6 +13,11 @@
         /// <summary>
         /// The no
         /// </summary>
-        No
+        No,
+
+        /// <summary>
+        /// The view in browser
+        /// </summary>
+        ViewInBrowser
     }
 }

@@ -44,5 +44,17 @@
                     .Replace("-", string.Empty).ToLowerInvariant();
             }
         }
+
+        /// <summary>
+        /// Creates if not exists.
+        /// </summary>
+        /// <param name="self">The self.</param>
+        public static void CreateIfNotExists(this DirectoryInfo self)
+        {
+            if (!self.Exists)
+            {
+                Directory.CreateDirectory(self.FullName);
+            }
+        }
     }
 }

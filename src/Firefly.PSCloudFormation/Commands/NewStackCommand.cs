@@ -16,7 +16,7 @@
     /// in which case it returns immediately and you can check the status of the stack via the DescribeStacks API
     /// Stack events for this template and any nested stacks are output to the console.
     /// </para>
-    /// <para type="link" uri="https://github.com/fireflycons/PSCloudFormation/blob/master/static/s3-usage.md">PSCloudFormation private S3 bucket</para>
+    /// <para type="link" uri="https://fireflycons.github.io/PSCloudFormation/articles/s3-usage.html">PSCloudFormation private S3 bucket</para>
     /// </summary>
     /// <example>
     /// <code>New-PSCFNStack -StackName "my-stack" -TemplateBody "{TEMPLATE CONTENT HERE}" -PK1 PV1 -PK2 PV2 -DisableRollback</code>

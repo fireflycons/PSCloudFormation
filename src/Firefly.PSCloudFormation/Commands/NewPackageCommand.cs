@@ -52,7 +52,7 @@
     /// </example>
     /// <example>
     /// <code>
-    /// New-PSCFNPackage -TemplateFile my-template.json -OutputTemplateFile my-modified-template.json -S3Bucket my-bucket -S3Prefix template-resouces
+    /// New-PSCFNPackage -TemplateFile my-template.json -OutputTemplateFile my-modified-template.json -S3Bucket my-bucket -S3Prefix template-resources
     /// </code>
     /// <para>
     /// Reads the template, recursively walking any <c>AWS::CloudFormation::Stack</c> resources, uploading code artifacts and nested templates to S3,
@@ -72,8 +72,8 @@
     /// the <c>New-PSCFNStack</c> cmdlet before it receives the template, therefore the template parameters cannot be known in advance.
     /// </para>
     /// </example>
-    /// <para type="link" uri="https://github.com/fireflycons/PSCloudFormation/blob/master/static/lambda-dependencies.md">Packaging Lambda Dependencies</para>
-    /// <para type="link" uri="https://github.com/fireflycons/PSCloudFormation/blob/master/static/s3-usage.md">PSCloudFormation private S3 bucket</para>
+    /// <para type="link" uri="https://fireflycons.github.io/PSCloudFormation/articles/lambda-packager.html">Packaging Lambda Dependencies</para>
+    /// <para type="link" uri="https://fireflycons.github.io/PSCloudFormation/articles/s3-usage.html">PSCloudFormation private S3 bucket</para>
     /// </summary>
     /// <seealso cref="Firefly.PSCloudFormation.CloudFormationServiceCommand" />
     [Cmdlet(VerbsCommon.New, "PSCFNPackage")]

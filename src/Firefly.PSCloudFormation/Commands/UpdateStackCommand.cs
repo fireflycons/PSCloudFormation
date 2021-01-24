@@ -1,8 +1,10 @@
 ﻿namespace Firefly.PSCloudFormation.Commands
 {
     using System;
+    using System.Collections.Generic;
     using System.Linq;
     using System.Management.Automation;
+    using System.Management.Automation.Host;
     using System.Runtime.InteropServices;
     using System.Threading;
     using System.Threading.Tasks;
@@ -29,9 +31,10 @@
     /// While a stack is in the UPDATE_IN_PROGRESS phase, pressing ESC 3 times in the space of a second will cancel the update forcing all modifications to roll back.
     /// Once the state transitions to UPDATE_COMPLETE_CLEANUP_IN_PROGRESS, the update can no longer be cancelled.
     /// </para>
-    /// <para type="link" uri="https://github.com/fireflycons/PSCloudFormation/blob/master/static/s3-usage.md">PSCloudFormation private S3 bucket</para>
-    /// <para type="link" uri="https://github.com/fireflycons/PSCloudFormation/blob/master/static/resource-import.md">Resource Import (PSCloudFormation)</para>
+    /// <para type="link" uri="https://fireflycons.github.io/PSCloudFormation/articles/s3-usage.html">PSCloudFormation private S3 bucket</para>
+    /// <para type="link" uri="https://fireflycons.github.io/PSCloudFormation/articles/resource-import.html">Resource Import (PSCloudFormation)</para>
     /// <para type="link" uri="(https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/resource-import.html)">Resource Import (AWS docs)</para>
+    /// <para type="link" uri="https://fireflycons.github.io/PSCloudFormation/articles/changesets.html">Changeset documentation (PSCloudFormation)</para>
     /// </summary>
     /// <example>
     /// <code>Update-PSCFNStack -StackName "my-stack" -TemplateBody "{TEMPLATE CONTENT HERE}" -PK1 PV1 -PK2 PV2</code>
@@ -62,7 +65,7 @@
     [Cmdlet(VerbsData.Update, "PSCFNStack")]
     [OutputType(typeof(CloudFormationResult))]
     // ReSharper disable once UnusedMember.Global
-    public class UpdateStackCommand : StackParameterCloudFormationCommand
+    public class UpdateStackCommand : StackParameterCloudFormationCommand, IChangesetArguments
     {
         /// <summary>
         /// The stack policy during update location
@@ -73,6 +76,37 @@
         /// The resources to import
         /// </summary>
         private string resourcesToImport;
+
+        /// <summary>
+        /// The changeset detail output
+        /// </summary>
+        private string changesetDetail;
+
+        /// <summary>
+        /// Gets or sets the changeset detail.
+        /// <para type="description">
+        /// Specifies a path to a file into which to write detailed JSON change information.
+        /// This can be useful in situations where you need to get other people to review changes, or you want to add the changeset information to e.g. git.
+        /// </para>
+        /// <para type="description">
+        /// The output is always JSON.
+        /// </para>
+        /// </summary>
+        /// <value>
+        /// The changeset detail.
+        /// </value>
+        [Parameter(ValueFromPipelineByPropertyName = true)]
+        // ReSharper disable once UnusedMember.Global
+        public string ChangesetDetail
+        {
+            get => this.changesetDetail;
+
+            set
+            {
+                this.changesetDetail = value;
+                this.ResolvedChangesetDetail = this.PathResolver.ResolvePath(value);
+            }
+        }
 
         /// <summary>
         /// Gets or sets the include nested stacks.
@@ -94,6 +128,7 @@
         /// If you want to update protected resources, specify a temporary overriding stack policy during this update. If you do not specify a stack policy, the current policy that is associated with the stack will be used.
         /// You can specify either a string, path to a file, or URL of a object in S3 that contains the policy body.
         /// </para>
+        /// <para type="link" uri="https://fireflycons.github.io/PSCloudFormation/articles/changesets.html">Changeset documentation (PSCloudFormation)</para>
         /// </summary>
         /// <value>
         /// The stack policy during update location.
@@ -197,14 +232,6 @@
         /// The resolved stack policy during update location.
         /// </value>
         protected string ResolvedStackPolicyDuringUpdateLocation { get; set; }
-
-        /// <summary>
-        /// Gets or sets the resolved resources to import.
-        /// </summary>
-        /// <value>
-        /// The resolved resources to import.
-        /// </value>
-        protected string ResolvedResourcesToImport { get; set; }
 
         /// <summary>
         /// Gets the stack operation.
@@ -340,8 +367,6 @@
         /// </returns>
         protected override async Task<object> OnProcessRecord()
         {
-            this.Logger = new PSLogger(this);
-
             if (this.ResolvedTemplateLocation == null && !this.UsePreviousTemplate)
             {
                 throw new ArgumentException("Must supply one of -TemplateLocation, -UsePreviousTemplate");
@@ -381,22 +406,58 @@
         /// <returns><c>true</c> if update should proceed; else <c>false</c></returns>
         private bool AcceptChangeset(DescribeChangeSetResponse changeset)
         {
+            var logger = (PSLogger)this.Logger;
+
+            List<ChoiceDescription> additionalChoices = null;
+
+            if (logger.CanViewChangesetInBrowser())
+            {
+                additionalChoices = new List<ChoiceDescription>
+                                        {
+                                            new ChoiceDescription("&View in Browser", "View detailed changeset in browser.")
+                                        };
+            }
+
+
+            // Write out all changeset details
+            logger.WriteChangesetDetails(this.ResolvedChangesetDetail);
+
             if (!this.Force)
             {
-                if (this.AskYesNo(
+                var accept = false;
+
+                while (!accept)
+                {
+                    var choice = this.AskYesNo(
                         $"Begin update of {this.StackName} now?",
                         null,
                         ChoiceResponse.Yes,
                         "Start rebuild now.",
-                        "Cancel operation.") == ChoiceResponse.No)
-                {
-                    return false;
+                        "Cancel operation.",
+                        additionalChoices);
+
+                    switch (choice)
+                    {
+                        case ChoiceResponse.No:
+
+                            return false;
+
+                        case ChoiceResponse.Yes:
+
+                            accept = true;
+                            break;
+
+                        case ChoiceResponse.ViewInBrowser:
+
+                            logger.ViewChangesetInBrowser();
+                            break;
+                    }
                 }
             }
 
             if (string.IsNullOrEmpty(this.ResolvedResourcesToImport))
             {
-                // Docs say only UPDATE_IN_PROGRESS can be interrupted.
+                // Docs say only UPDATE_IN_PROGRESS can be interrupted, so not import.
                 Console.WriteLine("Press ESC 3 times within one second to cancel update while update in progress");
             }
 

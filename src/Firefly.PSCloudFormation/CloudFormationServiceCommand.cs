@@ -46,6 +46,14 @@ namespace Firefly.PSCloudFormation
         private IPathResolver pathResolver;
 
         /// <summary>
+        /// Initializes a new instance of the <see cref="CloudFormationServiceCommand"/> class.
+        /// </summary>
+        protected CloudFormationServiceCommand()
+        {
+            this.Logger = new PSLogger(this);
+        }
+
+        /// <summary>
         /// Gets or sets the access key.
         /// <para type="description">
         /// The AWS access key for the user account. This can be a temporary access key
@@ -354,7 +362,6 @@ namespace Firefly.PSCloudFormation
                 }
             }
 
-            this.Logger = new PSLogger(this);
             this.Context = new PSCloudFormationContext
                                {
                                    Region = this._RegionEndpoint,

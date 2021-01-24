@@ -2,14 +2,29 @@
 {
     using System;
     using System.Collections.Generic;
+    using System.Collections.ObjectModel;
+    using System.IO;
     using System.Linq;
     using System.Management.Automation;
+    using System.Runtime.InteropServices;
     using System.Text.RegularExpressions;
+    using System.Threading;
+    using System.Xml;
+    using System.Xml.Xsl;
 
     using Amazon.CloudFormation.Model;
+    using Amazon.Runtime;
 
     using Firefly.CloudFormation;
     using Firefly.CloudFormation.Utils;
+    using Firefly.EmbeddedResourceLoader;
+    using Firefly.EmbeddedResourceLoader.Materialization;
+    using Firefly.PSCloudFormation.Utils;
+
+    using Newtonsoft.Json;
+    using Newtonsoft.Json.Linq;
+
+    using Formatting = Newtonsoft.Json.Formatting;
 
     /// <summary>
     /// Concrete logger implementation for PowerShell
@@ -24,9 +39,23 @@
         private static readonly string Padding30 = new string(' ', 30);
 
         /// <summary>
+        /// Stylesheet for transforming changeset to HTML, loaded from embedded resources
+        /// </summary>
+        [EmbeddedResource("ChangesetFormatter.xslt")]
+        // ReSharper disable once StyleCop.SA1650
+#pragma warning disable 649
+        private static XmlDocument changesetFormatter;
+#pragma warning restore 649
+
+        /// <summary>
         /// The <see cref="PSCmdlet"/> object.
         /// </summary>
         private readonly PSCmdlet cmdlet;
+
+        /// <summary>
+        /// The changeset details
+        /// </summary>
+        private readonly List<ChangesetDetails> changesetDetails = new List<ChangesetDetails>();
 
         /// <summary>
         /// Flag to output event headers
@@ -40,6 +69,7 @@
         public PSLogger(PSCmdlet cmdlet)
         {
             this.cmdlet = cmdlet;
+            ResourceLoader.LoadResources(this);
         }
 
         /// <summary>
@@ -57,6 +87,16 @@
                 this.LogInformation("No changes to stack resources. Other changes such as Outputs may be present.");
                 return new Dictionary<string, int>();
             }
+
+            this.changesetDetails.Add(
+                new ChangesetDetails
+                    {
+                        Changes = changes.Changes,
+                        ChangeSetName = changes.ChangeSetName,
+                        CreationTime = changes.CreationTime,
+                        Description = changes.Description,
+                        StackName = changes.StackName
+                    });
 
             var columnWidths = base.LogChangeset(changes);
             var foregroundColorMap = new Dictionary<string, ConsoleColor>
@@ -286,6 +326,148 @@
         }
 
         /// <summary>
+        /// Determines whether this instance [can view changeset in browser].
+        /// </summary>
+        /// <returns>
+        ///   <c>true</c> if this instance [can view changeset in browser]; otherwise, <c>false</c>.
+        /// </returns>
+        public bool CanViewChangesetInBrowser()
+        {
+            var os = new OSInfo().OSPlatform;
+
+            try
+            {
+                if (os == OSPlatform.Windows)
+                {
+                    const string RegKey = @"HKLM:\SOFTWARE\Microsoft\Windows NT\CurrentVersion";
+                    const string ItemName = "InstallationType";
+
+                    // Check version is Client or Server, i.e. excludes Server Core and Nano
+                    // Read registry via provider system as Registry class not available in net standard
+                    var value = this.cmdlet.SessionState.InvokeProvider.Property
+                        .Get(RegKey, new Collection<string> { ItemName }).First().Members
+                        .Match(ItemName, PSMemberTypes.NoteProperty).First().Value.ToString();
+
+                    return value == "Client" || value == "Server";
+                }
+
+                if (os == OSPlatform.Linux)
+                {
+                    // Check for desktop (env var XDG_CURRENT_DESKTOP)
+                    return !string.IsNullOrEmpty(Environment.GetEnvironmentVariable("XDG_CURRENT_DESKTOP"));
+                }
+
+                if (os == OSPlatform.OSX)
+                {
+                    // Always have a desktop
+                    return true;
+                }
+            }
+            catch (Exception e)
+            {
+                this.LogDebug($"Unable to determine if changeset can be viewed in browser: {e.Message}");
+            }
+            
+            return false;
+        }
+
+        /// <summary>
+        /// View detailed changeset info in default browser
+        /// </summary>
+        public void ViewChangesetInBrowser()
+        {
+            // Get JSON changes as XML
+            var xmlChanges = JsonConvert.DeserializeXmlNode($"{{\"Stack\": {this.GetJsonChanges()} }}", "Stacks");
+
+            if (xmlChanges == null)
+            {
+                this.LogWarning("Unable to convert changes to HTML. Would be the case when there are only changes to e.g. Outputs.");
+                return;
+            }
+
+            using (var ms = new MemoryStream())
+            {
+                // Transform to HTML
+                var xslt = new XslCompiledTransform();
+                xslt.Load(new XmlNodeReader(changesetFormatter));
+
+                xslt.Transform(new XmlNodeReader(xmlChanges), null, ms);
+                ms.Seek(0, SeekOrigin.Begin);
+#if DEBUG
+                var sw = new StringWriter();
+                xmlChanges.WriteTo(new XmlTextWriter(sw) { Formatting = System.Xml.Formatting.Indented });
+                var xml = sw.ToString();
+#endif
+                // Write HTML to temporary file and launch default browser
+                using (var tempFile = new TempFile(ms, ".html"))
+                {
+                    var os = new OSInfo().OSPlatform;
+
+                    if (os == OSPlatform.Windows)
+                    {
+                        // Windows shell open will open the file directly in default browser
+                        this.cmdlet.SessionState.InvokeCommand.InvokeScript(
+                            true,
+                            ScriptBlock.Create($". {tempFile.FullPath}"),
+                            null);
+                    }
+                    else if (os == OSPlatform.Linux)
+                    {
+                        // exec xdg-open ...
+                        this.cmdlet.SessionState.InvokeCommand.InvokeScript(
+                            true,
+                            ScriptBlock.Create($"xdg-open {tempFile.FullPath}"),
+                            null);
+                    }
+                    else if (os == OSPlatform.OSX)
+                    {
+                        // exec open ...
+                        this.cmdlet.SessionState.InvokeCommand.InvokeScript(
+                            true,
+                            ScriptBlock.Create($"open {tempFile.FullPath}"),
+                            null);
+                    }
+
+                    // Give browser time to open and read the file before it gets deleted
+                    Thread.Sleep(2000);
+                }
+            }
+        }
+
+        /// <summary>
+        /// Write out changeset details if any to given output.
+        /// </summary>
+        /// <param name="filePath">Path to file to write JSON changes to</param>
+        public void WriteChangesetDetails(string filePath)
+        {
+            if (!this.changesetDetails.Any() || filePath == null)
+            {
+                return;
+            }
+
+            var di = new DirectoryInfo(Path.GetDirectoryName(filePath));
+
+            di.CreateIfNotExists();
+
+            var json = this.GetJsonChanges();
+
+            File.WriteAllText(filePath, json);
+            this.LogInformation($"Changeset detail written to '{filePath}'");
+        }
+
+        /// <summary>
+        /// Converts change detail to JSON
+        /// </summary>
+        /// <returns>JSON string</returns>
+        public string GetJsonChanges()
+        {
+            return JsonConvert.SerializeObject(
+                this.changesetDetails,
+                Formatting.Indented,
+                new ConstantClassJsonConverter());
+        }
+
+        /// <summary>
         /// Gets the left margin for for the last column for word wrapping
         /// </summary>
         /// <param name="columnWidths">The column widths.</param>
@@ -330,6 +512,93 @@
                     }
                 }
             }
+        }
+
+        /// <summary>
+        /// <see cref="JsonConverter"/> class to squash <see cref="ConstantClass"/> values into a <see cref="JValue"/>
+        /// </summary>
+        /// <seealso cref="Newtonsoft.Json.JsonConverter" />
+        private class ConstantClassJsonConverter : JsonConverter
+        {
+            /// <summary>
+            /// Gets a value indicating whether this <see cref="T:Newtonsoft.Json.JsonConverter" /> can read JSON.
+            /// </summary>
+            /// <value>
+            ///   <c>true</c> if this <see cref="T:Newtonsoft.Json.JsonConverter" /> can read JSON; otherwise, <c>false</c>.
+            /// </value>
+            public override bool CanRead => false;
+
+            /// <summary>
+            /// Writes the JSON representation of the object.
+            /// </summary>
+            /// <param name="writer">The <see cref="T:Newtonsoft.Json.JsonWriter" /> to write to.</param>
+            /// <param name="value">The value.</param>
+            /// <param name="serializer">The calling serializer.</param>
+            public override void WriteJson(JsonWriter writer, object value, JsonSerializer serializer)
+            {
+                new JValue(((ConstantClass)value).Value).WriteTo(writer);
+            }
+
+            /// <summary>
+            /// Reads the JSON representation of the object.
+            /// </summary>
+            /// <param name="reader">The <see cref="T:Newtonsoft.Json.JsonReader" /> to read from.</param>
+            /// <param name="objectType">Type of the object.</param>
+            /// <param name="existingValue">The existing value of object being read.</param>
+            /// <param name="serializer">The calling serializer.</param>
+            /// <returns>
+            /// The object value.
+            /// </returns>
+            /// <exception cref="NotImplementedException">Unnecessary because CanRead is false. The type will skip the converter.</exception>
+            public override object ReadJson(JsonReader reader, Type objectType, object existingValue, JsonSerializer serializer)
+            {
+                throw new NotImplementedException("Unnecessary because CanRead is false. The type will skip the converter.");
+            }
+
+            /// <summary>
+            /// Determines whether this instance can convert the specified object type.
+            /// </summary>
+            /// <param name="objectType">Type of the object.</param>
+            /// <returns>
+            /// <c>true</c> if this instance can convert the specified object type; otherwise, <c>false</c>.
+            /// </returns>
+            public override bool CanConvert(Type objectType)
+            {
+                return objectType.IsSubclassOf(typeof(ConstantClass));
+            }
+        }
+
+        /// <summary>
+        /// Entity for formatting HTML change detail
+        /// </summary>
+        private class ChangesetDetails
+        {
+            /// <summary>
+            /// Gets or sets the Stack name
+            /// </summary>
+            // ReSharper disable UnusedAutoPropertyAccessor.Local - Used implicitly by json conversion
+            public string StackName { get; set; }
+
+            /// <summary>
+            /// Gets or sets the Changeset Name
+            /// </summary>
+            public string ChangeSetName { get; set; }
+
+            /// <summary>
+            /// Gets or sets the Description
+            /// </summary>
+            public string Description { get; set; }
+
+            /// <summary>
+            /// Gets or sets the Changeset creation time
+            /// </summary>
+            public DateTime CreationTime { get; set; }
+
+            /// <summary>
+            /// Gets or sets the Detailed resource changes
+            /// </summary>
+            public List<Change> Changes { get; set; }
+            // ReSharper restore UnusedAutoPropertyAccessor.Local
         }
     }
 }

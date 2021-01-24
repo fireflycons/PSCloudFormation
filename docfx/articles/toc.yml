@@ -10,3 +10,5 @@
   href: lambda-packager.md
 - name: Resource Import
   href: resource-import.md
+- name: Changesets
+  href: changesets.md
