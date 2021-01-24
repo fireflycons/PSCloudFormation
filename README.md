@@ -33,6 +33,8 @@ Head over [here](https://fireflycons.github.io/PSCloudFormation/index.html) for 
 * More complete support for determining AWS credentials from all sources.
 * [Resource Import](https://fireflycons.github.io/PSCloudFormation/articles/resource-import.html) supported (since v3.x) - still not supported by AWS.Tools cmdlets at time of writing.
 * [Dependency Packaging](https://fireflycons.github.io/PSCloudFormation/articles/lambda-packager.html) - For script based lambdas, it is possible to package dependent modules directly.
+* [Nested Changeset support](https://fireflycons.github.io/PSCloudFormation/articles/changesets.html) - With caveats! See documentation.
+* [Changeset Detail view](https://fireflycons.github.io/PSCloudFormation/articles/changesets.html) - View changeset detail in browser.
 
 ### Gotchas
 
