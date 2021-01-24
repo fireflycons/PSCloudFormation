@@ -2,6 +2,10 @@
 {
     using System.Management.Automation;
 
+    /// <summary>
+    /// Parameters related to changeset creation.
+    /// </summary>
+    // ReSharper disable UnusedMemberInSuper.Global - This just describes parameters common to more than one cmdlet
     public interface IChangesetArguments
     {
         /// <summary>
@@ -17,7 +21,6 @@
         /// <value>
         /// The changeset detail.
         /// </value>
-        // ReSharper disable once UnusedMember.Global
         string ChangesetDetail { get; set; }
 
         /// <summary>
@@ -48,7 +51,18 @@
         /// <value>
         /// The resources to import.
         /// </value>
-        // ReSharper disable once UnusedMember.Global
         string ResourcesToImport { get; set; }
+
+        /// <summary>
+        /// Gets or sets the use previous template.
+        /// <para type="description">
+        /// Reuse the existing template that is associated with the stack that you are updating.
+        /// Conditional: You must specify only one of the following parameters: TemplateLocation or set the UsePreviousTemplate to true.
+        /// </para>
+        /// </summary>
+        /// <value>
+        /// The use previous template.
+        /// </value>
+        SwitchParameter UsePreviousTemplate { get; set; }
     }
 }

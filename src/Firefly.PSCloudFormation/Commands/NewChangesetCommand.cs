@@ -20,7 +20,32 @@
     /// When you are satisfied with the changes the change set will make, execute the change set by using the ExecuteChangeSet action.
     /// AWS CloudFormation doesn't make changes until you execute the change set. To create a change set for the entire stack hierarchy, set IncludeNestedStacks to True.
     /// </para>
+    /// <para type="link" uri="https://fireflycons.github.io/PSCloudFormation/articles/s3-usage.html">PSCloudFormation private S3 bucket</para>
+    /// <para type="link" uri="https://fireflycons.github.io/PSCloudFormation/articles/resource-import.html">Resource Import (PSCloudFormation)</para>
+    /// <para type="link" uri="(https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/resource-import.html)">Resource Import (AWS docs)</para>
+    /// <para type="link" uri="https://fireflycons.github.io/PSCloudFormation/articles/changesets.html">Changeset documentation (PSCloudFormation)</para>
     /// </summary>
+    /// <example>
+    /// <code>New-PSCFNChangeset  -StackName "my-stack" -UsePreviousTemplate -PK1 PV1 -PK2 PV2</code>
+    /// <para>
+    /// Creates a changeset for the stack my-stack and outputs the changeset detail as JSON to the pipeline.
+    /// The template currently associated with the stack is used and updated with new customization parameters ('PK1' and 'PK2' represent the names of parameters declared in the template content, 'PV1' and 'PV2' represent the values for those parameters.
+    /// </para>
+    /// </example>
+    /// <example>
+    /// <code>New-PSCFNChangeset  -StackName "my-stack" -UsePreviousTemplate -PK1 PV1 -PK2 PV2 -ShowInBrowser</code>
+    /// <para>
+    /// Creates a changeset for the stack my-stack and launches the default browser to view the changeset detail.
+    /// The template currently associated with the stack is used and updated with new customization parameters ('PK1' and 'PK2' represent the names of parameters declared in the template content, 'PV1' and 'PV2' represent the values for those parameters.
+    /// </para>
+    /// </example>
+    /// <example>
+    /// <code>New-PSCFNChangeset  -StackName "my-stack" -TemplateLocation my-stack.yaml -PK1 PV1 -PK2 PV2 -ChangesetDetail my-stack-changes.json</code>
+    /// <para>
+    /// Creates a changeset for the stack my-stack and saves the JSON changeset detail to the specified file.
+    /// The template in my-stack.yaml is used and updated with new customization parameters ('PK1' and 'PK2' represent the names of parameters declared in the template content, 'PV1' and 'PV2' represent the values for those parameters.
+    /// </para>
+    /// </example>
     /// <seealso cref="Firefly.PSCloudFormation.StackParameterCloudFormationCommand" />
     /// <seealso cref="Firefly.PSCloudFormation.IChangesetArguments" />
     [Cmdlet(VerbsCommon.New, "PSCFNChangeset")]
@@ -105,6 +130,24 @@
                 this.resourcesToImport = value;
                 this.ResolvedResourcesToImport = this.PathResolver.ResolvePath(value);
             }
+        }
+
+        /// <summary>
+        /// Gets or sets the use previous template.
+        /// <para type="description">
+        /// Reuse the existing template that is associated with the stack that you are updating.
+        /// Conditional: You must specify only one of the following parameters: TemplateLocation or set the UsePreviousTemplate to true.
+        /// </para>
+        /// </summary>
+        /// <value>
+        /// The use previous template.
+        /// </value>
+        [Parameter(ValueFromPipelineByPropertyName = true)]
+        // ReSharper disable once UnusedMember.Global - used via underlying property
+        public SwitchParameter UsePreviousTemplate
+        {
+            get => this.UsePreviousTemplateFlag;
+            set => this.UsePreviousTemplateFlag = value;
         }
 
         /// <summary>
