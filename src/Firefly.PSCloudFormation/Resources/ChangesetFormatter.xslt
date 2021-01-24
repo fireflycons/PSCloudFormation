@@ -74,34 +74,33 @@
                         <div class="mb-4">
                             <div class="row">
                                 <div class="col">
-                                    <table class="vert mb-3">
-                                        <tr>
-                                            <td class="left">Stack Name</td>
-                                            <td>
-                                                <xsl:value-of select="StackName"/>
-                                            </td>
-                                        </tr>
-                                        <tr>
-                                            <td class="left">Changeset Name</td>
-                                            <td>
-                                                <xsl:value-of select="ChangeSetName"/>
-                                            </td>
-                                        </tr>
-                                        <xsl:if test="Description != ''">
-                                            <tr>
-                                                <td class="left">Description</td>
-                                                <td>
-                                                    <xsl:value-of select="Description"/>
-                                                </td>
-                                            </tr>
-                                        </xsl:if>
-                                        <tr>
-                                            <td class="left">CreationTime</td>
-                                            <td>
-                                                <xsl:value-of select="CreationTime"/>
-                                            </td>
-                                        </tr>
-                                    </table>
+                                    <div class="card text-white bg-info mb-2">
+                                        <div class="card-header"><h6>Stack: <xsl:value-of select="StackName"/></h6></div>
+                                        <div class="card-body">
+                                            <table class="vert">
+                                                <tr>
+                                                    <td class="left">Changeset Name</td>
+                                                    <td>
+                                                        <xsl:value-of select="ChangeSetName"/>
+                                                    </td>
+                                                </tr>
+                                                <xsl:if test="Description != ''">
+                                                    <tr>
+                                                        <td class="left">Description</td>
+                                                        <td>
+                                                            <xsl:value-of select="Description"/>
+                                                        </td>
+                                                    </tr>
+                                                </xsl:if>
+                                                <tr>
+                                                    <td class="left">CreationTime</td>
+                                                    <td>
+                                                        <xsl:value-of select="CreationTime"/>
+                                                    </td>
+                                                </tr>
+                                            </table>
+                                        </div>
+                                    </div>
                                 </div>
                             </div>
                             <xsl:for-each select="Changes">
