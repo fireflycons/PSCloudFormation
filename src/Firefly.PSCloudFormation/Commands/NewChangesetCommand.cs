@@ -4,9 +4,7 @@
     using System.Collections.Generic;
     using System.Management.Automation;
     using System.Threading.Tasks;
-
-    using Amazon.CloudFormation.Model;
-
+    
     /// <summary>
     /// <para type="synopsis">
     /// Calls the AWS CloudFormation CreateChangeSet API operation.
@@ -177,7 +175,7 @@
         /// <value>
         /// The stack operation.
         /// </value>
-        protected override StackOperation StackOperation { get; }
+        protected override StackOperation StackOperation { get; } = StackOperation.Update;
 
         /// <summary>
         /// Gets the valid values for select argument.

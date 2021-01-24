@@ -45,6 +45,9 @@ namespace Firefly.PSCloudFormation
         /// </summary>
         private IPathResolver pathResolver;
 
+        /// <summary>
+        /// Initializes a new instance of the <see cref="CloudFormationServiceCommand"/> class.
+        /// </summary>
         protected CloudFormationServiceCommand()
         {
             this.Logger = new PSLogger(this);
