@@ -1,5 +1,9 @@
 # Release Notes
 
+# 4.1.6.6
+
+* Enhancement - Add new cmdlet `New-PSCFNChangeset`. Add mechanism to get detailed changeset information and view in browser, save to file or output to pipeline. [Issue link](https://github.com/fireflycons/PSCloudFormation/issues/96)
+
 # 4.1.6.5 
 
 * Fix - Lambda handler detection fails if handler contains additional arguments (Python). [Issue link](https://github.com/fireflycons/PSCloudFormation/issues/97)
