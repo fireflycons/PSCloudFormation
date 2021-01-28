@@ -60,7 +60,7 @@ The HTML view relies on [jQuery](https://jquery.com) and [Bootstrap](https://get
 
 ### Nested Changeset Creation
 
-There is a server-side bug in this which I reported and has been acknowledged by AWS. If a nested stack has no changes, then any outputs of this nested stack are incorrectly deemed to have *all* been changed. Any other stacks in the nest which use these outputs as parameters then incorrectly show resource changes caused by these paameters.
+There is a [server-side bug in this which I reported](https://github.com/fireflycons/aws-nested-changeset-bug) and has been acknowledged by AWS. If a nested stack has no changes, then any outputs of this nested stack are incorrectly deemed to have *all* been changed. Any other stacks in the nest which use these outputs as parameters then incorrectly show resource changes caused by these paameters.
 
 This issue renders the nested changeset feature fairly useless at present. Since the bug is server-side (i.e. within AWS itself), as soon as AWS roll out the fix, then PSCloudFormation will work with this feature without the need for a new release.
 
