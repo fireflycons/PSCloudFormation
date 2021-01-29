@@ -1,7 +1,7 @@
 # PSCloudFormation
 [![Build status](https://ci.appveyor.com/api/projects/status/fgt7d0icj7emc6hl/branch/master?svg=true)](https://ci.appveyor.com/project/fireflycons/pscloudformation/branch/master)
 
-This module depends on [AWS.Tools](https://docs.aws.amazon.com/powershell/latest/userguide/pstools-welcome.html) 4.1.6.0 which you should install/upgrade first
+This module depends on [AWS.Tools](https://docs.aws.amazon.com/powershell/latest/userguide/pstools-welcome.html) 4.1.6.0 which you should install/upgrade to first
 
 Required AWS.Tools modules:
 
@@ -22,7 +22,7 @@ Head over [here](https://fireflycons.github.io/PSCloudFormation/index.html) for 
 ### Breaking Changes
 
 * Minimum requirement Windows PowerShell 5.1. All PowerShell Core versions are supported.
-* Requires modular [AWS.Tools](https://github.com/aws/aws-tools-for-powershell/issues/67) - currently version `4.1.2.0`. Monolithic AWSPowerShell is no longer supported (since PSCloudFormation v3.x). Future releases of this module will be version number aligned with the required version of `AWS.Tools`.
+* Requires modular [AWS.Tools](https://github.com/aws/aws-tools-for-powershell/issues/67) - currently version `4.1.6.0`. Monolithic AWSPowerShell is no longer supported (since PSCloudFormation v3.x). Future releases of this module will be version number aligned with the required version of `AWS.Tools`.
 * Meaning of `-Wait` parameter has changed. This only applies to `Update-PSCFNStack` and means that update should not begin if at the time the cmdlet is called, the target stack is found to be being updated by another process. In this case the update will wait for the other update to complete. All PSCloudFormation cmdlets will wait for their own operation to run to completion unless `-PassThru` is present.
 * Return type from the cmdlets has changed. Instead of being just a stack status or an ARN, it is a structure containing both, defined [here](https://fireflycons.github.io/Firefly-CloudFormation/api/Firefly.CloudFormation.Model.CloudFormationResult.html).
 
@@ -71,6 +71,7 @@ This module provides the following stack modification cmdlets
 
 ### Other Cmdlets
 
+- `New-PSCFNChangeSet` - ([Documentation](https://fireflycons.github.io/PSCloudFormation/cmdlets/New-PSCFNChangeSet.html)) Create changeset only, for review.
 - `Get-PSCFNStackOutputs` ([Documentation](https://fireflycons.github.io/PSCloudFormation/cmdlets/Get-PSCFNStackOutputs.html)) Retrieves the outputs of a stack in various useful formats for use in creation of new stack templates that will use or import these values.
 - `New-PSCFNPackage` ([Documentation](https://fireflycons.github.io/PSCloudFormation/cmdlets/New-PSCFNPackage.html)) Packages local artifacts, like `aws cloudformation package`.
 
