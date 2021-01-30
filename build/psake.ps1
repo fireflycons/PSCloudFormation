@@ -137,7 +137,8 @@ Task GenerateReferenceAssemblies -Depends Init {
 
             try
             {
-                & $refasmer -v -O $referenceDir -c $_.FullName
+                Write-Host "Processing $($_.Name)"
+                & $refasmer -O $referenceDir -c $_.FullName 2>&1
             }
             catch
             {

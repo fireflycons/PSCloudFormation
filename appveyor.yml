@@ -10,7 +10,7 @@ environment:
   FORCE_DOC_PUSH: true
 
 image:
-  - Ubuntu
+#  - Ubuntu
   - Visual Studio 2019
 
 install:
