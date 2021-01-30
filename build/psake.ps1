@@ -133,7 +133,7 @@ Task GenerateReferenceAssemblies -Depends Init {
         Write-Host "Generating reference assemblies for $_"
 
         Get-ChildItem -Path (Split-Path -Parent $manifest) -Filter *.dll |
-        Foreach-Item {
+        Foreach-Object {
 
             & $refasmer -v -O $referenceDir -c $_.FullName
         }
