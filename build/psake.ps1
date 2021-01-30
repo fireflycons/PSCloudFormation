@@ -135,9 +135,19 @@ Task GenerateReferenceAssemblies -Depends Init {
         Get-ChildItem -Path (Split-Path -Parent $manifest) -Filter *.dll |
         Foreach-Object {
 
-            & $refasmer -v -O $referenceDir -c $_.FullName
+            try
+            {
+                & $refasmer -v -O $referenceDir -c $_.FullName
+            }
+            catch
+            {
+                Write-Host $_.Exception.Message
+                throw
+            }
         }
     }
+
+    $Global:LASTEXITCODE = 0
 }
 
 Task Build -Depends GenerateReferenceAssemblies {
