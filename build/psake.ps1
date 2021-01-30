@@ -120,7 +120,7 @@ Task GenerateReferenceAssemblies -Depends Init {
     ) |
     ForEach-Object {
 
-        $module = $_
+        $temp = [System.IO.Path]::GetTempPath()
         $manifest = Get-Module -ListAvailable $_ |
         Sort-Object -Descending Version |
         Select-Object -First 1 |
@@ -140,9 +140,11 @@ Task GenerateReferenceAssemblies -Depends Init {
 
             if ($script:IsWindows)
             {
-                # AWS.Tools.Common seems to be open. Try unloading
-                Remove-Module $module -ErrorAction SilentlyContinue
+                # AWS.Tools.Common seems to be open here and refasmer throws IOException, so make copies
+                $dll = Join-Path $temp $_.Name
+                Copy-Item $_.FullName $temp
             }
+
             try
             {
                 Write-Host "Processing $($_.Name)"
