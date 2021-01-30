@@ -159,6 +159,7 @@ Task GenerateReferenceAssemblies -Depends Init {
     }
 
     $Global:LASTEXITCODE = 0
+    Write-Host
 }
 
 Task Build -Depends GenerateReferenceAssemblies {
