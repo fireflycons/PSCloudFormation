@@ -99,70 +99,7 @@ Task ListModules -Depends Init {
     Get-Module | Select-Object ModuleType, Version, Name | Out-Host
 }
 
-Task GenerateReferenceAssemblies -Depends Init {
-
-    $referenceDir = Join-Path $env:BHProjectPath "src/ReferenceAssemblies"
-
-    if (-not (Test-Path -Path $referenceDir -PathType Container))
-    {
-        New-Item -Path $referenceDir -ItemType Directory | Out-Null
-    }
-
-    $refasmer = Get-Command refasmer -ErrorAction SilentlyContinue
-
-    if (-not $refasmer)
-    {
-        throw "Cannot find refasmer. Should have been installed by install.ps1"
-    }
-
-    @(
-        'AWS.Tools.Common'
-    ) |
-    ForEach-Object {
-
-        $temp = [System.IO.Path]::GetTempPath()
-        $manifest = Get-Module -ListAvailable $_ |
-        Sort-Object -Descending Version |
-        Select-Object -First 1 |
-        Select-Object -ExpandProperty path
-
-        if (-not $manifest)
-        {
-            throw "Cannot locate $_ module"
-        }
-
-        Write-Host "Generating reference assemblies for $_"
-
-        Get-ChildItem -Path (Split-Path -Parent $manifest) -Filter *.dll |
-        Foreach-Object {
-
-            $dll = $_.FullName
-
-            if ($script:IsWindows)
-            {
-                # AWS.Tools.Common seems to be open here and refasmer throws IOException, so make copies
-                $dll = Join-Path $temp $_.Name
-                Copy-Item $_.FullName $temp
-            }
-
-            try
-            {
-                Write-Host "Processing $($_.Name)"
-                & $refasmer -O $referenceDir -c $dll 2>&1
-            }
-            catch
-            {
-                Write-Host $_.Exception.Message
-                throw
-            }
-        }
-    }
-
-    $Global:LASTEXITCODE = 0
-    Write-Host
-}
-
-Task Build -Depends GenerateReferenceAssemblies {
+Task Build -Depends Init {
     $lines
 
     # Run Cake build on binary solution

@@ -21,8 +21,8 @@
     <EmbeddedResource Include="Resources\ChangesetFormatter.xslt" />
   </ItemGroup>
   <ItemGroup>
-    <PackageReference Include="AWSSDK.S3" Version="3.5.7.*" />
-    <PackageReference Include="AWSSDK.SecurityToken" Version="3.5.1.*" />
+    <PackageReference Include="AWSSDK.S3" Version="3.5.*" />
+    <PackageReference Include="AWSSDK.SecurityToken" Version="3.5.*" />
     <PackageReference Include="Firefly.CrossPlatformZip" Version="0.5.0" />
     <PackageReference Include="Firefly.EmbeddedResourceLoader" Version="0.1.4" />
     <PackageReference Include="Firefly.PowerShell.DynamicParameters" Version="0.2.1" />
@@ -39,11 +39,6 @@
   </ItemGroup>
   <ItemGroup Condition="'$(SolutionName)' == 'Firefly.PSCloudFormation'">
     <PackageReference Include="Firefly.CloudFormation" Version="0.4.0" />
-  </ItemGroup>
-  <ItemGroup>
-    <Reference Include="AWS.Tools.Common">
-      <HintPath>$(SolutionDir)src/ReferenceAssemblies/AWS.Tools.Common.dll</HintPath>
-    </Reference>
   </ItemGroup>
   <ItemGroup>
     <None Update="debug.ps1">
