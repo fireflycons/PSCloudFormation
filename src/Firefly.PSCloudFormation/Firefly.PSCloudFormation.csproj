@@ -8,22 +8,6 @@
     <FileVersion>4.0.24.0</FileVersion>
   </PropertyGroup>
   <PropertyGroup>
-    <AwsTools>$(AWS_TOOLS_COMMON)</AwsTools>
-    <AwsToolsVersion>4.1.6.0</AwsToolsVersion>
-  </PropertyGroup>
-  <PropertyGroup Condition="'$(OS)' == 'Windows_NT'">
-    <CurrentUserAwsTools>$([System.Environment]::GetFolderPath(SpecialFolder.MyDocuments))\WindowsPowerShell\Modules\AWS.Tools.Common\$(AwsToolsVersion)\AWS.Tools.Common.dll</CurrentUserAwsTools>
-    <AllUsersAwsTools>C:\Program Files\WindowsPowerShell\Modules\AWS.Tools.Common\$(AwsToolsVersion)\AWS.Tools.Common.dll</AllUsersAwsTools>
-    <AwsTools Condition="'$(AwsTools)' == '' AND Exists('$(CurrentUserAwsTools)')">$(CurrentUserAwsTools)</AwsTools>
-    <AwsTools Condition="'$(AwsTools)' == '' AND Exists('$(AllUsersAwsTools)')">$(AllUsersAwsTools)</AwsTools>
-  </PropertyGroup>
-  <PropertyGroup Condition="'$(OS)' != 'Windows_NT'">
-    <CurrentUserAwsTools>~/.local/share/powershell/Modules/AWS.Tools.Common/$(AwsToolsVersion)/AWS.Tools.Common.dll</CurrentUserAwsTools>
-    <AllUsersAwsTools>/usr/local/share/powershell/Modules/AWS.Tools.Common/$(AwsToolsVersion)/AWS.Tools.Common.dll</AllUsersAwsTools>
-    <AwsTools Condition="'$(AwsTools)' == '' AND Exists('$(CurrentUserAwsTools)')">$(CurrentUserAwsTools)</AwsTools>
-    <AwsTools Condition="'$(AwsTools)' == '' AND Exists('$(AllUsersAwsTools)')">$(AllUsersAwsTools)</AwsTools>
-  </PropertyGroup>
-  <PropertyGroup>
     <DocumentationFile>$(ProjectDir)Firefly.PSCloudFormation.xml</DocumentationFile>
   </PropertyGroup>
   <PropertyGroup Condition="'$(APPVEYOR)'!=''">
@@ -58,7 +42,7 @@
   </ItemGroup>
   <ItemGroup>
     <Reference Include="AWS.Tools.Common">
-      <HintPath>$(AwsTools)</HintPath>
+      <HintPath>$(SolutionDir)src/ReferenceAssemblies/AWS.Tools.Common.dll</HintPath>
     </Reference>
   </ItemGroup>
   <ItemGroup>
@@ -74,8 +58,6 @@
     <Exec Command="echo $(TargetDir) &gt; &quot;$(SolutionDir)ModulePath.txt&quot;" />
   </Target>
   <Target Name="PreBuild" BeforeTargets="PreBuildEvent">
-    <Error Condition="'$(AwsTools)' == ''" Text="Cannot locate AWS Tools" />
-    <Message Importance="High" Text="AWS_TOOLS_COMMON: $(AWS_TOOLS_COMMON)" />
     <Message Importance="High" Text="TargetDir: $(TargetDir)" />
   </Target>
 </Project>

@@ -99,7 +99,48 @@ Task ListModules -Depends Init {
     Get-Module | Select-Object ModuleType, Version, Name | Out-Host
 }
 
-Task Build -Depends Init {
+Task GenerateReferenceAssemblies -Depends Init {
+
+    $referenceDir = Join-Path $env:BHProjectPath "src/ReferenceAssemblies"
+
+    if (-not (Test-Path -Path $referenceDir -PathType Container))
+    {
+        New-Item -Path $referenceDir -ItemType Directory | Out-Null
+    }
+
+    $refasmer = Get-Command refasmer -ErrorAction SilentlyContinue
+
+    if (-not $refasmer)
+    {
+        throw "Cannot find refasmer. Should have been installed by install.ps1"
+    }
+
+    @(
+        'AWS.Tools.Common'
+    ) |
+    ForEach-Object {
+
+        $manifest = Get-Module -ListAvailable $_ |
+        Sort-Object -Descending Version |
+        Select-Object -First 1 |
+        Select-Object -ExpandProperty path
+
+        if (-not $manifest)
+        {
+            throw "Cannot locate $_ module"
+        }
+
+        Write-Host "Generating reference assemblies for $_"
+
+        Get-ChildItem -Path (Split-Path -Parent $manifest) -Filter *.dll |
+        Foreach-Item {
+
+            & $refasmer -v -O $referenceDir -c $_.FullName
+        }
+    }
+}
+
+Task Build -Depends GenerateReferenceAssemblies {
     $lines
 
     # Run Cake build on binary solution
