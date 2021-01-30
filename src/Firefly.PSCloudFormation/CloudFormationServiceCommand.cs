@@ -8,28 +8,21 @@ namespace Firefly.PSCloudFormation
     using System.Collections.Generic;
     using System.Linq;
     using System.Management.Automation;
-    using System.Management.Automation.Host;
-    using System.Net;
-    using System.Reflection;
 
     using Amazon;
     using Amazon.CloudFormation;
     using Amazon.PowerShell.Common;
-    using Amazon.PowerShell.Utils;
     using Amazon.Runtime;
     using Amazon.Runtime.CredentialManagement;
-    using Amazon.Util;
 
     using Firefly.CloudFormation;
     using Firefly.CloudFormation.Model;
     using Firefly.PSCloudFormation.Utils;
 
-    using AWSRegion = Amazon.PowerShell.Common.AWSRegion;
-
     /// <summary>
     /// <para>
     /// Service level base class. Contains much of the implementation for determining credentials and region from AWS.Tools.Common
-    /// This was re-implemented here rather than just inheriting from AWS <see cref="ServiceCmdlet"/> as they don't do this evaluation until the pipeline is being processed.
+    /// This was re-implemented here rather than just inheriting from AWS <c>ServiceCmdlet"</c> as they don't do this evaluation until the pipeline is being processed.
     /// We need this information earlier in order to be able to process dynamic parameters when updating with Use Previous Template, i.e. we need to be able to retrieve
     /// existing template from CloudFormation.
     /// </para>
@@ -38,7 +31,7 @@ namespace Firefly.PSCloudFormation
     /// </para>
     /// </summary>
     /// <seealso cref="System.Management.Automation.PSCmdlet" />
-    public abstract class CloudFormationServiceCommand : PSCmdlet
+    public abstract class CloudFormationServiceCommand : PSCmdlet, IAWSCredentialsArguments, IAWSRegionArguments
     {
         /// <summary>
         /// The path resolver
@@ -306,7 +299,7 @@ namespace Firefly.PSCloudFormation
         {
             var amazonCloudFormationConfig = new AmazonCloudFormationConfig { RegionEndpoint = region };
 
-            Common.PopulateConfig(this, amazonCloudFormationConfig);
+            //Common.PopulateConfig(this, amazonCloudFormationConfig);
             this.CustomizeClientConfig(amazonCloudFormationConfig);
             var amazonCloudFormationClient = new AmazonCloudFormationClient(credentials, amazonCloudFormationConfig);
             return amazonCloudFormationClient;
@@ -329,8 +322,9 @@ namespace Firefly.PSCloudFormation
             {
                 credentials = this._CurrentCredentials;
             }
-            else if (this.TryGetCredentials(this.Host, this.SessionState))
+            else if (this.TryGetCredentials(this.Host, out var psCredentials, this.SessionState))
             {
+                this._CurrentCredentials = psCredentials.Credentials;
                 credentials = this._CurrentCredentials;
             }
             else
@@ -344,7 +338,7 @@ namespace Firefly.PSCloudFormation
 
             if (this._CurrentRegion == null)
             {
-                this.TryGetRegion(string.IsNullOrEmpty(this._DefaultRegion), out var region, this.SessionState);
+                this.TryGetRegion(true, out var region, out var regionSource, this.SessionState);
                 this._RegionEndpoint = region;
 
                 if (this._RegionEndpoint == null)
@@ -393,27 +387,6 @@ namespace Firefly.PSCloudFormation
         }
 
         /// <summary>
-        /// Cmdlet end processing - dispose resources.
-        /// </summary>
-        protected override void EndProcessing()
-        {
-            base.EndProcessing();
-            this._ClientFactory?.Dispose();
-
-            (this.Context.S3Util as S3Util)?.Dispose();
-        }
-
-        /// <summary>
-        /// Gets a web proxy.
-        /// </summary>
-        /// <param name="sessionState">State of the session.</param>
-        /// <returns>A <see cref="WebProxy"/> object to use for calls.</returns>
-        protected WebProxy GetWebProxy(SessionState sessionState)
-        {
-            return ProxySettings.GetFromSettingsVariable(sessionState)?.GetWebProxy();
-        }
-
-        /// <summary>
         /// Tests whether the named parameter was bound.
         /// </summary>
         /// <param name="parameterName">Name of the parameter.</param>
@@ -424,91 +397,14 @@ namespace Firefly.PSCloudFormation
         }
 
         /// <summary>
-        /// Asks for the user's MFA code.
+        /// Cmdlet end processing - dispose resources.
         /// </summary>
-        /// <returns>Code input by user.</returns>
-        protected string ReadMFACode()
+        protected override void EndProcessing()
         {
-            Console.Write("Enter MFA code:");
-            var text = string.Empty;
-            while (true)
-            {
-                var consoleKeyInfo = Console.ReadKey(true);
-                if (consoleKeyInfo.Key == ConsoleKey.Backspace)
-                {
-                    if (text.Length > 0)
-                    {
-                        text = text.Remove(text.Length - 1);
-                        var left = Console.CursorLeft - 1;
-                        Console.SetCursorPosition(left, Console.CursorTop);
-                        Console.Write(" ");
-                        Console.SetCursorPosition(left, Console.CursorTop);
-                    }
-                }
-                else
-                {
-                    if (consoleKeyInfo.Key == ConsoleKey.Enter)
-                    {
-                        break;
-                    }
+            base.EndProcessing();
+            this._ClientFactory?.Dispose();
 
-                    text += consoleKeyInfo.KeyChar.ToString();
-                    Console.Write("*");
-                }
-            }
-
-            Console.WriteLine();
-            return text;
-        }
-
-        /// <summary>
-        /// For credentials that require additional user input, set this up and perform it.
-        /// </summary>
-        /// <param name="credentials">The credentials.</param>
-        /// <param name="psHost">The ps host.</param>
-        /// <param name="sessionState">State of the session.</param>
-        protected void SetProxyAndCallbackIfNecessary(
-            AWSCredentials credentials,
-            PSHost psHost,
-            SessionState sessionState)
-        {
-            this.SetupIfFederatedCredentials(credentials, psHost, sessionState);
-            this.SetupIfAssumeRoleCredentials(credentials, sessionState);
-        }
-
-        /// <summary>
-        /// Do user interaction that may be required for assumed credentials
-        /// </summary>
-        /// <param name="credentials">The credentials.</param>
-        /// <param name="sessionState">State of the session.</param>
-        protected void SetupIfAssumeRoleCredentials(AWSCredentials credentials, SessionState sessionState)
-        {
-            if (credentials is AssumeRoleAWSCredentials assumeRoleAWSCredentials)
-            {
-                assumeRoleAWSCredentials.Options.MfaTokenCodeCallback = this.ReadMFACode;
-                assumeRoleAWSCredentials.Options.ProxySettings = this.GetWebProxy(sessionState);
-            }
-        }
-
-        /// <summary>
-        /// Do user interaction that may be required for federated credentials
-        /// </summary>
-        /// <param name="credentials">The credentials.</param>
-        /// <param name="psHost">The ps host.</param>
-        /// <param name="sessionState">State of the session.</param>
-        protected void SetupIfFederatedCredentials(AWSCredentials credentials, PSHost psHost, SessionState sessionState)
-        {
-            if (credentials is FederatedAWSCredentials federatedAWSCredentials)
-            {
-                var customCallbackState = new SAMLCredentialCallbackState
-                                              {
-                                                  Host = psHost,
-                                                  CmdletNetworkCredentialParameter = this.NetworkCredential
-                                              };
-                federatedAWSCredentials.Options.CredentialRequestCallback = this.UserCredentialCallbackHandler;
-                federatedAWSCredentials.Options.CustomCallbackState = customCallbackState;
-                federatedAWSCredentials.Options.ProxySettings = this.GetWebProxy(sessionState);
-            }
+            (this.Context.S3Util as S3Util)?.Dispose();
         }
 
         /// <summary>
@@ -590,344 +486,6 @@ namespace Firefly.PSCloudFormation
                         ErrorCategory.InvalidOperation,
                         errorSource));
             }
-        }
-
-        /// <summary>
-        /// Main call to determine AWS credentials given credential arguments on the command line and all other sources
-        /// </summary>
-        /// <param name="psHost">The PowerShell host.</param>
-        /// <param name="sessionState">State of the session.</param>
-        /// <returns><c>true</c> if credentials were found; else <c>false</c></returns>
-        protected bool TryGetCredentials(PSHost psHost, SessionState sessionState)
-        {
-            var haveProfileName = !string.IsNullOrEmpty(this.ProfileName);
-
-            var credentialProfileStoreChain = new CredentialProfileStoreChain(this.ProfileLocation);
-            if (AWSCredentialsFactory.TryGetAWSCredentials(
-                this.GetCredentialProfileOptions(),
-                credentialProfileStoreChain,
-                out var awsCredentials))
-            {
-                this.SetProxyAndCallbackIfNecessary(awsCredentials, psHost, sessionState);
-            }
-
-            if (awsCredentials == null && haveProfileName)
-            {
-                if (!credentialProfileStoreChain.TryGetProfile(this.ProfileName, out var profile))
-                {
-                    return false;
-                }
-
-                awsCredentials = AWSCredentialsFactory.GetAWSCredentials(profile, credentialProfileStoreChain);
-                this.SetProxyAndCallbackIfNecessary(awsCredentials, psHost, sessionState);
-            }
-
-            if (awsCredentials == null && this.Credential != null)
-            {
-                awsCredentials = this.Credential;
-            }
-
-            if (awsCredentials == null && sessionState != null)
-            {
-                var storedCredentials = sessionState.PSVariable.GetValue("StoredAWSCredentials");
-
-                if (storedCredentials is AWSPSCredentials awsPsCredentials)
-                {
-                    awsCredentials = GetCredentialsFromPSCredentials(awsPsCredentials);
-                }
-            }
-
-            if (awsCredentials == null)
-            {
-                try
-                {
-                    // Will throw if environment variables not set
-                    awsCredentials = new EnvironmentVariablesAWSCredentials();
-                }
-                catch
-                {
-                    // Swallow and continue
-                }
-            }
-
-            if (awsCredentials == null && !haveProfileName
-                                       && credentialProfileStoreChain.TryGetProfile("default", out var defaultProfile)
-                                       && defaultProfile.CanCreateAWSCredentials)
-            {
-                awsCredentials = AWSCredentialsFactory.GetAWSCredentials(defaultProfile, credentialProfileStoreChain);
-                this.SetProxyAndCallbackIfNecessary(awsCredentials, psHost, sessionState);
-            }
-
-            if (awsCredentials == null
-                && credentialProfileStoreChain.TryGetProfile("AWS PS Default", out var defaultPsProfile)
-                && defaultPsProfile.CanCreateAWSCredentials && AWSCredentialsFactory.TryGetAWSCredentials(
-                    defaultPsProfile,
-                    credentialProfileStoreChain,
-                    out awsCredentials))
-            {
-                this.SetProxyAndCallbackIfNecessary(awsCredentials, psHost, sessionState);
-            }
-
-            if (awsCredentials == null)
-            {
-                try
-                {
-                    if (!string.IsNullOrEmpty(
-                            Environment.GetEnvironmentVariable("AWS_CONTAINER_CREDENTIALS_RELATIVE_URI")))
-                    {
-                        awsCredentials = new ECSTaskCredentials();
-                    }
-                    else
-                    {
-                        awsCredentials = new InstanceProfileAWSCredentials();
-                    }
-                }
-                catch
-                {
-                    awsCredentials = null;
-                }
-            }
-
-            if (awsCredentials != null)
-            {
-                this._CurrentCredentials = awsCredentials;
-            }
-
-            return awsCredentials != null;
-        }
-
-        /// <summary>
-        /// Try to determine user's current region from available sources
-        /// </summary>
-        /// <param name="useInstanceMetadata">if set to <c>true</c> [use instance metadata].</param>
-        /// <param name="region">The region.</param>
-        /// <param name="sessionState">State of the session.</param>
-        /// <returns><c>true</c> if region was determined; else <c>false</c>.</returns>
-        /// <exception cref="ArgumentException">Unsupported parameter type; Region must be a string containing the system name for a region, or an AWSRegion instance</exception>
-        /// <exception cref="ArgumentOutOfRangeException">Unsupported region</exception>
-        protected bool TryGetRegion(bool useInstanceMetadata, out RegionEndpoint region, SessionState sessionState)
-        {
-            region = null;
-            var source = RegionSource.Unknown;
-
-            if (this.Region != null)
-            {
-                var regionSystemName = string.Empty;
-
-                switch (this.Region)
-                {
-                    case PSObject psobject:
-                        regionSystemName = !(psobject.BaseObject is AWSRegion)
-                                               ? psobject.BaseObject as string
-                                               : (psobject.BaseObject as AWSRegion)?.Region;
-                        break;
-
-                    case string s:
-                        regionSystemName = s;
-                        break;
-                }
-
-                if (string.IsNullOrEmpty(regionSystemName))
-                {
-                    throw new ArgumentException(
-                        "Unsupported parameter type; Region must be a string containing the system name for a region, or an AWSRegion instance");
-                }
-
-                try
-                {
-                    region = RegionEndpoint.GetBySystemName(regionSystemName);
-                    source = RegionSource.String;
-                }
-                catch (Exception ex)
-                {
-                    throw new ArgumentOutOfRangeException(
-                        $"Unsupported Region value. Supported values: {string.Join(", ", RegionEndpoint.EnumerableAllRegions)}",
-                        ex);
-                }
-            }
-
-            if (region == null && sessionState != null)
-            {
-                var value = sessionState.PSVariable.GetValue("StoredAWSRegion");
-
-                if (value is string s)
-                {
-                    region = RegionEndpoint.GetBySystemName(s);
-                    source = RegionSource.Session;
-                }
-            }
-
-            if (region == null && !TryLoadRegionFromProfile("default", this.ProfileLocation, ref region, ref source))
-            {
-                TryLoadRegionFromProfile("AWS PS Default", this.ProfileLocation, ref region, ref source);
-            }
-
-            if (region == null)
-            {
-                try
-                {
-                    // Throws if environment variable undefined
-                    var environmentVariableAWSRegion = new EnvironmentVariableAWSRegion();
-                    region = environmentVariableAWSRegion.Region;
-                    source = RegionSource.Environment;
-                }
-                catch
-                {
-                    // Do nothing
-                }
-            }
-
-            if (region == null && useInstanceMetadata)
-            {
-                try
-                {
-                    region = EC2InstanceMetadata.Region;
-                    if (region != null)
-                    {
-                        source = RegionSource.InstanceMetadata;
-                    }
-                }
-                catch
-                {
-                    // Do nothing
-                }
-            }
-
-            if (region != null)
-            {
-                return source != RegionSource.Unknown;
-            }
-
-            return false;
-        }
-
-        /// <summary>
-        /// Callback handler for SAML authentication.
-        /// </summary>
-        /// <param name="callbackArguments">The callback arguments.</param>
-        /// <returns>User's network credentials</returns>
-        protected NetworkCredential UserCredentialCallbackHandler(CredentialRequestCallbackArgs callbackArguments)
-        {
-            if (!(callbackArguments.CustomState is SAMLCredentialCallbackState sAMLCredentialCallbackState))
-            {
-                return null;
-            }
-
-            PSCredential psCredential = null;
-            string message = null;
-            if (!callbackArguments.PreviousAuthenticationFailed)
-            {
-                if (sAMLCredentialCallbackState.CmdletNetworkCredentialParameter != null)
-                {
-                    psCredential = sAMLCredentialCallbackState.CmdletNetworkCredentialParameter;
-                    sAMLCredentialCallbackState.CmdletNetworkCredentialParameter = null;
-                }
-                else if (sAMLCredentialCallbackState.ShellNetworkCredentialParameter != null)
-                {
-                    psCredential = sAMLCredentialCallbackState.ShellNetworkCredentialParameter;
-                }
-                else
-                {
-                    message =
-                        $"Enter your credentials to authenticate and obtain AWS role credentials for the profile '{callbackArguments.ProfileName}'";
-                }
-            }
-            else
-            {
-                message =
-                    $"Authentication failed. Enter the password for '{callbackArguments.UserIdentity}' to try again.";
-            }
-
-            var userName = string.IsNullOrEmpty(callbackArguments.UserIdentity)
-                               ? null
-                               : callbackArguments.UserIdentity.TrimStart('\\');
-            if (psCredential == null)
-            {
-                psCredential = sAMLCredentialCallbackState.Host.UI.PromptForCredential(
-                    "Authenticating for AWS Role Credentials",
-                    message,
-                    userName,
-                    string.Empty);
-            }
-
-            return psCredential?.GetNetworkCredential();
-        }
-
-        /// <summary>
-        /// Helper to extract the value of the internal <c>Credentials</c> property of <see cref="AWSPSCredentials"/>
-        /// </summary>
-        /// <param name="psCredentials"><see cref="AWSPSCredentials"/> object.</param>
-        /// <returns><see cref="AWSCredentials"/> value.</returns>
-        /// <exception cref="InvalidOperationException">Property 'Credentials' not found on {typeof(AWSPSCredentials).Name}</exception>
-        private static AWSCredentials GetCredentialsFromPSCredentials(AWSPSCredentials psCredentials)
-        {
-            var prop = typeof(AWSPSCredentials).GetProperty(
-                "Credentials",
-                BindingFlags.Instance | BindingFlags.NonPublic);
-
-            if (prop != null)
-            {
-                return (AWSCredentials)prop.GetMethod.Invoke(psCredentials, null);
-            }
-
-            throw new InvalidOperationException($"Property 'Credentials' not found on {nameof(AWSPSCredentials)}");
-        }
-
-        /// <summary>
-        /// Tries the load region from profile.
-        /// </summary>
-        /// <param name="name">The name.</param>
-        /// <param name="profileLocation">The profile location.</param>
-        /// <param name="region">The region.</param>
-        /// <param name="source">The source.</param>
-        /// <returns><c>true</c> if region was acquired; else <c>false</c></returns>
-        private static bool TryLoadRegionFromProfile(
-            string name,
-            string profileLocation,
-            ref RegionEndpoint region,
-            ref RegionSource source)
-        {
-            if (SettingsStore.TryGetProfile(name, profileLocation, out var profile) && profile.Region != null)
-            {
-                region = profile.Region;
-                source = RegionSource.Saved;
-                return true;
-            }
-
-            return false;
-        }
-
-        /// <summary>
-        /// Captures the PSHost and executing cmdlet state for use in our credential callback
-        /// handler.
-        /// </summary>
-        private class SAMLCredentialCallbackState
-        {
-            /// <summary>
-            /// Gets or sets any PSCredential argument supplied to the current cmdlet invocation.
-            /// This overrides ShellNetworkCredentialParameter that may have been set 
-            /// in the shell when Set-AWSCredentials was invoked. The value is cleared
-            /// after use.
-            /// </summary>
-            public PSCredential CmdletNetworkCredentialParameter { get; set; }
-
-            /// <summary>
-            /// Gets or sets the execution host, used to display credential prompts
-            /// </summary>
-            public PSHost Host { get; set; }
-
-            /// <summary>
-            /// Gets or sets the Shell Network Credential parameter
-            /// </summary>
-            /// <value>
-            /// Null or the value of the NetworkCredential parameter that was supplied
-            /// when the role profile was set active in the shell via Set-AWSCredentials.
-            /// If set, this credential is used if a more local scope credential cannot
-            /// be found in SelfNetworkCredentialParameter. This value is retained after 
-            /// use.
-            /// </value>
-            // ReSharper disable once UnusedAutoPropertyAccessor.Local
-            public PSCredential ShellNetworkCredentialParameter { get; set; }
         }
     }
 }
