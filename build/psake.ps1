@@ -120,6 +120,7 @@ Task GenerateReferenceAssemblies -Depends Init {
     ) |
     ForEach-Object {
 
+        $module = $_
         $manifest = Get-Module -ListAvailable $_ |
         Sort-Object -Descending Version |
         Select-Object -First 1 |
@@ -135,10 +136,17 @@ Task GenerateReferenceAssemblies -Depends Init {
         Get-ChildItem -Path (Split-Path -Parent $manifest) -Filter *.dll |
         Foreach-Object {
 
+            $dll = $_.FullName
+
+            if ($script:IsWindows)
+            {
+                # AWS.Tools.Common seems to be open. Try unloading
+                Remove-Module $module -ErrorAction SilentlyContinue
+            }
             try
             {
                 Write-Host "Processing $($_.Name)"
-                & $refasmer -O $referenceDir -c $_.FullName 2>&1
+                & $refasmer -O $referenceDir -c $dll 2>&1
             }
             catch
             {
