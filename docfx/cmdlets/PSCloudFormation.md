@@ -32,3 +32,6 @@ Deletes, then recreates a stack.
 ### [Update-PSCFNStack](Update-PSCFNStack.md)
 Calls the AWS CloudFormation UpdateStack API operation.
 
+### [New-PSCFNChangeset](New-PSCFNChangeset.md)
+Calls the AWS CloudFormation CreateChangeSet API operation.
+
