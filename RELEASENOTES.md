@@ -1,5 +1,8 @@
 # Release Notes
 
+# 4.1.6.7 
+
+* Tech/Enhancement - Remove dependency on `AWS.Tools.Common` thus removing the restriction that the module may only run with a specific vesion of `AWS.Tools`. [Issue link](https://github.com/fireflycons/PSCloudFormation/issues/99)
 # 4.1.6.6
 
 * Enhancement - Add new cmdlet `New-PSCFNChangeset`. Add mechanism to get detailed changeset information and view in browser, save to file or output to pipeline. [Issue link](https://github.com/fireflycons/PSCloudFormation/issues/96)
