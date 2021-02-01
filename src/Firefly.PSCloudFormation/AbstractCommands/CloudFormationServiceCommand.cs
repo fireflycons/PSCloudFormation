@@ -2,7 +2,7 @@
 // ReSharper disable StyleCop.SA1305
 // ReSharper disable InconsistentNaming
 
-namespace Firefly.PSCloudFormation
+namespace Firefly.PSCloudFormation.AbstractCommands
 {
     using System;
     using System.Collections.Generic;

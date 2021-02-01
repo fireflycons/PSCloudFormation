@@ -6,6 +6,7 @@
     using Amazon.CloudFormation;
 
     using Firefly.CloudFormation.Model;
+    using Firefly.PSCloudFormation.AbstractCommands;
 
     /// <summary>
     /// <para type="synopsis">Deletes, then recreates a stack.</para>
@@ -29,7 +30,7 @@
     /// If creation of the stack fails, it will not be rolled back.
     /// </para>
     /// </example>
-    /// <seealso cref="Firefly.PSCloudFormation.BaseCloudFormationCommand" />
+    /// <seealso cref="BaseCloudFormationCommand" />
     [Cmdlet(VerbsCommon.Reset, "PSCFNStack")]
     [OutputType(typeof(CloudFormationResult))]
     // ReSharper disable once UnusedMember.Global

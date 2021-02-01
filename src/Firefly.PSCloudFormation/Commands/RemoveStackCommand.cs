@@ -5,6 +5,7 @@
 
     using Firefly.CloudFormation;
     using Firefly.CloudFormation.Model;
+    using Firefly.PSCloudFormation.AbstractCommands;
 
     /// <summary>
     /// <para type="synopsis">Calls the AWS CloudFormation DeleteStack API operation.</para>
@@ -44,7 +45,7 @@
     /// if you want to proceed with the delete and if you answer yes, then ALL resources will be deleted.
     /// </para>
     /// </example>
-    /// <seealso cref="Firefly.PSCloudFormation.BaseCloudFormationCommand" />
+    /// <seealso cref="BaseCloudFormationCommand" />
     [Cmdlet(VerbsCommon.Remove, "PSCFNStack")]
     [OutputType(typeof(CloudFormationResult))]
     // ReSharper disable once UnusedMember.Global

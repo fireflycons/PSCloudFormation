@@ -1,4 +1,4 @@
-﻿namespace Firefly.PSCloudFormation
+﻿namespace Firefly.PSCloudFormation.AbstractCommands
 {
     using System;
     using System.Collections;
@@ -147,7 +147,7 @@
                 // In following with PowerShell conventions, do a case insensitive compare on parameter names.
                 var property = this.GetType().GetProperties(BindingFlags.Instance | BindingFlags.Public).FirstOrDefault(
                     p => string.Compare(p.Name, paramName, StringComparison.OrdinalIgnoreCase) == 0
-                         && p.GetCustomAttribute<ParameterAttribute>() != null);
+                         && CustomAttributeExtensions.GetCustomAttribute<ParameterAttribute>((MemberInfo)p) != null);
 
                 if (property != null)
                 {

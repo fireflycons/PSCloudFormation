@@ -11,6 +11,7 @@
     using Firefly.CloudFormation;
     using Firefly.CloudFormation.Model;
     using Firefly.CloudFormation.Parsers;
+    using Firefly.PSCloudFormation.AbstractCommands;
 
     /// <summary>
     /// <para type="synopsis">Get the outputs of a stack in various formats</para>

@@ -4,7 +4,9 @@
     using System.Collections.Generic;
     using System.Management.Automation;
     using System.Threading.Tasks;
-    
+
+    using Firefly.PSCloudFormation.AbstractCommands;
+
     /// <summary>
     /// <para type="synopsis">
     /// Calls the AWS CloudFormation CreateChangeSet API operation.
@@ -44,8 +46,8 @@
     /// The template in my-stack.yaml is used and updated with new customization parameters ('PK1' and 'PK2' represent the names of parameters declared in the template content, 'PV1' and 'PV2' represent the values for those parameters.
     /// </para>
     /// </example>
-    /// <seealso cref="Firefly.PSCloudFormation.StackParameterCloudFormationCommand" />
-    /// <seealso cref="Firefly.PSCloudFormation.IChangesetArguments" />
+    /// <seealso cref="StackParameterCloudFormationCommand" />
+    /// <seealso cref="IChangesetArguments" />
     [Cmdlet(VerbsCommon.New, "PSCFNChangeset")]
     // ReSharper disable once UnusedMember.Global
     public class NewChangesetCommand : StackParameterCloudFormationCommand, IChangesetArguments

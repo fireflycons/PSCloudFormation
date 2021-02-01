@@ -1,4 +1,4 @@
-﻿namespace Firefly.PSCloudFormation
+﻿namespace Firefly.PSCloudFormation.AbstractCommands
 {
     using System;
     using System.Collections;
@@ -33,7 +33,7 @@
     /// are not user-supplied.
     /// </para>
     /// </summary>
-    /// <seealso cref="Firefly.PSCloudFormation.BaseCloudFormationCommand" />
+    /// <seealso cref="BaseCloudFormationCommand" />
     /// <seealso cref="System.Management.Automation.IDynamicParameters" />
     public abstract class StackParameterCloudFormationCommand : BaseCloudFormationCommand, IDynamicParameters
     {

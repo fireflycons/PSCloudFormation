@@ -14,6 +14,7 @@
 
     using Firefly.CloudFormation;
     using Firefly.CloudFormation.Model;
+    using Firefly.PSCloudFormation.AbstractCommands;
 
     /// <summary>
     /// <para type="synopsis">Calls the AWS CloudFormation UpdateStack API operation.</para>
@@ -61,7 +62,7 @@
     /// If update of the stack fails, it will be rolled back.
     /// </para>
     /// </example>
-    /// <seealso cref="Firefly.PSCloudFormation.StackParameterCloudFormationCommand" />
+    /// <seealso cref="StackParameterCloudFormationCommand" />
     [Cmdlet(VerbsData.Update, "PSCFNStack")]
     [OutputType(typeof(CloudFormationResult))]
     // ReSharper disable once UnusedMember.Global

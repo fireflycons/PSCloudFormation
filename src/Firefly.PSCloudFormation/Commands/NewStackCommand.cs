@@ -7,6 +7,7 @@
 
     using Firefly.CloudFormation;
     using Firefly.CloudFormation.Model;
+    using Firefly.PSCloudFormation.AbstractCommands;
 
     /// <summary>
     /// <para type="synopsis">Calls the AWS CloudFormation CreateStack API operation.</para>
@@ -57,7 +58,7 @@
     /// As the above example, but the command will return immediately.
     /// </para>
     /// </example>
-    /// <seealso cref="Firefly.PSCloudFormation.StackParameterCloudFormationCommand" />
+    /// <seealso cref="StackParameterCloudFormationCommand" />
     [Cmdlet(VerbsCommon.New, "PSCFNStack")]
     [OutputType(typeof(CloudFormationResult))]
     // ReSharper disable once UnusedMember.Global
