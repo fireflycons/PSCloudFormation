@@ -15,6 +15,7 @@
         /// The os platform.
         /// </value>
         // ReSharper disable once StyleCop.SA1650
+        // ReSharper disable once InconsistentNaming
         OSPlatform OSPlatform { get; }
     }
 }

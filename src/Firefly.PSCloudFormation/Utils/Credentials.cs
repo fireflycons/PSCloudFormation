@@ -24,6 +24,7 @@
  * this module only running against a specific version of AWS.Tools
  */
 
+#pragma warning disable 1591
 // ReSharper disable StyleCop.SA1600
 // ReSharper disable StyleCop.SA1201
 // ReSharper disable InconsistentNaming
@@ -31,7 +32,6 @@
 // ReSharper disable StyleCop.SA1503
 // ReSharper disable StyleCop.SA1402
 // ReSharper disable StyleCop.SA1305
-#pragma warning disable 1591
 // ReSharper disable once CheckNamespace
 namespace Amazon.PowerShell.Common
 {
