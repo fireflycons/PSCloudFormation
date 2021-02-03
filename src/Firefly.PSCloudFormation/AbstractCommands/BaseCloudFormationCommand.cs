@@ -13,7 +13,6 @@
 
     using Firefly.CloudFormation;
     using Firefly.CloudFormation.Model;
-    using Firefly.PSCloudFormation.Commands;
     using Firefly.PSCloudFormation.Utils;
 
     /// <summary>
@@ -21,6 +20,27 @@
     /// </summary>
     public abstract class BaseCloudFormationCommand : CloudFormationServiceCommand
     {
+        /// <summary>
+        /// An empty object array used as second parameter to <see cref="PropertyInfo.GetValue(object, object[])"/>
+        /// </summary>
+        private static readonly object[] EmptyObjectArray = new object[0];
+
+        /// <summary>
+        /// Gets or sets the select delegate.
+        /// </summary>
+        /// <value>
+        /// The select delegate.
+        /// </value>
+        protected Func<object> SelectDelegate { get; set; }
+
+        /// <summary>
+        /// Gets or sets the output object.
+        /// </summary>
+        /// <value>
+        /// The output object.
+        /// </value>
+        protected object OutputObject { get; set; }
+
         /// <summary>
         /// Gets or sets the client request token.
         /// <para type="description">
@@ -47,6 +67,7 @@
         /// <value>
         /// The force.
         /// </value>
+        [SuppressParameterSelect]
         [Parameter(ValueFromPipelineByPropertyName = true)]
         public SwitchParameter Force { get; set; }
 
@@ -60,6 +81,7 @@
         /// <value>
         /// The pass thru.
         /// </value>
+        [SuppressParameterSelect]
         [Parameter(ValueFromPipelineByPropertyName = true)]
         public SwitchParameter PassThru { get; set; }
 
@@ -113,6 +135,18 @@
         internal WorkingDirectory WorkingDirectory { get; private set; }
 
         /// <summary>
+        /// Gets or sets the stack's arn.
+        /// </summary>
+        /// <value>
+        /// The arn.
+        /// </value>
+        [SelectableOutputProperty]
+        protected string Arn { get; set; }
+
+        [SelectableOutputProperty]
+        protected CloudFormationResult Result { get; set; }
+
+        /// <summary>
         /// Gets or sets the resolved changeset detail.
         /// </summary>
         /// <value>
@@ -127,44 +161,6 @@
         /// The resolved resources to import.
         /// </value>
         protected string ResolvedResourcesToImport { get; set; }
-
-        /// <summary>
-        /// Processes the -Select argument.
-        /// </summary>
-        /// <returns><c>null</c> if no -Select parameter else a <see cref="SelectParameterOption"/> indicating what the caller wants.</returns>
-        /// <exception cref="ArgumentException">Invalid value for -Select parameter.</exception>
-        internal SelectParameterOption ProcessSelectArgument()
-        {
-            if (this.Select == null)
-            {
-                return null;
-            }
-
-            if (this.Select.StartsWith("^"))
-            {
-                var paramName = this.Select.Substring(1);
-
-                // In following with PowerShell conventions, do a case insensitive compare on parameter names.
-                var property = this.GetType().GetProperties(BindingFlags.Instance | BindingFlags.Public).FirstOrDefault(
-                    p => string.Compare(p.Name, paramName, StringComparison.OrdinalIgnoreCase) == 0
-                         && CustomAttributeExtensions.GetCustomAttribute<ParameterAttribute>((MemberInfo)p) != null);
-
-                if (property != null)
-                {
-                    return new SelectParameterOption { SelectedProperty = property };
-                }
-            }
-            else if (this.Select == "*")
-            {
-                return new SelectParameterOption { SelectedOutput = "*" };
-            }
-            else if (this.GetSelectArgumentValues().Contains(this.Select.ToLowerInvariant()))
-            {
-                return new SelectParameterOption { SelectedOutput = this.Select.ToLowerInvariant() };
-            }
-
-            throw new ArgumentException("Invalid value for -Select parameter.");
-        }
 
         /// <summary>
         /// Asks a yes/no question.
@@ -235,17 +231,6 @@
         }
 
         /// <summary>
-        /// Accumulate all outputs for -Select *.
-        /// </summary>
-        /// <param name="stack"><see cref="Amazon.CloudFormation.Model.Stack"/> object, which will be <c>null</c> in the case of <see cref="RemoveStackCommand"/>.</param>
-        /// <returns><see cref="Hashtable"/> of outputs</returns>
-        protected virtual Hashtable SelectStar(Amazon.CloudFormation.Model.Stack stack)
-        {
-            // At this level, nothing to do
-            return new Hashtable();
-        }
-
-        /// <summary>
         /// Processes the record.
         /// </summary>
         protected override void ProcessRecord()
@@ -253,8 +238,20 @@
             const int StackOperationTask = 0;
             const int UpdateCancelTask = 1;
 
-            var ops = new CloudFormationOperations(this._ClientFactory, this.Context);
-            var selectParameterOption = this.ProcessSelectArgument();
+            if (this.ParameterWasBound(nameof(this.Select)))
+            {
+                this.SelectDelegate = this.CreateSelectDelegate(this.Select) ??
+                            throw new ArgumentException("Invalid value for -Select parameter.", nameof(this.Select));
+                
+                if (this.PassThru.IsPresent)
+                {
+                    throw new ArgumentException("-PassThru cannot be used when -Select is specified.", nameof(this.Select));
+                }
+            }
+            else if (this.PassThru.IsPresent)
+            {
+                this.SelectDelegate = () => this.Arn;
+            }
 
             base.ProcessRecord();
 
@@ -302,93 +299,27 @@
                 }
 
                 // Handle output according to -Select
-                object outputObject = null;
-                var stackArn = ((CloudFormationResult)stackOperation.Result)?.StackArn;
+                this.Result = (CloudFormationResult)stackOperation.Result;
+                this.Arn = this.Result.StackArn;
+                this.AfterOnProcessRecord();
 
-                if (selectParameterOption != null)
+                this.OutputObject = this.SelectDelegate?.Invoke();
+
+                if (this.OutputObject != null)
                 {
-                    if (selectParameterOption.SelectedProperty != null)
-                    {
-                        outputObject = selectParameterOption.SelectedProperty.GetValue(this);
-                    }
-                    else
-                    {
-                        switch (selectParameterOption.SelectedOutput)
-                        {
-                            case "outputs":
-
-                                outputObject = new Hashtable(ops.GetStackAsync(this.StackName).Result.Outputs.ToDictionary(o => o.OutputKey, o => o.OutputValue));
-                                break;
-
-                            case "arn":
-                                outputObject = stackArn;
-                                break;
-
-                            case "result":
-
-                                if (stackOperation.Result != null)
-                                {
-                                    outputObject = (CloudFormationResult)stackOperation.Result;
-                                }
-
-                                break;
-
-                            case "*":
-
-                                var stack = this is RemoveStackCommand ? null : ops.GetStackAsync(this.StackName).Result;
-
-                                outputObject = new Hashtable
-                                                   {
-                                                       { "Status", (CloudFormationResult)stackOperation.Result },
-                                                       { "Arn", stackArn }
-                                                   };
-
-                                var additionalOutputs = this.SelectStar(stack);
-
-                                foreach (DictionaryEntry kv in additionalOutputs)
-                                {
-                                    ((Hashtable)outputObject).Add(kv.Key, kv.Value);
-                                }
-
-                                break;
-
-                            default:
-
-                                outputObject = this.GetSelectedOutput(selectParameterOption.SelectedOutput);
-                                break;
-                        }
-                    }
-                }
-
-                if (outputObject != null)
-                {
-                    this.WriteObject(outputObject);
+                    this.WriteObject(this.OutputObject);
                 }
             }
         }
 
         /// <summary>
-        /// Gets the valid values for select argument.
+        /// Perform any post stack processing, such as retrieving values for select properties
         /// </summary>
-        /// <returns>List of acceptable values</returns>
-        protected virtual List<string> GetSelectArgumentValues()
+        protected virtual void AfterOnProcessRecord()
         {
-            // At this level, stack ARN or result can be returned
-            return new List<string> { "arn", "result" };
         }
 
-        /// <summary>
-        /// Gets the selected output.
-        /// </summary>
-        /// <param name="outputName">Name of the output.</param>
-        /// <returns>The value for the selected output.</returns>
-        /// <exception cref="ArgumentException">Invalid value for -Select parameter.</exception>
-        protected virtual object GetSelectedOutput(string outputName)
-        {
-            throw new ArgumentException("Invalid value for -Select parameter.");
-        }
-
-        /// <summary>
+       /// <summary>
         /// Callback method for delete stack if retain resources were given, but stack is not DELETE_FAILED
         /// </summary>
         /// <returns><c>true</c> if delete should proceed; else <c>false</c></returns>
@@ -419,6 +350,101 @@
                        ChoiceResponse.No,
                        "Delete now.",
                        "Cancel operation.") == ChoiceResponse.Yes;
+        }
+
+        /// <summary>
+        /// Creates a delegate to retrieve output requested by -Select
+        /// </summary>
+        /// <param name="selectString">The select string.</param>
+        /// <returns>Delegate to call at end of cmdlet processing to retrieve output value</returns>
+        protected Func<object> CreateSelectDelegate(string selectString)
+        {
+            switch (selectString)
+            {
+                case null:
+                case "":
+                    return null;
+
+                case "*":
+                    return () =>
+                        {
+                            // Compile all visible output properties to hashtable
+                            var result = new Hashtable();
+
+                            foreach (var property in this.GetType().GetProperties(BindingFlags.Instance | BindingFlags.NonPublic).Where(
+                                p => p.GetCustomAttributes<SelectableOutputPropertyAttribute>().Any()))
+                            {
+                                result.Add(property.Name, property.GetValue(this, EmptyObjectArray));
+                            }
+
+                            return result;
+                        };
+
+                case var s when s.StartsWith("^"):
+                    {
+                        // An input parameter value is requested
+                        var parameterName = selectString.Substring(1);
+
+                        PropertyInfo selectedProperty = null;
+                        foreach (var property in this.GetType().GetProperties(BindingFlags.Public | BindingFlags.Instance)
+                            .Where(
+                                p => p.GetCustomAttributes<ParameterAttribute>().Any()
+                                     && !p.GetCustomAttributes<SuppressParameterSelectAttribute>().Any()))
+                        {
+                            if (property.Name.Equals(parameterName, StringComparison.OrdinalIgnoreCase))
+                            {
+                                selectedProperty = property;
+                                break;
+                            }
+
+                            if (property.GetCustomAttributes<AliasAttribute>(false)
+                                .SelectMany(attribute => attribute.AliasNames).Any(
+                                    attributeAlias => attributeAlias.Equals(
+                                        parameterName,
+                                        StringComparison.OrdinalIgnoreCase)))
+                            {
+                                selectedProperty = property;
+                            }
+
+                            if (selectedProperty != null)
+                            {
+                                break;
+                            }
+                        }
+
+                        var getter = selectedProperty?.GetGetMethod();
+                        
+                        if (getter == null)
+                        {
+                            return null;
+                        }
+
+                        return () => getter.Invoke(this, EmptyObjectArray);
+                    }
+
+                default:
+                    {
+                        // An output property is requested
+                        var requestedOutputProperty = this.GetType().GetProperties(BindingFlags.Instance | BindingFlags.NonPublic)
+                            .FirstOrDefault(
+                                p => p.GetCustomAttributes<SelectableOutputPropertyAttribute>().Any()
+                                     && string.Compare(p.Name, selectString, StringComparison.OrdinalIgnoreCase) == 0);
+
+                        if (requestedOutputProperty == null)
+                        {
+                            return null;
+                        }
+
+                        var getter = requestedOutputProperty.GetGetMethod(true);
+                        
+                        if (getter == null)
+                        {
+                            return null;
+                        }
+
+                        return () => getter.Invoke(this, EmptyObjectArray);
+                    }
+            }
         }
     }
 }

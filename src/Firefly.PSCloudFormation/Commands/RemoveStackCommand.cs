@@ -73,7 +73,7 @@
         /// Specifying 'arn' will return the stack's ARN.
         /// Specifying 'result' will return the stack operation result.
         /// Specifying '*' will return a hash table containing a key for each of the above.
-        /// Specifying -Select '^ParameterName' will result in the cmdlet returning the selected cmdlet parameter value.
+        /// Specifying -Select '^ParameterName' will result in the cmdlet returning the selected cmdlet parameter value. Note that not all parameters are available, e.g. credential parameters.
         /// </para>
         /// </summary>
         /// <value>

@@ -2,6 +2,8 @@
   <GlobalSettings>
     <CollectionProperty Name="RecognizedWords">
         <Value>changeset</Value>
+        <Value>cmdlet</Value>
+        <Value>cmdlets</Value>
         <Value>git</Value>
     </CollectionProperty>
   </GlobalSettings>

@@ -52,6 +52,8 @@
     // ReSharper disable once UnusedMember.Global
     public class NewChangesetCommand : StackParameterCloudFormationCommand, IChangesetArguments
     {
+        // TODO: Select delegate for json changes
+
         /// <summary>
         /// The changeset detail output
         /// </summary>
@@ -169,6 +171,8 @@
         /// <value>
         /// The select.
         /// </value>
+        [SuppressParameterSelect]
+        [Parameter(ValueFromPipelineByPropertyName = true)]
         public override string Select { get; set; }
 
         /// <summary>
@@ -180,25 +184,36 @@
         protected override StackOperation StackOperation { get; } = StackOperation.Update;
 
         /// <summary>
-        /// Gets the valid values for select argument.
+        /// Gets the json changes for the changeset.
         /// </summary>
-        /// <returns>
-        /// List of acceptable values
-        /// </returns>
-        protected override List<string> GetSelectArgumentValues()
-        {
-            // Use the Select system to select JSON string output
-            var outputs = base.GetSelectArgumentValues();
-            outputs.Add("json");
-            return outputs;
-        }
+        /// <value>
+        /// The json.
+        /// </value>
+        [SelectableOutputProperty]
+        protected string Json => ((PSLogger)this.Logger).GetJsonChanges();
+
+        /// <summary>
+        /// Gets or sets the select.
+        /// <para type="description">
+        /// Use the -Select parameter to control the cmdlet output. The cmdlet doesn't have a return value by default.
+        /// Specifying 'arn' will return the stack's ARN.
+        /// Specifying 'ChangesetArn' will return the changeset's ARN.
+        /// Specifying '*' will return a hash table containing a key for each of the preceding named outputs.
+        /// Specifying -Select '^ParameterName' will result in the cmdlet returning the selected cmdlet parameter value. Note that not all parameters are available, e.g. credential parameters.
+        /// </para>
+        /// </summary>
+        /// <value>
+        /// The select.
+        /// </value>
+        [SelectableOutputProperty]
+        protected string ChangesetArn { get; private set; }
 
         /// <summary>
         /// Begins the processing.
         /// </summary>
         protected override void BeginProcessing()
         {
-            if (this.ChangesetDetail == null && !this.ShowInBrowser)
+            if (this.ChangesetDetail == null && !this.ShowInBrowser && !this.ParameterWasBound("Select"))
             {
                 // Select output as JSON to pipeline
                 this.Select = "json";
@@ -232,6 +247,9 @@
             {
                var result = await runner.UpdateStackAsync(null);
 
+               this.ChangesetArn = result.ChangesetResponse.ChangeSetId;
+               this.Arn = result.StackArn;
+
                if (this.ShowInBrowser)
                {
                    var logger = (PSLogger)this.Logger;
@@ -248,24 +266,6 @@
 
                return result;
             }
-        }
-
-        /// <summary>
-        /// Gets the JSON changes to return as selected output.
-        /// </summary>
-        /// <param name="outputName">Name of the output.</param>
-        /// <returns>
-        /// The value for the selected output.
-        /// </returns>
-        /// <exception cref="ArgumentException">Invalid value for -Select parameter.</exception>
-        protected override object GetSelectedOutput(string outputName)
-        {
-            if (outputName != "json")
-            {
-                throw new ArgumentException("Invalid value for -Select parameter.");
-            }
-
-            return ((PSLogger)this.Logger).GetJsonChanges();
         }
     }
 }

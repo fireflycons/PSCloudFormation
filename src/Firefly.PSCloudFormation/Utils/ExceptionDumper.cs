@@ -39,6 +39,7 @@
         /// <param name="ex">The exception.</param>
         public void Dump(Exception ex)
         {
+            this.output("Exception Dump:");
             this.indent = -1;
             this.DumpRecursive(ex);
         }

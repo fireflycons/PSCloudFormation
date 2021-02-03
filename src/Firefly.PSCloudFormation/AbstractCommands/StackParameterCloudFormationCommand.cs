@@ -1,7 +1,6 @@
 ﻿namespace Firefly.PSCloudFormation.AbstractCommands
 {
     using System;
-    using System.Collections;
     using System.Collections.Generic;
     using System.IO;
     using System.Linq;
@@ -16,7 +15,6 @@
     using Firefly.CloudFormation.Parsers;
     using Firefly.CloudFormation.Resolvers;
     using Firefly.CloudFormation.Utils;
-    using Firefly.PSCloudFormation.Commands;
     using Firefly.PSCloudFormation.Utils;
 
     using Tag = Amazon.CloudFormation.Model.Tag;
@@ -101,6 +99,7 @@
         /// Experimentation found that uploading the errant template to S3 first circumvents this error so is a suitable workaround, thus this option is provided.
         /// </para>
         /// </summary>
+        [SuppressParameterSelect]
         [Parameter(ValueFromPipelineByPropertyName = true)]
         public SwitchParameter ForceS3 { get; set; }
 
@@ -349,7 +348,8 @@
             }
             catch (AggregateException e)
             {
-                throw e.InnerExceptions.FirstOrDefault() ?? e;
+                var ex = e.InnerExceptions.FirstOrDefault() ?? e;
+                this.ThrowExecutionError(e.Message, this, ex);
             }
 
             var templateManager = new TemplateManager(templateResolver, this.StackOperation, this.Logger);
@@ -374,36 +374,6 @@
             return string.IsNullOrEmpty(this.ResolvedParameterFile)
                        ? new Dictionary<string, string>()
                        : ParameterFileParser.CreateParser(this.ResolveParameterFileContent()).ParseParameterFile();
-        }
-
-        /// <summary>
-        /// Accumulate all outputs for -Select *.
-        /// </summary>
-        /// <param name="stack"><see cref="Amazon.CloudFormation.Model.Stack" /> object, which will be <c>null</c> in the case of <see cref="RemoveStackCommand" />.</param>
-        /// <returns>
-        ///   <see cref="Hashtable" /> of outputs
-        /// </returns>
-        protected override Hashtable SelectStar(Amazon.CloudFormation.Model.Stack stack)
-        {
-            var returnValue = base.SelectStar(stack);
-
-            returnValue.Add("Outputs", new Hashtable(stack.Outputs.ToDictionary(o => o.OutputKey, o => o.OutputValue)));
-
-            return returnValue;
-        }
-
-        /// <summary>
-        /// Gets the valid values for select argument.
-        /// </summary>
-        /// <returns>
-        /// List of acceptable values
-        /// </returns>
-        protected override List<string> GetSelectArgumentValues()
-        {
-            // At this level, we can also include outputs
-            var values = base.GetSelectArgumentValues();
-            values.Add("outputs");
-            return values;
         }
 
         /// <summary>

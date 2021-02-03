@@ -393,11 +393,7 @@
 
                 xslt.Transform(new XmlNodeReader(xmlChanges), null, ms);
                 ms.Seek(0, SeekOrigin.Begin);
-#if DEBUG
-                var sw = new StringWriter();
-                xmlChanges.WriteTo(new XmlTextWriter(sw) { Formatting = System.Xml.Formatting.Indented });
-                var xml = sw.ToString();
-#endif
+
                 // Write HTML to temporary file and launch default browser
                 using (var tempFile = new TempFile(ms, ".html"))
                 {
