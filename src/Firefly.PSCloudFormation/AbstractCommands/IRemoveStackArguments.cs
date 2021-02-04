@@ -1,4 +1,4 @@
-﻿namespace Firefly.PSCloudFormation
+﻿namespace Firefly.PSCloudFormation.AbstractCommands
 {
     /// <summary>
     /// Parameters related to stack removal.

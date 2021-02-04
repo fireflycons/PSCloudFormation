@@ -14,6 +14,7 @@
 
     using Firefly.CloudFormation;
     using Firefly.CloudFormation.Model;
+    using Firefly.PSCloudFormation.AbstractCommands;
 
     /// <summary>
     /// <para type="synopsis">Calls the AWS CloudFormation UpdateStack API operation.</para>
@@ -61,11 +62,11 @@
     /// If update of the stack fails, it will be rolled back.
     /// </para>
     /// </example>
-    /// <seealso cref="Firefly.PSCloudFormation.StackParameterCloudFormationCommand" />
+    /// <seealso cref="StackParameterCloudFormationCommand" />
     [Cmdlet(VerbsData.Update, "PSCFNStack")]
     [OutputType(typeof(CloudFormationResult))]
     // ReSharper disable once UnusedMember.Global
-    public class UpdateStackCommand : StackParameterCloudFormationCommand, IChangesetArguments
+    public class UpdateStackCommand : StackOutputsCommand, IChangesetArguments
     {
         /// <summary>
         /// The stack policy during update location
@@ -202,13 +203,15 @@
         /// Specifying 'arn' will return the stack's ARN.
         /// Specifying 'result' will return the stack operation result.
         /// Specifying 'outputs' will return any stack outputs as a hashtable.
-        /// Specifying '*' will return a hash table containing a key for each of the above.
-        /// Specifying -Select '^ParameterName' will result in the cmdlet returning the selected cmdlet parameter value.
+        /// Specifying 'ChangesetArn' will return the changeset's ARN.
+        /// Specifying '*' will return a hash table containing a key for each of the preceding named outputs.
+        /// Specifying -Select '^ParameterName' will result in the cmdlet returning the selected cmdlet parameter value. Note that not all parameters are available, e.g. credential parameters.
         /// </para>
         /// </summary>
         /// <value>
         /// The select.
         /// </value>
+        [SuppressParameterSelect]
         [Parameter(ValueFromPipelineByPropertyName = true)]
         public override string Select { get; set; }
 
@@ -222,6 +225,7 @@
         /// <value>
         /// The wait.
         /// </value>
+        [SuppressParameterSelect]
         [Parameter(ValueFromPipelineByPropertyName = true)]
         public SwitchParameter Wait { get; set; }
 
@@ -417,7 +421,6 @@
                                             new ChoiceDescription("&View in Browser", "View detailed changeset in browser.")
                                         };
             }
-
 
             // Write out all changeset details
             logger.WriteChangesetDetails(this.ResolvedChangesetDetail);

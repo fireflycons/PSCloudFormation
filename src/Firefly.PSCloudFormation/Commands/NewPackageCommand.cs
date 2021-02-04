@@ -5,6 +5,7 @@
     using System.IO;
     using System.Management.Automation;
 
+    using Firefly.PSCloudFormation.AbstractCommands;
     using Firefly.PSCloudFormation.Utils;
 
     /// <summary>
@@ -75,7 +76,7 @@
     /// <para type="link" uri="https://fireflycons.github.io/PSCloudFormation/articles/lambda-packager.html">Packaging Lambda Dependencies</para>
     /// <para type="link" uri="https://fireflycons.github.io/PSCloudFormation/articles/s3-usage.html">PSCloudFormation private S3 bucket</para>
     /// </summary>
-    /// <seealso cref="Firefly.PSCloudFormation.CloudFormationServiceCommand" />
+    /// <seealso cref="CloudFormationServiceCommand" />
     [Cmdlet(VerbsCommon.New, "PSCFNPackage")]
     // ReSharper disable once UnusedMember.Global
     public class NewPackageCommand : CloudFormationServiceCommand

@@ -38,10 +38,13 @@
     <ProjectReference Include="..\..\..\Firefly.CloudFormation\src\Firefly.CloudFormation\Firefly.CloudFormation.csproj" />
   </ItemGroup>
   <ItemGroup Condition="'$(SolutionName)' == 'Firefly.PSCloudFormation'">
-    <PackageReference Include="Firefly.CloudFormation" Version="0.4.0" />
+    <PackageReference Include="Firefly.CloudFormation" Version="1.0.0" />
   </ItemGroup>
   <ItemGroup>
     <None Update="debug.ps1">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </None>
+    <None Update="PSCloudFormation.Completers.psm1">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </None>
     <None Update="PSCloudFormation.psd1">

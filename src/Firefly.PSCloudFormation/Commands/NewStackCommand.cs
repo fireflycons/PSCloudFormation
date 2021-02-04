@@ -7,6 +7,7 @@
 
     using Firefly.CloudFormation;
     using Firefly.CloudFormation.Model;
+    using Firefly.PSCloudFormation.AbstractCommands;
 
     /// <summary>
     /// <para type="synopsis">Calls the AWS CloudFormation CreateStack API operation.</para>
@@ -57,11 +58,11 @@
     /// As the above example, but the command will return immediately.
     /// </para>
     /// </example>
-    /// <seealso cref="Firefly.PSCloudFormation.StackParameterCloudFormationCommand" />
+    /// <seealso cref="StackParameterCloudFormationCommand" />
     [Cmdlet(VerbsCommon.New, "PSCFNStack")]
     [OutputType(typeof(CloudFormationResult))]
     // ReSharper disable once UnusedMember.Global
-    public class NewStackCommand : StackParameterCloudFormationCommand, INewStackArguments
+    public class NewStackCommand : StackOutputsCommand, INewStackArguments
     {
         /// <summary>
         /// Gets or sets the disable rollback.
@@ -109,13 +110,14 @@
         /// Specifying 'arn' will return the stack's ARN.
         /// Specifying 'result' will return the stack operation result.
         /// Specifying 'outputs' will return any stack outputs as a hashtable.
-        /// Specifying '*' will return a hash table containing a key for each of the above.
-        /// Specifying -Select '^ParameterName' will result in the cmdlet returning the selected cmdlet parameter value.
+        /// Specifying '*' will return a hash table containing a key for each of the preceding named outputs.
+        /// Specifying -Select '^ParameterName' will result in the cmdlet returning the selected cmdlet parameter value. Note that not all parameters are available, e.g. credential parameters.
         /// </para>
         /// </summary>
         /// <value>
         /// The select.
         /// </value>
+        [SuppressParameterSelect]
         [Parameter(ValueFromPipelineByPropertyName = true)]
         public override string Select { get; set; }
 

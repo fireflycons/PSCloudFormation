@@ -16,13 +16,15 @@
  */
 
 /*
- * This file is functionally unchanged from the version in AWS Tools repo at time of copying.
- * It has only had a code-tidy.
+ * This file is 99% functionally unchanged from the version in AWS Tools repo at time of copying.
+ * It has had a code-tidy. plus a helper method to acquire session credentials using reflection
+ * due to type mismatch with classes in AWS.Tools.Common
  *
  * I need these classes in here to remove the dependency on AWS.Tools.Common resulting in
- * the module only running against a specific version of AWS.Tools
+ * this module only running against a specific version of AWS.Tools
  */
 
+#pragma warning disable 1591
 // ReSharper disable StyleCop.SA1600
 // ReSharper disable StyleCop.SA1201
 // ReSharper disable InconsistentNaming
@@ -30,7 +32,6 @@
 // ReSharper disable StyleCop.SA1503
 // ReSharper disable StyleCop.SA1402
 // ReSharper disable StyleCop.SA1305
-#pragma warning disable 1591
 // ReSharper disable once CheckNamespace
 namespace Amazon.PowerShell.Common
 {
@@ -200,10 +201,11 @@ namespace Amazon.PowerShell.Common
             // shell session variable set (this allows override of machine-wide environment variables)
             if (innerCredentials == null && sessionState != null)
             {
-                var variableValue = sessionState.PSVariable.GetValue(SessionKeys.AWSCredentialsVariableName);
-                if (variableValue is AWSPSCredentials)
+                if (TryGetAWSPSCredentialsFromConflictingType(
+                    sessionState.PSVariable.GetValue(SessionKeys.AWSCredentialsVariableName),
+                    out var psCredentials))
                 {
-                    credentials = variableValue as AWSPSCredentials;
+                    credentials = psCredentials;
                     source = CredentialsSource.Session;
                     innerCredentials = credentials.Credentials; // so remaining probes are skipped
 
@@ -299,7 +301,44 @@ namespace Amazon.PowerShell.Common
                 credentials = new AWSPSCredentials(innerCredentials, name, source);
             }
 
-            return (credentials != null);
+            return credentials != null;
+        }
+
+        /// <summary>
+        /// Try to obtain an <see cref="AWSCredentials"/> from the PowerShell session variable <c>StoredAWSCredentials</c> by reflection.
+        /// Because we have duplicated some of the credential classes we have conflicting types, therefore we have to get to the underlying
+        /// common credentials using reflection.
+        /// </summary>
+        /// <param name="sessionVariableValue">The session variable value.</param>
+        /// <param name="credentials">The credentials.</param>
+        /// <returns><c>true</c> if credentials obtained from PowerShell session; else <c>false</c>.</returns>
+        private static bool TryGetAWSPSCredentialsFromConflictingType(object sessionVariableValue, out AWSPSCredentials credentials)
+        {
+            credentials = null;
+
+            if (sessionVariableValue == null)
+            {
+                return false;
+            }
+
+            var properties = sessionVariableValue.GetType().GetProperties(
+                System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
+
+            var credentialsProperty =
+                properties.FirstOrDefault(p => typeof(AWSCredentials).IsAssignableFrom(p.PropertyType));
+
+            var nameProperty = properties.FirstOrDefault(p => p.Name == "Name" && p.PropertyType == typeof(string));
+
+            if (credentialsProperty != null)
+            {
+                credentials = new AWSPSCredentials(
+                    (AWSCredentials)credentialsProperty.GetValue(sessionVariableValue),
+                    nameProperty != null ? (string)nameProperty.GetValue(sessionVariableValue) : "none",
+                    CredentialsSource.Session);
+                return true;
+            }
+
+            return false;
         }
 
         private static WebProxy GetWebProxy(IAWSCredentialsArguments self, SessionState sessionState)

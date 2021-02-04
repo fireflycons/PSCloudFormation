@@ -2,10 +2,11 @@
 // ReSharper disable StyleCop.SA1305
 // ReSharper disable InconsistentNaming
 
-namespace Firefly.PSCloudFormation
+namespace Firefly.PSCloudFormation.AbstractCommands
 {
     using System;
     using System.Collections.Generic;
+    using System.Diagnostics;
     using System.Linq;
     using System.Management.Automation;
 
@@ -53,6 +54,7 @@ namespace Firefly.PSCloudFormation
         /// if the corresponding session token is supplied to the -SessionToken parameter.
         /// </para>
         /// </summary>
+        [SuppressParameterSelect]
         [Alias("AK")]
         [Parameter(ValueFromPipelineByPropertyName = true)]
         public string AccessKey { get; set; }
@@ -64,6 +66,7 @@ namespace Firefly.PSCloudFormation
         /// and optionally a token for session-based credentials.
         /// </para>
         /// </summary>
+        [SuppressParameterSelect]
         [Parameter(ValueFromPipeline = true, ValueFromPipelineByPropertyName = true)]
         public AWSCredentials Credential { get; set; }
 
@@ -80,6 +83,7 @@ namespace Firefly.PSCloudFormation
         /// <value>
         /// The endpoint URL.
         /// </value>
+        [SuppressParameterSelect]
         [Parameter(ValueFromPipelineByPropertyName = true)]
         public string EndpointUrl { get; set; }
 
@@ -92,6 +96,7 @@ namespace Firefly.PSCloudFormation
         /// user's default network identity can or should be used during authentication.
         /// </para>
         /// </summary>
+        [SuppressParameterSelect]
         [Parameter(ValueFromPipeline = true, ValueFromPipelineByPropertyName = true)]
         public PSCredential NetworkCredential { get; set; }
 
@@ -120,6 +125,7 @@ namespace Firefly.PSCloudFormation
         /// Note that the encrypted credential file is not supported on all platforms.
         /// It will be skipped when searching for profiles on Windows Nano Server, Mac, and Linux platforms.
         /// </remarks>
+        [SuppressParameterSelect]
         [Parameter(ValueFromPipelineByPropertyName = true)]
         [Alias("AWSProfilesLocation", "ProfilesLocation")]
         public string ProfileLocation { get; set; }
@@ -134,6 +140,7 @@ namespace Firefly.PSCloudFormation
         /// the AWS CLI and other AWS SDKs.
         /// </para>
         /// </summary>
+        [SuppressParameterSelect]
         [Parameter(ValueFromPipelineByPropertyName = true)]
         [Alias("StoredCredentials", "AWSProfileName")]
         public string ProfileName { get; set; }
@@ -146,6 +153,7 @@ namespace Firefly.PSCloudFormation
         /// the AWS resources referenced in a call are usually region-specific.
         /// </para>
         /// </summary>
+        [SuppressParameterSelect]
         [Parameter(Mandatory = false, ValueFromPipelineByPropertyName = true)]
         [Alias("RegionToCall")]
         public object Region { get; set; }
@@ -166,6 +174,7 @@ namespace Firefly.PSCloudFormation
         /// <value>
         /// The s3 endpoint URL.
         /// </value>
+        [SuppressParameterSelect]
         [Parameter(ValueFromPipelineByPropertyName = true)]
         public string S3EndpointUrl { get; set; }
 
@@ -176,6 +185,7 @@ namespace Firefly.PSCloudFormation
         /// if the corresponding session token is supplied to the -SessionToken parameter.
         /// </para>
         /// </summary>
+        [SuppressParameterSelect]
         [Alias("SK", "SecretAccessKey")]
         [Parameter(ValueFromPipelineByPropertyName = true)]
         public string SecretKey { get; set; }
@@ -186,6 +196,7 @@ namespace Firefly.PSCloudFormation
         /// The session token if the access and secret keys are temporary session-based credentials.
         /// </para>
         /// </summary>
+        [SuppressParameterSelect]
         [Alias("ST")]
         [Parameter(ValueFromPipelineByPropertyName = true)]
         public string SessionToken { get; set; }
@@ -206,6 +217,7 @@ namespace Firefly.PSCloudFormation
         /// <value>
         /// The STS endpoint URL.
         /// </value>
+        [SuppressParameterSelect]
         [Parameter(ValueFromPipelineByPropertyName = true)]
         // ReSharper disable once InconsistentNaming
         // ReSharper disable once StyleCop.SA1650
@@ -284,9 +296,11 @@ namespace Firefly.PSCloudFormation
         public CredentialProfileOptions GetCredentialProfileOptions()
         {
             return new CredentialProfileOptions
-                       {
-                           AccessKey = this.AccessKey, SecretKey = this.SecretKey, Token = this.SessionToken
-                       };
+            {
+                AccessKey = this.AccessKey,
+                SecretKey = this.SecretKey,
+                Token = this.SessionToken
+            };
         }
 
         /// <summary>
@@ -324,6 +338,7 @@ namespace Firefly.PSCloudFormation
             }
             else if (this.TryGetCredentials(this.Host, out var psCredentials, this.SessionState))
             {
+                this.Logger.LogDebug($"Acquired credentials '{psCredentials.Name}' from {psCredentials.Source}");
                 this._CurrentCredentials = psCredentials.Credentials;
                 credentials = this._CurrentCredentials;
             }
@@ -357,13 +372,13 @@ namespace Firefly.PSCloudFormation
             }
 
             this.Context = new PSCloudFormationContext
-                               {
-                                   Region = this._RegionEndpoint,
-                                   Credentials = credentials,
-                                   S3EndpointUrl = this.S3EndpointUrl,
-                                   STSEndpointUrl = this.STSEndpointUrl,
-                                   Logger = this.Logger
-                               };
+            {
+                Region = this._RegionEndpoint,
+                Credentials = credentials,
+                S3EndpointUrl = this.S3EndpointUrl,
+                STSEndpointUrl = this.STSEndpointUrl,
+                Logger = this.Logger
+            };
 
             this._ClientFactory = new PSAwsClientFactory(
                 this.CreateClient(this._CurrentCredentials, this._RegionEndpoint),
@@ -415,6 +430,11 @@ namespace Firefly.PSCloudFormation
         /// <param name="exception">The exception that was caught, if any</param>
         protected void ThrowExecutionError(string message, object errorSource, Exception exception)
         {
+            if (this.HasDebugSwitch())
+            {
+                this.Logger.LogDebug(string.Join("\n", GetDebugAssemblyDetails()));
+            }
+
             if (exception == null)
             {
                 this.ThrowTerminatingError(
@@ -486,6 +506,34 @@ namespace Firefly.PSCloudFormation
                         ErrorCategory.InvalidOperation,
                         errorSource));
             }
+        }
+
+        /// <summary>
+        /// Determines whether [has debug switch].
+        /// </summary>
+        /// <returns>
+        ///   <c>true</c> if [has debug switch]; otherwise, <c>false</c>.
+        /// </returns>
+        protected bool HasDebugSwitch()
+        {
+            return this.MyInvocation.BoundParameters.Keys.Any(
+                k => string.Compare(k, "Debug", StringComparison.OrdinalIgnoreCase) == 0);
+        }
+
+        /// <summary>
+        /// Gets the identities of relevant loaded assemblies for debug output on exception.
+        /// </summary>
+        /// <returns>List of loaded assemblies</returns>
+        private static IEnumerable<string> GetDebugAssemblyDetails()
+        {
+            return new[] { "Relevant Assemblies:" }.Concat(
+                (from assembly in AppDomain.CurrentDomain.GetAssemblies().Where(
+                     a => a.FullName.StartsWith("AWS.") || a.FullName.StartsWith("AWSSDK.")
+                                                        || a.FullName.StartsWith("Firefly."))
+                 let name = assembly.FullName
+                 let fileVersion = FileVersionInfo.GetVersionInfo(assembly.Location).FileVersion
+                 select $"{name}, FileVersion={fileVersion}")
+                .OrderBy(s => s));
         }
     }
 }

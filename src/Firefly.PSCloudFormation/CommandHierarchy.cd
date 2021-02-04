@@ -1,0 +1,88 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<ClassDiagram MajorVersion="1" MinorVersion="1">
+  <Class Name="Firefly.PSCloudFormation.AbstractCommands.BaseCloudFormationCommand" Collapsed="true">
+    <Position X="7.25" Y="2" Width="1.5" />
+    <TypeIdentifier>
+      <HashCode>AAACAABBAIABAAgQAAAACBQAAEQgoIQCAAAKQAQKAAA=</HashCode>
+      <FileName>AbstractCommands\BaseCloudFormationCommand.cs</FileName>
+    </TypeIdentifier>
+  </Class>
+  <Class Name="Firefly.PSCloudFormation.AbstractCommands.CloudFormationServiceCommand" Collapsed="true">
+    <Position X="7.25" Y="0.5" Width="1.5" />
+    <TypeIdentifier>
+      <HashCode>ECAABAAIgwKAAyAIABAAAIABICHIgABAAAACEAIAADA=</HashCode>
+      <FileName>AbstractCommands\CloudFormationServiceCommand.cs</FileName>
+    </TypeIdentifier>
+    <Lollipop Position="0.2" />
+  </Class>
+  <Class Name="Firefly.PSCloudFormation.AbstractCommands.StackParameterCloudFormationCommand" Collapsed="true">
+    <Position X="8.5" Y="3.75" Width="1.5" />
+    <TypeIdentifier>
+      <HashCode>gAAAAAAhEBAxAgAQAAAASAAARQgAIAJAAAkCQJAAAAA=</HashCode>
+      <FileName>AbstractCommands\StackParameterCloudFormationCommand.cs</FileName>
+    </TypeIdentifier>
+    <Lollipop Position="0.2" />
+  </Class>
+  <Class Name="Firefly.PSCloudFormation.Commands.GetStackOutputsCommand" Collapsed="true">
+    <Position X="10" Y="2" Width="1.5" />
+    <TypeIdentifier>
+      <HashCode>AAQAAAAAAAAAYAAgAAAAAAAAAIgAAAACAAAIAAQAAgA=</HashCode>
+      <FileName>Commands\GetStackOutputsCommand.cs</FileName>
+    </TypeIdentifier>
+  </Class>
+  <Class Name="Firefly.PSCloudFormation.Commands.NewPackageCommand" Collapsed="true">
+    <Position X="4.5" Y="2" Width="1.5" />
+    <TypeIdentifier>
+      <HashCode>AAgAABAAAAAAAAAQAAAAABAAAAAAAAAAAAgIABAMAAA=</HashCode>
+      <FileName>Commands\NewPackageCommand.cs</FileName>
+    </TypeIdentifier>
+  </Class>
+  <Class Name="Firefly.PSCloudFormation.Commands.NewChangesetCommand" Collapsed="true">
+    <Position X="7.25" Y="6" Width="1.5" />
+    <TypeIdentifier>
+      <HashCode>AAAAABAAABABIAAQAAIACAAAAAAAAAAAAACAwAAggAA=</HashCode>
+      <FileName>Commands\NewChangesetCommand.cs</FileName>
+    </TypeIdentifier>
+    <Lollipop Position="0.2" />
+  </Class>
+  <Class Name="Firefly.PSCloudFormation.Commands.RemoveStackCommand" Collapsed="true">
+    <Position X="6" Y="3.75" Width="1.5" />
+    <TypeIdentifier>
+      <HashCode>AAAAAAAAAAABAAAAAAAAAAAAAAAAMAAAAAAAQAAAAAA=</HashCode>
+      <FileName>Commands\RemoveStackCommand.cs</FileName>
+    </TypeIdentifier>
+    <Lollipop Position="0.2" />
+  </Class>
+  <Class Name="Firefly.PSCloudFormation.AbstractCommands.StackOutputsCommand" Collapsed="true">
+    <Position X="9.5" Y="6" Width="1.5" />
+    <TypeIdentifier>
+      <HashCode>BAAAAABAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=</HashCode>
+      <FileName>AbstractCommands\StackOutputsCommand.cs</FileName>
+    </TypeIdentifier>
+  </Class>
+  <Class Name="Firefly.PSCloudFormation.Commands.NewStackCommand" Collapsed="true">
+    <Position X="7.25" Y="7.75" Width="1.5" />
+    <TypeIdentifier>
+      <HashCode>AAAAAAAAABABAAACAAAAAABAAEAAIAAIAAAAQAAAAAA=</HashCode>
+      <FileName>Commands\NewStackCommand.cs</FileName>
+    </TypeIdentifier>
+    <Lollipop Position="0.2" />
+  </Class>
+  <Class Name="Firefly.PSCloudFormation.Commands.ResetStackCommand" Collapsed="true">
+    <Position X="11.75" Y="7.75" Width="1.5" />
+    <TypeIdentifier>
+      <HashCode>AAAAAAAAABABAAACAAAAAABAAEAAEAAIAAAAQAAAAAA=</HashCode>
+      <FileName>Commands\ResetStackCommand.cs</FileName>
+    </TypeIdentifier>
+    <Lollipop Position="0.2" />
+  </Class>
+  <Class Name="Firefly.PSCloudFormation.Commands.UpdateStackCommand" Collapsed="true">
+    <Position X="9.5" Y="7.75" Width="1.5" />
+    <TypeIdentifier>
+      <HashCode>AAAAABAAABABIAABAAIAAAACAEQBIAAAAAGgQAAggAA=</HashCode>
+      <FileName>Commands\UpdateStackCommand.cs</FileName>
+    </TypeIdentifier>
+    <Lollipop Position="0.2" />
+  </Class>
+  <Font Name="Segoe UI" Size="9" />
+</ClassDiagram>
