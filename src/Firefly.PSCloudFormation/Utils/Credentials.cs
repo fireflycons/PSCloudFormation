@@ -315,6 +315,12 @@ namespace Amazon.PowerShell.Common
         private static bool TryGetAWSPSCredentialsFromConflictingType(object sessionVariableValue, out AWSPSCredentials credentials)
         {
             credentials = null;
+
+            if (sessionVariableValue == null)
+            {
+                return false;
+            }
+
             var properties = sessionVariableValue.GetType().GetProperties(
                 System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
 
