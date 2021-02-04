@@ -1,13 +1,19 @@
 # Release Notes
 
-# 4.1.6.7 
+# 4.1.6.8
+
+* Enhancement - Add argument completer for `-Select`. [Issue link](https://github.com/fireflycons/PSCloudFormation/issues/101)
+* Fix - Session credentials not being picked up (introduced in 4.1.6.7). [Issue link](https://github.com/fireflycons/PSCloudFormation/issues/102)
+* Enhancement - Dump loaded AWS Assemblies in exception handler with `-Debug`. [Issue link](https://github.com/fireflycons/PSCloudFormation/issues/103)
+
+# 4.1.6.7
 
 * Tech/Enhancement - Remove dependency on `AWS.Tools.Common` thus removing the restriction that the module may only run with a specific vesion of `AWS.Tools`. [Issue link](https://github.com/fireflycons/PSCloudFormation/issues/99)
 # 4.1.6.6
 
 * Enhancement - Add new cmdlet `New-PSCFNChangeset`. Add mechanism to get detailed changeset information and view in browser, save to file or output to pipeline. [Issue link](https://github.com/fireflycons/PSCloudFormation/issues/96)
 
-# 4.1.6.5 
+# 4.1.6.5
 
 * Fix - Lambda handler detection fails if handler contains additional arguments (Python). [Issue link](https://github.com/fireflycons/PSCloudFormation/issues/97)
 
