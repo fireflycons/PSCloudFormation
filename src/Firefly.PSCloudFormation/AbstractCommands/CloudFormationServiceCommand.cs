@@ -338,7 +338,7 @@ namespace Firefly.PSCloudFormation.AbstractCommands
             }
             else if (this.TryGetCredentials(this.Host, out var psCredentials, this.SessionState))
             {
-                this.Logger.LogDebug($"Acquired credentials from {psCredentials.Source}");
+                this.Logger.LogDebug($"Acquired credentials '{psCredentials.Name}' from {psCredentials.Source}");
                 this._CurrentCredentials = psCredentials.Credentials;
                 credentials = this._CurrentCredentials;
             }
