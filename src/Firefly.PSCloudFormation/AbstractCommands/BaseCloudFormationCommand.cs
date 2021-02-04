@@ -389,7 +389,8 @@
                         foreach (var property in this.GetType().GetProperties(BindingFlags.Public | BindingFlags.Instance)
                             .Where(
                                 p => p.GetCustomAttributes<ParameterAttribute>().Any()
-                                     && !p.GetCustomAttributes<SuppressParameterSelectAttribute>().Any()))
+                                     && !p.GetCustomAttributes<SuppressParameterSelectAttribute>().Any()
+                                     && p.PropertyType != typeof(SwitchParameter)))
                         {
                             if (property.Name.Equals(parameterName, StringComparison.OrdinalIgnoreCase))
                             {
