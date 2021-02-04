@@ -167,6 +167,13 @@
 
         /// <summary>
         /// Gets or sets the select.
+        /// <para type="description">
+        /// Use the -Select parameter to control the cmdlet output. The cmdlet doesn't have a return value by default.
+        /// Specifying 'arn' will return the stack's ARN.
+        /// Specifying 'ChangesetArn' will return the changeset's ARN.
+        /// Specifying '*' will return a hash table containing a key for each of the preceding named outputs.
+        /// Specifying -Select '^ParameterName' will result in the cmdlet returning the selected cmdlet parameter value. Note that not all parameters are available, e.g. credential parameters.
+        /// </para>
         /// </summary>
         /// <value>
         /// The select.
@@ -192,19 +199,6 @@
         [SelectableOutputProperty]
         protected string Json => ((PSLogger)this.Logger).GetJsonChanges();
 
-        /// <summary>
-        /// Gets or sets the select.
-        /// <para type="description">
-        /// Use the -Select parameter to control the cmdlet output. The cmdlet doesn't have a return value by default.
-        /// Specifying 'arn' will return the stack's ARN.
-        /// Specifying 'ChangesetArn' will return the changeset's ARN.
-        /// Specifying '*' will return a hash table containing a key for each of the preceding named outputs.
-        /// Specifying -Select '^ParameterName' will result in the cmdlet returning the selected cmdlet parameter value. Note that not all parameters are available, e.g. credential parameters.
-        /// </para>
-        /// </summary>
-        /// <value>
-        /// The select.
-        /// </value>
         [SelectableOutputProperty]
         protected string ChangesetArn { get; private set; }
 
