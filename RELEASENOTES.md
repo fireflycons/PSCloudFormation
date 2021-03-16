@@ -1,5 +1,9 @@
 # Release Notes
 
+# 4.1.6.9
+
+* Fix - Null ref in New-PSCFNChangeset if no changes detected. [Issue link](https://github.com/fireflycons/PSCloudFormation/issues/105)
+
 # 4.1.6.8
 
 * Enhancement - Add argument completer for `-Select`. [Issue link](https://github.com/fireflycons/PSCloudFormation/issues/101)

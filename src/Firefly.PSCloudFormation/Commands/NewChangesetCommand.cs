@@ -241,10 +241,10 @@
             {
                var result = await runner.UpdateStackAsync(null);
 
-               this.ChangesetArn = result.ChangesetResponse.ChangeSetId;
+               this.ChangesetArn = result.ChangesetResponse?.ChangeSetId;
                this.Arn = result.StackArn;
 
-               if (this.ShowInBrowser)
+               if (this.ShowInBrowser && this.ChangesetArn != null)
                {
                    var logger = (PSLogger)this.Logger;
 
