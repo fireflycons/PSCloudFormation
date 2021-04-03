@@ -496,7 +496,7 @@
                 ResourceUploadSettings resourceToUpload;
 
                 // See if we have a lambda
-                var lambdaResource = new LambdaArtifact(this.pathResolver, resource, templatePath);
+                var lambdaResource = new LambdaArtifact(this.pathResolver, resource, this.logger, this.platform, templatePath);
 
                 if (lambdaResource.ArtifactType != LambdaArtifactType.NotLambda)
                 {

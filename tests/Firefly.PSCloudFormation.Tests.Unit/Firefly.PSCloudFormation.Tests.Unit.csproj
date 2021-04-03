@@ -29,16 +29,22 @@
     <None Remove="Resources\LambdaDependencies\PythonLambdaLinux\template.yaml" />
     <None Remove="Resources\LambdaDependencies\PythonLambdaLinux\venv\bin\placeholder.txt" />
     <None Remove="Resources\LambdaDependencies\PythonLambdaLinux\venv\Include\placeholder.txt" />
+    <None Remove="Resources\LambdaDependencies\PythonLambdaLinux\venv\lib\python3_6\site-packages\mylibrary_1_0_0_dist_info\METADATA.txt" />
+    <None Remove="Resources\LambdaDependencies\PythonLambdaLinux\venv\lib\python3_6\site-packages\mylibrary_1_0_0_dist_info\RECORD.txt" />
     <None Remove="Resources\LambdaDependencies\PythonLambdaLinux\venv\lib\python3_6\site-packages\mylibrary\__init__.py" />
     <None Remove="Resources\LambdaDependencies\PythonLambdaLinux\venv\lib\python3_6\site-packages\mylibrary\__pycache__\__init__.pyc" />
     <None Remove="Resources\LambdaDependencies\PythonLambdaLinux\venv\lib\python3_6\site-packages\standalone_module.py" />
+    <None Remove="Resources\LambdaDependencies\PythonLambdaLinux\venv\lib\python3_6\site-packages\standalone_1_0_0_dist_info\RECORD.txt" />
     <None Remove="Resources\LambdaDependencies\PythonLambda\Lambda\lambda-dependencies.yaml" />
     <None Remove="Resources\LambdaDependencies\PythonLambda\Lambda\my_lambda.py" />
     <None Remove="Resources\LambdaDependencies\PythonLambda\Lambda\other.py" />
     <None Remove="Resources\LambdaDependencies\PythonLambda\template.yaml" />
     <None Remove="Resources\LambdaDependencies\PythonLambda\venv\Include\placeholder.txt" />
+    <None Remove="Resources\LambdaDependencies\PythonLambda\venv\lib\site-packages\mylibrary_1_0_0_dist_info\METADATA.txt" />
+    <None Remove="Resources\LambdaDependencies\PythonLambda\venv\lib\site-packages\mylibrary_1_0_0_dist_info\RECORD.txt" />
     <None Remove="Resources\LambdaDependencies\PythonLambda\venv\lib\site-packages\mylibrary\__init__.py" />
     <None Remove="Resources\LambdaDependencies\PythonLambda\venv\lib\site-packages\mylibrary\__pycache__\__init__.pyc" />
+    <None Remove="Resources\LambdaDependencies\PythonLambda\venv\lib\site-packages\standalone_1_0_0_dist_info\RECORD.txt" />
     <None Remove="Resources\LambdaDependencies\PythonLambda\venv\lib\site-packages\standalone_module.py" />
     <None Remove="Resources\LambdaDependencies\PythonLambda\venv\scripts\placeholder.txt" />
     <None Remove="Resources\LambdaDependencies\NodeLambda1\Lambda\lambda-dependencies.yaml" />
@@ -63,6 +69,14 @@
     <None Remove="Resources\ParameterTest.json" />
     <None Remove="Resources\ParameterTest.yaml" />
     <None Remove="Resources\progetDockerCloudFormation.yaml" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <EmbeddedResource Include="Resources\LambdaDependencies\PythonLambdaLinux\venv\lib\python3_6\site-packages\mylibrary_1_0_0_dist_info\METADATA.txt" />
+    <EmbeddedResource Include="Resources\LambdaDependencies\PythonLambdaLinux\venv\lib\python3_6\site-packages\mylibrary_1_0_0_dist_info\RECORD.txt" />
+    <EmbeddedResource Include="Resources\LambdaDependencies\PythonLambdaLinux\venv\lib\python3_6\site-packages\standalone_1_0_0_dist_info\RECORD.txt" />
+    <EmbeddedResource Include="Resources\LambdaDependencies\PythonLambda\venv\lib\site-packages\mylibrary_1_0_0_dist_info\METADATA.txt" />
+    <EmbeddedResource Include="Resources\LambdaDependencies\PythonLambda\venv\lib\site-packages\mylibrary_1_0_0_dist_info\RECORD.txt" />
   </ItemGroup>
 
   <ItemGroup>
@@ -91,6 +105,7 @@
     <EmbeddedResource Include="Resources\LambdaDependencies\PythonLambda\template-complex.yaml" />
     <EmbeddedResource Include="Resources\LambdaDependencies\PythonLambda\template.yaml" />
     <EmbeddedResource Include="Resources\LambdaDependencies\PythonLambda\venv\Include\placeholder.txt" />
+    <EmbeddedResource Include="Resources\LambdaDependencies\PythonLambda\venv\lib\site-packages\standalone_1_0_0_dist_info\RECORD.txt" />
     <EmbeddedResource Include="Resources\LambdaDependencies\PythonLambda\venv\lib\site-packages\mylibrary\__init__.py" />
     <EmbeddedResource Include="Resources\LambdaDependencies\PythonLambda\venv\lib\site-packages\mylibrary\__pycache__\__init__.pyc" />
     <EmbeddedResource Include="Resources\LambdaDependencies\PythonLambda\venv\lib\site-packages\standalone_module.py" />

@@ -5,7 +5,11 @@
     using System.Diagnostics;
     using System.IO;
     using System.Linq;
+    using System.Text.RegularExpressions;
 
+    using Amazon.S3.Model.Internal.MarshallTransformations;
+
+    using Firefly.CloudFormation;
     using Firefly.CloudFormation.Parsers;
     using Firefly.PSCloudFormation.Utils;
 
@@ -17,6 +21,13 @@
     [DebuggerDisplay("{LogicalName}")]
     internal class LambdaArtifact
     {
+        private const string RequirementsTxt = "requirements.txt";
+
+        /// <summary>
+        /// Regex to parse package names from a requirements.txt file
+        /// </summary>
+        private static readonly Regex RequirementsRegex = new Regex(@"^\s*(?<dependency>[\w+\-]+)\s*([\(=\<\>~!].*)?$", RegexOptions.Multiline);
+
         /// <summary>
         /// The lambda resource
         /// </summary>
@@ -32,17 +43,32 @@
         /// </summary>
         private readonly string templatePath;
 
+        private readonly ILogger logger;
+
+        private readonly IOSInfo platform;
+
+        private List<LambdaDependency> cachedDependencies;
+
         /// <summary>
         /// Initializes a new instance of the <see cref="LambdaArtifact"/> class.
         /// </summary>
         /// <param name="pathResolver">The path resolver.</param>
         /// <param name="lambdaResource">The lambda resource.</param>
+        /// <param name="logger"></param>
+        /// <param name="platform">The operating system platform</param>
         /// <param name="templatePath">Path to the template being processed.</param>
-        public LambdaArtifact(IPathResolver pathResolver, ITemplateResource lambdaResource, string templatePath)
+        public LambdaArtifact(
+            IPathResolver pathResolver,
+            ITemplateResource lambdaResource,
+            ILogger logger,
+            IOSInfo platform,
+            string templatePath)
         {
+            this.logger = logger;
             this.templatePath = templatePath;
             this.pathResolver = pathResolver;
             this.lambdaResource = lambdaResource;
+            this.platform = platform;
 
             switch (lambdaResource.ResourceType)
             {
@@ -221,11 +247,24 @@
         /// <returns>Deserialized Dependencies</returns>
         public List<LambdaDependency> LoadDependencies()
         {
+            if (this.cachedDependencies != null)
+            {
+                return this.cachedDependencies;
+            }
+
+            this.cachedDependencies = new List<LambdaDependency>();
+
             var dependencyFile = this.GetDependencyFile();
 
             if (dependencyFile == null)
             {
-                return new List<LambdaDependency>();
+                return this.cachedDependencies;
+            }
+
+            if (System.IO.Path.GetFileName(dependencyFile) == RequirementsTxt)
+            {
+                this.cachedDependencies = this.LoadDependenciesFromRequirements(dependencyFile);
+                return this.cachedDependencies;
             }
 
             // Ensure input file path is absolute
@@ -249,7 +288,8 @@
                                            .Deserialize<List<LambdaDependency>>(content);
 
                 // Make dependency locations absolute
-                return dependencies.Select(d => d.ResolveDependencyLocation(dependencyFile)).ToList();
+                this.cachedDependencies = dependencies.Select(d => d.ResolveDependencyLocation(dependencyFile)).ToList();
+                return this.cachedDependencies;
             }
             catch (Exception e)
             {
@@ -270,6 +310,54 @@
         }
 
         /// <summary>
+        /// Loads dependencies from requirements.txt file.
+        /// </summary>
+        /// <param name="pathToRequirements">The path to requirements.txt.</param>
+        /// <returns>Deserialized Dependencies</returns>
+        internal List<LambdaDependency> LoadDependenciesFromRequirements(string pathToRequirements)
+        {
+            var dependencies = new List<LambdaDependency>();
+
+            if (string.IsNullOrEmpty(pathToRequirements))
+            {
+                return dependencies;
+            }
+
+            var venv = new PythonVirtualEnv(this.platform).Load(this.RuntimeInfo);
+
+            foreach (var match in RequirementsRegex.Matches(File.ReadAllText(pathToRequirements)).Cast<Match>())
+            {
+                this.ResolveDependencies(match.Groups["dependency"].Value.Trim(), venv, dependencies);
+            }
+
+            return dependencies.Distinct().ToList();
+        }
+
+        /// <summary>
+        /// Recursively resolves the dependencies of a given package.
+        /// </summary>
+        /// <param name="packageName">Name of the package.</param>
+        /// <param name="venv">Representation of current virtual environment.</param>
+        /// <param name="dependencies">The dependencies.</param>
+        private void ResolveDependencies(string packageName, PythonVirtualEnv venv, ICollection<LambdaDependency> dependencies)
+        {
+            var module = venv[packageName];
+
+            if (module == null)
+            {
+                this.logger.LogWarning($"Cannot find module '{packageName}' in your virtual environment");
+                return;
+            }
+
+            dependencies.Add(new LambdaDependency { Location = venv.VirtualEnvDir, Libraries = module.Paths.ToArray() });
+
+            foreach (var pkg in module.Dependencies)
+            {
+                this.ResolveDependencies(pkg, venv, dependencies);
+            }
+        }
+
+        /// <summary>
         /// Gets the dependency file for this lambda.
         /// </summary>
         /// <returns>Path to dependency file if present; else <c>null</c></returns>
@@ -278,6 +366,13 @@
             if (this.ContainingDirectory == null)
             {
                 return null;
+            }
+
+            var requirements = System.IO.Path.Combine(this.ContainingDirectory, RequirementsTxt);
+
+            if (File.Exists(requirements))
+            {
+                return requirements;
             }
 
             return Directory.GetFiles(this.ContainingDirectory, "lambda-dependencies.*", SearchOption.TopDirectoryOnly)
@@ -303,7 +398,7 @@
             }
             catch (FormatException)
             {
-                // We don't cae if the property doesn't exist
+                // We don't care if the property doesn't exist
                 return null;
             }
         }
@@ -343,7 +438,7 @@
         /// <summary>
         /// Parses the s3 location.
         /// </summary>
-        /// <exception cref="PackagerException">Invalid or missing {(isServerless ? "CodeUri" : "Code")} property for {this.lambdaResource.LogicalName}</exception>
+        /// <exception cref="PackagerException">Invalid or missing <c>Code</c> or <c>CodeUri</c> property for lambda logical name.</exception>
         private void ParseS3Location()
         {
             var isServerless = this.lambdaResource.ResourceType == "AWS::Serverless::Function";

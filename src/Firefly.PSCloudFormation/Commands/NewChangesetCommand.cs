@@ -199,6 +199,12 @@
         [SelectableOutputProperty]
         protected string Json => ((PSLogger)this.Logger).GetJsonChanges();
 
+        /// <summary>
+        /// Gets the changeset ARN.
+        /// </summary>
+        /// <value>
+        /// The changeset ARN.
+        /// </value>
         [SelectableOutputProperty]
         protected string ChangesetArn { get; private set; }
 
