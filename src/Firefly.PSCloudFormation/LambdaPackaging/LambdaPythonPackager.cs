@@ -2,7 +2,6 @@
 {
     using System.IO;
     using System.Linq;
-    using System.Management.Automation.Language;
     using System.Text.RegularExpressions;
 
     using Firefly.CloudFormation;

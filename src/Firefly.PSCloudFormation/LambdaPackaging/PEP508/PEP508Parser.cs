@@ -1,4 +1,5 @@
-﻿namespace Firefly.PSCloudFormation.LambdaPackaging.PEP508
+﻿// ReSharper disable UnusedMember.Global - All methods are invoked by reflection
+namespace Firefly.PSCloudFormation.LambdaPackaging.PEP508
 {
     using Firefly.PSCloudFormation.LambdaPackaging.PEP508.Model;
 

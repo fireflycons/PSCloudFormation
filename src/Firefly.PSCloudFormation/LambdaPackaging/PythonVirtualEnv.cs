@@ -5,7 +5,6 @@
     using System.Diagnostics;
     using System.IO;
     using System.Linq;
-    using System.Management.Automation.Language;
     using System.Runtime.InteropServices;
     using System.Text.RegularExpressions;
 
@@ -16,52 +15,74 @@
     using sly.parser;
     using sly.parser.generator;
 
+    /// <summary>
+    /// Represents the contents of a virtual environment and all site packages installed in it.
+    /// </summary>
     internal class PythonVirtualEnv
     {
+        /// <summary>
+        /// Extracts the name of a package from its <c>.dist-info</c> directory name
+        /// </summary>
         private static readonly Regex PackageNameRegex = new Regex(@"^(?<packageName>.*)-\d+(\.\d+)*");
 
+        /// <summary>
+        /// Extracts the name of a dependent package from a <c>Requires-Dist</c> entry in METADATA file
+        /// </summary>
         private static readonly Regex RequirementsRegex =
             new Regex(@"^Requires\-Dist\:\s*(?<dependency>[\w+\-]+)");
 
-        private List<PythonModule> modules = new List<PythonModule>();
+        /// <summary>
+        /// List of modules discovered in site-packages
+        /// </summary>
+        private readonly List<PythonModule> modules = new List<PythonModule>();
 
         /// <summary>
         /// Variables for the PEP 508 Parser. Since we're building for a lambda environment, the OS will be Amazon Linux 2
         /// </summary>
         private readonly Dictionary<string, string> pep508Variables = new Dictionary<string, string>
-                                                                                 {
-                                                                                     { "os_name", "posix" },
-                                                                                     { "sys_platform", "linux" },
-                                                                                     {
-                                                                                         "platform_machine", "x86_64"
-                                                                                     }, // Pretty sure it is. May change to graviton
-                                                                                     {
-                                                                                         "platform_python_implementation",
-                                                                                         "CPython"
-                                                                                     },
-                                                                                     { "platform_system", "Linux" },
-                                                                                     {
-                                                                                         "python_version", "0.0"
-                                                                                     }, // Will be set by the specified lambda runtime from the resource declaration
-                                                                                     {
-                                                                                         "python_full_version", "0.0"
-                                                                                     }, // Will be set by the specified lambda runtime from the resource declaration - we don't know the point release
-                                                                                     {
-                                                                                         "implementation_name",
-                                                                                         "cpython"
-                                                                                     },
-                                                                                     {
-                                                                                         "extra", string.Empty
-                                                                                     } // Assumption of no 'extras'
-                                                                                 };
+                                                                          {
+                                                                              { "os_name", "posix" },
+                                                                              { "sys_platform", "linux" },
+                                                                              {
+                                                                                  "platform_machine", "x86_64"
+                                                                              },
+                                                                              {
+                                                                                  // Pretty sure it is. May change to graviton
+                                                                                  "platform_python_implementation",
+                                                                                  "CPython"
+                                                                              },
+                                                                              { "platform_system", "Linux" },
+                                                                              {
+                                                                                  "python_version", "0.0"
+                                                                              },
+                                                                              {
+                                                                                  // Will be set by the specified lambda runtime from the resource declaration
+                                                                                  "python_full_version", "0.0"
+                                                                              },
+                                                                              {
+                                                                                  // Will be set by the specified lambda runtime from the resource declaration - we don't know the point release
+                                                                                  "implementation_name",
+                                                                                  "cpython"
+                                                                              },
+                                                                              {
+                                                                                  "extra", string.Empty
+                                                                              } // Assumption of no 'extras'
+                                                                          };
 
+        /// <summary>
+        /// Parser for dependency inclusion expressions in <c>Requires-Dist</c> statements of METADATA files.
+        /// </summary>
         private readonly Parser<MetadataToken, IExpression> parser;
 
+        /// <summary>
+        /// Abstraction of platform the module is running on (for unit tests).
+        /// </summary>
         private readonly IOSInfo platform;
 
         /// <summary>
         /// Initializes a new instance of the <see cref="PythonVirtualEnv"/> class.
         /// </summary>
+        /// <param name="platform">Abstraction of platform the module is running on (for unit tests).</param>
         /// <exception cref="PackagerException">Cannot find VIRTUAL_ENV environment variable. Activate your virtual env first, then run.</exception>
         public PythonVirtualEnv(IOSInfo platform)
         {
@@ -92,6 +113,8 @@
         /// <value>
         /// The bin directory.
         /// </value>
+
+        // ReSharper disable once UnusedMember.Global
         public string BinDir =>
             Path.Combine(this.VirtualEnvDir, RuntimeInformation.IsOSPlatform(OSPlatform.Windows) ? "Scripts" : "bin");
 
@@ -101,6 +124,8 @@
         /// <value>
         /// The include directory.
         /// </value>
+
+        // ReSharper disable once UnusedMember.Global
         public string IncludeDir => Path.Combine(this.VirtualEnvDir, "include");
 
         /// <summary>
@@ -242,13 +267,8 @@
                             this.pep508Variables["python_full_version"] = runtimeInfo.RuntimeVersion;
                             var evaluation = r.Result.Evaluate(new ExpressionContext(this.pep508Variables));
 
-                            if (evaluation == null)
-                            {
-                                throw new PackagerException(
-                                    $"Error evaluating: {expression}\nIf this expression is valid, please raise an issue.");
-                            }
-
-                            includeDependency = (bool)evaluation;
+                            includeDependency = (bool?)evaluation ?? throw new PackagerException(
+                                                    $"Error evaluating: {expression}\nIf this expression is valid, please raise an issue.");
                         }
 
                         if (includeDependency)
@@ -271,15 +291,29 @@
         [DebuggerDisplay("{Name}")]
         internal class PythonModule
         {
+            /// <summary>
+            /// Gets the dependencies of this module.
+            /// </summary>
+            /// <value>
+            /// The dependencies.
+            /// </value>
             public List<string> Dependencies { get; } = new List<string>();
 
-            public bool IsSingleFile => Paths.Count == 1 && File.Exists(this.Paths[0]);
-
+            /// <summary>
+            /// Gets or sets the name of this module.
+            /// </summary>
+            /// <value>
+            /// The name.
+            /// </value>
             public string Name { get; set; }
 
+            /// <summary>
+            /// Gets or sets the paths to components that make up this module.
+            /// </summary>
+            /// <value>
+            /// The paths.
+            /// </value>
             public List<string> Paths { get; set; } = new List<string>();
-
-            public List<string> Extras { get; } = new List<string>();
         }
     }
 }

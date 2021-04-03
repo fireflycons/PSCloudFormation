@@ -101,12 +101,7 @@
                 return true;
             }
 
-            if (obj.GetType() != this.GetType())
-            {
-                return false;
-            }
-
-            return this.Equals((LambdaDependency)obj);
+            return obj.GetType() == this.GetType() && this.Equals((LambdaDependency)obj);
         }
 
         public override int GetHashCode()
@@ -119,7 +114,7 @@
 
         private bool LibrariesEquals(LambdaDependency other)
         {
-            if (this.Libraries == null & other.Libraries == null)
+            if (this.Libraries == null && other.Libraries == null)
             {
                 return true;
             }
@@ -134,7 +129,9 @@
                 return false;
             }
 
+            // ReSharper disable AssignNullToNotNullAttribute - both are already checked above. It should have seen that
             return this.Libraries.OrderBy(l => l).SequenceEqual(other.Libraries.OrderBy(l => l));
+            // ReSharper restore AssignNullToNotNullAttribute
         }
     }
 }

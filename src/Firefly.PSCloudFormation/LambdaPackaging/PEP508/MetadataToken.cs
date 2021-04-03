@@ -1,4 +1,8 @@
-﻿namespace Firefly.PSCloudFormation.LambdaPackaging.PEP508
+﻿// ReSharper disable StyleCop.SA1602
+// ReSharper disable InconsistentNaming
+// ReSharper disable UnusedMember.Global
+
+namespace Firefly.PSCloudFormation.LambdaPackaging.PEP508
 {
     using sly.lexer;
 

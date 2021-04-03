@@ -45,7 +45,7 @@
             {
                 case MetadataToken.NOT:
 
-                    return !((bool)right);
+                    return !(bool)right;
 
                 default:
 
