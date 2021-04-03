@@ -9,7 +9,7 @@ Required AWS.Tools modules:
 * AWS.Tools.CloudFormation
 * AWS.Tools.S3
 
-## Version 4 is here!
+## Version 4 Notes
 
 This version is a complete re-write in C#. I found that it was becoming a cumbersome beast keeping it in pure PowerShell, taking longer to load the module, and certain parts of it were running quite slowly.
 
@@ -33,6 +33,7 @@ Head over [here](https://fireflycons.github.io/PSCloudFormation/index.html) for 
 * More complete support for determining AWS credentials from all sources.
 * [Resource Import](https://fireflycons.github.io/PSCloudFormation/articles/resource-import.html) supported (since v3.x) - still not supported by AWS.Tools cmdlets at time of writing.
 * [Dependency Packaging](https://fireflycons.github.io/PSCloudFormation/articles/lambda-packager.html) - For script based lambdas, it is possible to package dependent modules directly.
+* Support for Python lambda dependency resultion via `requirements.txt`
 * [Nested Changeset support](https://fireflycons.github.io/PSCloudFormation/articles/changesets.html) - With caveats! See documentation.
 * [Changeset Detail view](https://fireflycons.github.io/PSCloudFormation/articles/changesets.html) - View changeset detail in browser.
 
@@ -91,3 +92,4 @@ Thanks to
 
 * [ramblingcookiemonster](http://ramblingcookiemonster.github.io/) for `PSDepend` and `PSDeploy` used in parts of the build of this project.
 * [Antoine Aubry](https://github.com/aaubry/YamlDotNet) for `YamlDotNet`
+* [Olivier Duhart](https://github.com/b3b00/csly) for `csly` used to parse python `METADATA` files.
