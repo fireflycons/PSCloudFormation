@@ -477,7 +477,7 @@
             }
 
             // Place a requriements.txt
-            File.WriteAllText(Path.Combine(templateDir, "Lambda", "requirements.txt"), "mylibrary");
+            File.WriteAllText(Path.Combine(templateDir, "Lambda", "requirements.txt"), "mylibrary\nboto3");
 
             using var workingDirectory = new TempDirectory();
 
@@ -492,8 +492,9 @@
             this.Logger.VerboseMessages.Should().Contain(
                 new[]
                     {
-                        "Adding mylibrary/", "Adding my_lambda.py",
-                        "Adding standalone_module.py", "Adding mylibrary/__init__.py"
+                        "Adding mylibrary/", "Adding my_lambda.py", "Adding standalone_module.py",
+                        "Adding mylibrary/__init__.py",
+                        "Package 'boto3' will not be included because it exists by default in the AWS execution environment."
                     },
                 "the function itself and its dependency should be in right places in zip");
 

@@ -354,7 +354,7 @@
         {
             if (IgnoreDependencies.Contains(packageName))
             {
-                this.logger.LogVerbose($"Package '{packageName} will not be included because it exists by default in the AWS execution environment.");
+                this.logger.LogVerbose($"Package '{packageName}' will not be included because it exists by default in the AWS execution environment.");
                 return;
             }
 

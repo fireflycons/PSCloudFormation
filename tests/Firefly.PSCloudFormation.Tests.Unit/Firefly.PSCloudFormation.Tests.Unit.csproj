@@ -29,6 +29,9 @@
     <None Remove="Resources\LambdaDependencies\PythonLambdaLinux\template.yaml" />
     <None Remove="Resources\LambdaDependencies\PythonLambdaLinux\venv\bin\placeholder.txt" />
     <None Remove="Resources\LambdaDependencies\PythonLambdaLinux\venv\Include\placeholder.txt" />
+    <None Remove="Resources\LambdaDependencies\PythonLambdaLinux\venv\lib\python3_6\site-packages\boto3\__init__.py" />
+    <None Remove="Resources\LambdaDependencies\PythonLambdaLinux\venv\lib\python3_6\site-packages\boto3_2_39_0_dist_info\METADATA" />
+    <None Remove="Resources\LambdaDependencies\PythonLambdaLinux\venv\lib\python3_6\site-packages\boto3_2_39_0_dist_info\RECORD" />
     <None Remove="Resources\LambdaDependencies\PythonLambdaLinux\venv\lib\python3_6\site-packages\mylibrary_1_0_0_dist_info\METADATA.txt" />
     <None Remove="Resources\LambdaDependencies\PythonLambdaLinux\venv\lib\python3_6\site-packages\mylibrary_1_0_0_dist_info\RECORD.txt" />
     <None Remove="Resources\LambdaDependencies\PythonLambdaLinux\venv\lib\python3_6\site-packages\mylibrary\__init__.py" />
@@ -40,6 +43,9 @@
     <None Remove="Resources\LambdaDependencies\PythonLambda\Lambda\other.py" />
     <None Remove="Resources\LambdaDependencies\PythonLambda\template.yaml" />
     <None Remove="Resources\LambdaDependencies\PythonLambda\venv\Include\placeholder.txt" />
+    <None Remove="Resources\LambdaDependencies\PythonLambda\venv\lib\site-packages\boto3\__init__.py" />
+    <None Remove="Resources\LambdaDependencies\PythonLambda\venv\lib\site-packages\boto3_2_39_0_dist_info\METADATA" />
+    <None Remove="Resources\LambdaDependencies\PythonLambda\venv\lib\site-packages\boto3_2_39_0_dist_info\RECORD" />
     <None Remove="Resources\LambdaDependencies\PythonLambda\venv\lib\site-packages\mylibrary_1_0_0_dist_info\METADATA.txt" />
     <None Remove="Resources\LambdaDependencies\PythonLambda\venv\lib\site-packages\mylibrary_1_0_0_dist_info\RECORD.txt" />
     <None Remove="Resources\LambdaDependencies\PythonLambda\venv\lib\site-packages\mylibrary\__init__.py" />
@@ -72,9 +78,15 @@
   </ItemGroup>
 
   <ItemGroup>
+    <EmbeddedResource Include="Resources\LambdaDependencies\PythonLambdaLinux\venv\lib\python3_6\site-packages\boto3\__init__.py" />
+    <EmbeddedResource Include="Resources\LambdaDependencies\PythonLambdaLinux\venv\lib\python3_6\site-packages\boto3_2_39_0_dist_info\METADATA" />
+    <EmbeddedResource Include="Resources\LambdaDependencies\PythonLambdaLinux\venv\lib\python3_6\site-packages\boto3_2_39_0_dist_info\RECORD" />
     <EmbeddedResource Include="Resources\LambdaDependencies\PythonLambdaLinux\venv\lib\python3_6\site-packages\mylibrary_1_0_0_dist_info\METADATA.txt" />
     <EmbeddedResource Include="Resources\LambdaDependencies\PythonLambdaLinux\venv\lib\python3_6\site-packages\mylibrary_1_0_0_dist_info\RECORD.txt" />
     <EmbeddedResource Include="Resources\LambdaDependencies\PythonLambdaLinux\venv\lib\python3_6\site-packages\standalone_1_0_0_dist_info\RECORD.txt" />
+    <EmbeddedResource Include="Resources\LambdaDependencies\PythonLambda\venv\lib\site-packages\boto3\__init__.py" />
+    <EmbeddedResource Include="Resources\LambdaDependencies\PythonLambda\venv\lib\site-packages\boto3_2_39_0_dist_info\METADATA" />
+    <EmbeddedResource Include="Resources\LambdaDependencies\PythonLambda\venv\lib\site-packages\boto3_2_39_0_dist_info\RECORD" />
     <EmbeddedResource Include="Resources\LambdaDependencies\PythonLambda\venv\lib\site-packages\mylibrary_1_0_0_dist_info\METADATA.txt" />
     <EmbeddedResource Include="Resources\LambdaDependencies\PythonLambda\venv\lib\site-packages\mylibrary_1_0_0_dist_info\RECORD.txt" />
   </ItemGroup>
