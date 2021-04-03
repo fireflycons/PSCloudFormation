@@ -7,8 +7,6 @@
     using System.Linq;
     using System.Text.RegularExpressions;
 
-    using Amazon.S3.Model.Internal.MarshallTransformations;
-
     using Firefly.CloudFormation;
     using Firefly.CloudFormation.Parsers;
     using Firefly.PSCloudFormation.Utils;
@@ -21,7 +19,20 @@
     [DebuggerDisplay("{LogicalName}")]
     internal class LambdaArtifact
     {
+        /// <summary>
+        /// Name of <c>requirements.txt</c> file.
+        /// </summary>
         private const string RequirementsTxt = "requirements.txt";
+
+        /// <summary>
+        /// Packages that we don't need to include with a lambda as they are present in the AWS execution environment.
+        /// </summary>
+        private static readonly string[] IgnoreDependencies = new[]
+                                                                  {
+                                                                      "boto", "boto3", "botocore", "jmespath",
+                                                                      "s3transfer", "urllib3", "python-dateutil",
+                                                                      "docutils"
+                                                                  };
 
         /// <summary>
         /// Regex to parse package names from a requirements.txt file
@@ -324,7 +335,7 @@
             }
 
             var venv = new PythonVirtualEnv(this.platform).Load(this.RuntimeInfo);
-
+            
             foreach (var match in RequirementsRegex.Matches(File.ReadAllText(pathToRequirements)).Cast<Match>())
             {
                 this.ResolveDependencies(match.Groups["dependency"].Value.Trim(), venv, dependencies);
@@ -341,6 +352,12 @@
         /// <param name="dependencies">The dependencies.</param>
         private void ResolveDependencies(string packageName, PythonVirtualEnv venv, ICollection<LambdaDependency> dependencies)
         {
+            if (IgnoreDependencies.Contains(packageName))
+            {
+                this.logger.LogVerbose($"Package '{packageName} will not be included because it exists by default in the AWS execution environment.");
+                return;
+            }
+
             var module = venv[packageName];
 
             if (module == null)
