@@ -22,7 +22,7 @@ Head over [here](https://fireflycons.github.io/PSCloudFormation/index.html) for 
 ### Breaking Changes
 
 * Minimum requirement Windows PowerShell 5.1. All PowerShell Core versions are supported.
-* Requires modular [AWS.Tools](https://github.com/aws/aws-tools-for-powershell/issues/67) - currently version `4.1.6.0` or higher. Monolithic AWSPowerShell is no longer supported (since PSCloudFormation v3.x). Future releases of this module will be version number aligned with the required version of `AWS.Tools`.
+* Requires modular [AWS.Tools](https://github.com/aws/aws-tools-for-powershell/issues/67) - currently version `4.1.6.0` or higher. Monolithic AWSPowerShell is no longer supported (since PSCloudFormation v3.x). Future releases of this module will be version number aligned with the required version of `AWS.Tools` as and when enhancements are added in the space occupied by these cmdlets.
 * Meaning of `-Wait` parameter has changed. This only applies to `Update-PSCFNStack` and means that update should not begin if at the time the cmdlet is called, the target stack is found to be being updated by another process. In this case the update will wait for the other update to complete. All PSCloudFormation cmdlets will wait for their own operation to run to completion unless `-PassThru` is present.
 * Return type from the cmdlets has changed. Instead of being just a stack status or an ARN, it is a structure containing both, defined [here](https://fireflycons.github.io/Firefly-CloudFormation/api/Firefly.CloudFormation.Model.CloudFormationResult.html).
 
@@ -31,7 +31,7 @@ Head over [here](https://fireflycons.github.io/PSCloudFormation/index.html) for 
 * More use of colour in changeset and stack event display.
 * All properties of create, update and delete stack are now supported.
 * More complete support for determining AWS credentials from all sources.
-* [Resource Import](https://fireflycons.github.io/PSCloudFormation/articles/resource-import.html) supported (since v3.x) - still not supported by AWS.Tools cmdlets at time of writing.
+* [Resource Import](https://fireflycons.github.io/PSCloudFormation/articles/resource-import.html) supported (since v3.x).
 * [Dependency Packaging](https://fireflycons.github.io/PSCloudFormation/articles/lambda-packager.html) - For script based lambdas, it is possible to package dependent modules directly.
 * Support for Python lambda dependency resultion via `requirements.txt`
 * [Nested Changeset support](https://fireflycons.github.io/PSCloudFormation/articles/changesets.html) - With caveats! See documentation.
