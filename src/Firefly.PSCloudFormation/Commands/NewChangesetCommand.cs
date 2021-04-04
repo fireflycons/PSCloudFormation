@@ -1,7 +1,6 @@
 ﻿namespace Firefly.PSCloudFormation.Commands
 {
     using System;
-    using System.Collections.Generic;
     using System.Management.Automation;
     using System.Threading.Tasks;
 
@@ -199,6 +198,12 @@
         [SelectableOutputProperty]
         protected string Json => ((PSLogger)this.Logger).GetJsonChanges();
 
+        /// <summary>
+        /// Gets the changeset ARN.
+        /// </summary>
+        /// <value>
+        /// The changeset ARN.
+        /// </value>
         [SelectableOutputProperty]
         protected string ChangesetArn { get; private set; }
 

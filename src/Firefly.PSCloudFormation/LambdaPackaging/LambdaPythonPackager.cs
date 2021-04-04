@@ -152,12 +152,7 @@
                 }
 
                 // Remove any __pycache__
-                foreach (var pycache in dependencyEntry.Libraries
-                    .Where(l => Directory.Exists(Path.Combine(this.packageDirectory.FullName, l))).Select(
-                        l => Directory.GetDirectories(
-                            Path.Combine(this.packageDirectory.FullName, l),
-                            "*__pycache__",
-                            SearchOption.AllDirectories)).SelectMany(pycaches => pycaches))
+                foreach (var pycache in Directory.EnumerateDirectories(this.packageDirectory.FullName, "__pycache__", SearchOption.AllDirectories))
                 {
                     Directory.Delete(pycache, true);
                 }
@@ -212,30 +207,50 @@
 
             foreach (var library in dependencyEntry.Libraries)
             {
-                var libDirectory = dependencyLocationArray.Select(d => Path.Combine(d, library))
-                    .FirstOrDefault(Directory.Exists);
-
-                if (libDirectory != null)
+                if (Path.IsPathRooted(library))
                 {
-                    // Now copy to where we are building the package
-                    var source = new DirectoryInfo(libDirectory);
-                    var target = new DirectoryInfo(Path.Combine(this.packageDirectory.FullName, source.Name));
-                    CopyAll(source, target);
-                    continue;
+                    if (File.Exists(library))
+                    {
+                        File.Copy(library, Path.Combine(this.packageDirectory.FullName, Path.GetFileName(library)));
+                    }
+                    else if (Directory.Exists(library))
+                    {
+                        var source = new DirectoryInfo(library);
+                        var target = new DirectoryInfo(Path.Combine(this.packageDirectory.FullName, source.Name));
+                        CopyAll(source, target);
+                    }
+                    else
+                    {
+                        throw new FileNotFoundException("Library module not found", library);
+                    }
                 }
-
-                // Perhaps the dependency is a single file
-                var libFile = dependencyLocationArray.Select(d => Path.Combine(d, $"{library}.py"))
-                    .FirstOrDefault(File.Exists);
-
-                if (libFile == null)
+                else
                 {
-                    throw new PackagerException(
-                        $"Module {library} not found in virtual env '{dependencyEntry.Location}'");
-                }
+                    var libDirectory = dependencyLocationArray.Select(d => Path.Combine(d, library))
+                        .FirstOrDefault(Directory.Exists);
 
-                // Copy the file to the packaging directory
-                File.Copy(libFile, Path.Combine(this.packageDirectory.FullName, Path.GetFileName(libFile)));
+                    if (libDirectory != null)
+                    {
+                        // Now copy to where we are building the package
+                        var source = new DirectoryInfo(libDirectory);
+                        var target = new DirectoryInfo(Path.Combine(this.packageDirectory.FullName, source.Name));
+                        CopyAll(source, target);
+                        continue;
+                    }
+
+                    // Perhaps the dependency is a single file
+                    var libFile = dependencyLocationArray.Select(d => Path.Combine(d, $"{library}.py"))
+                        .FirstOrDefault(File.Exists);
+
+                    if (libFile == null)
+                    {
+                        throw new PackagerException(
+                            $"Module {library} not found in virtual env '{dependencyEntry.Location}'");
+                    }
+
+                    // Copy the file to the packaging directory
+                    File.Copy(libFile, Path.Combine(this.packageDirectory.FullName, Path.GetFileName(libFile)));
+                }
             }
         }
     }

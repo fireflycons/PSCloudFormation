@@ -143,6 +143,12 @@
         [SelectableOutputProperty]
         protected string Arn { get; set; }
 
+        /// <summary>
+        /// Gets or sets the result of the CloudFormation run.
+        /// </summary>
+        /// <value>
+        /// The result.
+        /// </value>
         [SelectableOutputProperty]
         protected CloudFormationResult Result { get; set; }
 

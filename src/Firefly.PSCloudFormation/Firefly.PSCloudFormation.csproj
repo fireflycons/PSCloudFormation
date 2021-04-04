@@ -27,6 +27,7 @@
     <PackageReference Include="Firefly.EmbeddedResourceLoader" Version="0.1.4" />
     <PackageReference Include="Firefly.PowerShell.DynamicParameters" Version="0.2.1" />
     <PackageReference Include="PowerShellStandard.Library" Version="5.1.0" />
+    <PackageReference Include="sly" Version="2.6.4.1" />
   </ItemGroup>
   <ItemGroup Condition="'$(OS)' == 'Windows_NT'">
     <PackageReference Include="XmlDoc2CmdletDoc" Version="0.3.0">

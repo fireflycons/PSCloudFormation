@@ -6,6 +6,7 @@
     using System.Collections.Generic;
     using System.IO;
     using System.Linq;
+    using System.Runtime.InteropServices;
     using System.Threading.Tasks;
 
     using Firefly.CloudFormation.Parsers;
@@ -116,7 +117,11 @@
 
             function.Should().NotBeNull("you broke the template!");
 
-            var artifact = new LambdaArtifact(new TestPathResolver(), function, template);
+            var mockOSInfo = new Mock<IOSInfo>();
+
+            mockOSInfo.Setup(i => i.OSPlatform).Returns(OSPlatform.Windows);
+
+            var artifact = new LambdaArtifact(new TestPathResolver(), function, new TestLogger(this.output), mockOSInfo.Object, template);
             var packager = LambdaPackager.CreatePackager(artifact, mockS3.Object, new TestLogger(this.output), new OSInfo());
 
             Func<Task> act = async () => { await packager.Package(null); };
@@ -151,9 +156,15 @@
             mockLambdaFunctionResource.Setup(r => r.GetResourcePropertyValue(InlineCodePropertyMap[resourceType]))
                 .Returns(InlineCodeCodeMap[runtime]);
 
+            var mockOSInfo = new Mock<IOSInfo>();
+
+            mockOSInfo.Setup(i => i.OSPlatform).Returns(OSPlatform.Windows);
+
             var artifact = new LambdaArtifact(
                 new TestPathResolver(),
                 mockLambdaFunctionResource.Object,
+                new TestLogger(this.output),
+                mockOSInfo.Object,
                 Directory.GetCurrentDirectory());
 
             // Verify parsing
@@ -192,9 +203,15 @@
             mockLambdaFunctionResource.Setup(r => r.GetResourcePropertyValue(InlineCodePropertyMap[resourceType]))
                 .Returns(InlineCodeCodeMap[runtime]);
 
+            var mockOSInfo = new Mock<IOSInfo>();
+
+            mockOSInfo.Setup(i => i.OSPlatform).Returns(OSPlatform.Windows);
+
             var artifact = new LambdaArtifact(
                 new TestPathResolver(),
                 mockLambdaFunctionResource.Object,
+                new TestLogger(this.output),
+                mockOSInfo.Object,
                 Directory.GetCurrentDirectory());
 
             // Verify parsing
@@ -228,9 +245,15 @@
                 .Returns("index.mistyped_handler");
             mockLambdaFunctionResource.Setup(r => r.GetResourcePropertyValue(codeProperty)).Returns(InlineRuby);
 
+            var mockOSInfo = new Mock<IOSInfo>();
+
+            mockOSInfo.Setup(i => i.OSPlatform).Returns(OSPlatform.Windows);
+
             var artifact = new LambdaArtifact(
                 new TestPathResolver(),
                 mockLambdaFunctionResource.Object,
+                new TestLogger(this.output),
+                mockOSInfo.Object,
                 Directory.GetCurrentDirectory());
 
             var packager = LambdaPackager.CreatePackager(artifact, mockS3.Object, logger, new OSInfo());
@@ -260,9 +283,15 @@
             mockLambdaFunctionResource.Setup(r => r.GetResourcePropertyValue("Code")).Returns(this.dependencyFiles);
             mockLambdaFunctionResource.Setup(r => r.GetResourcePropertyValue("Handler")).Returns("index.handler");
 
+            var mockOSInfo = new Mock<IOSInfo>();
+
+            mockOSInfo.Setup(i => i.OSPlatform).Returns(OSPlatform.Windows);
+
             var artifact = new LambdaArtifact(
                 new TestPathResolver(),
                 mockLambdaFunctionResource.Object,
+                new TestLogger(this.output),
+                mockOSInfo.Object,
                 this.dependencyFiles);
 
             var dependencies = artifact.LoadDependencies();
@@ -287,9 +316,15 @@
             mockLambdaFunctionResource.Setup(r => r.GetResourcePropertyValue("Code")).Returns(this.dependencyFiles);
             mockLambdaFunctionResource.Setup(r => r.GetResourcePropertyValue("Handler")).Returns("index.handler");
 
+            var mockOSInfo = new Mock<IOSInfo>();
+
+            mockOSInfo.Setup(i => i.OSPlatform).Returns(OSPlatform.Windows);
+
             var artifact = new LambdaArtifact(
                 new TestPathResolver(),
-                mockLambdaFunctionResource.Object,
+                mockLambdaFunctionResource.Object, 
+                new TestLogger(this.output),
+                mockOSInfo.Object,
                 this.dependencyFiles);
 
             var dependencyFile = Path.Combine(this.dependencyFiles, $"lambda-dependencies.{format}");

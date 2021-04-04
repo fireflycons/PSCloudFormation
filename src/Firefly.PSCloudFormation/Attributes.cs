@@ -1,4 +1,5 @@
 ﻿// ReSharper disable StyleCop.SA1402
+
 namespace Firefly.PSCloudFormation
 {
     using System;

@@ -29,19 +29,6 @@ Having said this, the PSCloudFormation packager will still correctly apply a loc
 
 ### Python
 
-The easiest way to package Python dependencies is to build your Python lambda in a [virtual env](https://docs.python.org/3/library/venv.html) and then run PSCloudFormation cmdlets from within the virtual env, using the `VIRTUAL_ENV` environment variable in your `lambda-dependencies` file as the location for package dependencies. This environment variable is created when you activate your virtualenv.
-
-```yaml
-- Location: "$VIRTUAL_ENV"
-  Libraries:
-  - yaml
-  - PIL
-  - six
-- Location: /some/other/location
-  Libraries:
-  - other_library
-```
-
 **Sample directory structure (Windows)**
 
 ```
@@ -61,7 +48,7 @@ lambda-project
 
 ...where `X.Y` is the Python runtime version e.g. `3.6`
 
-**CAVEAT**: Due to the versioned site packages in the venv, you need to develop using the same version of Python as the runtime version you intend to deploy your lambda to.
+**CAVEAT**: Due to the versioned site packages in the venv, you must develop using the same version of Python as the runtime version you intend to deploy your lambda to.
 
 ```
 lambda-project
@@ -76,6 +63,39 @@ lambda-project
                 ├── PIL
                 ├── six.py
 ```
+
+#### Using PSCloudFormation dependencies
+
+The easiest way to package Python dependencies is to build your Python lambda in a [virtual env](https://docs.python.org/3/library/venv.html) and then run PSCloudFormation cmdlets from within the virtual env, using the `VIRTUAL_ENV` environment variable in your `lambda-dependencies` file as the location for package dependencies. This environment variable is created when you activate your virtualenv.
+
+Note that for this mechanism you must list all dependencies, including dependencies of dependencies. This mechanism does not walk the dependency tree of each package listed in `Libraries`. Note also that `Libraries` refers to files or directories, _not_ package names therefore specifying `PyYAML` will _not_ package any files!
+
+```yaml
+- Location: "$VIRTUAL_ENV"
+  Libraries:
+  - yaml
+  - PIL
+  - six
+- Location: /some/other/location
+  Libraries:
+  - other_library
+```
+
+#### Using requirements.txt
+
+**Experimental** For this you must have a [virtual env](https://docs.python.org/3/library/venv.html) active in your environment when you run PSCloudFormation cmdlets.
+
+List the lambda's dependencies in a `requirements.txt` file in the root directory of the lambda function code. Packages listed in `requirements.txt` that are present in the AWS execution environment such as `boto3` and its dependencies will be skipped for packaging to reduce the size of the package zip. To see what is being skipped, run with `-Verbose` switch.
+
+For each listed dependency, it is looked up in the virtual env and the content and sub-dependencies are recursively located through each package's dist-info files.
+
+A parser is employed to evaluate [marker expressions](https://www.python.org/dev/peps/pep-0508/#environment-markers) applied to `Requires-Dist:` statements in `METADATA` files. This probably does not support _all_ possible grammar in these logical statements, but the unit tests cover many cases I've found. If a statement fails to parse but is in your opinion syntactically correct or if a sub-dependency is not included that should have been, please raise an issue. As a workaround, fall back to [PSCloudFormation dependencies](#using-pscloudformation-dependencies).
+
+The following assumptions are made:
+
+* Your virtual env contains all the dependencies your lambda requires. The packager will not `pip install` any missing ones.
+* Versions of these dependencies are correct for your lambda.
+* When evaluating sub-dependencies via package `METADATA` files, marker variables such as `os_name`, `sys_platform` etc. evaluate to values consistent with the lambda execution environment being Amazon Linux 2. `python_version` evaluates to the version targeted by your lambda resource's `Runtime` property. `extra` is always assumed (possibly incorrectly) undefined, thus any `extra == 'package'` will evaulate to `false`.
 
 ### NodeJS
 

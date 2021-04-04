@@ -127,8 +127,7 @@ namespace Amazon.PowerShell.Common
         {
             if (!string.IsNullOrEmpty(this.Name))
                 return this.Name;
-            else
-                return this.Credentials != null ? this.Credentials.ToString() : base.ToString();
+            return this.Credentials != null ? this.Credentials.ToString() : base.ToString();
         }
     }
 
@@ -150,7 +149,6 @@ namespace Amazon.PowerShell.Common
             }
 
             credentials = null;
-            AWSCredentials innerCredentials = null;
             string name = null;
             var source = CredentialsSource.Unknown;
             var userSpecifiedProfile = !string.IsNullOrEmpty(self.ProfileName);
@@ -162,7 +160,7 @@ namespace Amazon.PowerShell.Common
             if (AWSCredentialsFactory.TryGetAWSCredentials(
                 self.GetCredentialProfileOptions(),
                 profileChain,
-                out innerCredentials))
+                out var innerCredentials))
             {
                 source = CredentialsSource.Strings;
                 name = "Supplied Key Parameters";
@@ -589,10 +587,10 @@ namespace Amazon.PowerShell.Common
                     // be nice and informative :-)
                     StringBuilder sb = new StringBuilder("Unsupported Region value. Supported values: ");
                     var regions = RegionEndpoint.EnumerableAllRegions;
-                    for (int i = 0; i < regions.Count<RegionEndpoint>(); i++)
+                    for (int i = 0; i < regions.Count(); i++)
                     {
                         if (i > 0) sb.Append(",");
-                        sb.Append(regions.ElementAt<RegionEndpoint>(i).SystemName);
+                        sb.Append(regions.ElementAt(i).SystemName);
                     }
 
                     throw new ArgumentOutOfRangeException(sb.ToString());
@@ -772,12 +770,14 @@ namespace Amazon.PowerShell.Common
                                Token = immutableCredentials.Token
                            };
             }
-            else if (PassThroughExtractTypes.Contains(type))
+
+            if (PassThroughExtractTypes.Contains(type))
                 return null;
-            else if (ThrowExtractTypes.Contains(type))
+
+            if (ThrowExtractTypes.Contains(type))
                 throw new InvalidOperationException("Cannot save credentials of type " + type.Name);
-            else
-                throw new InvalidOperationException("Unrecognized credentials type: " + type.Name);
+
+            throw new InvalidOperationException("Unrecognized credentials type: " + type.Name);
         }
 
 #pragma warning disable CS0618 // A class was marked with the Obsolete attribute
