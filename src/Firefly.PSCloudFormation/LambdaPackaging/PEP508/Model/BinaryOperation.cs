@@ -83,7 +83,7 @@
                             return leftAsVersion == rightAsVersion;
                         }
 
-                        return (string)left == (string)right;
+                        return string.Compare((string)left, (string)right, StringComparison.OrdinalIgnoreCase) == 0;
 
                     case MetadataToken.NOTEQUALS:
                     case MetadataToken.ALTNOTEQUALS:
@@ -93,7 +93,7 @@
                             return leftAsVersion != rightAsVersion;
                         }
 
-                        return (string)left != (string)right;
+                        return string.Compare((string)left, (string)right, StringComparison.OrdinalIgnoreCase) != 0;
 
                     case MetadataToken.GREATER:
 
