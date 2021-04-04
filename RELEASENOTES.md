@@ -2,7 +2,7 @@
 
 # 4.1.6.10
 
-* Enhancement - Add support for Python dependency resolution in lambda packager using `requiements.txt`. [Issue link](https://github.com/fireflycons/PSCloudFormation/issues/106)
+* Enhancement - Add support for Python dependency resolution in lambda packager using `requirements.txt`. [Issue link](https://github.com/fireflycons/PSCloudFormation/issues/106)
 
 # 4.1.6.9
 
