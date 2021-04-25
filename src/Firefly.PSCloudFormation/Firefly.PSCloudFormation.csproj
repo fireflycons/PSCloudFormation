@@ -23,9 +23,9 @@
   <ItemGroup>
     <PackageReference Include="AWSSDK.S3" Version="3.5.*" />
     <PackageReference Include="AWSSDK.SecurityToken" Version="3.5.*" />
-    <PackageReference Include="Firefly.CrossPlatformZip" Version="0.5.0" />
-    <PackageReference Include="Firefly.EmbeddedResourceLoader" Version="0.1.4" />
-    <PackageReference Include="Firefly.PowerShell.DynamicParameters" Version="0.2.1" />
+    <PackageReference Include="Firefly.CrossPlatformZip" Version="0.5.2" />
+    <PackageReference Include="Firefly.EmbeddedResourceLoader" Version="0.1.5" />
+    <PackageReference Include="Firefly.PowerShell.DynamicParameters" Version="0.2.2" />
     <PackageReference Include="PowerShellStandard.Library" Version="5.1.0" />
     <PackageReference Include="sly" Version="2.6.4.1" />
   </ItemGroup>
@@ -39,7 +39,7 @@
     <ProjectReference Include="..\..\..\Firefly.CloudFormation\src\Firefly.CloudFormation\Firefly.CloudFormation.csproj" />
   </ItemGroup>
   <ItemGroup Condition="'$(SolutionName)' == 'Firefly.PSCloudFormation'">
-    <PackageReference Include="Firefly.CloudFormation" Version="1.0.0" />
+    <PackageReference Include="Firefly.CloudFormation" Version="1.0.1" />
   </ItemGroup>
   <ItemGroup>
     <None Update="debug.ps1">
