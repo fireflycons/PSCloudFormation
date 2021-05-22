@@ -1,5 +1,9 @@
 # Release Notes
 
+# 4.1.6.12
+
+* Fix - Exception when RDS delete creates a snapshot. [Issue link](https://github.com/fireflycons/PSCloudFormation/issues/109)
+
 # 4.1.6.11
 
 * Enhancement - Link with [SourceLink](https://github.com/dotnet/sourcelink/) enabled vesions of my own dependencies. No functional change. [Issue link](https://github.com/fireflycons/PSCloudFormation/issues/108)

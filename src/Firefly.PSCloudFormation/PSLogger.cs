@@ -277,7 +277,7 @@
 
             ui.Write(fg, bg, status.PadRight(this.StatusColumnWidth + 1));
 
-            if (@event.ResourceStatusReason == null)
+            if (string.IsNullOrEmpty(@event.ResourceStatusReason))
             {
                 ui.WriteLine("-");
             }
