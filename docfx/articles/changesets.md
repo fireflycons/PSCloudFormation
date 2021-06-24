@@ -19,6 +19,18 @@ PSCloudFormation supports extracting changeset detail to a file, the pipeline, a
 
 ## Working with Changesets
 
+### Changeset View
+
+When a changeset is created, it is presented to the console for review. This contains the usual columns as displayed in the changeset viewer on the AWS console, with the addition of an extra column that describes the scope of the resource change for a `Modify` action. This is a comma separated list of single characters with the following meaning
+
+| Scope | Meaning                                           |
+|-------|---------------------------------------------------|
+| C     | `CreationPolicy` is being changed                 |
+| M     | `Metadata` is being changed                       |
+| P     | One or more resource properties are being changed |
+| T     | One or more tags are being changed                |
+| U     | `UpdatePolicy` is being changed                   |
+
 ### Nested Changesets
 
 If the switch `-IncludeNestedStacks` is passed to either [New-PSCFNChangeset](xref:Update-PSCFNChangeset) or [Update-PSCFNStack](xref:Update-PSCFNStack), and the given stack contains `AWS::CloudFomation::Stack` resources, changesets will be computed for these stacks also. Changes for all the stacks in the nest will be displayed.

@@ -118,23 +118,26 @@
             var logicalResourceIdColWidth = Math.Max(columnWidths["LogicalResourceId"], 10);
             var resourceTypeColWidth = Math.Max(columnWidths["ResourceType"], 4);
             var replacementColWidth = Math.Max(columnWidths["Replacement"], 11);
+            var scopeColWidth = 9;
 
             var changeFormatString =
-                $"{{0,-{actionColWidth}}} {{1,-{logicalResourceIdColWidth}}} {{2,-{resourceTypeColWidth}}} {{3,-{replacementColWidth}}} {{4}}";
+                $"{{0,-{actionColWidth}}} {{1,-{logicalResourceIdColWidth}}} {{2,-{resourceTypeColWidth}}} {{3,-{replacementColWidth}}} {{4,-{scopeColWidth}}} {{5}}";
 
             // Resize window to be wide enough for a reasonable amount of Physical ID per line
-            this.ResizeWindow(string.Format(changeFormatString, "x", "x", "x", "x", Padding30).Length);
+            this.ResizeWindow(string.Format(changeFormatString, "x", "x", "x", "x", "x", Padding30).Length);
 
             var leftIndent = GetLeftMarginForLastColumn(
                 actionColWidth,
                 logicalResourceIdColWidth,
                 resourceTypeColWidth,
-                replacementColWidth);
+                replacementColWidth,
+                scopeColWidth);
+
             var maxLineLength = ui.RawUI.WindowSize.Width - leftIndent;
 
             this.LogInformation("Changes to be made...\n");
-            this.LogInformation(changeFormatString, "Action", "Logical ID", "Type", "Replacement", "Physical ID");
-            this.LogInformation(changeFormatString, "------", "----------", "----", "-----------", "-----------");
+            this.LogInformation(changeFormatString, "Action", "Logical ID", "Type", "Replacement", "Scope", "Physical ID");
+            this.LogInformation(changeFormatString, "------", "----------", "----", "-----------", "-----", "-----------");
 
             foreach (var r in changes.Changes.Select(change => change.ResourceChange))
             {
@@ -152,6 +155,17 @@
                         foregroundColorMap[r.Replacement.Value],
                         bg,
                         r.Replacement.Value.PadRight(replacementColWidth + 1));
+                }
+
+                if (r.Scope != null && r.Scope.Any())
+                {
+                    ui.Write(
+                        string.Join(",", r.Scope.Select(sc => sc[0].ToString().ToUpperInvariant()))
+                            .PadRight(scopeColWidth + 1));
+                }
+                else
+                {
+                    ui.Write(" ".PadRight(scopeColWidth + 1));
                 }
 
                 List<string> lines;

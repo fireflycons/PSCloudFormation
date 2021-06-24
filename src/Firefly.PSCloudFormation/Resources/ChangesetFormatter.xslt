@@ -177,6 +177,15 @@
                                                                 </xsl:otherwise>
                                                             </xsl:choose>
                                                         </tr>
+                                                        <tr>
+                                                            <td class="left">Scope</td>
+                                                            <td>
+                                                                <xsl:for-each select="ResourceChange/Scope">
+                                                                    <xsl:if test="not(position() = 1)">, </xsl:if>
+                                                                    <xsl:value-of select="."/>
+                                                                </xsl:for-each>
+                                                            </td>
+                                                        </tr>
                                                     </xsl:if>
                                                     <tr>
                                                         <td class="left">Physical ID</td>
