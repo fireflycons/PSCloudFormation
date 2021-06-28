@@ -1,9 +1,12 @@
 # Release Notes
 
+# 4.1.6.15
+
+* Fix - Python lambda checker. Does not handle type hints in handler function. [Issue link](https://github.com/fireflycons/PSCloudFormation/issues/111)
+
 # 4.1.6.14
 
 * Fix - Incorrect handling of DisableRollback parameter (package update) [Issue link](https://github.com/fireflycons/Firefly.CloudFormation/issues/12)
-* Fix - Python lambda checker. Does not handle type hints in handler function. [Issue link](https://github.com/fireflycons/PSCloudFormation/issues/111)
 
 # 4.1.6.13
 
