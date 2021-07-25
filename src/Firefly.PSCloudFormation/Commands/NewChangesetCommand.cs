@@ -248,10 +248,10 @@
 
                this.ChangesetArn = result.ChangesetResponse?.ChangeSetId;
                this.Arn = result.StackArn;
+               var logger = (PSLogger)this.Logger;
 
-               if (this.ShowInBrowser && this.ChangesetArn != null)
+                if (this.ShowInBrowser && this.ChangesetArn != null)
                {
-                   var logger = (PSLogger)this.Logger;
 
                    if (logger.CanViewChangesetInBrowser())
                    {
@@ -263,6 +263,12 @@
                    }
                }
 
+               if (!string.IsNullOrEmpty(this.ResolvedChangesetDetail))
+               {
+                   // Write out all changeset details
+                   logger.WriteChangesetDetails(this.ResolvedChangesetDetail);
+               }
+                
                return result;
             }
         }
