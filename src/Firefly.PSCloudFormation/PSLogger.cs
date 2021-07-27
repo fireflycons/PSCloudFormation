@@ -9,7 +9,7 @@
     using System.Runtime.InteropServices;
     using System.Text.RegularExpressions;
     using System.Threading;
-    using System.Xml;
+    using System.Xml.Linq;
     using System.Xml.Xsl;
 
     using Amazon.CloudFormation.Model;
@@ -45,7 +45,7 @@
         [EmbeddedResource("ChangesetFormatter.xslt")]
         // ReSharper disable once StyleCop.SA1650
 #pragma warning disable 649
-        private static XmlDocument changesetFormatter;
+        private static XDocument changesetFormatter;
 #pragma warning restore 649
 
         /// <summary>
@@ -399,14 +399,16 @@
                 this.LogWarning("Unable to convert changes to HTML. Would be the case when there are only changes to e.g. Outputs.");
                 return;
             }
-            
+
+            var changesXDocument = xmlChanges.ToXDocument();
+
             using (var ms = new MemoryStream())
             {
                 // Transform to HTML
                 var xslt = new XslCompiledTransform();
-                xslt.Load(new XmlNodeReader(changesetFormatter));
+                xslt.Load(changesetFormatter.CreateReader());
 
-                xslt.Transform(new XmlNodeReader(xmlChanges), null, ms);
+                xslt.Transform(changesXDocument.CreateReader(), null, ms);
                 ms.Seek(0, SeekOrigin.Begin);
 
                 // Write HTML to temporary file and launch default browser
