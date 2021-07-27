@@ -19,6 +19,7 @@
     using Firefly.CloudFormation.Utils;
     using Firefly.EmbeddedResourceLoader;
     using Firefly.EmbeddedResourceLoader.Materialization;
+    using Firefly.PSCloudFormation.ChangeVisualisation;
     using Firefly.PSCloudFormation.Utils;
 
     using Newtonsoft.Json;
@@ -398,7 +399,7 @@
                 this.LogWarning("Unable to convert changes to HTML. Would be the case when there are only changes to e.g. Outputs.");
                 return;
             }
-
+            
             using (var ms = new MemoryStream())
             {
                 // Transform to HTML
@@ -576,39 +577,6 @@
             {
                 return objectType.IsSubclassOf(typeof(ConstantClass));
             }
-        }
-
-        /// <summary>
-        /// Entity for formatting HTML change detail
-        /// </summary>
-        private class ChangesetDetails
-        {
-            /// <summary>
-            /// Gets or sets the Stack name
-            /// </summary>
-            // ReSharper disable UnusedAutoPropertyAccessor.Local - Used implicitly by json conversion
-            public string StackName { get; set; }
-
-            /// <summary>
-            /// Gets or sets the Changeset Name
-            /// </summary>
-            public string ChangeSetName { get; set; }
-
-            /// <summary>
-            /// Gets or sets the Description
-            /// </summary>
-            public string Description { get; set; }
-
-            /// <summary>
-            /// Gets or sets the Changeset creation time
-            /// </summary>
-            public DateTime CreationTime { get; set; }
-
-            /// <summary>
-            /// Gets or sets the Detailed resource changes
-            /// </summary>
-            public List<Change> Changes { get; set; }
-            // ReSharper restore UnusedAutoPropertyAccessor.Local
         }
     }
 }
