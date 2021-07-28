@@ -58,7 +58,7 @@
                     width: 150px;
                     }
 
-                    .detail-btn {
+                    .detail-btn, graph-btn {
                     width: 120px;
                     }
                 </style>
@@ -99,10 +99,26 @@
                                                     </td>
                                                 </tr>
                                             </table>
+                                            <xsl:if test="Graph">
+                                                <a class="btn btn-primary btn-sm graph-btn mt-2" data-toggle="collapse" href="#{generate-id(StackName)}" role="button" aria-expanded="false" aria-controls="{generate-id(StackName)}">Show Graph</a>
+                                            </xsl:if>
                                         </div>
                                     </div>
                                 </div>
                             </div>
+                            <xsl:if test="Graph">
+                                <div class="row">
+                                    <div class="col">
+                                        <div class="collapse multi-collapse" id="{generate-id(StackName)}">
+                                            <div class="card card-body bg-dark mb-1 text-center">
+                                                <xsl:for-each select="Graph">
+                                                    <xsl:copy-of select="*"/>
+                                                </xsl:for-each>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </xsl:if>
                             <xsl:for-each select="Changes">
                                 <div class="row">
                                     <div class="col">
@@ -338,13 +354,21 @@
                     </xsl:for-each>
                 </div>
                 <script language="JavaScript">
-                    $(document).ready(function() {
-                    $('.detail-btn').on('click', function() {
+                    $(document).ready(function () {
+                    $('.detail-btn').on('click', function () {
                     var text = $(this).text();
                     if (text === "Show Detail") {
                     $(this).html('Hide Detail');
                     } else {
                     $(this).text('Show Detail');
+                    }
+                    });
+                    $('.graph-btn').on('click', function () {
+                    var text = $(this).text();
+                    if (text === "Show Graph") {
+                    $(this).html('Hide Graph');
+                    } else {
+                    $(this).text('Show Graph');
                     }
                     });
                     });

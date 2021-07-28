@@ -30,6 +30,7 @@
     <PackageReference Include="sly" Version="2.6.4.1" />
     <PackageReference Include="QuikGraph" Version="2.3.0" />
     <PackageReference Include="QuikGraph.Graphviz" Version="2.3.0" />
+    <PackageReference Include="System.Net.Http.Json" Version="5.0.0" />
   </ItemGroup>
   <ItemGroup Condition="'$(OS)' == 'Windows_NT'">
     <PackageReference Include="XmlDoc2CmdletDoc" Version="0.3.0">

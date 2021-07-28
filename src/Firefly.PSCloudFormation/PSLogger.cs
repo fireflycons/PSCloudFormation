@@ -9,6 +9,7 @@
     using System.Runtime.InteropServices;
     using System.Text.RegularExpressions;
     using System.Threading;
+    using System.Threading.Tasks;
     using System.Xml.Linq;
     using System.Xml.Xsl;
 
@@ -389,7 +390,7 @@
         /// <summary>
         /// View detailed changeset info in default browser
         /// </summary>
-        public void ViewChangesetInBrowser()
+        public async Task ViewChangesetInBrowser()
         {
             // Get JSON changes as XML
             var xmlChanges = JsonConvert.DeserializeXmlNode($"{{\"Stack\": {this.GetJsonChanges()} }}", "Stacks");
@@ -401,6 +402,43 @@
             }
 
             var changesXDocument = xmlChanges.ToXDocument();
+
+            switch (await this.changesetDetails.First().GetRendererStatus())
+            {
+                case RendererStatus.Ok:
+
+                    this.LogInformation($"Building change graph{(this.changesetDetails.Count > 1 ? "s" : String.Empty)}");
+                    foreach (var details in this.changesetDetails)
+                    {
+                        var stack = details.StackName;
+                        var elem = changesXDocument.Descendants("StackName").FirstOrDefault(e => e.Value == stack);
+
+                        if (elem != null)
+                        {
+                            var graph = await details.RenderSvg();
+                            var graphNode = new XElement("Graph", graph);
+                            elem.Parent.Add(graphNode);
+                        }
+                    }
+
+                    break;
+
+                case RendererStatus.ClientError:
+                    this.LogWarning("SVG Renderer API returned 4xx error");
+                    break;
+
+                case RendererStatus.ServerError:
+                    this.LogWarning("SVG Renderer API returned 5xx error");
+                    break;
+
+                case RendererStatus.NotFound:
+                    this.LogWarning("SVG Renderer API endpoint not found");
+                    break;
+
+                case RendererStatus.ConnectionError:
+                    this.LogWarning("SVG Renderer API could not be contacted");
+                    break;
+            }
 
             using (var ms = new MemoryStream())
             {

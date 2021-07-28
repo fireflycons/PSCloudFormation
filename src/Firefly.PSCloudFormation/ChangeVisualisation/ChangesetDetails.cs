@@ -4,7 +4,10 @@
     using System.Collections.Generic;
     using System.Linq;
     using System.Net;
+    using System.Runtime.CompilerServices;
+    using System.Runtime.InteropServices;
     using System.Text;
+    using System.Threading.Tasks;
     using System.Web;
     using System.Xml;
     using System.Xml.Linq;
@@ -51,108 +54,69 @@
         // ReSharper restore UnusedAutoPropertyAccessor.Local
 
         /// <summary>
+        /// SVG renderer to use
+        /// </summary>
+        private readonly ISvgRenderer svgRenderer = new QuickChartSvgRenderer();
+
+        /// <summary>
         /// Determines whether this instance [can render SVG].
         /// </summary>
         /// <returns>
         ///   <c>true</c> if this instance [can render SVG]; otherwise, <c>false</c>.
         /// </returns>
-        public static bool CanRenderSvg()
+        public async Task<RendererStatus> GetRendererStatus()
         {
-            try
-            {
-                var request = WebRequest.Create("https://quickchart.io/graphviz?graph=graph{a--b}");
-                request.Method = "GET";
-                using (var response = (HttpWebResponse)request.GetResponse())
-                {
-                    var streamResponse = response.GetResponseStream();
-
-                    if (streamResponse is null)
-                    {
-                        return false;
-                    }
-                }
-
-                return true;
-            }
-            catch
-            {
-                return false;
-            }
+            return await this.svgRenderer.GetStatus();
         }
 
         /// <summary>
         /// Renders the change details as SVG directed graph.
         /// </summary>
-        /// <returns>SVG fragment for adding to browser view.</returns>
-        public string RenderSvg()
+        /// <returns><see cref="XElement"/> containing SVG fragment for adding to browser view.</returns>
+        public async Task<XElement> RenderSvg()
         {
             var graph = this.GenerateChangeGraph();
 
             var dotGraph = graph.ToGraphviz(
                 algorithm =>
                     {
-                        // Custom init example
+                        var font = new GraphvizFont("Arial", 9);
+
+                        algorithm.CommonVertexFormat.Font = font;
+                        algorithm.CommonEdgeFormat.Font = font;
+                        algorithm.GraphFormat.RankDirection = GraphvizRankDirection.LR;
                         algorithm.FormatVertex += (sender, args) =>
                             {
                                 args.VertexFormat.Label = args.Vertex.ToString();
+                                args.VertexFormat.Shape = args.Vertex.Shape;
+
                                 if (args.Vertex is ResourceVertex rv)
                                 {
-                                    args.VertexFormat.FillColor =
-                                        rv.Change.ResourceChange.Replacement == Replacement.True
-                                            ? GraphvizColor.Red
-                                            :
-                                            rv.Change.ResourceChange.Replacement == Replacement.Conditional
-                                                ?
-                                                GraphvizColor.Orange
-                                                : GraphvizColor.LightGreen;
-
-                                    args.VertexFormat.Style = GraphvizVertexStyle.Filled;
+                                    args.VertexFormat.Label = rv.Label;
+                                    args.VertexFormat.Style = rv.Style;
+                                    args.VertexFormat.FillColor = rv.FillColor;
+                                    args.VertexFormat.FontColor = rv.FontColor;
                                 }
                             };
+
                         algorithm.FormatEdge += (sender, args) => { args.EdgeFormat.Label.Value = args.Edge.Tag; };
                     });
 
-            var uri = new UriBuilder("https://quickchart.io/graphviz")
-                          {
-                              Query = $"graph={HttpUtility.UrlEncode(dotGraph)}"
-                          };
+            // Temp fix - wait for https://github.com/KeRNeLith/QuikGraph/issues/27
+            dotGraph = DotHtmlFormatter.QuoteHtml(dotGraph);
 
-            var request = WebRequest.Create(uri.ToString());
-            request.Method = "GET";
-
-            using (var response = (HttpWebResponse)request.GetResponse())
-            {
-                var streamResponse = response.GetResponseStream();
-
-                if (streamResponse is null)
-                {
-                    return string.Empty;
-                }
-
-                var doc = XDocument.Load(streamResponse); // Svg
-
-                var elem = doc.Elements().First();
-
-                var sb = new StringBuilder();
-                var xws = new XmlWriterSettings { OmitXmlDeclaration = true, Indent = true };
-
-                using (var xw = XmlWriter.Create(sb, xws))
-                {
-                    elem.WriteTo(xw);
-                }
-
-                return sb.ToString();
-            }
+            return await this.svgRenderer.RenderSvg(dotGraph);
         }
 
         /// <summary>
         /// Generates the change graph.
         /// </summary>
+        /// <returns>A graph representation of the interaction between resources during the update.</returns>
         public BidirectionalGraph<IChangeVertex, TaggedEdge<IChangeVertex, string>> GenerateChangeGraph()
         {
             var parameters = new List<ParameterVertex>();
             var direct = new DirectModificationVertex();
-            var resourceVertices = this.Changes.Select(c => new ResourceVertex(c)).ToList();
+            var resourceVertices = this.Changes.Select(ResourceVertex.Create).ToList();
             var edges = new List<TaggedEdge<IChangeVertex, string>>();
             var graph = new BidirectionalGraph<IChangeVertex, TaggedEdge<IChangeVertex, string>>();
 
@@ -181,7 +145,9 @@
                         && detail.Evaluation == EvaluationType.Static)
                     {
                         // User directly modified a property
-                        edges.Add(new TaggedEdge<IChangeVertex, string>(direct, resource, detail.Target.Name));
+                        string edgeTag = detail.Target.Name ?? (detail.Target.Attribute == "Tags" ? "Tags" : null);
+
+                        edges.Add(new TaggedEdge<IChangeVertex, string>(direct, resource, edgeTag));
                     }
 
                     if (detail.ChangeSource == ChangeSource.ResourceReference)

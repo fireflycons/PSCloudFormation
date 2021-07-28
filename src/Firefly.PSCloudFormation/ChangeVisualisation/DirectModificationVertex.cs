@@ -2,14 +2,18 @@
 {
     using System.Diagnostics;
 
+    using QuikGraph.Graphviz.Dot;
+
     [DebuggerDisplay("Direct: {Name}")]
     internal class DirectModificationVertex : IChangeVertex
     {
         public string Name => "Direct Modification";
 
+        public GraphvizVertexShape Shape => GraphvizVertexShape.Ellipse;
+
         public override string ToString()
         {
-            return $"D: {this.Name}";
+            return this.Name;
         }
     }
 }
