@@ -1,47 +1,25 @@
 # PSCloudFormation
 [![Build status](https://ci.appveyor.com/api/projects/status/fgt7d0icj7emc6hl/branch/master?svg=true)](https://ci.appveyor.com/project/fireflycons/pscloudformation/branch/master)
 
+A set PowerShell cmdlets for manipulating AWS CloudFormation stacks.
+
+## Features
+
+* Live display of stack events as a template is being applied when running synchronously (without `-PassThru` switch). Where nested stacks are involved, the events from these are also shown interleaved with those of the parent stack in chronlogical order.
+* When using a workstation with a GUI, [detailed changeset information](https://fireflycons.github.io/PSCloudFormation/articles/changesets.html) can be brought up in a browser, including an SVG graph depicting the relationships between resources that are being modifed - like `terraform graph`
+* Automatic packaging and upload to S3 of dependencies such as nested stack templates, lambdas, and other resources that require S3 references as described in [aws cloudformation package](https://docs.aws.amazon.com/cli/latest/reference/cloudformation/package.html)
+* Close argument parity with similar cmdlets in AWS.Tools.CloudFormation
+## Dependencies
+
 This module depends on [AWS.Tools](https://docs.aws.amazon.com/powershell/latest/userguide/pstools-welcome.html) version `4.1.6.0` or higher which you should install/upgrade to first
 
 Required AWS.Tools modules:
 
 * AWS.Tools.Common
-* AWS.Tools.CloudFormation
-* AWS.Tools.S3
 
-## Version 4 Notes
-
-This version is a complete re-write in C#. I found that it was becoming a cumbersome beast keeping it in pure PowerShell, taking longer to load the module, and certain parts of it were running quite slowly.
-
-Turning it into a binary module addresses the above problems and reduces complexity given the cmdlets share many common arguments meaning that inheritance can be used to reduce code duplication. It also gives me the chance to showcase three of my other projects: [Firefly.CloudFormation](https://github.com/fireflycons/Firefly.CloudFormation) which underpins this module, [PSDynamicParameters](https://github.com/fireflycons/PSDynamicParameters) which is a library for managing PowerShell Dynamic Parameters for C# cmdlets and [CrossPlatformZip](https://github.com/fireflycons/CrossPlatformZip) which creates zip files targeting Windows or Linux/Unix/MacOS from any source platform - needed for the packaging component of this module. Lambda does not like zip files that don't contain Unix permission attributes!
-
-### New Documentation Site
+## New Documentation Site
 
 Head over [here](https://fireflycons.github.io/PSCloudFormation/index.html) for further reading and more in-depth discussion on the featues of this module.
-
-### Breaking Changes
-
-* Minimum requirement Windows PowerShell 5.1. All PowerShell Core versions are supported.
-* Requires modular [AWS.Tools](https://github.com/aws/aws-tools-for-powershell/issues/67) - currently version `4.1.6.0` or higher. Monolithic AWSPowerShell is no longer supported (since PSCloudFormation v3.x). Future releases of this module will be version number aligned with the required version of `AWS.Tools` as and when enhancements are added in the space occupied by these cmdlets.
-* Meaning of `-Wait` parameter has changed. This only applies to `Update-PSCFNStack` and means that update should not begin if at the time the cmdlet is called, the target stack is found to be being updated by another process. In this case the update will wait for the other update to complete. All PSCloudFormation cmdlets will wait for their own operation to run to completion unless `-PassThru` is present.
-* Return type from the cmdlets has changed. Instead of being just a stack status or an ARN, it is a structure containing both, defined [here](https://fireflycons.github.io/Firefly-CloudFormation/api/Firefly.CloudFormation.Model.CloudFormationResult.html).
-
-### Enhancements
-
-* More use of colour in changeset and stack event display.
-* All properties of create, update and delete stack are now supported.
-* More complete support for determining AWS credentials from all sources.
-* [Resource Import](https://fireflycons.github.io/PSCloudFormation/articles/resource-import.html) supported (since v3.x).
-* [Dependency Packaging](https://fireflycons.github.io/PSCloudFormation/articles/lambda-packager.html) - For script based lambdas, it is possible to package dependent modules directly.
-* Support for Python lambda dependency resultion via `requirements.txt`
-* [Nested Changeset support](https://fireflycons.github.io/PSCloudFormation/articles/changesets.html) - With caveats! See documentation.
-* [Changeset Detail view](https://fireflycons.github.io/PSCloudFormation/articles/changesets.html) - View changeset detail in browser.
-
-### Gotchas
-
-Due to the fact that the entire PowerShell process is a single .NET AppDomain, it is possible to fall into DLL hell. This module has various dependencies such as [YamlDotNet](https://github.com/aaubry/YamlDotNet). If something else in the current PowerShell session has loaded a different version of a dependent library like YamlDotNet, then you will get an assembly version clash when importing this module and the import will fail. Start a new PowerShell session and import there.
-
-There is a way round this for pure .NET Core applications, but then I would have to target PowerShell Core only. The time isn't right for that yet, but if there's sufficient interest, then that could be the v5 release.
 
 ## How to Install
 
@@ -93,3 +71,5 @@ Thanks to
 * [ramblingcookiemonster](http://ramblingcookiemonster.github.io/) for `PSDepend` and `PSDeploy` used in parts of the build of this project.
 * [Antoine Aubry](https://github.com/aaubry/YamlDotNet) for `YamlDotNet`
 * [Olivier Duhart](https://github.com/b3b00/csly) for `csly` used to parse python `METADATA` files.
+* [Alexandre Rabérin](https://github.com/KeRNeLith/QuikGraph) for QuikGraph
+* [Ian Webster](https://github.com/typpo/quickchart) and [QuickChart.io](https://quickchart.io/) for SVG rendering API.
