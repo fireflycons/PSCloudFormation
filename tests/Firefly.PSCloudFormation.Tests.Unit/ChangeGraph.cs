@@ -18,6 +18,7 @@
     {
         private readonly ITestOutputHelper output;
 
+#pragma warning disable 649
         [EmbeddedResource("changeset.json")]
         private string changeJson;
 
