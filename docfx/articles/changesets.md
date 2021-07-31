@@ -60,7 +60,7 @@ When a GUI is detected, [Update-PSCFNStack](xref:Update-PSCFNStack) provides an 
 
 [New-PSCFNChangeset](xref:Update-PSCFNChangeset) will perform the above by addition of `-ShowInBrowser` switch argument.
 
-The HTML document contains a formatted view of each change along with the detail provided in the `JSON Changes` view in the CloudFormation console. A graph of relationships between modified resouces is also provided. This has the following key
+The HTML document contains a formatted view of each change along with the detail provided in the `JSON Changes` view in the CloudFormation console. An SVG graph of relationships between modified resouces is also provided, which can be manipulated using the mouse. This has the following key
 
 | Icon                  | Meaning                                                                     |
 |-----------------------|-----------------------------------------------------------------------------|
