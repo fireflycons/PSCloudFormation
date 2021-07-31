@@ -65,6 +65,7 @@ The HTML document contains a formatted view of each change along with the detail
 | Icon                  | Meaning                                                                     |
 |-----------------------|-----------------------------------------------------------------------------|
 | Solid box, green font | New resource.                                                               |
+| Solid box, blue font  | Imported resource.                                                               |
 | Dashed box, red font  | Resource is being deleted.                                                  |
 | Box, green fill       | Resource is being modified, without replacement.                            |
 | Box, amber fill       | Resource is being modified, conditional replacement.                        |
