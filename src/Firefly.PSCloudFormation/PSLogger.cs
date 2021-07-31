@@ -50,6 +50,11 @@
 #pragma warning restore 649
 
         /// <summary>
+        /// SVG renderer to use
+        /// </summary>
+        private readonly ISvgRenderer svgRenderer = new QuickChartSvgRenderer();
+
+        /// <summary>
         /// The <see cref="PSCmdlet"/> object.
         /// </summary>
         private readonly PSCmdlet cmdlet;
@@ -120,10 +125,10 @@
             var logicalResourceIdColWidth = Math.Max(columnWidths["LogicalResourceId"], 10);
             var resourceTypeColWidth = Math.Max(columnWidths["ResourceType"], 4);
             var replacementColWidth = Math.Max(columnWidths["Replacement"], 11);
-            var scopeColWidth = 9;
+            const int ScopeColWidth = 9;
 
             var changeFormatString =
-                $"{{0,-{actionColWidth}}} {{1,-{logicalResourceIdColWidth}}} {{2,-{resourceTypeColWidth}}} {{3,-{replacementColWidth}}} {{4,-{scopeColWidth}}} {{5}}";
+                $"{{0,-{actionColWidth}}} {{1,-{logicalResourceIdColWidth}}} {{2,-{resourceTypeColWidth}}} {{3,-{replacementColWidth}}} {{4,-{ScopeColWidth}}} {{5}}";
 
             // Resize window to be wide enough for a reasonable amount of Physical ID per line
             this.ResizeWindow(string.Format(changeFormatString, "x", "x", "x", "x", "x", Padding30).Length);
@@ -133,7 +138,7 @@
                 logicalResourceIdColWidth,
                 resourceTypeColWidth,
                 replacementColWidth,
-                scopeColWidth);
+                ScopeColWidth);
 
             var maxLineLength = ui.RawUI.WindowSize.Width - leftIndent;
 
@@ -163,11 +168,11 @@
                 {
                     ui.Write(
                         string.Join(",", r.Scope.Select(sc => sc[0].ToString().ToUpperInvariant()))
-                            .PadRight(scopeColWidth + 1));
+                            .PadRight(ScopeColWidth + 1));
                 }
                 else
                 {
-                    ui.Write(" ".PadRight(scopeColWidth + 1));
+                    ui.Write(" ".PadRight(ScopeColWidth + 1));
                 }
 
                 List<string> lines;
@@ -390,7 +395,8 @@
         /// <summary>
         /// View detailed changeset info in default browser
         /// </summary>
-        public async Task ViewChangesetInBrowser()
+        /// <returns>Task to wait on</returns>
+        public async Task ViewChangesetInBrowserAsync()
         {
             // Get JSON changes as XML
             var xmlChanges = JsonConvert.DeserializeXmlNode($"{{\"Stack\": {this.GetJsonChanges()} }}", "Stacks");
@@ -403,11 +409,11 @@
 
             var changesXDocument = xmlChanges.ToXDocument();
 
-            switch (await this.changesetDetails.First().GetRendererStatus())
+            switch (await this.svgRenderer.GetStatus())
             {
                 case RendererStatus.Ok:
 
-                    this.LogInformation($"Building change graph{(this.changesetDetails.Count > 1 ? "s" : String.Empty)}");
+                    this.LogInformation($"Building change graph{(this.changesetDetails.Count > 1 ? "s" : string.Empty)}");
                     foreach (var details in this.changesetDetails)
                     {
                         var stack = details.StackName;
@@ -415,8 +421,10 @@
 
                         if (elem != null)
                         {
-                            var graph = await details.RenderSvg();
+                            var graph = await details.RenderSvg(this.svgRenderer);
                             var graphNode = new XElement("Graph", graph);
+
+                            // ReSharper disable once PossibleNullReferenceException - if this node exists, by definition of the schema it has a parent
                             elem.Parent.Add(graphNode);
                         }
                     }
@@ -480,7 +488,8 @@
                     }
 
                     // Give browser time to open and read the file before it gets deleted
-                    Thread.Sleep(2000);
+                    Thread.Sleep(5000);
+                    this.LogDebug("Browser should have opened by now");
                 }
             }
         }
