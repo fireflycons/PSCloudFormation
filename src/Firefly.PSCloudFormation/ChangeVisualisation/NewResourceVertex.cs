@@ -1,5 +1,7 @@
 ﻿namespace Firefly.PSCloudFormation.ChangeVisualisation
 {
+    using System.Diagnostics;
+
     using Amazon.CloudFormation.Model;
 
     using QuikGraph.Graphviz.Dot;
@@ -8,6 +10,7 @@
     /// Represents a new resource
     /// </summary>
     /// <seealso cref="Firefly.PSCloudFormation.ChangeVisualisation.ResourceVertex" />
+    [DebuggerDisplay("Add: {Name}")]
     internal class NewResourceVertex : ResourceVertex
     {
         /// <summary>

@@ -452,7 +452,7 @@
 
                         case ChoiceResponse.ViewInBrowser:
 
-                            logger.ViewChangesetInBrowser();
+                            logger.ViewChangesetInBrowserAsync().Wait();
                             break;
                     }
                 }

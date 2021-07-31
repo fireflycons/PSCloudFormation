@@ -30,7 +30,6 @@
     <PackageReference Include="sly" Version="2.6.4.1" />
     <PackageReference Include="QuikGraph" Version="2.3.0" />
     <PackageReference Include="QuikGraph.Graphviz" Version="2.3.0" />
-    <PackageReference Include="System.Net.Http.Json" Version="5.0.0" />
   </ItemGroup>
   <ItemGroup Condition="'$(OS)' == 'Windows_NT'">
     <PackageReference Include="XmlDoc2CmdletDoc" Version="0.3.0">
@@ -42,7 +41,7 @@
     <ProjectReference Include="..\..\..\Firefly.CloudFormation\src\Firefly.CloudFormation\Firefly.CloudFormation.csproj" />
   </ItemGroup>
   <ItemGroup Condition="'$(SolutionName)' == 'Firefly.PSCloudFormation'">
-    <PackageReference Include="Firefly.CloudFormation" Version="1.0.3" />
+    <PackageReference Include="Firefly.CloudFormation" Version="1.0.4" />
   </ItemGroup>
   <ItemGroup>
     <None Update="debug.ps1">

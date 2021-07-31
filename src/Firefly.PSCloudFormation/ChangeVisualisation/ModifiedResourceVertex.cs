@@ -1,5 +1,7 @@
 ﻿namespace Firefly.PSCloudFormation.ChangeVisualisation
 {
+    using System.Diagnostics;
+
     using Amazon.CloudFormation;
     using Amazon.CloudFormation.Model;
 
@@ -9,6 +11,7 @@
     /// Represents a modified resource
     /// </summary>
     /// <seealso cref="Firefly.PSCloudFormation.ChangeVisualisation.ResourceVertex" />
+    [DebuggerDisplay("Modify: {Name}")]
     internal class ModifiedResourceVertex : ResourceVertex
     {
         /// <summary>

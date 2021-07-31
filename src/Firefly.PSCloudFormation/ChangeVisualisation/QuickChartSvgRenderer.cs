@@ -4,12 +4,8 @@
     using System.Linq;
     using System.Net;
     using System.Net.Http;
-    using System.Net.Http.Json;
-    using System.Text;
     using System.Threading.Tasks;
     using System.Xml.Linq;
-
-    using Newtonsoft.Json;
 
     /// <summary>
     /// Implementation of SVG renderer using <see href="https://quickchart.io/documentation/graphviz-api"/>
@@ -32,24 +28,32 @@
         {
             try
             {
-                using (var response = await HttpClient.GetAsync("https://quickchart.io/graphviz?graph=graph{a--b}"))
+                using (var request = new HttpRequestMessage
+                                         {
+                                             Content = new JsonContent(new { graph = "graph{a--b}", layout = "dot", format = "svg" }),
+                                             Method = HttpMethod.Post,
+                                             RequestUri = new Uri("https://quickchart.io/graphviz")
+                                         })
                 {
-                    if (response.IsSuccessStatusCode)
+                    using (var response = await HttpClient.SendAsync(request))
                     {
-                        return RendererStatus.Ok;
-                    }
+                        if (response.IsSuccessStatusCode)
+                        {
+                            return RendererStatus.Ok;
+                        }
 
-                    if (response.StatusCode == HttpStatusCode.NotFound)
-                    {
-                        return RendererStatus.NotFound;
-                    }
+                        if (response.StatusCode == HttpStatusCode.NotFound)
+                        {
+                            return RendererStatus.NotFound;
+                        }
 
-                    if ((int)response.StatusCode >= 400 && (int)response.StatusCode < 500)
-                    {
-                        return RendererStatus.ClientError;
-                    }
+                        if ((int)response.StatusCode >= 400 && (int)response.StatusCode < 500)
+                        {
+                            return RendererStatus.ClientError;
+                        }
 
-                    return RendererStatus.ServerError;
+                        return RendererStatus.ServerError;
+                    }
                 }
             }
             catch (HttpRequestException)
@@ -67,11 +71,9 @@
         /// </returns>
         public async Task<XElement> RenderSvg(string dotGraph)
         {
-            var graph = new { graph = dotGraph, layout = "dot", format = "svg" };
-
             using (var request = new HttpRequestMessage
                                      {
-                                         Content = JsonContent.Create(graph),
+                                         Content = new JsonContent(new { graph = dotGraph, layout = "dot", format = "svg" }),
                                          Method = HttpMethod.Post,
                                          RequestUri = new Uri("https://quickchart.io/graphviz")
                                      })

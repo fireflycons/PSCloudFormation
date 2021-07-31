@@ -3,13 +3,7 @@
     using System;
     using System.Collections.Generic;
     using System.Linq;
-    using System.Net;
-    using System.Runtime.CompilerServices;
-    using System.Runtime.InteropServices;
-    using System.Text;
     using System.Threading.Tasks;
-    using System.Web;
-    using System.Xml;
     using System.Xml.Linq;
 
     using Amazon.CloudFormation;
@@ -27,7 +21,6 @@
         /// <summary>
         /// Gets or sets the Stack name
         /// </summary>
-
         // ReSharper disable UnusedAutoPropertyAccessor.Local - Used implicitly by json conversion
         public string StackName { get; set; }
 
@@ -54,26 +47,11 @@
         // ReSharper restore UnusedAutoPropertyAccessor.Local
 
         /// <summary>
-        /// SVG renderer to use
-        /// </summary>
-        private readonly ISvgRenderer svgRenderer = new QuickChartSvgRenderer();
-
-        /// <summary>
-        /// Determines whether this instance [can render SVG].
-        /// </summary>
-        /// <returns>
-        ///   <c>true</c> if this instance [can render SVG]; otherwise, <c>false</c>.
-        /// </returns>
-        public async Task<RendererStatus> GetRendererStatus()
-        {
-            return await this.svgRenderer.GetStatus();
-        }
-
-        /// <summary>
         /// Renders the change details as SVG directed graph.
         /// </summary>
+        /// <param name="renderer">SVG renderer to use.</param>
         /// <returns><see cref="XElement"/> containing SVG fragment for adding to browser view.</returns>
-        public async Task<XElement> RenderSvg()
+        public async Task<XElement> RenderSvg(ISvgRenderer renderer)
         {
             var graph = this.GenerateChangeGraph();
 
@@ -105,7 +83,20 @@
             // Temp fix - wait for https://github.com/KeRNeLith/QuikGraph/issues/27
             dotGraph = DotHtmlFormatter.QuoteHtml(dotGraph);
 
-            return await this.svgRenderer.RenderSvg(dotGraph);
+            var svg = await renderer.RenderSvg(dotGraph);
+            
+            // Now change the width and height attributes of the SVG to 100% so it becomes responsive in bootstrap
+            if (svg.Attribute("width") != null)
+            {
+                svg.Attribute("width").Value = "100%";
+            }
+
+            if (svg.Attribute("height") != null)
+            {
+                svg.Attribute("height").Value = "100%";
+            }
+            
+            return svg;
         }
 
         /// <summary>
@@ -145,7 +136,7 @@
                         && detail.Evaluation == EvaluationType.Static)
                     {
                         // User directly modified a property
-                        string edgeTag = detail.Target.Name ?? (detail.Target.Attribute == "Tags" ? "Tags" : null);
+                        var edgeTag = detail.Target.Name ?? (detail.Target.Attribute == "Tags" ? "Tags" : null);
 
                         edges.Add(new TaggedEdge<IChangeVertex, string>(direct, resource, edgeTag));
                     }
@@ -161,7 +152,7 @@
                     {
                         // Change via GetAtt from another resource
                         var causingEntity = resourceVertices.First(
-                            r => r.Name == detail.CausingEntity.Split(new[] { '.' }).First());
+                            r => r.Name == detail.CausingEntity.Split('.').First());
                         edges.Add(new TaggedEdge<IChangeVertex, string>(causingEntity, resource, detail.Target.Name));
                     }
                 }

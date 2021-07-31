@@ -1,5 +1,7 @@
 ﻿namespace Firefly.PSCloudFormation.ChangeVisualisation
 {
+    using System.Diagnostics;
+
     using Amazon.CloudFormation.Model;
 
     using QuikGraph.Graphviz.Dot;
@@ -8,6 +10,7 @@
     /// Represents a deleted resource
     /// </summary>
     /// <seealso cref="Firefly.PSCloudFormation.ChangeVisualisation.ResourceVertex" />
+    [DebuggerDisplay("Delete: {Name}")]
     internal class DeletedResouceVertex : ResourceVertex
     {
         /// <summary>

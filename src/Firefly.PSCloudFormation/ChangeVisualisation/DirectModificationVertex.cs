@@ -4,7 +4,7 @@
 
     using QuikGraph.Graphviz.Dot;
 
-    [DebuggerDisplay("Direct: {Name}")]
+    [DebuggerDisplay("{Name}")]
     internal class DirectModificationVertex : IChangeVertex
     {
         public string Name => "Direct Modification";

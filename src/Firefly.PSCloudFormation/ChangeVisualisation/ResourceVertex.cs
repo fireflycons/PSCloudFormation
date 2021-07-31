@@ -19,7 +19,7 @@
         /// Initializes a new instance of the <see cref="ResourceVertex"/> class.
         /// </summary>
         /// <param name="change">The change.</param>
-        public ResourceVertex(Change change)
+        protected ResourceVertex(Change change)
         {
             this.Change = change;
         }
