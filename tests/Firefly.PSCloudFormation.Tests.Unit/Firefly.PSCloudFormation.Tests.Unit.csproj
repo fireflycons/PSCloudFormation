@@ -14,6 +14,7 @@
     <None Remove="Resources\DeepNestedStack\sub-nested-2.json" />
     <None Remove="Resources\DependencyFile\lambda-dependencies.json" />
     <None Remove="Resources\DependencyFile\lambda-dependencies.yaml" />
+    <None Remove="Resources\Graph\changeset.json" />
     <None Remove="Resources\LambdaDependencies\NodeLambda1\Dependencies\mylibrary\libfile.js" />
     <None Remove="Resources\LambdaDependencies\NodeLambda1\Lambda\my_lambda.js" />
     <None Remove="Resources\LambdaDependencies\NodeLambda1\Lambda\other.js" />
@@ -78,6 +79,7 @@
   </ItemGroup>
 
   <ItemGroup>
+    <EmbeddedResource Include="Resources\Graph\changeset.json" />
     <EmbeddedResource Include="Resources\LambdaDependencies\PythonLambdaLinux\venv\lib\python3_6\site-packages\boto3\__init__.py" />
     <EmbeddedResource Include="Resources\LambdaDependencies\PythonLambdaLinux\venv\lib\python3_6\site-packages\boto3_2_39_0_dist_info\METADATA" />
     <EmbeddedResource Include="Resources\LambdaDependencies\PythonLambdaLinux\venv\lib\python3_6\site-packages\boto3_2_39_0_dist_info\RECORD" />
@@ -160,6 +162,7 @@
     <PackageReference Include="xunit" Version="2.4.0" />
     <PackageReference Include="xunit.runner.visualstudio" Version="2.4.0" />
     <PackageReference Include="coverlet.collector" Version="1.2.0" />
+    <PackageReference Include="Xunit.SkippableFact" Version="1.4.13" />
   </ItemGroup>
 
   <ItemGroup>

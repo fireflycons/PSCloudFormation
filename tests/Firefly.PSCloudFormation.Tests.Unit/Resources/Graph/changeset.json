@@ -1,0 +1,811 @@
+[
+  {
+    "StackName": "floorbox-perf",
+    "ChangeSetName": "fc-cloudformation-1627410627575",
+    "Description": null,
+    "CreationTime": "2021-07-27T19:30:28.352+01:00",
+    "Changes": [
+      {
+        "ResourceChange": {
+          "Action": "Modify",
+          "ChangeSetId": null,
+          "Details": [
+            {
+              "CausingEntity": null,
+              "ChangeSource": "DirectModification",
+              "Evaluation": "Static",
+              "Target": {
+                "Attribute": "Properties",
+                "Name": "Role",
+                "RequiresRecreation": "Never"
+              }
+            },
+            {
+              "CausingEntity": null,
+              "ChangeSource": "DirectModification",
+              "Evaluation": "Static",
+              "Target": {
+                "Attribute": "Properties",
+                "Name": "Runtime",
+                "RequiresRecreation": "Never"
+              }
+            }
+          ],
+          "LogicalResourceId": "FloorBoxAuthoriserLambda",
+          "ModuleInfo": null,
+          "PhysicalResourceId": "Floorbox-Authoriser-perf",
+          "Replacement": "False",
+          "ResourceType": "AWS::Lambda::Function",
+          "Scope": [
+            "Properties"
+          ]
+        },
+        "Type": "Resource"
+      },
+      {
+        "ResourceChange": {
+          "Action": "Modify",
+          "ChangeSetId": null,
+          "Details": [
+            {
+              "CausingEntity": null,
+              "ChangeSource": "DirectModification",
+              "Evaluation": "Dynamic",
+              "Target": {
+                "Attribute": "Properties",
+                "Name": "Policies",
+                "RequiresRecreation": "Never"
+              }
+            },
+            {
+              "CausingEntity": "FloorBoxAuthoriserLambda.Arn",
+              "ChangeSource": "ResourceAttribute",
+              "Evaluation": "Dynamic",
+              "Target": {
+                "Attribute": "Properties",
+                "Name": "Policies",
+                "RequiresRecreation": "Never"
+              }
+            }
+          ],
+          "LogicalResourceId": "FloorBoxAuthoriserRole",
+          "ModuleInfo": null,
+          "PhysicalResourceId": "floorbox-perf-FloorBoxAuthoriserRole-1LL0VJ36BTY8U",
+          "Replacement": "False",
+          "ResourceType": "AWS::IAM::Role",
+          "Scope": [
+            "Properties"
+          ]
+        },
+        "Type": "Resource"
+      },
+      {
+        "ResourceChange": {
+          "Action": "Modify",
+          "ChangeSetId": null,
+          "Details": [
+            {
+              "CausingEntity": "FloorBoxAuthoriserRole.Arn",
+              "ChangeSource": "ResourceAttribute",
+              "Evaluation": "Dynamic",
+              "Target": {
+                "Attribute": "Properties",
+                "Name": "AuthorizerCredentials",
+                "RequiresRecreation": "Never"
+              }
+            },
+            {
+              "CausingEntity": null,
+              "ChangeSource": "DirectModification",
+              "Evaluation": "Dynamic",
+              "Target": {
+                "Attribute": "Properties",
+                "Name": "AuthorizerCredentials",
+                "RequiresRecreation": "Never"
+              }
+            },
+            {
+              "CausingEntity": "FloorBoxAuthoriserLambda.Arn",
+              "ChangeSource": "ResourceAttribute",
+              "Evaluation": "Dynamic",
+              "Target": {
+                "Attribute": "Properties",
+                "Name": "AuthorizerUri",
+                "RequiresRecreation": "Never"
+              }
+            },
+            {
+              "CausingEntity": null,
+              "ChangeSource": "DirectModification",
+              "Evaluation": "Dynamic",
+              "Target": {
+                "Attribute": "Properties",
+                "Name": "AuthorizerUri",
+                "RequiresRecreation": "Never"
+              }
+            }
+          ],
+          "LogicalResourceId": "FloorBoxAuthoriser",
+          "ModuleInfo": null,
+          "PhysicalResourceId": "vdhyee",
+          "Replacement": "False",
+          "ResourceType": "AWS::ApiGateway::Authorizer",
+          "Scope": [
+            "Properties"
+          ]
+        },
+        "Type": "Resource"
+      },
+      {
+        "ResourceChange": {
+          "Action": "Modify",
+          "ChangeSetId": null,
+          "Details": [
+            {
+              "CausingEntity": "FloorBoxDxfConverterResource",
+              "ChangeSource": "ResourceReference",
+              "Evaluation": "Static",
+              "Target": {
+                "Attribute": "Properties",
+                "Name": "ResourceId",
+                "RequiresRecreation": "Never"
+              }
+            }
+          ],
+          "LogicalResourceId": "FloorBoxDxfConverterRequestOPTIONS",
+          "ModuleInfo": null,
+          "PhysicalResourceId": "floor-Floor-12C7F3KGKRJ6Z",
+          "Replacement": "False",
+          "ResourceType": "AWS::ApiGateway::Method",
+          "Scope": [
+            "Properties"
+          ]
+        },
+        "Type": "Resource"
+      },
+      {
+        "ResourceChange": {
+          "Action": "Modify",
+          "ChangeSetId": null,
+          "Details": [
+            {
+              "CausingEntity": "FloorBoxDxfConverter.Arn",
+              "ChangeSource": "ResourceAttribute",
+              "Evaluation": "Dynamic",
+              "Target": {
+                "Attribute": "Properties",
+                "Name": "Integration",
+                "RequiresRecreation": "Never"
+              }
+            },
+            {
+              "CausingEntity": null,
+              "ChangeSource": "DirectModification",
+              "Evaluation": "Dynamic",
+              "Target": {
+                "Attribute": "Properties",
+                "Name": "Integration",
+                "RequiresRecreation": "Never"
+              }
+            },
+            {
+              "CausingEntity": "FloorBoxDxfConverterResource",
+              "ChangeSource": "ResourceReference",
+              "Evaluation": "Static",
+              "Target": {
+                "Attribute": "Properties",
+                "Name": "ResourceId",
+                "RequiresRecreation": "Never"
+              }
+            }
+          ],
+          "LogicalResourceId": "FloorBoxDxfConverterRequestPOST",
+          "ModuleInfo": null,
+          "PhysicalResourceId": "floor-Floor-1E05RC2W8GTJO",
+          "Replacement": "False",
+          "ResourceType": "AWS::ApiGateway::Method",
+          "Scope": [
+            "Properties"
+          ]
+        },
+        "Type": "Resource"
+      },
+      {
+        "ResourceChange": {
+          "Action": "Modify",
+          "ChangeSetId": null,
+          "Details": [
+            {
+              "CausingEntity": null,
+              "ChangeSource": "DirectModification",
+              "Evaluation": "Static",
+              "Target": {
+                "Attribute": "Properties",
+                "Name": "ParentId",
+                "RequiresRecreation": "Always"
+              }
+            }
+          ],
+          "LogicalResourceId": "FloorBoxDxfConverterResource",
+          "ModuleInfo": null,
+          "PhysicalResourceId": "ipnw9l",
+          "Replacement": "True",
+          "ResourceType": "AWS::ApiGateway::Resource",
+          "Scope": [
+            "Properties"
+          ]
+        },
+        "Type": "Resource"
+      },
+      {
+        "ResourceChange": {
+          "Action": "Modify",
+          "ChangeSetId": null,
+          "Details": [
+            {
+              "CausingEntity": null,
+              "ChangeSource": "DirectModification",
+              "Evaluation": "Static",
+              "Target": {
+                "Attribute": "Properties",
+                "Name": "Role",
+                "RequiresRecreation": "Never"
+              }
+            },
+            {
+              "CausingEntity": null,
+              "ChangeSource": "DirectModification",
+              "Evaluation": "Static",
+              "Target": {
+                "Attribute": "Properties",
+                "Name": "Runtime",
+                "RequiresRecreation": "Never"
+              }
+            }
+          ],
+          "LogicalResourceId": "FloorBoxDxfConverter",
+          "ModuleInfo": null,
+          "PhysicalResourceId": "Floorbox-DxfConverter-perf",
+          "Replacement": "False",
+          "ResourceType": "AWS::Lambda::Function",
+          "Scope": [
+            "Properties"
+          ]
+        },
+        "Type": "Resource"
+      },
+      {
+        "ResourceChange": {
+          "Action": "Modify",
+          "ChangeSetId": null,
+          "Details": [
+            {
+              "CausingEntity": null,
+              "ChangeSource": "DirectModification",
+              "Evaluation": "Dynamic",
+              "Target": {
+                "Attribute": "Properties",
+                "Name": "Policies",
+                "RequiresRecreation": "Never"
+              }
+            },
+            {
+              "CausingEntity": "FloorBoxS3BucketResource.Arn",
+              "ChangeSource": "ResourceAttribute",
+              "Evaluation": "Dynamic",
+              "Target": {
+                "Attribute": "Properties",
+                "Name": "Policies",
+                "RequiresRecreation": "Never"
+              }
+            }
+          ],
+          "LogicalResourceId": "FloorBoxExecuteLambdaRole",
+          "ModuleInfo": null,
+          "PhysicalResourceId": "floorbox-perf-FloorBoxExecuteLambdaRole-L974SENQDQHH",
+          "Replacement": "False",
+          "ResourceType": "AWS::IAM::Role",
+          "Scope": [
+            "Properties"
+          ]
+        },
+        "Type": "Resource"
+      },
+      {
+        "ResourceChange": {
+          "Action": "Modify",
+          "ChangeSetId": null,
+          "Details": [
+            {
+              "CausingEntity": null,
+              "ChangeSource": "DirectModification",
+              "Evaluation": "Dynamic",
+              "Target": {
+                "Attribute": "Properties",
+                "Name": "Endpoint",
+                "RequiresRecreation": "Always"
+              }
+            },
+            {
+              "CausingEntity": "FloorboxFetchExhibitorsStandsLambda.Arn",
+              "ChangeSource": "ResourceAttribute",
+              "Evaluation": "Dynamic",
+              "Target": {
+                "Attribute": "Properties",
+                "Name": "Endpoint",
+                "RequiresRecreation": "Always"
+              }
+            }
+          ],
+          "LogicalResourceId": "FloorBoxFetchExhibitorsSNSSubscriptions",
+          "ModuleInfo": null,
+          "PhysicalResourceId": "arn:aws:sns:eu-west-1:915203318988:perf-exhibitor-updated:54c9de37-8c8b-4dc6-89db-55c0aa484679",
+          "Replacement": "Conditional",
+          "ResourceType": "AWS::SNS::Subscription",
+          "Scope": [
+            "Properties"
+          ]
+        },
+        "Type": "Resource"
+      },
+      {
+        "ResourceChange": {
+          "Action": "Modify",
+          "ChangeSetId": null,
+          "Details": [
+            {
+              "CausingEntity": null,
+              "ChangeSource": "DirectModification",
+              "Evaluation": "Dynamic",
+              "Target": {
+                "Attribute": "Properties",
+                "Name": "FunctionName",
+                "RequiresRecreation": "Always"
+              }
+            },
+            {
+              "CausingEntity": "FloorBoxDxfConverter.Arn",
+              "ChangeSource": "ResourceAttribute",
+              "Evaluation": "Dynamic",
+              "Target": {
+                "Attribute": "Properties",
+                "Name": "FunctionName",
+                "RequiresRecreation": "Always"
+              }
+            }
+          ],
+          "LogicalResourceId": "FloorBoxLambdaPermission",
+          "ModuleInfo": null,
+          "PhysicalResourceId": "floorbox-perf-FloorBoxLambdaPermission-ZPH1ELWP8NQQ",
+          "Replacement": "Conditional",
+          "ResourceType": "AWS::Lambda::Permission",
+          "Scope": [
+            "Properties"
+          ]
+        },
+        "Type": "Resource"
+      },
+      {
+        "ResourceChange": {
+          "Action": "Remove",
+          "ChangeSetId": null,
+          "Details": [],
+          "LogicalResourceId": "FloorBoxPermissionForBucketToInvokeLambda",
+          "ModuleInfo": null,
+          "PhysicalResourceId": "floorbox-perf-FloorBoxPermissionForBucketToInvokeLambda-YOU0BADAWRKE",
+          "Replacement": null,
+          "ResourceType": "AWS::Lambda::Permission",
+          "Scope": []
+        },
+        "Type": "Resource"
+      },
+      {
+        "ResourceChange": {
+          "Action": "Modify",
+          "ChangeSetId": null,
+          "Details": [
+            {
+              "CausingEntity": null,
+              "ChangeSource": "DirectModification",
+              "Evaluation": "Dynamic",
+              "Target": {
+                "Attribute": "Properties",
+                "Name": "FunctionName",
+                "RequiresRecreation": "Always"
+              }
+            },
+            {
+              "CausingEntity": "FloorBoxReturnSavedLayerConfigLambda.Arn",
+              "ChangeSource": "ResourceAttribute",
+              "Evaluation": "Dynamic",
+              "Target": {
+                "Attribute": "Properties",
+                "Name": "FunctionName",
+                "RequiresRecreation": "Always"
+              }
+            }
+          ],
+          "LogicalResourceId": "FloorBoxReturnSavedLayerConfigLambdaPermission",
+          "ModuleInfo": null,
+          "PhysicalResourceId": "floorbox-perf-FloorBoxReturnSavedLayerConfigLambdaPermission-EMGZ84M2JWB9",
+          "Replacement": "Conditional",
+          "ResourceType": "AWS::Lambda::Permission",
+          "Scope": [
+            "Properties"
+          ]
+        },
+        "Type": "Resource"
+      },
+      {
+        "ResourceChange": {
+          "Action": "Modify",
+          "ChangeSetId": null,
+          "Details": [
+            {
+              "CausingEntity": null,
+              "ChangeSource": "DirectModification",
+              "Evaluation": "Static",
+              "Target": {
+                "Attribute": "Properties",
+                "Name": "Role",
+                "RequiresRecreation": "Never"
+              }
+            },
+            {
+              "CausingEntity": null,
+              "ChangeSource": "DirectModification",
+              "Evaluation": "Static",
+              "Target": {
+                "Attribute": "Properties",
+                "Name": "Runtime",
+                "RequiresRecreation": "Never"
+              }
+            }
+          ],
+          "LogicalResourceId": "FloorBoxReturnSavedLayerConfigLambda",
+          "ModuleInfo": null,
+          "PhysicalResourceId": "Floorbox-ReturnSavedLayerConfig-perf",
+          "Replacement": "False",
+          "ResourceType": "AWS::Lambda::Function",
+          "Scope": [
+            "Properties"
+          ]
+        },
+        "Type": "Resource"
+      },
+      {
+        "ResourceChange": {
+          "Action": "Modify",
+          "ChangeSetId": null,
+          "Details": [
+            {
+              "CausingEntity": "FloorBoxReturnSavedLayerConfigLambda.Arn",
+              "ChangeSource": "ResourceAttribute",
+              "Evaluation": "Dynamic",
+              "Target": {
+                "Attribute": "Properties",
+                "Name": "Integration",
+                "RequiresRecreation": "Never"
+              }
+            },
+            {
+              "CausingEntity": null,
+              "ChangeSource": "DirectModification",
+              "Evaluation": "Dynamic",
+              "Target": {
+                "Attribute": "Properties",
+                "Name": "Integration",
+                "RequiresRecreation": "Never"
+              }
+            },
+            {
+              "CausingEntity": "FloorBoxReturnSavedLayerConfigResource",
+              "ChangeSource": "ResourceReference",
+              "Evaluation": "Static",
+              "Target": {
+                "Attribute": "Properties",
+                "Name": "ResourceId",
+                "RequiresRecreation": "Never"
+              }
+            }
+          ],
+          "LogicalResourceId": "FloorBoxReturnSavedLayerConfigRequestGet",
+          "ModuleInfo": null,
+          "PhysicalResourceId": "floor-Floor-1KB6Q6UB4G2JF",
+          "Replacement": "False",
+          "ResourceType": "AWS::ApiGateway::Method",
+          "Scope": [
+            "Properties"
+          ]
+        },
+        "Type": "Resource"
+      },
+      {
+        "ResourceChange": {
+          "Action": "Modify",
+          "ChangeSetId": null,
+          "Details": [
+            {
+              "CausingEntity": null,
+              "ChangeSource": "DirectModification",
+              "Evaluation": "Static",
+              "Target": {
+                "Attribute": "Properties",
+                "Name": "ParentId",
+                "RequiresRecreation": "Always"
+              }
+            }
+          ],
+          "LogicalResourceId": "FloorBoxReturnSavedLayerConfigResource",
+          "ModuleInfo": null,
+          "PhysicalResourceId": "4w4zw8",
+          "Replacement": "True",
+          "ResourceType": "AWS::ApiGateway::Resource",
+          "Scope": [
+            "Properties"
+          ]
+        },
+        "Type": "Resource"
+      },
+      {
+        "ResourceChange": {
+          "Action": "Modify",
+          "ChangeSetId": null,
+          "Details": [
+            {
+              "CausingEntity": "FloorboxFetchExhibitorsStandsLambda.Arn",
+              "ChangeSource": "ResourceAttribute",
+              "Evaluation": "Dynamic",
+              "Target": {
+                "Attribute": "Properties",
+                "Name": "NotificationConfiguration",
+                "RequiresRecreation": "Never"
+              }
+            },
+            {
+              "CausingEntity": null,
+              "ChangeSource": "DirectModification",
+              "Evaluation": "Dynamic",
+              "Target": {
+                "Attribute": "Properties",
+                "Name": "NotificationConfiguration",
+                "RequiresRecreation": "Never"
+              }
+            }
+          ],
+          "LogicalResourceId": "FloorBoxS3BucketResource",
+          "ModuleInfo": null,
+          "PhysicalResourceId": "floorboxs3bucketresource-perf",
+          "Replacement": "False",
+          "ResourceType": "AWS::S3::Bucket",
+          "Scope": [
+            "Properties"
+          ]
+        },
+        "Type": "Resource"
+      },
+      {
+        "ResourceChange": {
+          "Action": "Modify",
+          "ChangeSetId": null,
+          "Details": [
+            {
+              "CausingEntity": null,
+              "ChangeSource": "DirectModification",
+              "Evaluation": "Dynamic",
+              "Target": {
+                "Attribute": "Properties",
+                "Name": "FunctionName",
+                "RequiresRecreation": "Always"
+              }
+            },
+            {
+              "CausingEntity": "FloorBoxUploadUrlGeneratorLambda.Arn",
+              "ChangeSource": "ResourceAttribute",
+              "Evaluation": "Dynamic",
+              "Target": {
+                "Attribute": "Properties",
+                "Name": "FunctionName",
+                "RequiresRecreation": "Always"
+              }
+            }
+          ],
+          "LogicalResourceId": "FloorBoxUploadUrlGeneratorLambdaPermission",
+          "ModuleInfo": null,
+          "PhysicalResourceId": "floorbox-perf-FloorBoxUploadUrlGeneratorLambdaPermission-CELXF7EQRB27",
+          "Replacement": "Conditional",
+          "ResourceType": "AWS::Lambda::Permission",
+          "Scope": [
+            "Properties"
+          ]
+        },
+        "Type": "Resource"
+      },
+      {
+        "ResourceChange": {
+          "Action": "Modify",
+          "ChangeSetId": null,
+          "Details": [
+            {
+              "CausingEntity": null,
+              "ChangeSource": "DirectModification",
+              "Evaluation": "Static",
+              "Target": {
+                "Attribute": "Properties",
+                "Name": "Role",
+                "RequiresRecreation": "Never"
+              }
+            },
+            {
+              "CausingEntity": null,
+              "ChangeSource": "DirectModification",
+              "Evaluation": "Static",
+              "Target": {
+                "Attribute": "Properties",
+                "Name": "Runtime",
+                "RequiresRecreation": "Never"
+              }
+            }
+          ],
+          "LogicalResourceId": "FloorBoxUploadUrlGeneratorLambda",
+          "ModuleInfo": null,
+          "PhysicalResourceId": "Floorbox-UploadUrlGenerator-perf",
+          "Replacement": "False",
+          "ResourceType": "AWS::Lambda::Function",
+          "Scope": [
+            "Properties"
+          ]
+        },
+        "Type": "Resource"
+      },
+      {
+        "ResourceChange": {
+          "Action": "Modify",
+          "ChangeSetId": null,
+          "Details": [
+            {
+              "CausingEntity": "FloorBoxUploadUrlGeneratorLambda.Arn",
+              "ChangeSource": "ResourceAttribute",
+              "Evaluation": "Dynamic",
+              "Target": {
+                "Attribute": "Properties",
+                "Name": "Integration",
+                "RequiresRecreation": "Never"
+              }
+            },
+            {
+              "CausingEntity": null,
+              "ChangeSource": "DirectModification",
+              "Evaluation": "Dynamic",
+              "Target": {
+                "Attribute": "Properties",
+                "Name": "Integration",
+                "RequiresRecreation": "Never"
+              }
+            },
+            {
+              "CausingEntity": "FloorBoxUploadUrlGeneratorResource",
+              "ChangeSource": "ResourceReference",
+              "Evaluation": "Static",
+              "Target": {
+                "Attribute": "Properties",
+                "Name": "ResourceId",
+                "RequiresRecreation": "Never"
+              }
+            }
+          ],
+          "LogicalResourceId": "FloorBoxUploadUrlGeneratorRequestGet",
+          "ModuleInfo": null,
+          "PhysicalResourceId": "floor-Floor-1O22HOSXP6HHA",
+          "Replacement": "False",
+          "ResourceType": "AWS::ApiGateway::Method",
+          "Scope": [
+            "Properties"
+          ]
+        },
+        "Type": "Resource"
+      },
+      {
+        "ResourceChange": {
+          "Action": "Modify",
+          "ChangeSetId": null,
+          "Details": [
+            {
+              "CausingEntity": null,
+              "ChangeSource": "DirectModification",
+              "Evaluation": "Static",
+              "Target": {
+                "Attribute": "Properties",
+                "Name": "ParentId",
+                "RequiresRecreation": "Always"
+              }
+            }
+          ],
+          "LogicalResourceId": "FloorBoxUploadUrlGeneratorResource",
+          "ModuleInfo": null,
+          "PhysicalResourceId": "1bd37e",
+          "Replacement": "True",
+          "ResourceType": "AWS::ApiGateway::Resource",
+          "Scope": [
+            "Properties"
+          ]
+        },
+        "Type": "Resource"
+      },
+      {
+        "ResourceChange": {
+          "Action": "Modify",
+          "ChangeSetId": null,
+          "Details": [
+            {
+              "CausingEntity": null,
+              "ChangeSource": "DirectModification",
+              "Evaluation": "Static",
+              "Target": {
+                "Attribute": "Properties",
+                "Name": "Role",
+                "RequiresRecreation": "Never"
+              }
+            },
+            {
+              "CausingEntity": null,
+              "ChangeSource": "DirectModification",
+              "Evaluation": "Static",
+              "Target": {
+                "Attribute": "Properties",
+                "Name": "Runtime",
+                "RequiresRecreation": "Never"
+              }
+            }
+          ],
+          "LogicalResourceId": "FloorboxFetchExhibitorsStandsLambda",
+          "ModuleInfo": null,
+          "PhysicalResourceId": "Floorbox-FetchExhibitorsStands-perf",
+          "Replacement": "False",
+          "ResourceType": "AWS::Lambda::Function",
+          "Scope": [
+            "Properties"
+          ]
+        },
+        "Type": "Resource"
+      },
+      {
+        "ResourceChange": {
+          "Action": "Modify",
+          "ChangeSetId": null,
+          "Details": [
+            {
+              "CausingEntity": null,
+              "ChangeSource": "DirectModification",
+              "Evaluation": "Dynamic",
+              "Target": {
+                "Attribute": "Properties",
+                "Name": "Endpoint",
+                "RequiresRecreation": "Always"
+              }
+            },
+            {
+              "CausingEntity": "FloorboxFetchExhibitorsStandsLambda.Arn",
+              "ChangeSource": "ResourceAttribute",
+              "Evaluation": "Dynamic",
+              "Target": {
+                "Attribute": "Properties",
+                "Name": "Endpoint",
+                "RequiresRecreation": "Always"
+              }
+            }
+          ],
+          "LogicalResourceId": "FloorplanMapUploadSnsSubscription",
+          "ModuleInfo": null,
+          "PhysicalResourceId": "arn:aws:sns:eu-west-1:915203318988:perf-floorplanMap-uploaded:0426af1a-e5d6-44bd-8203-80c37a74b488",
+          "Replacement": "Conditional",
+          "ResourceType": "AWS::SNS::Subscription",
+          "Scope": [
+            "Properties"
+          ]
+        },
+        "Type": "Resource"
+      }
+    ]
+  }
+]
