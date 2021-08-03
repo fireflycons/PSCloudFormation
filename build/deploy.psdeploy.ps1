@@ -1,6 +1,6 @@
 # Generic module deployment.
 # This stuff should be moved to psake for a cleaner deployment view
-# Nuget key in $ENV:NuGetApiKey
+# Nuget key in $ENV:GalleryApiKey
 
 if($ENV:BHProjectName -and $ENV:BHProjectName.Count -eq 1)
 {
@@ -12,7 +12,7 @@ if($ENV:BHProjectName -and $ENV:BHProjectName.Count -eq 1)
             FromSource $ENV:BHProjectName
             To PSGallery
             WithOptions @{
-                ApiKey = $ENV:NuGetApiKey
+                ApiKey = $ENV:GalleryApiKey
             }
             Tagged Production
         }
