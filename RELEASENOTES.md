@@ -1,5 +1,9 @@
 # Release Notes
 
+# 4.1.6.6
+
+* Enhancement - Add graphical representation of changeset to bowser view. [Issue link](https://github.com/fireflycons/PSCloudFormation/issues/112)
+
 # 4.1.6.15
 
 * Fix - Python lambda checker. Does not handle type hints in handler function. [Issue link](https://github.com/fireflycons/PSCloudFormation/issues/111)
