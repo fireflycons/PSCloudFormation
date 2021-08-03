@@ -266,9 +266,9 @@ namespace Amazon.PowerShell.Common
                 // or EC2 Instance Profile as a last resort
                 try
                 {
-                    string relativeUri =
+                    var relativeUri =
                         Environment.GetEnvironmentVariable(ECSTaskCredentials.ContainerCredentialsURIEnvVariable);
-                    string fullUri = Environment.GetEnvironmentVariable(
+                    var fullUri = Environment.GetEnvironmentVariable(
                         ECSTaskCredentials.ContainerCredentialsFullURIEnvVariable);
 
                     if (!string.IsNullOrEmpty(relativeUri) || !string.IsNullOrEmpty(fullUri))
@@ -349,10 +349,10 @@ namespace Amazon.PowerShell.Common
         {
             Console.Write("Enter MFA code:");
 
-            string mfaCode = string.Empty;
+            var mfaCode = string.Empty;
             while (true)
             {
-                ConsoleKeyInfo info = Console.ReadKey(true);
+                var info = Console.ReadKey(true);
                 if (info.Key == ConsoleKey.Backspace)
                 {
                     if (mfaCode.Length > 0)
@@ -561,10 +561,10 @@ namespace Amazon.PowerShell.Common
             // user gave a command-level region parameter override?
             if (self.Region != null)
             {
-                string regionSysName = string.Empty;
+                var regionSysName = string.Empty;
                 if (self.Region is PSObject)
                 {
-                    PSObject paramObject = self.Region as PSObject;
+                    var paramObject = self.Region as PSObject;
                     if (paramObject.BaseObject is AWSRegion)
                         regionSysName = (paramObject.BaseObject as AWSRegion).Region.SystemName;
                     else
@@ -585,9 +585,9 @@ namespace Amazon.PowerShell.Common
                 catch (Exception)
                 {
                     // be nice and informative :-)
-                    StringBuilder sb = new StringBuilder("Unsupported Region value. Supported values: ");
+                    var sb = new StringBuilder("Unsupported Region value. Supported values: ");
                     var regions = RegionEndpoint.EnumerableAllRegions;
-                    for (int i = 0; i < regions.Count(); i++)
+                    for (var i = 0; i < regions.Count(); i++)
                     {
                         if (i > 0) sb.Append(",");
                         sb.Append(regions.ElementAt(i).SystemName);
@@ -600,7 +600,7 @@ namespace Amazon.PowerShell.Common
             // user pushed default shell variable? (this allows override of machine-wide environment setting)
             if (region == null && sessionState != null)
             {
-                object variableValue = sessionState.PSVariable.GetValue(SessionKeys.AWSRegionVariableName);
+                var variableValue = sessionState.PSVariable.GetValue(SessionKeys.AWSRegionVariableName);
                 if (variableValue is string)
                 {
                     region = RegionEndpoint.GetBySystemName(variableValue as string);
@@ -781,28 +781,28 @@ namespace Amazon.PowerShell.Common
         }
 
 #pragma warning disable CS0618 // A class was marked with the Obsolete attribute
-        private static HashSet<Type> PassThroughExtractTypes = new HashSet<Type>
-                                                                   {
-                                                                       typeof(InstanceProfileAWSCredentials),
+        private static readonly HashSet<Type> PassThroughExtractTypes = new HashSet<Type>
+                                                                            {
+                                                                                typeof(InstanceProfileAWSCredentials),
 #if DESKTOP
             typeof(StoredProfileFederatedCredentials),
 #endif
-                                                                       typeof(FederatedAWSCredentials),
-                                                                   };
+                                                                                typeof(FederatedAWSCredentials),
+                                                                            };
 
-        private static HashSet<Type> ThrowExtractTypes = new HashSet<Type>
-                                                             {
-                                                                 typeof(AssumeRoleAWSCredentials),
-                                                                 typeof(URIBasedRefreshingCredentialHelper),
-                                                                 typeof(AnonymousAWSCredentials),
-                                                                 typeof(ECSTaskCredentials),
-                                                                 typeof(EnvironmentVariablesAWSCredentials),
-                                                                 typeof(StoredProfileAWSCredentials),
+        private static readonly HashSet<Type> ThrowExtractTypes = new HashSet<Type>
+                                                                      {
+                                                                          typeof(AssumeRoleAWSCredentials),
+                                                                          typeof(URIBasedRefreshingCredentialHelper),
+                                                                          typeof(AnonymousAWSCredentials),
+                                                                          typeof(ECSTaskCredentials),
+                                                                          typeof(EnvironmentVariablesAWSCredentials),
+                                                                          typeof(StoredProfileAWSCredentials),
 #if DESKTOP
             typeof(EnvironmentAWSCredentials),
 #endif
-                                                                 typeof(EnvironmentVariablesAWSCredentials)
-                                                             };
+                                                                          typeof(EnvironmentVariablesAWSCredentials)
+                                                                      };
 #pragma warning restore CS0618 // A class was marked with the Obsolete attribute
     }
 
@@ -850,13 +850,7 @@ namespace Amazon.PowerShell.Common
         /// </summary>
         public int Port { get; set; }
 
-        internal bool UseProxy
-        {
-            get
-            {
-                return !string.IsNullOrEmpty(this.Hostname) && this.Port != 0;
-            }
-        }
+        internal bool UseProxy => !string.IsNullOrEmpty(this.Hostname) && this.Port != 0;
 
         internal static ProxySettings GetFromSettingsVariable(SessionState session)
         {
@@ -871,7 +865,7 @@ namespace Amazon.PowerShell.Common
 
         internal static ProxySettings GetSettings(PSCmdlet cmdlet)
         {
-            ProxySettings ps = GetFromSettingsVariable(cmdlet.SessionState);
+            var ps = GetFromSettingsVariable(cmdlet.SessionState);
             if (ps == null)
                 ps = new ProxySettings();
 

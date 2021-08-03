@@ -48,6 +48,7 @@
     /// <seealso cref="StackParameterCloudFormationCommand" />
     /// <seealso cref="IChangesetArguments" />
     [Cmdlet(VerbsCommon.New, "PSCFNChangeset")]
+
     // ReSharper disable once UnusedMember.Global
     public class NewChangesetCommand : StackParameterCloudFormationCommand, IChangesetArguments
     {
@@ -77,6 +78,7 @@
         /// The changeset detail.
         /// </value>
         [Parameter(ValueFromPipelineByPropertyName = true)]
+
         // ReSharper disable once UnusedMember.Global
         public string ChangesetDetail
         {
@@ -121,6 +123,7 @@
         /// The resources to import.
         /// </value>
         [Parameter(ValueFromPipelineByPropertyName = true)]
+
         // ReSharper disable once UnusedMember.Global
         public string ResourcesToImport
         {
@@ -132,37 +135,6 @@
                 this.ResolvedResourcesToImport = this.PathResolver.ResolvePath(value);
             }
         }
-
-        /// <summary>
-        /// Gets or sets the use previous template.
-        /// <para type="description">
-        /// Reuse the existing template that is associated with the stack that you are updating.
-        /// Conditional: You must specify only one of the following parameters: TemplateLocation or set the UsePreviousTemplate to true.
-        /// </para>
-        /// </summary>
-        /// <value>
-        /// The use previous template.
-        /// </value>
-        [Parameter(ValueFromPipelineByPropertyName = true)]
-        // ReSharper disable once UnusedMember.Global - used via underlying property
-        public SwitchParameter UsePreviousTemplate
-        {
-            get => this.UsePreviousTemplateFlag;
-            set => this.UsePreviousTemplateFlag = value;
-        }
-
-        /// <summary>
-        /// Gets or sets the show in browser.
-        /// <para type="description">
-        /// If set and a GUI is detected, display the changeset detail in the default browser.
-        /// </para>
-        /// <para type="link" uri="https://fireflycons.github.io/PSCloudFormation/articles/changesets.html">Changeset documentation (PSCloudFormation)</para>
-        /// </summary>
-        /// <value>
-        /// The show in browser.
-        /// </value>
-        [Parameter(ValueFromPipelineByPropertyName = true)]
-        public SwitchParameter ShowInBrowser { get; set; }
 
         /// <summary>
         /// Gets or sets the select.
@@ -182,12 +154,45 @@
         public override string Select { get; set; }
 
         /// <summary>
-        /// Gets the stack operation.
+        /// Gets or sets the show in browser.
+        /// <para type="description">
+        /// If set and a GUI is detected, display the changeset detail in the default browser.
+        /// </para>
+        /// <para type="link" uri="https://fireflycons.github.io/PSCloudFormation/articles/changesets.html">Changeset documentation (PSCloudFormation)</para>
         /// </summary>
         /// <value>
-        /// The stack operation.
+        /// The show in browser.
         /// </value>
-        protected override StackOperation StackOperation { get; } = StackOperation.Update;
+        [Parameter(ValueFromPipelineByPropertyName = true)]
+        public SwitchParameter ShowInBrowser { get; set; }
+
+        /// <summary>
+        /// Gets or sets the use previous template.
+        /// <para type="description">
+        /// Reuse the existing template that is associated with the stack that you are updating.
+        /// Conditional: You must specify only one of the following parameters: TemplateLocation or set the UsePreviousTemplate to true.
+        /// </para>
+        /// </summary>
+        /// <value>
+        /// The use previous template.
+        /// </value>
+        [Parameter(ValueFromPipelineByPropertyName = true)]
+
+        // ReSharper disable once UnusedMember.Global - used via underlying property
+        public SwitchParameter UsePreviousTemplate
+        {
+            get => this.UsePreviousTemplateFlag;
+            set => this.UsePreviousTemplateFlag = value;
+        }
+
+        /// <summary>
+        /// Gets the changeset ARN.
+        /// </summary>
+        /// <value>
+        /// The changeset ARN.
+        /// </value>
+        [SelectableOutputProperty]
+        protected string ChangesetArn { get; private set; }
 
         /// <summary>
         /// Gets the json changes for the changeset.
@@ -199,13 +204,12 @@
         protected string Json => ((PSLogger)this.Logger).GetJsonChanges();
 
         /// <summary>
-        /// Gets the changeset ARN.
+        /// Gets the stack operation.
         /// </summary>
         /// <value>
-        /// The changeset ARN.
+        /// The stack operation.
         /// </value>
-        [SelectableOutputProperty]
-        protected string ChangesetArn { get; private set; }
+        protected override StackOperation StackOperation { get; } = StackOperation.Update;
 
         /// <summary>
         /// Begins the processing.
@@ -237,33 +241,36 @@
 
             await base.OnProcessRecord();
 
-            using (var runner = this.GetBuilder()
-                .WithUsePreviousTemplate(this.UsePreviousTemplateFlag)
-                .WithResourceImports(this.ResolvedResourcesToImport)
-                .WithIncludeNestedStacks(this.IncludeNestedStacks)
-                .WithChangesetOnly()
-                .Build())
+            using (var runner = this.GetBuilder().WithUsePreviousTemplate(this.UsePreviousTemplateFlag)
+                .WithResourceImports(this.ResolvedResourcesToImport).WithIncludeNestedStacks(this.IncludeNestedStacks)
+                .WithChangesetOnly().Build())
             {
-               var result = await runner.UpdateStackAsync(null);
+                var result = await runner.UpdateStackAsync(null);
 
-               this.ChangesetArn = result.ChangesetResponse?.ChangeSetId;
-               this.Arn = result.StackArn;
+                this.ChangesetArn = result.ChangesetResponse?.ChangeSetId;
+                this.Arn = result.StackArn;
+                var logger = (PSLogger)this.Logger;
 
-               if (this.ShowInBrowser && this.ChangesetArn != null)
-               {
-                   var logger = (PSLogger)this.Logger;
+                if (this.ShowInBrowser && this.ChangesetArn != null)
+                {
+                    if (logger.CanViewChangesetInBrowser())
+                    {
+                        await logger.ViewChangesetInBrowserAsync();
+                    }
+                    else
+                    {
+                        logger.LogWarning(
+                            "Failed to detect a GUI. If you think this is incorrect, please raise an issue.");
+                    }
+                }
 
-                   if (logger.CanViewChangesetInBrowser())
-                   {
-                       logger.ViewChangesetInBrowser();
-                   }
-                   else
-                   {
-                       logger.LogWarning("Failed to detect a GUI. If you think this is incorrect, please raise an issue.");
-                   }
-               }
+                if (!string.IsNullOrEmpty(this.ResolvedChangesetDetail))
+                {
+                    // Write out all changeset details
+                    logger.WriteChangesetDetails(this.ResolvedChangesetDetail);
+                }
 
-               return result;
+                return result;
             }
         }
     }

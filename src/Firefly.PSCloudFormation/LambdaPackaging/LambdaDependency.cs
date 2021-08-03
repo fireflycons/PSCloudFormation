@@ -5,6 +5,8 @@
     using System.IO;
     using System.Linq;
 
+    using Amazon.S3.Model.Internal.MarshallTransformations;
+
     /// <summary>
     /// Object that describes a lambda dependency
     /// </summary>
@@ -114,24 +116,12 @@
 
         private bool LibrariesEquals(LambdaDependency other)
         {
-            if (this.Libraries == null && other.Libraries == null)
+            if (this.Libraries != null && other.Libraries != null)
             {
-                return true;
+                return this.Libraries.OrderBy(l => l).SequenceEqual(other.Libraries.OrderBy(l => l));
             }
 
-            if (this.Libraries == null && other.Libraries != null)
-            {
-                return false;
-            }
-
-            if (this.Libraries != null && other.Libraries == null)
-            {
-                return false;
-            }
-
-            // ReSharper disable AssignNullToNotNullAttribute - both are already checked above. It should have seen that
-            return this.Libraries.OrderBy(l => l).SequenceEqual(other.Libraries.OrderBy(l => l));
-            // ReSharper restore AssignNullToNotNullAttribute
+            return !(this.Libraries == null ^ other.Libraries == null);
         }
     }
 }

@@ -9,7 +9,7 @@
                 <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css" integrity="sha384-JcKb8q3iqJ61gNV9KGb8thSsNjpSL0n8PARn9HuZOnIxN0hoP+VmmDGMN5t9UJ0Z" crossorigin="anonymous"></link>
                 <script src="https://code.jquery.com/jquery-3.5.1.min.js" integrity="sha256-9/aliU8dGd2tb6OSsuzixeV4y/faTqgFtohetphbbj0=" crossorigin="anonymous"></script>
                 <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.min.js" integrity="sha384-B4gt1jrGC7Jh4AgTPSdUtOBvfO8shuf57BaghqFfPlYxofvL8/KUEfYiJOMMV+rV" crossorigin="anonymous"></script>
-
+                <script type="text/javascript" src="https://rawgit.com/DanielHoffmann/jquery-svg-pan-zoom/master/compiled/jquery.svg.pan.zoom.js"></script>
                 <style>
                     body {
                     font-family: arial, sans-serif;
@@ -58,7 +58,7 @@
                     width: 150px;
                     }
 
-                    .detail-btn {
+                    .detail-btn, graph-btn {
                     width: 120px;
                     }
                 </style>
@@ -99,10 +99,26 @@
                                                     </td>
                                                 </tr>
                                             </table>
+                                            <xsl:if test="Graph">
+                                                <a class="btn btn-primary btn-sm graph-btn mt-2" data-toggle="collapse" href="#{generate-id(StackName)}" role="button" aria-expanded="false" aria-controls="{generate-id(StackName)}">Show Graph</a>
+                                            </xsl:if>
                                         </div>
                                     </div>
                                 </div>
                             </div>
+                            <xsl:if test="Graph">
+                                <div class="row">
+                                    <div class="col">
+                                        <div class="collapse multi-collapse" id="{generate-id(StackName)}">
+                                            <div class="card card-body bg-dark mb-1 text-center">
+                                                <xsl:for-each select="Graph">
+                                                    <xsl:copy-of select="*"/>
+                                                </xsl:for-each>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </xsl:if>
                             <xsl:for-each select="Changes">
                                 <div class="row">
                                     <div class="col">
@@ -338,13 +354,22 @@
                     </xsl:for-each>
                 </div>
                 <script language="JavaScript">
-                    $(document).ready(function() {
-                    $('.detail-btn').on('click', function() {
+                    $(document).ready(function () {
+                    var graphs = $("svg").svgPanZoom();
+                    $('.detail-btn').on('click', function () {
                     var text = $(this).text();
                     if (text === "Show Detail") {
                     $(this).html('Hide Detail');
                     } else {
                     $(this).text('Show Detail');
+                    }
+                    });
+                    $('.graph-btn').on('click', function () {
+                    var text = $(this).text();
+                    if (text === "Show Graph") {
+                    $(this).html('Hide Graph');
+                    } else {
+                    $(this).text('Show Graph');
                     }
                     });
                     });
