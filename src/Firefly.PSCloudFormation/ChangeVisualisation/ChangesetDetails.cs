@@ -85,17 +85,20 @@
 
             var svg = await renderer.RenderSvg(dotGraph);
             
-            // Now change the width and height attributes of the SVG to 100% so it becomes responsive in bootstrap
-            if (svg.Attribute("width") != null)
+            if (svg != null)
             {
-                svg.Attribute("width").Value = "100%";
+                // Now change the width and height attributes of the SVG to 100% so it becomes responsive in bootstrap
+                if (svg.Attribute("width") != null)
+                {
+                    svg.Attribute("width").Value = "100%";
+                }
+
+                if (svg.Attribute("height") != null)
+                {
+                    svg.Attribute("height").Value = "100%";
+                }
             }
 
-            if (svg.Attribute("height") != null)
-            {
-                svg.Attribute("height").Value = "100%";
-            }
-            
             return svg;
         }
 

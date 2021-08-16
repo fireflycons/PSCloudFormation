@@ -83,7 +83,7 @@
                     response.EnsureSuccessStatusCode();
 
                     var doc = XDocument.Load(await response.Content.ReadAsStreamAsync());
-                    return doc.Elements().First();
+                    return doc.Elements().FirstOrDefault();
                 }
             }
         }

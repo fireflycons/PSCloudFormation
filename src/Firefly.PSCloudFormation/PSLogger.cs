@@ -422,10 +422,18 @@
                         if (elem != null)
                         {
                             var graph = await details.RenderSvg(this.svgRenderer);
-                            var graphNode = new XElement("Graph", graph);
 
-                            // ReSharper disable once PossibleNullReferenceException - if this node exists, by definition of the schema it has a parent
-                            elem.Parent.Add(graphNode);
+                            if (graph == null)
+                            {
+                                this.LogWarning($"{stack}: No graph rendered.");
+                            }
+                            else
+                            {
+                                var graphNode = new XElement("Graph", graph);
+
+                                // ReSharper disable once PossibleNullReferenceException - if this node exists, by definition of the schema it has a parent
+                                elem.Parent.Add(graphNode);
+                            }
                         }
                     }
 

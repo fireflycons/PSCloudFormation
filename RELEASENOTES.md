@@ -1,5 +1,9 @@
 # Release Notes
 
+# 4.1.6.17
+
+* Fix - Handle Sequence contains no matching element when rendering SVG. [Issue link](https://github.com/fireflycons/PSCloudFormation/issues/116)
+
 # 4.1.6.16
 
 * Enhancement - Add graphical representation of changeset to browser view. [Issue link](https://github.com/fireflycons/PSCloudFormation/issues/112)
