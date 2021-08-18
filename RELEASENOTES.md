@@ -3,6 +3,7 @@
 # 4.1.6.18
 
 * Fix - Unlabeled graph edges for changes to CreationPolicy, UpdatePolicy, Metadata. [Issue link](https://github.com/fireflycons/PSCloudFormation/issues/117)
+* Enhancement - Display changeset time as UTC instead of ISO 8601. [Issue link](https://github.com/fireflycons/PSCloudFormation/issues/118)
 
 # 4.1.6.17
 
