@@ -1,5 +1,9 @@
 # Release Notes
 
+# 4.1.6.18
+
+* Fix - Unlabeled graph edges for changes to CreationPolicy, UpdatePolicy, Metadata. [Issue link](https://github.com/fireflycons/PSCloudFormation/issues/117)
+
 # 4.1.6.17
 
 * Fix - Handle Sequence contains no matching element when rendering SVG. [Issue link](https://github.com/fireflycons/PSCloudFormation/issues/116)

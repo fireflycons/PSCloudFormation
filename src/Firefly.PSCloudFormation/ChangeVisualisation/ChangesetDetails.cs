@@ -121,6 +121,8 @@
             {
                 foreach (var detail in resource.Change.ResourceChange.Details)
                 {
+                    var edgeName = detail.Target.Name ?? detail.Target.Attribute.Value;
+
                     if (detail.ChangeSource == ChangeSource.ParameterReference)
                     {
                         // Value of stack parameter has changed
@@ -132,23 +134,21 @@
                             parameters.Add(param);
                         }
 
-                        edges.Add(new TaggedEdge<IChangeVertex, string>(param, resource, detail.Target.Name));
+                        edges.Add(new TaggedEdge<IChangeVertex, string>(param, resource, edgeName));
                     }
 
                     if (detail.ChangeSource == ChangeSource.DirectModification
                         && detail.Evaluation == EvaluationType.Static)
                     {
                         // User directly modified a property
-                        var edgeTag = detail.Target.Name ?? (detail.Target.Attribute == "Tags" ? "Tags" : null);
-
-                        edges.Add(new TaggedEdge<IChangeVertex, string>(direct, resource, edgeTag));
+                        edges.Add(new TaggedEdge<IChangeVertex, string>(direct, resource, edgeName));
                     }
 
                     if (detail.ChangeSource == ChangeSource.ResourceReference)
                     {
                         // Change via Ref to another resource
                         var causingEntity = resourceVertices.First(r => r.Name == detail.CausingEntity);
-                        edges.Add(new TaggedEdge<IChangeVertex, string>(causingEntity, resource, detail.Target.Name));
+                        edges.Add(new TaggedEdge<IChangeVertex, string>(causingEntity, resource, edgeName));
                     }
 
                     if (detail.ChangeSource == ChangeSource.ResourceAttribute)
@@ -156,7 +156,7 @@
                         // Change via GetAtt from another resource
                         var causingEntity = resourceVertices.First(
                             r => r.Name == detail.CausingEntity.Split('.').First());
-                        edges.Add(new TaggedEdge<IChangeVertex, string>(causingEntity, resource, detail.Target.Name));
+                        edges.Add(new TaggedEdge<IChangeVertex, string>(causingEntity, resource, edgeName));
                     }
                 }
             }
