@@ -5,6 +5,9 @@
         <Value>cmdlet</Value>
         <Value>cmdlets</Value>
         <Value>git</Value>
+        <Value>terraform</Value>
+        <Value>stdout</Value>
+        <Value>stderr</Value>
     </CollectionProperty>
   </GlobalSettings>
 </StyleCopSettings>
