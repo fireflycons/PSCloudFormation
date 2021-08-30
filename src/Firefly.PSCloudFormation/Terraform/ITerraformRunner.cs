@@ -12,7 +12,7 @@
         /// </summary>
         /// <param name="address">The address.</param>
         /// <returns>Resource definition in HCL</returns>
-        string GetResourceDefinition(string address);
+        HclResource GetResourceDefinition2(string address);
 
         /// <summary>
         /// Runs Terraform.

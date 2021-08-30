@@ -75,18 +75,18 @@
         /// <returns>
         /// Resource definition in HCL
         /// </returns>
-        public string GetResourceDefinition(string address)
+        public HclResource GetResourceDefinition2(string address)
         {
-            var definition = new List<string>();
+            var definition = new HclResource(address);
 
             this.logger.LogInformation($"Getting resource definition for {address}");
 
             var exitCode = this.RunProcess(
                 $"state show -no-color {address}",
-                msg => definition.Add(msg),
+                msg => definition.Lines.Add(msg),
                 msg => this.logger.LogError(msg));
 
-            return exitCode != 0 ? null : string.Join(Environment.NewLine, definition);
+            return definition;
         }
 
         /// <summary>

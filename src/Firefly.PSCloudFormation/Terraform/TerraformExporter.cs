@@ -5,16 +5,22 @@
     using System.IO;
     using System.Linq;
     using System.Text;
+    using System.Text.RegularExpressions;
 
     using Amazon.CloudFormation.Model;
 
     using Firefly.CloudFormation;
     using Firefly.EmbeddedResourceLoader;
+    using Firefly.PSCloudFormation.Terraform.State;
 
     using Newtonsoft.Json;
 
     internal class TerraformExporter : AutoResourceLoader
     {
+        private const string MainScriptFile = "main.tf";
+
+        private const string StateFileName = "terraform.tfstate";
+
         [EmbeddedResource("terraform-resource-map.json")]
 
         // ReSharper disable once StyleCop.SA1600 - Loaded by auto-resource
@@ -94,11 +100,12 @@ terraform {
             }
 
             var cwd = Directory.GetCurrentDirectory();
+            var importedResources = new List<HclResource>();
 
             try
             {
                 Directory.SetCurrentDirectory(this.settings.WorkspaceDirectory);
-                File.WriteAllText("main.tf", initialHcl.ToString(), new UTF8Encoding(false));
+                File.WriteAllText(MainScriptFile, initialHcl.ToString(), new UTF8Encoding(false));
 
                 this.logger.LogInformation("\nInitializing workspace...");
                 this.settings.Runner.Run("init", true);
@@ -108,7 +115,7 @@ terraform {
                 {
                     if (this.settings.Runner.Run("import", false, resource.Address, resource.PhysicalId))
                     {
-                        finalHcl.AppendLine(this.settings.Runner.GetResourceDefinition(resource.Address));
+                        importedResources.Add(this.settings.Runner.GetResourceDefinition2(resource.Address));
                     }
                     else
                     {
@@ -116,13 +123,56 @@ terraform {
                     }
                 }
 
-                File.WriteAllText("main.tf", finalHcl.ToString(), new UTF8Encoding(false));
+                this.logger.LogInformation("\nResolving dependencies between resources...");
+                var stateFile = JsonConvert.DeserializeObject<StateFile>(File.ReadAllText(StateFileName));
+                var graph = stateFile.GenerateChangeGraph();
+                stateFile.Save(StateFileName);
+                var dot = stateFile.GenerateDotGraph(graph);
+
+                // Walk graph edges and fix up dependencies in HCL script fragments
+                foreach (var edge in graph.Edges)
+                {
+                    var dependency = edge.Tag;
+
+                    if (dependency == null)
+                    {
+                        this.logger.LogWarning("Untagged graph edge.");
+                        continue;
+                    }
+
+                    var sourceResource = resourcesToImport.FirstOrDefault(r => r.Address == edge.Source.Address);
+                    var targetScript = importedResources.FirstOrDefault(r => r.Address == edge.Target.Address);
+                    var targetAttribute = dependency.TargetAttribute;
+
+                    if (sourceResource == null || targetScript == null || targetAttribute == null)
+                    {
+                        this.logger.LogWarning($"Cannot resolve dependency between {edge.Source.Address} -> {edge.Target.Address}");
+                        continue;
+                    }
+
+                    if (dependency.IsArrayMember)
+                    {
+                        targetScript.SetAttributeArrayRefValue(targetAttribute, sourceResource);
+                    }
+                    else
+                    {
+                        targetScript.SetAttributeRefValue(targetAttribute, sourceResource);
+                    }
+                }
+
+                // Write out HCL 
+                foreach (var resource in importedResources)
+                {
+                    finalHcl.AppendLine(resource.ToString());
+                }
+
+                File.WriteAllText(MainScriptFile, finalHcl.ToString(), new UTF8Encoding(false));
+
 
                 // Now try to fix up the script by running terraform plan until we get no errors or the same errors repeating
                 var passes = 1;
-                var script = new HclScript("main.tf");
+                var script = new HclScript(MainScriptFile);
                 var lastErrorHash = 0;
-
                 this.logger.LogInformation("\nRunning 'terraform plan' and attempting to fix issues...");
                 this.logger.LogInformation("- Pass 1");
                 var errors = this.settings.Runner.RunPlan();
@@ -179,20 +229,10 @@ terraform {
                 }
 
                 this.logger.LogInformation(
-                    "You may well still need to make manual edits to the script, for instance to add inputs/outputs or dependencies between resources.");
+                    "You will still need to make manual edits to the script, for instance to add inputs/outputs or dependencies between resources.");
 
                 Directory.SetCurrentDirectory(cwd);
             }
-        }
-
-        [DebuggerDisplay("{Address}: {PhysicalId}")]
-        private class ResourceImport
-        {
-            public string Address { get; set; }
-
-            public string AwsAddress { get; set; }
-
-            public string PhysicalId { get; set; }
         }
 
         [DebuggerDisplay("{Aws} -> {Terraform}")]
