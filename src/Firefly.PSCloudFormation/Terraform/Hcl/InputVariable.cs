@@ -76,6 +76,7 @@
 
         /// <summary>
         /// Factory method to create an input variable of the correct type.
+        /// TODO: add validation for AWS custom types. Get some commonality with cmdlet parameter parser
         /// </summary>
         /// <param name="stackParameter">The stack parameter.</param>
         /// <returns>Subclass of <see cref="InputVariable"/></returns>
