@@ -10,6 +10,7 @@
     using Amazon.Runtime;
 
     using Firefly.CloudFormation;
+    using Firefly.PSCloudFormation.Terraform.Hcl;
     using Firefly.PSCloudFormation.Terraform.PlanDeserialization;
 
     using Newtonsoft.Json;

@@ -1,4 +1,4 @@
-﻿namespace Firefly.PSCloudFormation.Terraform
+﻿namespace Firefly.PSCloudFormation.Terraform.Hcl
 {
     using System;
     using System.Collections.Generic;
@@ -80,6 +80,30 @@
             foreach (var ind in lineNumbers.OrderByDescending(n => n))
             {
                 this.lines.RemoveAt(ind - 1);
+            }
+        }
+
+        /// <summary>
+        /// Fixes up variable references.
+        /// </summary>
+        /// <remarks>
+        /// VERY EXPERIMENTAL!
+        /// For now, using only String scalar variables having a non-blank default value,
+        /// simply grep for attribute values matching the variable's default and replace
+        /// </remarks>
+        public void FixUpVariableReferences(IList<HclParameter> parameters)
+        {
+            foreach (var parameter in parameters.Where(p => p.IsScalar && p.Type == "string"))
+            {
+                var valueToMatch = $"\"{parameter.DefaultValue}\"";
+
+                for (var ind = 0; ind < this.lines.Count; ++ind)
+                {
+                    if (this.lines[ind].Contains(valueToMatch) && !this.lines[ind].StartsWith(HclParameter.DefaultDecalaration))
+                    {
+                        this.lines[ind] = this.lines[ind].Replace(valueToMatch, $"var.{parameter.Name}");
+                    }
+                }
             }
         }
 

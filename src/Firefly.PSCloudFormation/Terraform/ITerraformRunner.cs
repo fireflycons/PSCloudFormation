@@ -1,5 +1,6 @@
 ﻿namespace Firefly.PSCloudFormation.Terraform
 {
+    using Firefly.PSCloudFormation.Terraform.Hcl;
     using Firefly.PSCloudFormation.Terraform.PlanDeserialization;
 
     /// <summary>

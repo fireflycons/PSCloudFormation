@@ -3,6 +3,7 @@
     using System.Linq;
     using System.Text.RegularExpressions;
 
+    using Firefly.PSCloudFormation.Terraform.Hcl;
     using Firefly.PSCloudFormation.Terraform.PlanDeserialization;
 
     internal static class PlanFixer

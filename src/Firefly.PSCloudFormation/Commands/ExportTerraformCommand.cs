@@ -94,8 +94,11 @@
         internal async Task<object> ExportTerraform(ICloudFormationContext context, IAwsClientFactory clientFactory)
         {
             this.Logger.LogInformation($"\nReading stack {this.StackName} from AWS...");
+            var ops = new CloudFormationOperations(clientFactory, context);
+
             var exporter = new TerraformExporter(
-                await new CloudFormationOperations(clientFactory, context).GetStackResources(this.StackName),
+                await ops.GetStackResources(this.StackName),
+                (await ops.GetTemplateSummary(this.StackName)).Parameters,
                 new TerrafomSettings
                     {
                         AwsRegion = this._RegionEndpoint.SystemName,

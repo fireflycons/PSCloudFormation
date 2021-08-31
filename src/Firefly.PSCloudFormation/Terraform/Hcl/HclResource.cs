@@ -1,4 +1,4 @@
-﻿namespace Firefly.PSCloudFormation.Terraform
+﻿namespace Firefly.PSCloudFormation.Terraform.Hcl
 {
     using System;
     using System.Collections.Generic;

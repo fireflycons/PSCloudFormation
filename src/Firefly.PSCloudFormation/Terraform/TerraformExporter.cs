@@ -11,6 +11,7 @@
 
     using Firefly.CloudFormation;
     using Firefly.EmbeddedResourceLoader;
+    using Firefly.PSCloudFormation.Terraform.Hcl;
     using Firefly.PSCloudFormation.Terraform.State;
 
     using Newtonsoft.Json;
@@ -32,8 +33,11 @@
 
         private readonly IList<StackResource> stackResources;
 
-        public TerraformExporter(IList<StackResource> stackResources, ITerraformSettings settings, ILogger logger)
+        private readonly IList<ParameterDeclaration> awsParameters;
+
+        public TerraformExporter(IList<StackResource> stackResources, IList<ParameterDeclaration> parameters, ITerraformSettings settings, ILogger logger)
         {
+            this.awsParameters = parameters;
             this.settings = settings;
             this.logger = logger;
             this.stackResources = stackResources;
@@ -58,9 +62,31 @@ terraform {
 
 ";
             initialHcl.AppendLine(TerraformBlock);
-            initialHcl.AppendFormat("provider \"aws\" {{ region = \"{0}\" }}\n", this.settings.AwsRegion);
+            initialHcl.AppendFormat("provider \"aws\" {{\n  region = \"{0}\"\n}}\n\n", this.settings.AwsRegion);
             finalHcl.AppendLine(TerraformBlock);
-            finalHcl.AppendFormat("provider \"aws\" {{ region = \"{0}\" }}\n", this.settings.AwsRegion);
+            finalHcl.AppendFormat("provider \"aws\" {{\n  region = \"{0}\"\n}}\n\n", this.settings.AwsRegion);
+
+            this.logger.LogInformation("Importing parameters...");
+            var parameters = new List<HclParameter>();
+
+            foreach (var p in this.awsParameters)
+            {
+                var hclParam = HclParameter.CreateParameter(p);
+
+                if (p == null)
+                {
+                    this.logger.LogWarning($"Cannot import stack parameter '{p.ParameterKey}'");
+                }
+                else
+                {
+                    parameters.Add(hclParam);
+                }
+            }
+
+            foreach (var hclParameter in parameters)
+            {
+                finalHcl.AppendLine(hclParameter.GenerateHcl());
+            }
 
             this.logger.LogInformation("Processing stack resources and mapping to terraform resource types...");
             foreach (var resource in this.stackResources)
@@ -163,7 +189,7 @@ terraform {
                 // Write out HCL 
                 foreach (var resource in importedResources)
                 {
-                    finalHcl.AppendLine(resource.ToString());
+                    finalHcl.AppendLine(resource.ToString()).AppendLine();
                 }
 
                 File.WriteAllText(MainScriptFile, finalHcl.ToString(), new UTF8Encoding(false));
@@ -172,13 +198,14 @@ terraform {
                 // Now try to fix up the script by running terraform plan until we get no errors or the same errors repeating
                 var passes = 1;
                 var script = new HclScript(MainScriptFile);
-                var lastErrorHash = 0;
+                script.FixUpVariableReferences(parameters);
+                script.Save();
+
                 this.logger.LogInformation("\nRunning 'terraform plan' and attempting to fix issues...");
                 this.logger.LogInformation("- Pass 1");
                 var errors = this.settings.Runner.RunPlan();
-                var thisErrorHash = errors?.GetHashCode() ?? -1;
 
-                while (lastErrorHash != thisErrorHash)
+                while (true)
                 {
                     if (errors == null)
                     {
@@ -188,15 +215,19 @@ terraform {
                     }
 
                     // Do fixes
+                    var errorsFixed = errors.Count(error => PlanFixer.Fix(script, error));
                     this.logger.LogInformation(
-                        $"  - Errors fixed: {errors.Count(error => PlanFixer.Fix(script, error))}/{errors.Count()}");
+                        $"  - Errors fixed: {errorsFixed}/{errors.Count()}");
                     script.Save();
+
+                    if (errorsFixed == 0)
+                    {
+                        break;
+                    }
 
                     // Re-run plan
                     this.logger.LogInformation($"- Pass {++passes}");
                     errors = this.settings.Runner.RunPlan();
-                    lastErrorHash = thisErrorHash;
-                    thisErrorHash = errors?.GetHashCode() ?? -1;
                 }
 
                 // If we get here, then the most recent run did not fix anything else
@@ -234,6 +265,8 @@ terraform {
                 Directory.SetCurrentDirectory(cwd);
             }
         }
+
+
 
         [DebuggerDisplay("{Aws} -> {Terraform}")]
         private class ResourceMapping

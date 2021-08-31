@@ -36,17 +36,6 @@
         }
 
         /// <summary>
-        /// Returns a hash code for this instance.
-        /// </summary>
-        /// <returns>
-        /// A hash code for this instance, suitable for use in hashing algorithms and data structures like a hash table. 
-        /// </returns>
-        public override int GetHashCode()
-        {
-            return this.errors.Aggregate(0, (current, e) => current ^ e.Diagnostic.Snippet.GetHashCode());
-        }
-
-        /// <summary>
         /// Returns an enumerator that iterates through a collection.
         /// </summary>
         /// <returns>
