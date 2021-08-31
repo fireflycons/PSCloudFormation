@@ -85,15 +85,11 @@
 
             foreach (var r1 in this.Resources)
             {
-                foreach (var r2 in this.Resources.Where(r => r.ResourceInstance.Id != r1.ResourceInstance.Id))
-                {
-                    var deps = r2.ResourceInstance.References(r1);
-
-                    if (deps != null)
-                    {
-                        edges.Add(new TaggedEdge<Resource, ResourceDependency>(r1, r2, deps));
-                    }
-                }
+                edges.AddRange(
+                    from r2 in this.Resources.Where(r => r.ResourceInstance.Id != r1.ResourceInstance.Id)
+                    let deps = r2.ResourceInstance.References(r1)
+                    where deps != null
+                    select new TaggedEdge<Resource, ResourceDependency>(r1, r2, deps));
             }
 
             graph.AddVertexRange(this.Resources);
