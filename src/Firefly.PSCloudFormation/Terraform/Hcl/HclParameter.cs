@@ -7,10 +7,20 @@
 
     using Amazon.CloudFormation.Model;
 
+    /// <summary>
+    /// Represents a Terraform HCL parameter (input variable)
+    /// </summary>
     internal abstract class HclParameter
     {
-        public const string DefaultDecalaration = "  default     = ";
+        /// <summary>
+        /// Text fragment to insert when declaring input variable default
+        /// </summary>
+        public const string DefaultDeclaration = "  default     = ";
 
+        /// <summary>
+        /// Initializes a new instance of the <see cref="HclParameter"/> class.
+        /// </summary>
+        /// <param name="stackParameter">The AWS stack parameter to create from.</param>
         protected HclParameter(ParameterDeclaration stackParameter)
         {
             this.Name = stackParameter.ParameterKey;
@@ -19,18 +29,59 @@
             this.DefaultValue = stackParameter.DefaultValue;
         }
 
+        /// <summary>
+        /// Gets a value indicating whether this <see cref="HclParameter"/> is sensitive.
+        /// </summary>
+        /// <value>
+        ///   <c>true</c> if sensitive; otherwise, <c>false</c>.
+        /// </value>
         public bool Sensitive { get; }
 
+        /// <summary>
+        /// Gets the name.
+        /// </summary>
+        /// <value>
+        /// The name.
+        /// </value>
         public string Name { get; }
 
+        /// <summary>
+        /// Gets the description.
+        /// </summary>
+        /// <value>
+        /// The description.
+        /// </value>
         public string Description { get; }
 
+        /// <summary>
+        /// Gets the type.
+        /// </summary>
+        /// <value>
+        /// The type.
+        /// </value>
         public abstract string Type { get; }
 
+        /// <summary>
+        /// Gets the default value.
+        /// </summary>
+        /// <value>
+        /// The default value.
+        /// </value>
         public string DefaultValue { get; }
 
+        /// <summary>
+        /// Gets a value indicating whether this instance is scalar.
+        /// </summary>
+        /// <value>
+        ///   <c>true</c> if this instance is scalar; otherwise, <c>false</c>.
+        /// </value>
         public bool IsScalar => !this.Type.StartsWith("list(");
 
+        /// <summary>
+        /// Factory method to create an input variable of the correct type.
+        /// </summary>
+        /// <param name="stackParameter">The stack parameter.</param>
+        /// <returns>Subclass of <see cref="HclParameter"/></returns>
         public static HclParameter CreateParameter(ParameterDeclaration stackParameter)
         {
             switch (stackParameter.ParameterType)
@@ -75,6 +126,10 @@
             return null;
         }
 
+        /// <summary>
+        /// Generates HCL code for this parameter.
+        /// </summary>
+        /// <returns>HCL code for the parameter.</returns>
         public string GenerateHcl()
         {
             var hcl = new StringBuilder();
@@ -92,42 +147,86 @@
                 hcl.AppendLine("  sensitive = true");
             }
 
-            hcl.AppendLine(this.GeneratetDefaultStanza());
+            hcl.AppendLine(this.GenerateDefaultStanza());
             hcl.AppendLine("}");
 
             return hcl.ToString();
         }
 
-        protected abstract string GeneratetDefaultStanza();
+        /// <summary>
+        /// Generates the default stanza.
+        /// </summary>
+        /// <returns>Default stanza for the variable declaration</returns>
+        protected abstract string GenerateDefaultStanza();
     }
 
+    /// <summary>
+    /// A string scalar input variable
+    /// </summary>
+    /// <seealso cref="Firefly.PSCloudFormation.Terraform.Hcl.HclParameter" />
     internal class HclStringParameter : HclParameter
     {
+        /// <summary>
+        /// Initializes a new instance of the <see cref="HclStringParameter"/> class.
+        /// </summary>
+        /// <param name="stackParameter">The AWS stack parameter to create from.</param>
         public HclStringParameter(ParameterDeclaration stackParameter)
             : base(stackParameter)
         {
         }
 
+        /// <summary>
+        /// Gets the type.
+        /// </summary>
+        /// <value>
+        /// The type.
+        /// </value>
         public override string Type => "string";
 
-        protected override string GeneratetDefaultStanza()
+        /// <summary>
+        /// Generates the default stanza.
+        /// </summary>
+        /// <returns>
+        /// Default stanza for the variable declaration
+        /// </returns>
+        protected override string GenerateDefaultStanza()
         {
             var defaultValue = string.IsNullOrEmpty(this.DefaultValue) ? string.Empty : this.DefaultValue;
 
-            return $"{DefaultDecalaration}\"{defaultValue}\"";
+            return $"{DefaultDeclaration}\"{defaultValue}\"";
         }
     }
 
+    /// <summary>
+    /// A string list input variable
+    /// </summary>
+    /// <seealso cref="Firefly.PSCloudFormation.Terraform.Hcl.HclParameter" />
     internal class HclStringListParameter : HclParameter
     {
+        /// <summary>
+        /// Initializes a new instance of the <see cref="HclStringListParameter"/> class.
+        /// </summary>
+        /// <param name="stackParameter">The AWS stack parameter to create from.</param>
         public HclStringListParameter(ParameterDeclaration stackParameter)
             : base(stackParameter)
         {
         }
 
+        /// <summary>
+        /// Gets the type.
+        /// </summary>
+        /// <value>
+        /// The type.
+        /// </value>
         public override string Type => "list(string)";
 
-        protected override string GeneratetDefaultStanza()
+        /// <summary>
+        /// Generates the default stanza.
+        /// </summary>
+        /// <returns>
+        /// Default stanza for the variable declaration
+        /// </returns>
+        protected override string GenerateDefaultStanza()
         {
             var hcl = new StringBuilder();
 
@@ -135,7 +234,7 @@
                                    ? new List<string> { string.Empty }
                                    : this.DefaultValue.Split(new[] { ',' }, StringSplitOptions.RemoveEmptyEntries).ToList();
 
-            hcl.AppendLine($"{DefaultDecalaration}[");
+            hcl.AppendLine($"{DefaultDeclaration}[");
             foreach (var val in defaultValue)
             {
                 hcl.AppendLine($"    \"{val}\",");
@@ -147,16 +246,36 @@
         }
     }
 
+    /// <summary>
+    /// A numeric scalar input variable
+    /// </summary>
+    /// <seealso cref="Firefly.PSCloudFormation.Terraform.Hcl.HclParameter" />
     internal class HclNumberParameter : HclParameter
     {
+        /// <summary>
+        /// Initializes a new instance of the <see cref="HclNumberParameter"/> class.
+        /// </summary>
+        /// <param name="stackParameter">The AWS stack parameter to create from.</param>
         public HclNumberParameter(ParameterDeclaration stackParameter)
             : base(stackParameter)
         {
         }
 
+        /// <summary>
+        /// Gets the type.
+        /// </summary>
+        /// <value>
+        /// The type.
+        /// </value>
         public override string Type => "number";
 
-        protected override string GeneratetDefaultStanza()
+        /// <summary>
+        /// Generates the default stanza.
+        /// </summary>
+        /// <returns>
+        /// Default stanza for the variable declaration
+        /// </returns>
+        protected override string GenerateDefaultStanza()
         {
             double defaultValue = 0;
 
@@ -165,21 +284,40 @@
                 defaultValue = double.Parse(this.DefaultValue);
             }
 
-            return $"{ DefaultDecalaration}{ defaultValue}";
+            return $"{ DefaultDeclaration}{ defaultValue}";
         }
-
     }
 
+    /// <summary>
+    /// A numeric list input variable
+    /// </summary>
+    /// <seealso cref="Firefly.PSCloudFormation.Terraform.Hcl.HclParameter" />
     internal class HclNumberListParameter : HclParameter
     {
+        /// <summary>
+        /// Initializes a new instance of the <see cref="HclNumberListParameter"/> class.
+        /// </summary>
+        /// <param name="stackParameter">The AWS stack parameter to create from.</param>
         public HclNumberListParameter(ParameterDeclaration stackParameter)
             : base(stackParameter)
         {
         }
 
+        /// <summary>
+        /// Gets the type.
+        /// </summary>
+        /// <value>
+        /// The type.
+        /// </value>
         public override string Type => "list(number)";
 
-        protected override string GeneratetDefaultStanza()
+        /// <summary>
+        /// Generates the default stanza.
+        /// </summary>
+        /// <returns>
+        /// Default stanza for the variable declaration
+        /// </returns>
+        protected override string GenerateDefaultStanza()
         {
             var hcl = new StringBuilder();
 
@@ -187,7 +325,7 @@
                                    ? new List<double> { 0 }
                                    : this.DefaultValue.Split(new[] { ',' }, StringSplitOptions.RemoveEmptyEntries).Select(double.Parse).ToList();
 
-            hcl.AppendLine($"{DefaultDecalaration}[");
+            hcl.AppendLine($"{DefaultDeclaration}[");
             foreach (var val in defaultValue)
             {
                 hcl.AppendLine($"    {val},");

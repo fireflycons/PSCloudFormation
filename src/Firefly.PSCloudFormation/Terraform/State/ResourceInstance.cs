@@ -7,27 +7,72 @@
     using Newtonsoft.Json;
     using Newtonsoft.Json.Linq;
 
+    /// <summary>
+    /// Represents an instance of a resource in the state file.
+    /// </summary>
     [DebuggerDisplay("{Id}")]
     internal class ResourceInstance
     {
+        /// <summary>
+        /// Gets or sets the schema version.
+        /// </summary>
+        /// <value>
+        /// The schema version.
+        /// </value>
         [JsonProperty("schema_version")]
         public int SchemaVersion { get; set; }
 
+        /// <summary>
+        /// Gets or sets the attributes.
+        /// </summary>
+        /// <value>
+        /// The attributes.
+        /// </value>
         [JsonProperty("attributes")]
         public JObject Attributes { get; set; }
 
+        /// <summary>
+        /// Gets or sets the sensitive attributes.
+        /// </summary>
+        /// <value>
+        /// The sensitive attributes.
+        /// </value>
         [JsonProperty("sensitive_attributes")]
         public List<string> SensitiveAttributes { get; set; }
 
+        /// <summary>
+        /// Gets or sets the provider metadata.
+        /// </summary>
+        /// <value>
+        /// The provider metadata.
+        /// </value>
         [JsonProperty("private")]
         public string ProviderMetadata { get; set; }
 
+        /// <summary>
+        /// Gets or sets the dependencies.
+        /// </summary>
+        /// <value>
+        /// The dependencies.
+        /// </value>
         [JsonProperty("dependencies", NullValueHandling = NullValueHandling.Ignore)]
         public List<string> Dependencies { get; set; }
 
+        /// <summary>
+        /// Gets the identifier.
+        /// </summary>
+        /// <value>
+        /// The identifier.
+        /// </value>
         [JsonIgnore]
         public string Id => this.Attributes["id"].Value<string>();
 
+        /// <summary>
+        /// Gets or sets the parent.
+        /// </summary>
+        /// <value>
+        /// The parent.
+        /// </value>
         [JsonIgnore]
         public Resource Parent { get; set; }
 

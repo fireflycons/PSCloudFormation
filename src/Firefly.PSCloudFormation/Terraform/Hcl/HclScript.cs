@@ -99,7 +99,7 @@
 
                 for (var ind = 0; ind < this.lines.Count; ++ind)
                 {
-                    if (this.lines[ind].Contains(valueToMatch) && !this.lines[ind].StartsWith(HclParameter.DefaultDecalaration))
+                    if (this.lines[ind].Contains(valueToMatch) && !this.lines[ind].StartsWith(HclParameter.DefaultDeclaration))
                     {
                         this.lines[ind] = this.lines[ind].Replace(valueToMatch, $"var.{parameter.Name}");
                     }

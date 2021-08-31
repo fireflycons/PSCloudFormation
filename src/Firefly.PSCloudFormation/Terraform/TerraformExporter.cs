@@ -5,7 +5,6 @@
     using System.IO;
     using System.Linq;
     using System.Text;
-    using System.Text.RegularExpressions;
 
     using Amazon.CloudFormation.Model;
 
@@ -16,25 +15,53 @@
 
     using Newtonsoft.Json;
 
+    /// <summary>
+    /// Main class for handling Terraform export
+    /// </summary>
+    /// <seealso cref="Firefly.EmbeddedResourceLoader.AutoResourceLoader" />
     internal class TerraformExporter : AutoResourceLoader
     {
+        /// <summary>
+        /// Name of the main script file
+        /// </summary>
         private const string MainScriptFile = "main.tf";
 
+        /// <summary>
+        /// Name of the Terraform state file
+        /// </summary>
         private const string StateFileName = "terraform.tfstate";
 
         [EmbeddedResource("terraform-resource-map.json")]
-
         // ReSharper disable once StyleCop.SA1600 - Loaded by auto-resource
         private static string resourceMapJson;
 
+        /// <summary>
+        /// The logger
+        /// </summary>
         private readonly ILogger logger;
 
+        /// <summary>
+        /// The export settings
+        /// </summary>
         private readonly ITerraformSettings settings;
 
+        /// <summary>
+        /// The stack resources
+        /// </summary>
         private readonly IList<StackResource> stackResources;
 
+        /// <summary>
+        /// The AWS stack parameters
+        /// </summary>
         private readonly IList<ParameterDeclaration> awsParameters;
 
+        /// <summary>
+        /// Initializes a new instance of the <see cref="TerraformExporter"/> class.
+        /// </summary>
+        /// <param name="stackResources">The stack resources.</param>
+        /// <param name="parameters">The parameters.</param>
+        /// <param name="settings">The settings.</param>
+        /// <param name="logger">The logger.</param>
         public TerraformExporter(IList<StackResource> stackResources, IList<ParameterDeclaration> parameters, ITerraformSettings settings, ILogger logger)
         {
             this.awsParameters = parameters;
@@ -43,6 +70,9 @@
             this.stackResources = stackResources;
         }
 
+        /// <summary>
+        /// Performs Terraform export.
+        /// </summary>
         public void Export()
         {
             var resourceMap = JsonConvert.DeserializeObject<List<ResourceMapping>>(resourceMapJson);
@@ -266,14 +296,27 @@ terraform {
             }
         }
 
-
-
+        /// <summary>
+        /// Maps an AWS resource type to equivalent Terraform resource
+        /// </summary>
         [DebuggerDisplay("{Aws} -> {Terraform}")]
         private class ResourceMapping
         {
+            /// <summary>
+            /// Gets or sets the AWS type name.
+            /// </summary>
+            /// <value>
+            /// The AWS type name.
+            /// </value>
             [JsonProperty("AWS")]
             public string Aws { get; set; }
 
+            /// <summary>
+            /// Gets or sets the terraform type name.
+            /// </summary>
+            /// <value>
+            /// The terraform.
+            /// </value>
             [JsonProperty("TF")]
             public string Terraform { get; set; }
         }
