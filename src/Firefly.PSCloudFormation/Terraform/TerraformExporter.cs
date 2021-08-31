@@ -97,11 +97,11 @@ terraform {
             finalHcl.AppendFormat("provider \"aws\" {{\n  region = \"{0}\"\n}}\n\n", this.settings.AwsRegion);
 
             this.logger.LogInformation("Importing parameters...");
-            var parameters = new List<HclParameter>();
+            var parameters = new List<InputVariable>();
 
             foreach (var p in this.awsParameters)
             {
-                var hclParam = HclParameter.CreateParameter(p);
+                var hclParam = InputVariable.CreateParameter(p);
 
                 if (p == null)
                 {

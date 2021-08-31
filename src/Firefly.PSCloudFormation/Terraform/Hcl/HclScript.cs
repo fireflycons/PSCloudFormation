@@ -91,7 +91,7 @@
         /// For now, using only String scalar variables having a non-blank default value,
         /// simply grep for attribute values matching the variable's default and replace
         /// </remarks>
-        public void FixUpVariableReferences(IList<HclParameter> parameters)
+        public void FixUpVariableReferences(IList<InputVariable> parameters)
         {
             foreach (var parameter in parameters.Where(p => p.IsScalar && p.Type == "string"))
             {
@@ -99,7 +99,7 @@
 
                 for (var ind = 0; ind < this.lines.Count; ++ind)
                 {
-                    if (this.lines[ind].Contains(valueToMatch) && !this.lines[ind].StartsWith(HclParameter.DefaultDeclaration))
+                    if (this.lines[ind].Contains(valueToMatch) && !this.lines[ind].StartsWith(InputVariable.DefaultDeclaration))
                     {
                         this.lines[ind] = this.lines[ind].Replace(valueToMatch, $"var.{parameter.Name}");
                     }
