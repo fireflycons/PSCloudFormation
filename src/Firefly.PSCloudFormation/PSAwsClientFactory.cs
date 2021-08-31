@@ -1,6 +1,7 @@
 ﻿namespace Firefly.PSCloudFormation
 {
     using Amazon.CloudFormation;
+    using Amazon.Runtime;
     using Amazon.S3;
     using Amazon.SecurityToken;
 
@@ -13,11 +14,6 @@
     public class PSAwsClientFactory : IPSAwsClientFactory
     {
         /// <summary>
-        /// The cloud formation client
-        /// </summary>
-        private readonly IAmazonCloudFormation cloudFormationClient;
-
-        /// <summary>
         /// The context
         /// </summary>
         private readonly IPSCloudFormationContext context;
@@ -29,7 +25,6 @@
         /// <param name="context">The context.</param>
         public PSAwsClientFactory(IAmazonCloudFormation cloudFormationClient, IPSCloudFormationContext context)
         {
-            this.cloudFormationClient = cloudFormationClient;
             this.context = context;
         }
 
@@ -41,7 +36,14 @@
         /// </returns>
         public IAmazonCloudFormation CreateCloudFormationClient()
         {
-            return this.cloudFormationClient;
+            var config = new AmazonCloudFormationConfig { RegionEndpoint = this.context.Region };
+
+            if (this.context.CloudFormationEndpointUrl != null)
+            {
+                config.ServiceURL = this.context.CloudFormationEndpointUrl.AbsoluteUri;
+            }
+
+            return new AmazonCloudFormationClient(this.context.Credentials ?? new AnonymousAWSCredentials(), config);
         }
 
         /// <summary>
@@ -99,12 +101,9 @@
                     });
         }
 
-        /// <summary>
-        /// Performs application-defined tasks associated with freeing, releasing, or resetting unmanaged resources.
-        /// </summary>
+        // TODO: Factor this out
         public void Dispose()
         {
-            this.cloudFormationClient?.Dispose();
         }
     }
 }
