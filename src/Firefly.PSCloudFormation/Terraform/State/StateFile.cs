@@ -87,9 +87,9 @@
             {
                 edges.AddRange(
                     from r2 in this.Resources.Where(r => r.ResourceInstance.Id != r1.ResourceInstance.Id)
-                    let deps = r2.ResourceInstance.References(r1)
-                    where deps != null
-                    select new TaggedEdge<Resource, ResourceDependency>(r1, r2, deps));
+                    let dependency = r2.ResourceInstance.References(r1)
+                    where dependency != null
+                    select new TaggedEdge<Resource, ResourceDependency>(r1, r2, dependency));
             }
 
             graph.AddVertexRange(this.Resources);

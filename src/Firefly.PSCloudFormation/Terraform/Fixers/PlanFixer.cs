@@ -1,5 +1,6 @@
-﻿namespace Firefly.PSCloudFormation.Terraform
+﻿namespace Firefly.PSCloudFormation.Terraform.Fixers
 {
+    using System.Collections.Generic;
     using System.Linq;
     using System.Text.RegularExpressions;
 
@@ -20,6 +21,12 @@
                 case PlanErrorType.InvalidOrUnknownKey:
 
                     return FixUnconfigurableAtribute(script, error);
+
+                case PlanErrorType.MissingRequiredArgument:
+
+                    var fixer = ResourceFixer.Create(script, error);
+
+                    return fixer != null && fixer.Fix();
 
                 default:
 

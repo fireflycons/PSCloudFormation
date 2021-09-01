@@ -10,6 +10,7 @@
 
     using Firefly.CloudFormation;
     using Firefly.EmbeddedResourceLoader;
+    using Firefly.PSCloudFormation.Terraform.Fixers;
     using Firefly.PSCloudFormation.Terraform.Hcl;
     using Firefly.PSCloudFormation.Terraform.State;
 
