@@ -40,7 +40,7 @@
         /// The terraform version.
         /// </value>
         [JsonProperty("terraform_version")]
-        public Version TerraformVersion { get; set; }
+        public string TerraformVersion { get; set; }
 
         /// <summary>
         /// Gets or sets the serial number.
