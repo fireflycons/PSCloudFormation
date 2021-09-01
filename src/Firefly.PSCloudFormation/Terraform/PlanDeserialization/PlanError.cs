@@ -62,7 +62,7 @@
         /// The line number.
         /// </value>
         [JsonIgnore]
-        public int LineNumber => this.Diagnostic.Range.Start.Line;
+        public int LineNumber => this.Diagnostic?.Range?.Start?.Line ?? 0;
 
         /// <summary>
         /// Gets the message.

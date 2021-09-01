@@ -65,6 +65,7 @@
         /// The identifier.
         /// </value>
         [JsonIgnore]
+        // ReSharper disable once AssignNullToNotNullAttribute - All resources in state file have an ID.
         public string Id => this.Attributes["id"].Value<string>();
 
         /// <summary>
