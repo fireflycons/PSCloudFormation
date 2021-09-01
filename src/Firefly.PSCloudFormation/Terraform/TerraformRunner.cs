@@ -5,6 +5,7 @@
     using System.Diagnostics;
     using System.IO;
     using System.Linq;
+    using System.Management.Automation.Language;
     using System.Runtime.InteropServices;
 
     using Amazon.Runtime;
@@ -82,7 +83,7 @@
 
             this.logger.LogInformation($"Getting resource definition for {address}");
 
-            var exitCode = this.RunProcess(
+            this.RunProcess(
                 $"state show -no-color {address}",
                 msg => definition.Lines.Add(msg),
                 msg => this.logger.LogError(msg));
@@ -139,19 +140,14 @@
                 return null;
             }
 
-            var errors = new List<PlanError>();
-
-            foreach (var statement in output)
-            {
-                if (statement.Contains("\"@level\":\"error\""))
-                {
-                    errors.Add(JsonConvert.DeserializeObject<PlanError>(statement));
-                }
-            }
+            var errors = (from statement in output
+                          where statement.Contains("\"@level\":\"error\"")
+                          select JsonConvert.DeserializeObject<PlanError>(statement))
+                .ToList();
 
             // Errors will be processed in reverse order so that adjusting the file content
             // does not put the line numbers out of kilter.
-            return new PlanErrorCollection(errors.OrderByDescending(e => e.LineNumber));
+            return !errors.Any() ? null : new PlanErrorCollection(errors.OrderByDescending(e => e.LineNumber));
         }
 
         /// <summary>
