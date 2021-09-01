@@ -249,7 +249,7 @@ terraform {
         /// <param name="stateFile">The state file.</param>
         /// <param name="resourcesToImport">The resources to import.</param>
         /// <param name="importedResources">The imported resources.</param>
-        private void ProcessResourceDependencies(StateFile stateFile, List<ResourceImport> resourcesToImport, List<HclResource> importedResources)
+        private void ProcessResourceDependencies(StateFile stateFile, IReadOnlyCollection<ResourceImport> resourcesToImport, IReadOnlyCollection<HclResource> importedResources)
         {
             var graph = stateFile.GenerateChangeGraph();
 
@@ -341,7 +341,7 @@ terraform {
             {
                 var hclParam = InputVariable.CreateParameter(p);
 
-                if (p == null)
+                if (hclParam == null)
                 {
                     this.logger.LogWarning($"Cannot import stack parameter '{p.ParameterKey}'");
                 }
