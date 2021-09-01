@@ -70,16 +70,5 @@
 
             svg.Should().NotBeNull();
         }
-
-        [Fact]
-        public void ShouldFormatHtlmDot()
-        {
-            const string Dot = "digraph G {0[label = \"<S>P: SubnetCidr</S>\"]}";
-            const string Expected = "digraph G {0[label = <<S>P: SubnetCidr</S>>]}";
-
-            var formattedDot = DotHtmlFormatter.QuoteHtml(Dot);
-
-            formattedDot.Should().Be(Expected);
-        }
     }
 }

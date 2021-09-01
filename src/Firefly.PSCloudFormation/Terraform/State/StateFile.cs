@@ -104,7 +104,7 @@
         /// <returns>A DOT format digraph, primarily for use in debugging.</returns>
         public string GenerateDotGraph(BidirectionalGraph<Resource, TaggedEdge<Resource, ResourceDependency>> graph)
         {
-            var dotGraph = graph.ToGraphviz(
+            return graph.ToGraphviz(
                 algorithm =>
                     {
                         var font = new GraphvizFont("Arial", 9);
@@ -120,9 +120,6 @@
 
                         algorithm.FormatEdge += (sender, args) => { args.EdgeFormat.Label.Value = args.Edge.Tag?.TargetAttribute; };
                     });
-
-            // Temp fix - wait for https://github.com/KeRNeLith/QuikGraph/issues/27
-            return DotHtmlFormatter.QuoteHtml(dotGraph);
         }
 
         /// <summary>
