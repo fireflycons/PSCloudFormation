@@ -9,7 +9,7 @@ The [Export-PSCFNTerraform](xref:Export-PSCFNTerraform) cmdlet will read a Cloud
 The general procedure for migrating a CloudFormation Stack is as follows
 
 1. Edit the CloudFormation Template and set a `DeletionPolicy` of `Retain` on all resources. Update the stack and ensure that this gets applied. In some cases you might need to force a resource update to one resouce (e.g. add a tag) for the policies to be applied.
-1. Run [Export-PSCFNTerraform](xref:Export-PSCFNTerraform) on the stack, and make manual corrections
+1. Run [Export-PSCFNTerraform](xref:Export-PSCFNTerraform) on the stack, and make manual corrections. Test deploy your stack to another enviroment/region/account until you're sure it's correct.
 1. Delete the CloudFormation Stack. The stack definition will be removed from CloudFormation, however the resouces it contains will not.
 1. Now the stack resources are wholly owned by Terraform.
 

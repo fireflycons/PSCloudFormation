@@ -9,6 +9,11 @@ A set PowerShell cmdlets for manipulating AWS CloudFormation stacks.
 * When using a workstation with a GUI, [detailed changeset information](https://fireflycons.github.io/PSCloudFormation/articles/changesets.html) can be brought up in a browser, including an SVG graph depicting the relationships between resources that are being modifed - like `terraform graph`
 * Automatic packaging and upload to S3 of dependencies such as nested stack templates, lambdas, and other resources that require S3 references as described in [aws cloudformation package](https://docs.aws.amazon.com/cli/latest/reference/cloudformation/package.html)
 * Close argument parity with similar cmdlets in AWS.Tools.CloudFormation
+
+### Experimental Features
+
+* Export a live CloudFormation Stack to Terraform HCL. This is sitll a work in progress, however it's still better than what you get simply by running [terraform import](https://www.terraform.io/docs/cli/import/index.html). See [Terrafom Export](https://fireflycons.github.io/PSCloudFormation/articles/terraform-export.html)
+
 ## Dependencies
 
 This module depends on [AWS.Tools](https://docs.aws.amazon.com/powershell/latest/userguide/pstools-welcome.html) version `4.1.6.0` or higher which you should install/upgrade to first
