@@ -1,5 +1,10 @@
 # Release Notes
 
+# 4.1.6.19
+
+* Fix - Negative MinValue constraint on numeric parameter not working. [Issue link](https://github.com/fireflycons/PSCloudFormation/issues/120)
+* Enhancement - Experimental release of Terraform Exporter. [Issue link](https://github.com/fireflycons/PSCloudFormation/issues/119)
+
 # 4.1.6.18
 
 * Fix - Unlabeled graph edges for changes to CreationPolicy, UpdatePolicy, Metadata. [Issue link](https://github.com/fireflycons/PSCloudFormation/issues/117)

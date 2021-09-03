@@ -173,13 +173,13 @@
                                 builder.WithValidatePattern(param.AllowedPattern);
                             }
 
-                            if (param.HasMaxLength)
+                            if (param.HasMaxLength || param.HasMinLength)
                             {
                                 builder.WithValidateLength(param.MinLength, param.MaxLength);
                             }
                         }
 
-                        if ((param.Type == "Number" || param.Type == "List<Number>") && param.HasMaxValue)
+                        if ((param.Type == "Number" || param.Type == "List<Number>") && (param.HasMaxValue || param.HasMinValue))
                         {
                             builder.WithValidateRange(param.MinValue, param.MaxValue);
                         }
