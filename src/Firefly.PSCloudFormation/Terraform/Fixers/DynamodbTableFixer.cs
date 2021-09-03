@@ -46,12 +46,7 @@
                 return false;
             }
 
-            if (Regex.IsMatch(this.error.Diagnostic.Snippet.Code, @"^\s*ttl\s+\{"))
-            {
-                return this.FixTTLMissingAttribute();
-            }
-
-            return false;
+            return Regex.IsMatch(this.error.Diagnostic.Snippet.Code, @"^\s*ttl\s+\{") && this.FixTTLMissingAttribute();
         }
 
         /// <summary>

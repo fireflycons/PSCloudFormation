@@ -6,8 +6,6 @@
     using System.Linq;
     using System.Text;
 
-    using Firefly.PSCloudFormation.ChangeVisualisation;
-
     using Newtonsoft.Json;
 
     using QuikGraph;

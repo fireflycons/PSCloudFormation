@@ -14,7 +14,7 @@
         /// <value>
         /// The address.
         /// </value>
-        public string Address { get; set; }
+        public string Address => $"{this.TerraformType}.{this.LogicalId}";
 
         /// <summary>
         /// Gets or sets the AWS address (logical ID).
@@ -22,7 +22,7 @@
         /// <value>
         /// The AWS address.
         /// </value>
-        public string AwsAddress { get; set; }
+        public string AwsAddress => $"{this.LogicalId} ({this.AwsType})";
 
         /// <summary>
         /// Gets or sets the physical identifier.
@@ -31,5 +31,17 @@
         /// The physical identifier.
         /// </value>
         public string PhysicalId { get; set; }
+
+        public string LogicalId { get; set; }
+
+        /// <summary>
+        /// Gets or sets the AWS resource type.
+        /// </summary>
+        /// <value>
+        /// The resource type.
+        /// </value>
+        public string AwsType { get; set; }
+
+        public string TerraformType { get; set; }
     }
 }

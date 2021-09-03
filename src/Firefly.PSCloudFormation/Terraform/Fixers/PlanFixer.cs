@@ -1,14 +1,22 @@
 ﻿namespace Firefly.PSCloudFormation.Terraform.Fixers
 {
-    using System.Collections.Generic;
     using System.Linq;
     using System.Text.RegularExpressions;
 
     using Firefly.PSCloudFormation.Terraform.Hcl;
     using Firefly.PSCloudFormation.Terraform.PlanDeserialization;
 
+    /// <summary>
+    /// Class containing methods for fixing various errors following a terraform plan
+    /// </summary>
     internal static class PlanFixer
     {
+        /// <summary>
+        /// Fixes the specified script.
+        /// </summary>
+        /// <param name="script">The script.</param>
+        /// <param name="error">The error.</param>
+        /// <returns><c>true</c> if the specified error was addressed; else <c>false</c></returns>
         public static bool Fix(HclScript script, PlanError error)
         {
             switch (error.ErrorType)
@@ -20,7 +28,7 @@
                 case PlanErrorType.UnconfigurableAtribute:
                 case PlanErrorType.InvalidOrUnknownKey:
 
-                    return FixUnconfigurableAtribute(script, error);
+                    return FixUnconfigurableAttribute(script, error);
 
                 case PlanErrorType.MissingRequiredArgument:
 
@@ -57,7 +65,13 @@
             return false;
         }
 
-        private static bool FixUnconfigurableAtribute(HclScript script, PlanError error)
+        /// <summary>
+        /// Fixes attributes that should not be in the HCL by removing them
+        /// </summary>
+        /// <param name="script">The script.</param>
+        /// <param name="error">The error.</param>
+        /// <returns><c>true</c> if action was taken</returns>
+        private static bool FixUnconfigurableAttribute(HclScript script, PlanError error)
         {
             script.RemoveLines(
                 Enumerable.Range(

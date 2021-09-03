@@ -5,7 +5,6 @@
     using System.Diagnostics;
     using System.IO;
     using System.Linq;
-    using System.Management.Automation.Language;
     using System.Runtime.InteropServices;
 
     using Amazon.Runtime;
@@ -77,7 +76,7 @@
         /// <returns>
         /// Resource definition in HCL
         /// </returns>
-        public HclResource GetResourceDefinition2(string address)
+        public HclResource GetResourceDefinition(string address)
         {
             var definition = new HclResource(address);
 
@@ -96,12 +95,13 @@
         /// </summary>
         /// <param name="command">The command (e.g. plan, import etc).</param>
         /// <param name="throwOnError">if <c>true</c> throw an exception if terraform exits with non-zero status.</param>
+        /// <param name="output">Action to collect output from the command. Can be <c>null</c></param>
         /// <param name="arguments">The arguments.</param>
         /// <returns>
         /// If exceptions are disabled by <paramref name="throwOnError" /> then <c>false</c> is returned when terraform exits with non-zero status.
         /// </returns>
         /// <exception cref="System.InvalidOperationException">terraform exited with code {process.ExitCode}</exception>
-        public bool Run(string command, bool throwOnError, params string[] arguments)
+        public bool Run(string command, bool throwOnError, Action<string> output, params string[] arguments)
         {
             var commandtail = $"{command} ";
             commandtail += arguments == null
@@ -110,8 +110,16 @@
 
             var exitCode = this.RunProcess(
                 commandtail.Trim(),
-                msg => this.logger.LogInformation(msg),
-                msg => this.logger.LogError(msg));
+                msg =>
+                    {
+                        output?.Invoke(msg);
+                        this.logger.LogInformation(msg);
+                    },
+                msg =>
+                    {
+                        output?.Invoke(msg);
+                        this.logger.LogError(msg);
+                    });
 
             if (exitCode != 0 && throwOnError)
             {

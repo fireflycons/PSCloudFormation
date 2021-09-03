@@ -12,7 +12,9 @@
     using Firefly.EmbeddedResourceLoader;
     using Firefly.PSCloudFormation.Terraform.Fixers;
     using Firefly.PSCloudFormation.Terraform.Hcl;
+    using Firefly.PSCloudFormation.Terraform.Importers;
     using Firefly.PSCloudFormation.Terraform.State;
+    using Firefly.PSCloudFormation.Utils;
 
     using Newtonsoft.Json;
 
@@ -32,6 +34,16 @@
         /// </summary>
         private const string StateFileName = "terraform.tfstate";
 
+        private const string TerraformBlock = @"
+terraform {
+  required_providers {
+    aws = {
+      source = ""hashicorp/aws""
+    }
+  }
+}
+
+";
         /// <summary>
         /// Map of AWS resource type to Terraform resource type, generated during build.
         /// </summary>
@@ -61,6 +73,8 @@
         /// </summary>
         private readonly IList<ParameterDeclaration> awsParameters;
 
+        private readonly IUserInterface ui;
+
         /// <summary>
         /// Initializes a new instance of the <see cref="TerraformExporter"/> class.
         /// </summary>
@@ -68,8 +82,10 @@
         /// <param name="parameters">The parameters.</param>
         /// <param name="settings">The settings.</param>
         /// <param name="logger">The logger.</param>
-        public TerraformExporter(IList<StackResource> stackResources, IList<ParameterDeclaration> parameters, ITerraformSettings settings, ILogger logger)
+        /// <param name="ui">User interface abstraction for asking questions of the user.</param>
+        public TerraformExporter(IList<StackResource> stackResources, IList<ParameterDeclaration> parameters, ITerraformSettings settings, ILogger logger, IUserInterface ui)
         {
+            this.ui = ui;
             this.awsParameters = parameters;
             this.settings = settings;
             this.logger = logger;
@@ -85,16 +101,6 @@
             var finalHcl = new StringBuilder();
             var importFailures = new List<string>();
             var unmappedResources = new List<string>();
-            const string TerraformBlock = @"
-terraform {
-  required_providers {
-    aws = {
-      source = ""hashicorp/aws""
-    }
-  }
-}
-
-";
             initialHcl.AppendLine(TerraformBlock);
             initialHcl.AppendFormat("provider \"aws\" {{\n  region = \"{0}\"\n}}\n\n", this.settings.AwsRegion);
             finalHcl.AppendLine(TerraformBlock);
@@ -132,17 +138,58 @@ terraform {
                 File.WriteAllText(MainScriptFile, initialHcl.ToString(), new UTF8Encoding(false));
 
                 this.logger.LogInformation("\nInitializing workspace...");
-                this.settings.Runner.Run("init", true);
+                this.settings.Runner.Run("init", true, null);
                 this.logger.LogInformation("\nImporting mapped resources to terraform state...");
 
                 foreach (var resource in resourcesToImport)
                 {
-                    if (this.settings.Runner.Run("import", false, resource.Address, resource.PhysicalId))
+                    var commandOutput = new List<string>();
+
+                    var success = this.settings.Runner.Run(
+                        "import",
+                        false,
+                        msg => commandOutput.Add(msg),
+                        resource.Address,
+                        resource.PhysicalId);
+
+                    if (success)
                     {
-                        importedResources.Add(this.settings.Runner.GetResourceDefinition2(resource.Address));
+                        importedResources.Add(this.settings.Runner.GetResourceDefinition(resource.Address));
                     }
                     else
                     {
+                        if (!this.settings.NonInteractive)
+                        {
+                            if (commandOutput.ContainsText("Unexpected format of ID"))
+                            {
+                                var importer = ResourceImporter.Create(
+                                    resource.TerraformType,
+                                    this.ui,
+                                    resourcesToImport);
+
+                                if (importer != null)
+                                {
+                                    var target = importer.GetImportId(
+                                        $"Select related resource for {resource.AwsAddress}",
+                                        null);
+
+                                    success = this.settings.Runner.Run(
+                                        "import",
+                                        false,
+                                        null,
+                                        resource.Address,
+                                        $"{target}/{resource.PhysicalId}");
+
+                                    if (success)
+                                    {
+                                        importedResources.Add(
+                                            this.settings.Runner.GetResourceDefinition(resource.Address));
+                                        continue;
+                                    }
+                                }
+                            }
+                        }
+
                         importFailures.Add($"{resource.Address} from {resource.AwsAddress}");
                     }
                 }
@@ -228,7 +275,7 @@ terraform {
 
                 // Do fixes
                 var errorsFixed = errors.Count(error => PlanFixer.Fix(script, error));
-                this.logger.LogInformation($"  - Errors fixed: {errorsFixed}/{errors.Count()}");
+                this.logger.LogInformation($"  - Issues fixed: {errorsFixed}/{errors.Count()}");
                 script.Save();
 
                 if (errorsFixed == 0)
@@ -319,9 +366,10 @@ terraform {
                     resourcesToImport.Add(
                         new ResourceImport
                             {
-                                Address = $"{mapping.Terraform}.{resource.LogicalResourceId}",
                                 PhysicalId = resource.PhysicalResourceId,
-                                AwsAddress = $"{resource.LogicalResourceId} ({resource.ResourceType})"
+                                LogicalId = resource.LogicalResourceId,
+                                TerraformType = mapping.Terraform,
+                                AwsType = resource.ResourceType
                             });
                 }
             }
