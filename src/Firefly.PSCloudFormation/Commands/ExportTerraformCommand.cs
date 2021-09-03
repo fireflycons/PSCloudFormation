@@ -8,6 +8,7 @@
     using Firefly.CloudFormation;
     using Firefly.PSCloudFormation.AbstractCommands;
     using Firefly.PSCloudFormation.Terraform;
+    using Firefly.PSCloudFormation.Utils;
 
     /// <summary>
     /// <para type="synopsis">
@@ -21,6 +22,24 @@
     /// Once the resource ownership has been passed to Terraform, all the resources within the CloudFormation template should have
     /// their deletion policy set to Retain, then the CloudFormation stack deleted, thus leaving the resources intact.
     /// </para>
+    /// <example>
+    /// <code>Export-PSCFNTerraform -StackName my-stack -WorkspaceDirectory ~/tf/my-stack</code>
+    /// <para>
+    /// Reads my-stack from AWS via the CloudFormation service and generates Terraform code for that stack in the specified directory.
+    /// </para>
+    /// </example>
+    /// <example>
+    /// <code>Export-PSCFNTerraform -StackName my-stack -WorkspaceDirectory ~/tf/my-stack -NonInteractive</code>
+    /// <para>
+    /// As the first example, but does not ask questions about resources that cannot be imported directly. These resources are reported as not imported.
+    /// </para>
+    /// </example>
+    /// <example>
+    /// <code>Export-PSCFNTerraform -StackName my-stack -WorkspaceDirectory ~/tf/my-stack -Force</code>
+    /// <para>
+    /// As the first example, but if an existing state file is found in the workspace, it is overwritten without prompting.
+    /// </para>
+    /// </example>
     /// </summary>
     /// <seealso cref="Firefly.PSCloudFormation.AbstractCommands.CloudFormationServiceCommand" />
     [Cmdlet(VerbsData.Export, "PSCFNTerraform")]
@@ -78,6 +97,25 @@
         public SwitchParameter Force { get; set; }
 
         /// <summary>
+        /// Gets or sets the non interactive.
+        /// <para type="description">
+        /// If set, do not ask the user questions.
+        /// </para>
+        /// <para type="description">
+        /// Some resources such as lambda permissions cannot at this time directly be associated
+        /// with the resources they refer to. In these cases a dialog with the user is initiated
+        /// such that the user may select the appropriate resource e.g. lambda function to
+        /// associate the resource being imported with. This switch disables that user interaction
+        /// meaning that the resource will have to be resolved manually later.
+        /// </para>
+        /// </summary>
+        /// <value>
+        /// The non interactive.
+        /// </value>
+        [Parameter]
+        public SwitchParameter NonInteractive { get; set; }
+
+        /// <summary>
         /// Gets or sets the resolved workspace directory.
         /// </summary>
         /// <value>
@@ -103,9 +141,11 @@
                     {
                         AwsRegion = this._RegionEndpoint.SystemName,
                         Runner = new TerraformRunner(this._CurrentCredentials, this.Logger),
-                        WorkspaceDirectory = this.ResolvedWorkspaceDirectory
+                        WorkspaceDirectory = this.ResolvedWorkspaceDirectory,
+                        NonInteractive = this.NonInteractive
                     },
-                this.Logger);
+                this.Logger,
+                new PSUserInterface(this.Host.UI));
 
             exporter.Export();
 
