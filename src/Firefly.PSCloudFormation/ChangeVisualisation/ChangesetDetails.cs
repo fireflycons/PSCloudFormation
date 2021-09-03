@@ -71,6 +71,7 @@
                                 if (args.Vertex is ResourceVertex rv)
                                 {
                                     args.VertexFormat.Label = rv.Label;
+                                    args.VertexFormat.IsHtmlLabel = true;
                                     args.VertexFormat.Style = rv.Style;
                                     args.VertexFormat.FillColor = rv.FillColor;
                                     args.VertexFormat.FontColor = rv.FontColor;
@@ -79,9 +80,6 @@
 
                         algorithm.FormatEdge += (sender, args) => { args.EdgeFormat.Label.Value = args.Edge.Tag; };
                     });
-
-            // Temp fix - wait for https://github.com/KeRNeLith/QuikGraph/issues/27
-            dotGraph = DotHtmlFormatter.QuoteHtml(dotGraph);
 
             var svg = await renderer.RenderSvg(dotGraph);
             

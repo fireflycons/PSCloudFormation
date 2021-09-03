@@ -169,45 +169,6 @@
         protected string ResolvedResourcesToImport { get; set; }
 
         /// <summary>
-        /// Asks a yes/no question.
-        /// </summary>
-        /// <param name="caption">The caption.</param>
-        /// <param name="message">The message.</param>
-        /// <param name="defaultResponse">The default response.</param>
-        /// <param name="helpYes">Help message for Yes response</param>
-        /// <param name="helpNo">Help message for No response</param>
-        /// <param name="additionalChoices">Any additional choices</param>
-        /// <returns>User choice</returns>
-        protected ChoiceResponse AskYesNo(
-            string caption,
-            string message,
-            ChoiceResponse defaultResponse,
-            string helpYes,
-            string helpNo,
-            List<ChoiceDescription> additionalChoices = null)
-        {
-            var choices = new Collection<ChoiceDescription>
-                              {
-                                  new ChoiceDescription($"&{ChoiceResponse.Yes}", helpYes),
-                                  new ChoiceDescription($"&{ChoiceResponse.No}", helpNo)
-                              };
-
-            if (additionalChoices != null)
-            {
-                foreach (var choiceDescription in additionalChoices)
-                {
-                    choices.Add(choiceDescription);
-                }
-            }
-
-            return (ChoiceResponse)this.Host.UI.PromptForChoice(
-                caption,
-                message,
-                choices,
-                (int)defaultResponse);
-        }
-
-        /// <summary>
         /// Gets the builder for <see cref="CloudFormationRunner"/> and populates the fields pertinent to this level.
         /// </summary>
         /// <returns>Builder for <see cref="CloudFormationRunner"/>.</returns>

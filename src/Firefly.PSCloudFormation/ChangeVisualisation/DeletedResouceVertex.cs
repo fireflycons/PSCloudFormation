@@ -44,7 +44,7 @@
         /// <value>
         /// The label.
         /// </value>
-        public override string Label => $"<S>{this.Name}</S>";
+        public override string Label => $"<s>{this.Name}</s>";
 
         /// <summary>
         /// Gets the style.
