@@ -1,5 +1,9 @@
 # Release Notes
 
+# 4.1.6.20
+
+* Fix - ...value of argument "maxLength" is out of range. [Issue link](https://github.com/fireflycons/PSCloudFormation/issues/122)
+
 # 4.1.6.19
 
 * Fix - Negative MinValue constraint on numeric parameter not working. [Issue link](https://github.com/fireflycons/PSCloudFormation/issues/120)
