@@ -1,5 +1,9 @@
 # Release Notes
 
+# 4.1.6.21
+
+* Fix - Resizing vewport throws exception when running on a build agent.
+
 # 4.1.6.20
 
 * Fix - ...value of argument "maxLength" is out of range. [Issue link](https://github.com/fireflycons/PSCloudFormation/issues/122)

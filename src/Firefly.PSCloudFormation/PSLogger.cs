@@ -552,34 +552,46 @@
         /// <param name="minWidth">The minimum width.</param>
         private void ResizeWindow(int minWidth)
         {
-            var rawUi = this.cmdlet.Host.UI.RawUI;
-
-            if (rawUi.BufferSize.Width < minWidth)
+            if (!Environment.UserInteractive)
             {
-                var buf = rawUi.BufferSize;
-                buf.Width = minWidth;
-                rawUi.BufferSize = buf;
+                return;
             }
 
-            if (rawUi.WindowSize.Width < minWidth)
+            try
             {
-                var buf = rawUi.WindowSize;
-                try
-                {
-                    buf.Width = minWidth;
-                    rawUi.WindowSize = buf;
-                }
-                catch (PSArgumentOutOfRangeException e)
-                {
-                    var re = new Regex(@"^Window cannot be wider than (?<width>\d+)\.");
-                    var m = re.Match(e.Message);
+                var rawUi = this.cmdlet.Host.UI.RawUI;
 
-                    if (m.Success)
+                if (rawUi.BufferSize.Width < minWidth)
+                {
+                    var buf = rawUi.BufferSize;
+                    buf.Width = minWidth;
+                    rawUi.BufferSize = buf;
+                }
+
+                if (rawUi.WindowSize.Width < minWidth)
+                {
+                    var buf = rawUi.WindowSize;
+                    try
                     {
-                        buf.Width = int.Parse(m.Groups["width"].Value);
+                        buf.Width = minWidth;
                         rawUi.WindowSize = buf;
                     }
+                    catch (PSArgumentOutOfRangeException e)
+                    {
+                        var re = new Regex(@"^Window cannot be wider than (?<width>\d+)\.");
+                        var m = re.Match(e.Message);
+
+                        if (m.Success)
+                        {
+                            buf.Width = int.Parse(m.Groups["width"].Value);
+                            rawUi.WindowSize = buf;
+                        }
+                    }
                 }
+            }
+            catch (PlatformNotSupportedException)
+            {
+                this.LogVerbose("Unable to resize window on this platform");
             }
         }
 
