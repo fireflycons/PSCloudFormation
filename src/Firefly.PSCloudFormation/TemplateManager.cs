@@ -9,6 +9,7 @@
     using Firefly.CloudFormation;
     using Firefly.CloudFormation.Parsers;
     using Firefly.CloudFormation.Resolvers;
+    using Firefly.CloudFormationParser;
     using Firefly.PowerShell.DynamicParameters;
 
     /// <summary>
@@ -113,7 +114,7 @@
         /// <value>
         /// The template parameters.
         /// </value>
-        public List<TemplateFileParameter> TemplateParameters { get; }
+        public List<IParameter> TemplateParameters { get; }
 
         /// <summary>
         /// Gets the stack dynamic parameters.
@@ -163,7 +164,7 @@
                     {
                         if (param.AllowedValues != null && param.AllowedValues.Any())
                         {
-                            builder.WithValidateSet(param.AllowedValues);
+                            builder.WithValidateSet(param.AllowedValues.ToArray());
                         }
 
                         if (param.Type == "String")
@@ -175,7 +176,7 @@
 
                             if (param.HasMaxLength || param.HasMinLength)
                             {
-                                builder.WithValidateLength(param.MinLength, param.MaxLength);
+                                builder.WithValidateLength(param.MinLength ?? 0, param.MaxLength ?? int.MaxValue);
                             }
                         }
 

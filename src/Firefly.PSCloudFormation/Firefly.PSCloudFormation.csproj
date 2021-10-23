@@ -23,15 +23,13 @@
     <EmbeddedResource Include="Resources\terraform-resource-map.json" />
   </ItemGroup>
   <ItemGroup>
-    <PackageReference Include="AWSSDK.S3" Version="3.5.*" />
-    <PackageReference Include="AWSSDK.SecurityToken" Version="3.5.*" />
+    <PackageReference Include="AWSSDK.SecurityToken" Version="3.7.*" />
     <PackageReference Include="Firefly.CrossPlatformZip" Version="0.5.2" />
-    <PackageReference Include="Firefly.EmbeddedResourceLoader" Version="0.1.5" />
+    <PackageReference Include="Firefly.EmbeddedResourceLoader" Version="0.1.6" />
     <PackageReference Include="Firefly.PowerShell.DynamicParameters" Version="0.2.2" />
+    <PackageReference Include="Newtonsoft.Json" Version="13.0.1" />
     <PackageReference Include="PowerShellStandard.Library" Version="5.1.0" />
     <PackageReference Include="sly" Version="2.6.4.1" />
-    <PackageReference Include="QuikGraph" Version="2.3.0" />
-    <PackageReference Include="QuikGraph.Graphviz" Version="2.3.1" />
   </ItemGroup>
   <ItemGroup Condition="'$(OS)' == 'Windows_NT'">
     <PackageReference Include="XmlDoc2CmdletDoc" Version="0.3.0">
@@ -41,9 +39,10 @@
   </ItemGroup>
   <ItemGroup Condition="'$(SolutionName)' == 'Firefly.PSCloudFormation.debug'">
     <ProjectReference Include="..\..\..\Firefly.CloudFormation\src\Firefly.CloudFormation\Firefly.CloudFormation.csproj" />
+    <ProjectReference Include="..\..\..\Firefly.CloudFormationParser\src\Firefly.CloudFormationParser\Firefly.CloudFormationParser.csproj" />
   </ItemGroup>
   <ItemGroup Condition="'$(SolutionName)' == 'Firefly.PSCloudFormation'">
-    <PackageReference Include="Firefly.CloudFormation" Version="1.0.8" />
+    <PackageReference Include="Firefly.CloudFormation" Version="2.0.0" />
   </ItemGroup>
   <ItemGroup>
     <None Update="debug.ps1">

@@ -69,31 +69,48 @@
 
         private ICloudFormationContext Context { get; }
 
-        [Theory]
-        [InlineData("JSON")]
-        [InlineData("YAML")]
-        public void ShouldReturnImportsInCorrectFormat(string format)
+        [Fact]
+        public async void ShouldReturnOutputsAsParameterBlock()
         {
             var cmd = new GetStackOutputsCommand
                           {
-                              StackName = "test-stack", AsCrossStackReferences = true, Format = format
+                              StackName = "test-stack",
+                              AsParameterBlock = true
                           };
 
-            var result = (string)cmd.GetStackOutputs(
-                this.Context,
-                this.ClientFactory,
-                GetStackOutputsCommand.ImportsParameterSet).Result;
+            var result = (string)await cmd.GetStackOutputs(
+                                     this.Context,
+                                     this.ClientFactory,
+                                     GetStackOutputsCommand.ImportsParameterSet);
+
+            result.Should().Contain("FirstParameter").And.Contain("SecondParameter");
         }
 
         [Fact]
-        public void ShouldReturnTwoParametersWithExpectedValuesAsHashtable()
+        public async void ShouldReturnExportedOutputsAsImports()
+        {
+            var cmd = new GetStackOutputsCommand
+                          {
+                              StackName = "test-stack", AsCrossStackReferences = true
+                          };
+
+            var result = (string)await cmd.GetStackOutputs(
+                this.Context,
+                this.ClientFactory,
+                GetStackOutputsCommand.ImportsParameterSet);
+
+            result.Should().NotContain("SecondParameter", "ExportName is not declared on this parameter");
+        }
+
+        [Fact]
+        public async void ShouldReturnTwoParametersWithExpectedValuesAsHashtable()
         {
             var cmd = new GetStackOutputsCommand { StackName = "test-stack", AsHashTable = true };
 
-            var result = (Hashtable)cmd.GetStackOutputs(
+            var result = (Hashtable)await cmd.GetStackOutputs(
                 this.Context,
                 this.ClientFactory,
-                GetStackOutputsCommand.HashParameterSet).Result;
+                GetStackOutputsCommand.HashParameterSet);
 
             result.Count.Should().Be(2);
             result["FirstParameter"].Should().Be("arn:aws:first-parameter");

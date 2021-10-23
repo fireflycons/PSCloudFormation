@@ -9,7 +9,10 @@
     using System.Runtime.InteropServices;
     using System.Threading.Tasks;
 
+    using Amazon.Auth.AccessControlPolicy;
+
     using Firefly.CloudFormation.Parsers;
+    using Firefly.CloudFormationParser;
     using Firefly.EmbeddedResourceLoader;
     using Firefly.EmbeddedResourceLoader.Materialization;
     using Firefly.PSCloudFormation.LambdaPackaging;
@@ -113,7 +116,7 @@
             var template = Path.Combine(this.handlerTestDirectory, "zipped_lambda.yaml");
 
             var parser = TemplateParser.Create(await File.ReadAllTextAsync(template));
-            var function = parser.GetResources().FirstOrDefault(r => r.ResourceType == "AWS::Serverless::Function");
+            var function = parser.GetResources().FirstOrDefault(r => r.Type == "AWS::Serverless::Function");
 
             function.Should().NotBeNull("you broke the template!");
 
@@ -147,10 +150,10 @@
             string runtime)
         {
             var mockS3 = new Mock<IPSS3Util>();
-            var mockLambdaFunctionResource = new Mock<ITemplateResource>();
+            var mockLambdaFunctionResource = new Mock<IResource>();
 
-            mockLambdaFunctionResource.Setup(r => r.LogicalName).Returns("MockInlineLambda");
-            mockLambdaFunctionResource.Setup(r => r.ResourceType).Returns(resourceType);
+            mockLambdaFunctionResource.Setup(r => r.Name).Returns("MockInlineLambda");
+            mockLambdaFunctionResource.Setup(r => r.Type).Returns(resourceType);
             mockLambdaFunctionResource.Setup(r => r.GetResourcePropertyValue("Runtime")).Returns(runtime);
             mockLambdaFunctionResource.Setup(r => r.GetResourcePropertyValue("Handler")).Returns("index.handler");
             mockLambdaFunctionResource.Setup(r => r.GetResourcePropertyValue(InlineCodePropertyMap[resourceType]))
@@ -193,10 +196,10 @@
         internal async Task ShouldThrowWhenInlineLambdaHasMissingHandlerMethod(string resourceType, string runtime)
         {
             var mockS3 = new Mock<IPSS3Util>();
-            var mockLambdaFunctionResource = new Mock<ITemplateResource>();
+            var mockLambdaFunctionResource = new Mock<IResource>();
 
-            mockLambdaFunctionResource.Setup(r => r.LogicalName).Returns("MockInlineLambda");
-            mockLambdaFunctionResource.Setup(r => r.ResourceType).Returns(resourceType);
+            mockLambdaFunctionResource.Setup(r => r.Name).Returns("MockInlineLambda");
+            mockLambdaFunctionResource.Setup(r => r.Type).Returns(resourceType);
             mockLambdaFunctionResource.Setup(r => r.GetResourcePropertyValue("Runtime")).Returns(runtime);
             mockLambdaFunctionResource.Setup(r => r.GetResourcePropertyValue("Handler"))
                 .Returns("index.mistyped_handler");
@@ -227,23 +230,15 @@
         /// Can only warn when handler cannot be matched with function in Ruby as cannot check
         /// for a handler that is a class method without code to understand Ruby grammar.
         /// </summary>
-        [InlineData("AWS::Lambda::Function", "Code.ZipFile")]
-        [InlineData("AWS::Serverless::Function", "InlineCode")]
-        [Theory]
-        internal async Task ShouldWarnWhenInlineRubyLambdaHasMissingHandlerMethod(
-            string resourceType,
-            string codeProperty)
+        [Fact]
+        internal async Task ShouldWarnWhenInlineRubyLambdaHasMissingHandlerMethod()
         {
             var logger = new TestLogger(this.output);
             var mockS3 = new Mock<IPSS3Util>();
-            var mockLambdaFunctionResource = new Mock<ITemplateResource>();
-
-            mockLambdaFunctionResource.Setup(r => r.LogicalName).Returns("MockInlineLambda");
-            mockLambdaFunctionResource.Setup(r => r.ResourceType).Returns(resourceType);
-            mockLambdaFunctionResource.Setup(r => r.GetResourcePropertyValue("Runtime")).Returns("ruby2.7");
-            mockLambdaFunctionResource.Setup(r => r.GetResourcePropertyValue("Handler"))
-                .Returns("index.mistyped_handler");
-            mockLambdaFunctionResource.Setup(r => r.GetResourcePropertyValue(codeProperty)).Returns(InlineRuby);
+            var lambdaFunctionResource = this.LambdaFunctionResource(
+                "index.mistyped_handler",
+                "ruby2.7",
+                new Dictionary<object, object> { { "ZipFile", InlineRuby } });
 
             var mockOSInfo = new Mock<IOSInfo>();
 
@@ -251,7 +246,7 @@
 
             var artifact = new LambdaArtifact(
                 new TestPathResolver(),
-                mockLambdaFunctionResource.Object,
+                lambdaFunctionResource,
                 new TestLogger(this.output),
                 mockOSInfo.Object,
                 Directory.GetCurrentDirectory());
@@ -275,21 +270,17 @@
             // dependencyFiles temp dir is initialized each test by ctor,
             // so delete the dependency file NOT being tested
             File.Delete(Path.Combine(this.dependencyFiles, $"lambda-dependencies.{deleteMap[format]}"));
-            var mockLambdaFunctionResource = new Mock<ITemplateResource>();
 
-            mockLambdaFunctionResource.Setup(r => r.LogicalName).Returns("MockInlineLambda");
-            mockLambdaFunctionResource.Setup(r => r.ResourceType).Returns("AWS::Lambda::Function");
-            mockLambdaFunctionResource.Setup(r => r.GetResourcePropertyValue("Runtime")).Returns("python3.6");
-            mockLambdaFunctionResource.Setup(r => r.GetResourcePropertyValue("Code")).Returns(this.dependencyFiles);
-            mockLambdaFunctionResource.Setup(r => r.GetResourcePropertyValue("Handler")).Returns("index.handler");
-
+            var lambdaFunctionResource =
+                this.LambdaFunctionResource("index.handler", "python3.6", this.dependencyFiles.FullPath);
+            
             var mockOSInfo = new Mock<IOSInfo>();
 
             mockOSInfo.Setup(i => i.OSPlatform).Returns(OSPlatform.Windows);
 
             var artifact = new LambdaArtifact(
                 new TestPathResolver(),
-                mockLambdaFunctionResource.Object,
+                lambdaFunctionResource,
                 new TestLogger(this.output),
                 mockOSInfo.Object,
                 this.dependencyFiles);
@@ -308,13 +299,9 @@
             // dependencyFiles temp dir is initialized each test by ctor,
             // so delete the dependency file NOT being tested
             File.Delete(Path.Combine(this.dependencyFiles, $"lambda-dependencies.{deleteMap[format]}"));
-            var mockLambdaFunctionResource = new Mock<ITemplateResource>();
 
-            mockLambdaFunctionResource.Setup(r => r.LogicalName).Returns("MockInlineLambda");
-            mockLambdaFunctionResource.Setup(r => r.ResourceType).Returns("AWS::Lambda::Function");
-            mockLambdaFunctionResource.Setup(r => r.GetResourcePropertyValue("Runtime")).Returns("nodejs10.x");
-            mockLambdaFunctionResource.Setup(r => r.GetResourcePropertyValue("Code")).Returns(this.dependencyFiles);
-            mockLambdaFunctionResource.Setup(r => r.GetResourcePropertyValue("Handler")).Returns("index.handler");
+            var lambdaFunctionResource =
+                this.LambdaFunctionResource("index.handler", "nodejs10.x", this.dependencyFiles.FullPath);
 
             var mockOSInfo = new Mock<IOSInfo>();
 
@@ -322,7 +309,7 @@
 
             var artifact = new LambdaArtifact(
                 new TestPathResolver(),
-                mockLambdaFunctionResource.Object, 
+                lambdaFunctionResource, 
                 new TestLogger(this.output),
                 mockOSInfo.Object,
                 this.dependencyFiles);
@@ -334,6 +321,44 @@
             var relativeDependency = artifact.LoadDependencies().Last();
 
             relativeDependency.Location.Should().Be(expectedDependencyPath);
+        }
+
+        private IResource ServerlessFunctionResource(string handler, string runtime, object codeUri)
+        {
+            var resource = new Firefly.CloudFormationParser.TemplateObjects.Resource
+                               {
+                                   Name = "MockInlineLambda",
+                                   Type = "AWS::Serverless::Function",
+                                   Properties = new Dictionary<string, object>
+                                                    {
+                                                        { "Handler", handler }, { "Runtime", runtime }, { "CodeUri", codeUri }
+                                                    },
+                                   Template = new Mock<ITemplate>().Object
+                               };
+
+            return resource;
+        }
+
+        private IResource LambdaFunctionResource(string handler, string runtime, object code)
+        {
+            var resource = new Firefly.CloudFormationParser.TemplateObjects.Resource
+                               {
+                                   Name = "MockInlineLambda",
+                                   Type = "AWS::Lambda::Function",
+                                   Properties = new Dictionary<string, object>
+                                                    {
+                                                        { "Handler", handler }, { "Runtime", runtime }, { "Code", code }
+                                                    },
+                                   Template = new Mock<ITemplate>().Object
+                               };
+
+            return resource;
+        }
+
+        private object CodeZipFile(string pathOrInlineCode)
+        {
+            return new Dictionary<object, object> { { "ZipFile", pathOrInlineCode } };
+
         }
     }
 }

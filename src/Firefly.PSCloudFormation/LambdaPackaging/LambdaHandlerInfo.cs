@@ -3,6 +3,7 @@
     using System.Text.RegularExpressions;
 
     using Firefly.CloudFormation.Parsers;
+    using Firefly.CloudFormationParser;
 
     /// <summary>
     /// Splits the lambda resource's Handler property.
@@ -19,10 +20,10 @@
         /// <summary>
         /// Initializes a new instance of the <see cref="LambdaHandlerInfo"/> class.
         /// </summary>
-        /// <param name="lambdaResource"><see cref="TemplateResource"/> describing the lambda</param>
-        public LambdaHandlerInfo(ITemplateResource lambdaResource)
+        /// <param name="lambdaResource"><see cref="IResource"/> describing the lambda</param>
+        public LambdaHandlerInfo(IResource lambdaResource)
         {
-            this.Handler = lambdaResource.GetResourcePropertyValue("Handler");
+            this.Handler = (string)lambdaResource.GetResourcePropertyValue("Handler");
 
             var m = HandlerRegex.Match(this.Handler);
 

@@ -15,6 +15,7 @@
     using Firefly.CloudFormation.Parsers;
     using Firefly.CloudFormation.Resolvers;
     using Firefly.CloudFormation.Utils;
+    using Firefly.CloudFormationParser;
     using Firefly.PSCloudFormation.Utils;
 
     using Tag = Amazon.CloudFormation.Model.Tag;
@@ -310,8 +311,8 @@
         /// <value>
         /// The template parameters.
         /// </value>
-        protected List<TemplateFileParameter> TemplateParameters { get; private set; } =
-            new List<TemplateFileParameter>();
+        protected List<IParameter> TemplateParameters { get; private set; } =
+            new List<IParameter>();
 
         /// <summary>
         /// Gets or sets a value indicating whether <c>-UsePreviousTemplate</c> switch was set by the <c>Update-PSCFNStack</c> cmdlet.
