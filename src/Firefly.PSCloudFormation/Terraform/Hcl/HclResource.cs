@@ -3,6 +3,7 @@
     using System;
     using System.Collections.Generic;
     using System.Diagnostics;
+    using System.Linq;
     using System.Text.RegularExpressions;
 
     /// <summary>
@@ -11,6 +12,11 @@
     [DebuggerDisplay("{Address}")]
     internal class HclResource
     {
+        /// <summary>
+        /// Regex to strip out fields returned by terraform show that don't belong in the HCL.
+        /// </summary>
+        private static readonly Regex invalidFieldsRegex = new Regex(@"^\s*(id|arn)");
+
         /// <summary>
         /// Initializes a new instance of the <see cref="HclResource"/> class.
         /// </summary>
@@ -21,6 +27,17 @@
 
             this.Type = addressParts[0];
             this.Name = addressParts[1];
+        }
+
+        /// <summary>
+        /// Initializes a new instance of the <see cref="HclResource"/> class.
+        /// </summary>
+        /// <param name="address">The address.</param>
+        /// <param name="lines">The lines that make up the resource definition.</param>
+        public HclResource(string address, IEnumerable<string> lines)
+        : this(address)
+        {
+            this.Lines = lines.Where(l => !invalidFieldsRegex.IsMatch(l)).ToList();
         }
 
         /// <summary>

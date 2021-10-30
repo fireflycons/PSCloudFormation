@@ -78,16 +78,16 @@
         /// </returns>
         public HclResource GetResourceDefinition(string address)
         {
-            var definition = new HclResource(address);
+            var definitionText = new List<string>();
 
             this.logger.LogInformation($"Getting resource definition for {address}");
 
             this.RunProcess(
                 $"state show -no-color {address}",
-                msg => definition.Lines.Add(msg),
+                msg => definitionText.Add(msg),
                 msg => this.logger.LogError(msg));
 
-            return definition;
+            return new HclResource(address, definitionText);
         }
 
         /// <summary>
