@@ -16,6 +16,8 @@ namespace Firefly.PSCloudFormation.Terraform.HclSerializer.Events
         MappingEnd,
         ResourceStart,
         ResourceEnd,
+        PolicyStart,
+        PolicyEnd,
         Comment,
     }
 }

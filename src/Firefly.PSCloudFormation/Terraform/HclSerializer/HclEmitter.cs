@@ -2,6 +2,7 @@
 {
     using System;
     using System.Collections.Generic;
+    using System.Diagnostics.Contracts;
     using System.IO;
     using System.Linq;
 
@@ -27,6 +28,10 @@
 
         private EmitterState state;
 
+        private string currentResourceType = null;
+
+        private Quirks quirks = new Quirks();
+
         public HclEmitter(TextWriter output)
         {
             this.output = output;
@@ -39,7 +44,9 @@
 
             Mapping,
 
-            Sequence
+            Sequence,
+
+            OmitSequence
         }
 
         private void IncreaseIndent()
@@ -107,11 +114,23 @@
                     this.EmitMappingEnd(evt);
                     break;
 
+                case EventType.PolicyStart:
+
+                    this.EmitPolicyStart(evt);
+                    break;
+
+                case EventType.PolicyEnd:
+
+                    this.EmitPolicyEnd(evt);
+                    break;
+
                 case EventType.ResourceEnd:
 
                     this.indents.Clear();
                     this.column = 0;
                     this.indent = 0;
+                    this.currentResourceType = null;
+                    this.quirks = new Quirks();
                     this.WriteBreak();
                     this.WriteBreak();
                     break;
@@ -127,6 +146,8 @@
 
             this.Write("resource");
             this.isWhitespace = false;
+            this.currentResourceType = rs.ResourceType;
+            this.quirks = Quirks.GetQuirks(rs.ResourceType);
             this.EmitScalar(new Scalar(rs.ResourceType, true));
             this.EmitScalar(new Scalar(rs.ResourceName, true));
         }
@@ -142,9 +163,29 @@
 
         private void EmitMappingKey(HclEvent evt, bool isFirst)
         {
+            if (!(evt is Scalar scalar))
+            {
+                throw new HclSerializerException($"Expected SCALAR, got {evt.GetType().Name}");
+            }
+
             this.WriteIndent();
             this.EmitScalar(evt);
-            this.WriteIndicator("=", true, false, false);
+
+            var keyQuirks = this.quirks.GetQuirksForMappingKey(scalar.Value);
+
+            if ((keyQuirks & QuirkType.OmitOuterSequence) != 0)
+            {
+                this.state = EmitterState.OmitSequence;
+            }
+
+            if ((keyQuirks & QuirkType.KeyWithoutEquals) != 0)
+            {
+                this.Write(' ');
+            }
+            else
+            {
+                this.WriteIndicator("=", true, false, false);
+            }
         }
 
         private void EmitScalarValue(HclEvent evt)
@@ -173,6 +214,12 @@
         private void EmitSequenceStart(HclEvent evt)
         {
             this.states.Push(this.state);
+
+            if (this.state == EmitterState.OmitSequence)
+            {
+                return;
+            }
+
             this.WriteIndicator("[", true, false, true);
             this.IncreaseIndent();
             this.WriteIndent();
@@ -181,10 +228,37 @@
 
         private void EmitSequenceEnd(HclEvent evt)
         {
+            this.state = this.states.Pop();
+
+            if (this.state == EmitterState.OmitSequence)
+            {
+                return;
+            }
+
+            this.indent = this.indents.Pop();
+            this.WriteIndent();
+            this.WriteIndicator("]", false, false, false);
+
+            if (this.state == EmitterState.Sequence)
+            {
+                this.Write(',');
+            }
+        }
+
+        private void EmitPolicyStart(HclEvent evt)
+        {
+            this.states.Push(this.state);
+            this.WriteIndicator("jsonencode(", true, false, true);
+            this.IncreaseIndent();
+            this.WriteIndent();
+        }
+
+        private void EmitPolicyEnd(HclEvent evt)
+        {
             this.indent = this.indents.Pop();
             this.state = this.states.Pop();
             this.WriteIndent();
-            this.WriteIndicator("]", false, false, false);
+            this.WriteIndicator(")", false, false, false);
 
             if (this.state == EmitterState.Sequence)
             {

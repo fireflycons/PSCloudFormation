@@ -113,7 +113,20 @@
                 case JTokenType.Integer:
                 case JTokenType.String:
 
-                    this.emitter.Emit(new ScalarValue(((JValue)node).Value));
+                    var scalar = new ScalarValue(((JValue)node).Value);
+
+                    if (scalar.IsPolicyDocument)
+                    {
+                        var policy = JObject.Parse(scalar.Value);
+                        this.emitter.Emit(new PolicyStart());
+                        this.WalkNode(policy);
+                        this.emitter.Emit(new PolicyEnd());
+                    }
+                    else
+                    {
+                        this.emitter.Emit(scalar);
+                    }
+
                     break;
 
                 default:
