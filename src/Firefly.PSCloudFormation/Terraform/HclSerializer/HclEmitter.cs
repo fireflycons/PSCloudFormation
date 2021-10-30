@@ -7,12 +7,8 @@
 
     using Firefly.PSCloudFormation.Terraform.HclSerializer.Events;
 
-    using sly.parser.syntax.grammar;
-
     internal class HclEmitter : IHclEmitter
     {
-        private readonly bool forceIndentLess;
-
         private readonly TextWriter output;
 
         private int column;
@@ -29,39 +25,21 @@
 
         private bool isWhitespace;
 
-        private bool isMappingContext;
-
         private EmitterState state;
 
         public HclEmitter(TextWriter output)
         {
             this.output = output;
-            this.state = EmitterState.ResourceStart;
+            this.state = EmitterState.None;
         }
 
         private enum EmitterState
         {
-            ResourceStart,
+            None,
 
-            ResourceEnd,
+            Mapping,
 
-            SequenceStart,
-
-            SequenceFirstItem,
-
-            SequenceItem,
-
-            SequenceEnd,
-
-            MappingStart,
-
-            MappingFirstKey,
-
-            MappingKey,
-            
-            MappingSimpleValue,
-
-            MappingEnd
+            Sequence
         }
 
         private void IncreaseIndent()
@@ -79,21 +57,19 @@
                 return;
             }
 
-            this.state = EmitterState.ResourceStart;
+            this.state = EmitterState.None;
             while (this.events.Any())
             {
                 evt = this.events.Dequeue();
-                this.EmitNode(evt, false);
+                this.EmitNode(evt);
             }
         }
 
         /// <summary>
         /// Expect a node.
         /// </summary>
-        private void EmitNode(HclEvent evt, bool isMapping)
+        private void EmitNode(HclEvent evt)
         {
-            this.isMappingContext = isMapping;
-
             switch (evt.Type)
             {
                 case EventType.ResourceStart:
@@ -137,6 +113,7 @@
                     this.column = 0;
                     this.indent = 0;
                     this.WriteBreak();
+                    this.WriteBreak();
                     break;
             }
         }
@@ -152,13 +129,12 @@
             this.isWhitespace = false;
             this.EmitScalar(new Scalar(rs.ResourceType, true));
             this.EmitScalar(new Scalar(rs.ResourceName, true));
-            this.state = EmitterState.MappingStart;
         }
 
         private void EmitMappingStart(HclEvent evt)
         {
             this.states.Push(this.state);
-            this.state = EmitterState.MappingKey;
+            this.state = EmitterState.Mapping;
             this.WriteIndicator("{", true, false, false);
             this.IncreaseIndent();
             this.WriteIndent();
@@ -166,27 +142,32 @@
 
         private void EmitMappingKey(HclEvent evt, bool isFirst)
         {
+            this.WriteIndent();
             this.EmitScalar(evt);
             this.WriteIndicator("=", true, false, false);
         }
 
         private void EmitScalarValue(HclEvent evt)
         {
+            if (this.state == EmitterState.Sequence)
+            {
+                this.WriteIndent();
+            }
+
             this.EmitScalar(evt);
-            this.WriteIndent();
         }
 
         private void EmitMappingEnd(HclEvent evt)
         {
             this.indent = this.indents.Pop();
             this.state = this.states.Pop();
-            //this.WriteIndent();
+            this.WriteIndent();
             this.WriteIndicator("}", false, false, true);
-            if (this.state == EmitterState.SequenceItem)
+
+            if (this.state == EmitterState.Sequence)
             {
                 this.Write(',');
             }
-            this.WriteIndent();
         }
 
         private void EmitSequenceStart(HclEvent evt)
@@ -195,20 +176,20 @@
             this.WriteIndicator("[", true, false, true);
             this.IncreaseIndent();
             this.WriteIndent();
-            this.state = EmitterState.SequenceItem;
+            this.state = EmitterState.Sequence;
         }
 
         private void EmitSequenceEnd(HclEvent evt)
         {
             this.indent = this.indents.Pop();
             this.state = this.states.Pop();
-            //this.WriteIndent();
+            this.WriteIndent();
             this.WriteIndicator("]", false, false, false);
-            if (this.state == EmitterState.SequenceItem)
+
+            if (this.state == EmitterState.Sequence)
             {
                 this.Write(',');
             }
-            this.WriteIndent();
         }
 
         private void EmitScalar(HclEvent evt)
@@ -235,7 +216,7 @@
                 this.Write('"');
             }
 
-            if (this.state == EmitterState.SequenceItem)
+            if (this.state == EmitterState.Sequence)
             {
                 this.Write(',');
             }
