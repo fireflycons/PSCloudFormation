@@ -6,6 +6,7 @@
     using System.Linq;
 
     using Firefly.PSCloudFormation.Terraform.HclSerializer.Events;
+    using Firefly.PSCloudFormation.Terraform.HclSerializer.Traits;
 
     internal class HclEmitter : IHclEmitter
     {
