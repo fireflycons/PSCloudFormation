@@ -1,27 +1,28 @@
-﻿namespace Firefly.PSCloudFormation.Terraform
+﻿using System;
+using System.Collections.Generic;
+using System.Text;
+
+namespace Firefly.PSCloudFormation.Terraform
 {
-    using System.Collections.Generic;
     using System.Diagnostics;
     using System.IO;
     using System.Linq;
-    using System.Text;
 
     using Amazon.CloudFormation.Model;
 
     using Firefly.CloudFormation;
+    using Firefly.CloudFormationParser.GraphObjects;
+    using Firefly.CloudFormationParser.Intrinsics.Functions;
     using Firefly.EmbeddedResourceLoader;
-    using Firefly.PSCloudFormation.Terraform.Fixers;
     using Firefly.PSCloudFormation.Terraform.Hcl;
+    using Firefly.PSCloudFormation.Terraform.HclSerializer;
     using Firefly.PSCloudFormation.Terraform.Importers;
     using Firefly.PSCloudFormation.Terraform.State;
     using Firefly.PSCloudFormation.Utils;
 
     using Newtonsoft.Json;
+    using Newtonsoft.Json.Linq;
 
-    /// <summary>
-    /// Main class for handling Terraform export
-    /// </summary>
-    /// <seealso cref="Firefly.EmbeddedResourceLoader.AutoResourceLoader" />
     internal class TerraformExporter : AutoResourceLoader
     {
         /// <summary>
@@ -34,22 +35,20 @@
         /// </summary>
         private const string StateFileName = "terraform.tfstate";
 
-        private const string TerraformBlock = @"
-terraform {
-  required_providers {
-    aws = {
-      source = ""hashicorp/aws""
-    }
-  }
-}
+#pragma warning disable 649
 
-";
+        /// <summary>
+        /// The terraform block
+        /// </summary>
+        [EmbeddedResource("terraform-block.hcl")]
+        // ReSharper disable once StyleCop.SA1600 - Loaded by auto-resource
+        private static string terraformBlock;
+
         /// <summary>
         /// Map of AWS resource type to Terraform resource type, generated during build.
         /// </summary>
         [EmbeddedResource("terraform-resource-map.json")]
         // ReSharper disable once StyleCop.SA1600 - Loaded by auto-resource
-#pragma warning disable 649
         private static string resourceMapJson;
 #pragma warning restore 649
 
@@ -64,32 +63,21 @@ terraform {
         private readonly ITerraformSettings settings;
 
         /// <summary>
-        /// The stack resources
+        /// The UI
         /// </summary>
-        private readonly IList<StackResource> stackResources;
-
-        /// <summary>
-        /// The AWS stack parameters
-        /// </summary>
-        private readonly IList<ParameterDeclaration> awsParameters;
-
         private readonly IUserInterface ui;
 
         /// <summary>
         /// Initializes a new instance of the <see cref="TerraformExporter"/> class.
         /// </summary>
-        /// <param name="stackResources">The stack resources.</param>
-        /// <param name="parameters">The parameters.</param>
         /// <param name="settings">The settings.</param>
         /// <param name="logger">The logger.</param>
         /// <param name="ui">User interface abstraction for asking questions of the user.</param>
-        public TerraformExporter(IList<StackResource> stackResources, IList<ParameterDeclaration> parameters, ITerraformSettings settings, ILogger logger, IUserInterface ui)
+        public TerraformExporter(ITerraformSettings settings, ILogger logger, IUserInterface ui)
         {
-            this.ui = ui;
-            this.awsParameters = parameters;
             this.settings = settings;
             this.logger = logger;
-            this.stackResources = stackResources;
+            this.ui = ui;
         }
 
         /// <summary>
@@ -101,10 +89,9 @@ terraform {
             var finalHcl = new StringBuilder();
             var importFailures = new List<string>();
             var unmappedResources = new List<string>();
-            initialHcl.AppendLine(TerraformBlock);
-            initialHcl.AppendFormat("provider \"aws\" {{\n  region = \"{0}\"\n}}\n\n", this.settings.AwsRegion);
-            finalHcl.AppendLine(TerraformBlock);
-            finalHcl.AppendFormat("provider \"aws\" {{\n  region = \"{0}\"\n}}\n\n", this.settings.AwsRegion);
+
+            initialHcl.AppendLine(terraformBlock.Replace("#REGION#", this.settings.AwsRegion));
+            finalHcl.AppendLine(terraformBlock.Replace("#REGION#", this.settings.AwsRegion));
 
             var parameters = this.ProcessInputVariables();
 
@@ -128,7 +115,7 @@ terraform {
             }
 
             var cwd = Directory.GetCurrentDirectory();
-            var importedResources = new List<HclResource>();
+            var importedResources = new List<ResourceImport>();
 
             try
             {
@@ -154,68 +141,124 @@ terraform {
 
                     if (success)
                     {
-                        importedResources.Add(this.settings.Runner.GetResourceDefinition(resource.Address));
+                        importedResources.Add(resource);
                     }
-                    else
+                    else if (!this.settings.NonInteractive)
                     {
-                        if (!this.settings.NonInteractive)
+                        // Likely on a lambda permission
+                        if (commandOutput.ContainsText("Unexpected format of ID"))
                         {
-                            if (commandOutput.ContainsText("Unexpected format of ID"))
+                            var importer = ResourceImporter.Create(resource.TerraformType, this.ui, resourcesToImport);
+
+                            if (importer != null)
                             {
-                                var importer = ResourceImporter.Create(
-                                    resource.TerraformType,
-                                    this.ui,
-                                    resourcesToImport);
+                                var target = importer.GetImportId(
+                                    $"Select related resource for {resource.AwsAddress}",
+                                    null);
 
-                                if (importer != null)
+                                success = this.settings.Runner.Run(
+                                    "import",
+                                    false,
+                                    null,
+                                    resource.Address,
+                                    $"{target}/{resource.PhysicalId}");
+
+                                if (success)
                                 {
-                                    var target = importer.GetImportId(
-                                        $"Select related resource for {resource.AwsAddress}",
-                                        null);
-
-                                    success = this.settings.Runner.Run(
-                                        "import",
-                                        false,
-                                        null,
-                                        resource.Address,
-                                        $"{target}/{resource.PhysicalId}");
-
-                                    if (success)
-                                    {
-                                        importedResources.Add(
-                                            this.settings.Runner.GetResourceDefinition(resource.Address));
-                                        continue;
-                                    }
+                                    importedResources.Add(resource);
+                                    continue;
                                 }
                             }
                         }
-
+                        
                         importFailures.Add($"{resource.Address} from {resource.AwsAddress}");
                     }
                 }
 
+                // Now start adjusting the state file in accordance with the template's directed edge graph.
                 this.logger.LogInformation("\nResolving dependencies between resources...");
+
+                // One copy of the state file that we will modify and write back out (adding dependencies and sensitive attributes)
                 var stateFile = JsonConvert.DeserializeObject<StateFile>(File.ReadAllText(StateFileName));
-                this.ProcessResourceDependencies(stateFile, resourcesToImport, importedResources);
 
-                // Write out HCL 
-                foreach (var resource in importedResources)
+                // TODO: Analyze state file for null properties that have defaults. Replace these defaults and write back out.
+
+                // A second copy of the state file that we will insert references to inputs, other resources etc. before serialization to HCL.
+                var hclGeneratationStateFile = JsonConvert.DeserializeObject<StateFile>(File.ReadAllText(StateFileName));
+
+                // Wire up dependencies
+                foreach (var edge in this.settings.Template.DependencyGraph.Edges.Where(e => e.Source is ResourceVertex && e.Target is ResourceVertex))
                 {
-                    finalHcl.AppendLine(resource.ToString()).AppendLine();
+                    var sourceAwsResource = this.settings.Resources.First(r => r.LogicalResourceId == edge.Source.Name);
+                    var targetAwsResource = this.settings.Resources.First(r => r.LogicalResourceId == edge.Target.Name);
+
+                    var sourceTerraformResource =
+                        importedResources.FirstOrDefault(r => sourceAwsResource.LogicalResourceId == r.LogicalId);
+                    var targetTerraformResource =
+                        importedResources.FirstOrDefault(r => targetAwsResource.LogicalResourceId == r.LogicalId);
+
+                    if (sourceTerraformResource == null || targetTerraformResource == null)
+                    {
+                        // Resource wasn't imported
+                        continue;
+                    }
+
+                    var sourceState = hclGeneratationStateFile.Resources.First(r => r.Address == sourceTerraformResource.Address)
+                        .Instances.First();
+                    var targetState = hclGeneratationStateFile.Resources.First(r => r.Address == targetTerraformResource.Address)
+                        .Instances.First();
+
+                    if (edge.Tag?.ReferenceType == ReferenceType.DirectReference)
+                    {
+                        var newValue = new DirectReference(sourceTerraformResource.Address);
+                        var con = new JConstructor(newValue.ReferenceExpression, newValue);
+                        foreach (var node in targetState.FindId(sourceAwsResource.PhysicalResourceId))
+                        {
+                            switch (node)
+                            {
+                                case JProperty jp when jp.Value is JValue:
+
+                                    jp.Value = con;
+                                    break;
+
+                                case JArray ja:
+
+                                    for (var ind = 0; ind < ja.Count; ++ind)
+                                    {
+                                        var stringVal = ja[ind].Value<string>();
+
+                                        if (stringVal == sourceAwsResource.PhysicalResourceId)
+                                        {
+                                            ja.RemoveAt(ind);
+                                            ja.Add(con);
+                                        }
+                                    }
+
+                                    break;
+                            }
+                        }
+                    }
                 }
 
-                File.WriteAllText(MainScriptFile, finalHcl.ToString(), new UTF8Encoding(false));
-                
-                // Now try to fix up the script by running terraform plan until we get no errors or the same errors repeating
-                if (this.FixUpScript(parameters))
+                // Serialize to HCL
+                using (var s = new StringWriter())
                 {
-                    return;
-                }
+                    var serializer = new Serializer(new HclEmitter(s));
+                    serializer.Serialize(hclGeneratationStateFile);
 
-                // If we get here, then the most recent run did not fix anything else
-                this.logger.LogWarning(
-                    "There are still errors in the script that could not be automatically resolved.");
-                this.logger.LogWarning("Run 'terraform plan' to see them and resolve manually.\n");
+                    var hcl = s.ToString();
+
+                    var main = Path.Combine(this.settings.WorkspaceDirectory, "main.tf");
+
+                    if (File.Exists(main))
+                    {
+                        File.Delete(main);
+                    }
+
+                    var enc = new UTF8Encoding(false);
+                    File.WriteAllText(main, terraformBlock.Replace("#REGION#", this.settings.AwsRegion), enc);
+                    File.AppendAllText(main, hcl, enc);
+                }
             }
             finally
             {
@@ -249,91 +292,29 @@ terraform {
         }
 
         /// <summary>
-        /// Fixes up the script by adding in the parameters, repeatedly running terraform plan and resolving reported issues until no further fixes can be made
+        /// Processes the input variables.
         /// </summary>
-        /// <param name="inputVariables">The input variables to add to the script.</param>
-        /// <returns><c>true</c> if all issues were resolved; else <c>false</c></returns>
-        private bool FixUpScript(IList<InputVariable> inputVariables)
+        /// <returns>A list of <see cref="InputVariable"/></returns>
+        private List<InputVariable> ProcessInputVariables()
         {
-            var passes = 1;
-            var script = new HclScript(MainScriptFile);
-            script.FixUpVariableReferences(inputVariables);
-            script.Save();
+            this.logger.LogInformation("Importing parameters...");
+            var parameters = new List<InputVariable>();
 
-            this.logger.LogInformation("\nRunning 'terraform plan' and attempting to fix issues...");
-            this.logger.LogInformation("- Pass 1");
-            var errors = this.settings.Runner.RunPlan();
-
-            while (true)
+            foreach (var p in this.settings.Template.Parameters)
             {
-                if (errors == null)
+                var hclParam = InputVariable.CreateParameter(p);
+
+                if (hclParam == null)
                 {
-                    this.logger.LogInformation("All HCL issues were successfully corrected!");
-                    this.logger.LogInformation(string.Empty);
-                    return true;
-                }
-
-                // Do fixes
-                var errorsFixed = errors.Count(error => PlanFixer.Fix(script, error));
-                this.logger.LogInformation($"  - Issues fixed: {errorsFixed}/{errors.Count()}");
-                script.Save();
-
-                if (errorsFixed == 0)
-                {
-                    break;
-                }
-
-                // Re-run plan
-                this.logger.LogInformation($"- Pass {++passes}");
-                errors = this.settings.Runner.RunPlan();
-            }
-
-            return false;
-        }
-
-        /// <summary>
-        /// Processes the resource dependencies.
-        /// </summary>
-        /// <param name="stateFile">The state file.</param>
-        /// <param name="resourcesToImport">The resources to import.</param>
-        /// <param name="importedResources">The imported resources.</param>
-        private void ProcessResourceDependencies(StateFile stateFile, IReadOnlyCollection<ResourceImport> resourcesToImport, IReadOnlyCollection<HclResource> importedResources)
-        {
-            var graph = stateFile.GenerateChangeGraph();
-
-            // Walk graph edges and fix up dependencies in HCL script fragments
-            foreach (var edge in graph.Edges)
-            {
-                var dependency = edge.Tag;
-
-                if (dependency == null)
-                {
-                    this.logger.LogWarning("Untagged graph edge.");
-                    continue;
-                }
-
-                var sourceResource = resourcesToImport.FirstOrDefault(r => r.Address == edge.Source.Address);
-                var targetScript = importedResources.FirstOrDefault(r => r.Address == edge.Target.Address);
-                var targetAttribute = dependency.TargetAttribute;
-
-                if (sourceResource == null || targetScript == null || targetAttribute == null)
-                {
-                    this.logger.LogWarning($"Cannot resolve dependency between {edge.Source.Address} -> {edge.Target.Address}");
-                    continue;
-                }
-
-                if (dependency.IsArrayMember)
-                {
-                    targetScript.SetAttributeArrayRefValue(targetAttribute, sourceResource);
+                    this.logger.LogWarning($"Cannot import stack parameter '{p.Name}'");
                 }
                 else
                 {
-                    targetScript.SetAttributeRefValue(targetAttribute, sourceResource);
+                    parameters.Add(hclParam);
                 }
             }
 
-            // Save the state file in case we added dependencies to resources
-            stateFile.Save(StateFileName);
+            return parameters;
         }
 
         /// <summary>
@@ -350,7 +331,7 @@ terraform {
             var resourcesToImport = new List<ResourceImport>();
             this.logger.LogInformation("Processing stack resources and mapping to terraform resource types...");
 
-            foreach (var resource in this.stackResources)
+            foreach (var resource in this.settings.Resources)
             {
                 var mapping = resourceMap.FirstOrDefault(m => m.Aws == resource.ResourceType);
 
@@ -365,42 +346,16 @@ terraform {
                         .AppendLine();
                     resourcesToImport.Add(
                         new ResourceImport
-                            {
-                                PhysicalId = resource.PhysicalResourceId,
-                                LogicalId = resource.LogicalResourceId,
-                                TerraformType = mapping.Terraform,
-                                AwsType = resource.ResourceType
-                            });
+                        {
+                            PhysicalId = resource.PhysicalResourceId,
+                            LogicalId = resource.LogicalResourceId,
+                            TerraformType = mapping.Terraform,
+                            AwsType = resource.ResourceType
+                        });
                 }
             }
 
             return resourcesToImport;
-        }
-
-        /// <summary>
-        /// Processes the input variables.
-        /// </summary>
-        /// <returns>A list of <see cref="InputVariable"/></returns>
-        private List<InputVariable> ProcessInputVariables()
-        {
-            this.logger.LogInformation("Importing parameters...");
-            var parameters = new List<InputVariable>();
-
-            foreach (var p in this.awsParameters)
-            {
-                var hclParam = InputVariable.CreateParameter(p);
-
-                if (hclParam == null)
-                {
-                    this.logger.LogWarning($"Cannot import stack parameter '{p.ParameterKey}'");
-                }
-                else
-                {
-                    parameters.Add(hclParam);
-                }
-            }
-
-            return parameters;
         }
 
         /// <summary>
@@ -427,5 +382,6 @@ terraform {
             [JsonProperty("TF")]
             public string Terraform { get; set; }
         }
+
     }
 }

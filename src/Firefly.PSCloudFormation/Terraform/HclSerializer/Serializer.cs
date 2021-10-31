@@ -1,7 +1,5 @@
 ﻿namespace Firefly.PSCloudFormation.Terraform.HclSerializer
 {
-    using System;
-    using System.Collections.Generic;
     using System.Linq;
 
     using Firefly.PSCloudFormation.Terraform.HclSerializer.Events;
@@ -69,6 +67,13 @@
                     break;
 
                 case JTokenType.Constructor:
+
+                    // A reference inserted by the walk through the dependency graph
+                    var con = node.Value<JConstructor>();
+
+                    this.emitter.Emit(new ScalarValue((Reference)con.First()));
+                    break;
+
                 case JTokenType.Property:
                 case JTokenType.Undefined:
                 case JTokenType.None:

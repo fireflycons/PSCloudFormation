@@ -1,7 +1,22 @@
 ﻿namespace Firefly.PSCloudFormation.Terraform.HclSerializer.Events
 {
+    using Firefly.PSCloudFormation.Terraform.State;
+
+    /// <summary>
+    /// A scalar value, either a mapping or sequence value.
+    /// </summary>
+    /// <seealso cref="Firefly.PSCloudFormation.Terraform.HclSerializer.Events.Scalar" />
     internal class ScalarValue : Scalar
     {
+        /// <summary>
+        /// Initializes a new instance of the <see cref="ScalarValue"/> class.
+        /// </summary>
+        /// <param name="reference">A <see cref="Reference"/>, which is never quoted.</param>
+        public ScalarValue(Reference reference)
+            : base(reference.ReferenceExpression, false)
+        {
+        }
+
         /// <summary>
         /// Initializes a new instance of the <see cref="ScalarValue"/> class.
         /// </summary>
