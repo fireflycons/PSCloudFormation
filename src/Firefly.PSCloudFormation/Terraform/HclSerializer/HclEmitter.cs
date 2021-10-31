@@ -2,7 +2,6 @@
 {
     using System;
     using System.Collections.Generic;
-    using System.Diagnostics.Contracts;
     using System.IO;
     using System.Linq;
 
@@ -20,6 +19,14 @@
 
         private readonly Stack<int> indents = new Stack<int>();
 
+        private readonly Stack<string> path = new Stack<string>();
+
+        private string currentKey;
+
+        private string currentResourceName;
+
+        private string currentResourceType;
+
         private int indent;
 
         private bool isIndentation;
@@ -28,9 +35,7 @@
 
         private EmitterState state;
 
-        private string currentResourceType = null;
-
-        private Quirks quirks = new Quirks();
+        private ResourceTraits resourceTraits = new ResourceTraits();
 
         public HclEmitter(TextWriter output)
         {
@@ -46,13 +51,31 @@
 
             Sequence,
 
-            OmitSequence
+            Policy,
+
+            Block
         }
+
+        private enum AttributeContent
+        {
+            Null,
+
+            EmptyString,
+
+            EmptyCollection,
+
+            HasValue
+        }
+
+        private string CurrentPath =>
+            string.Join(".", this.path.Where(p => p != null).Concat(new[] { this.currentKey }).ToList());
+
+        private int Depth => this.path.Where(p => p != null).Count();
 
         private void IncreaseIndent()
         {
             this.indents.Push(this.indent);
-            this.indent += 4;
+            this.indent += 2;
         }
 
         public void Emit(HclEvent evt)
@@ -68,7 +91,23 @@
             while (this.events.Any())
             {
                 evt = this.events.Dequeue();
-                this.EmitNode(evt);
+
+                if (evt is MappingKey key && this.resourceTraits.IgnoredAttributes.Contains(key.Value))
+                {
+                    // Swallow this event and its descendents.
+                    var level = 0;
+
+                    do
+                    {
+                        evt = this.events.Dequeue();
+                        level += evt.NestingIncrease;
+                    }
+                    while (level > 0);
+                }
+                else
+                {
+                    this.EmitNode(evt);
+                }
             }
         }
 
@@ -129,8 +168,8 @@
                     this.indents.Clear();
                     this.column = 0;
                     this.indent = 0;
-                    this.currentResourceType = null;
-                    this.quirks = new Quirks();
+                    this.resourceTraits = new ResourceTraits();
+                    this.currentKey = null;
                     this.WriteBreak();
                     this.WriteBreak();
                     break;
@@ -146,8 +185,9 @@
 
             this.Write("resource");
             this.isWhitespace = false;
+            this.resourceTraits = ResourceTraits.GetTraits(rs.ResourceType);
+            this.currentResourceName = rs.ResourceName;
             this.currentResourceType = rs.ResourceType;
-            this.quirks = Quirks.GetQuirks(rs.ResourceType);
             this.EmitScalar(new Scalar(rs.ResourceType, true));
             this.EmitScalar(new Scalar(rs.ResourceName, true));
         }
@@ -155,6 +195,7 @@
         private void EmitMappingStart(HclEvent evt)
         {
             this.states.Push(this.state);
+            this.path.Push(this.currentKey);
             this.state = EmitterState.Mapping;
             this.WriteIndicator("{", true, false, false);
             this.IncreaseIndent();
@@ -163,24 +204,34 @@
 
         private void EmitMappingKey(HclEvent evt, bool isFirst)
         {
-            if (!(evt is Scalar scalar))
+            if (!(evt is MappingKey scalar))
             {
-                throw new HclSerializerException($"Expected SCALAR, got {evt.GetType().Name}");
+                throw new HclSerializerException($"Expected MAPPING-KEY, got {evt.GetType().Name}");
+            }
+
+            var lastKey = this.currentKey;
+            this.currentKey = scalar.Value;
+
+            var analysis = this.AnalyzeAttribute(scalar);
+
+            if (analysis != AttributeContent.HasValue && !this.resourceTraits.ShouldEmitAttribute(this.CurrentPath))
+            {
+                this.ConsumeAttribute();
+                this.currentKey = lastKey;
+                return;
             }
 
             this.WriteIndent();
             this.EmitScalar(evt);
 
-            var keyQuirks = this.quirks.GetQuirksForMappingKey(scalar.Value);
+            var isPotentiallyBlock = this.events.Count >= 2 && this.events.First() is SequenceStart
+                                                            && this.events.Skip(1).First() is MappingStart
+                                                            && !this.states.Contains(EmitterState.Policy);
 
-            if ((keyQuirks & QuirkType.OmitOuterSequence) != 0)
+            if (isPotentiallyBlock && !this.resourceTraits.NonBlockTypeAttributes.Contains(scalar.Value))
             {
-                this.state = EmitterState.OmitSequence;
-            }
-
-            if ((keyQuirks & QuirkType.KeyWithoutEquals) != 0)
-            {
-                this.Write(' ');
+                this.states.Push(this.state);
+                this.state = EmitterState.Block;
             }
             else
             {
@@ -190,18 +241,25 @@
 
         private void EmitScalarValue(HclEvent evt)
         {
+            if (!(evt is Scalar scalar))
+            {
+                throw new HclSerializerException($"Expected SCALAR. Got {evt.GetType().Name}");
+            }
+
+
             if (this.state == EmitterState.Sequence)
             {
                 this.WriteIndent();
             }
 
-            this.EmitScalar(evt);
+            this.EmitScalar(this.resourceTraits.ApplyDefaultValue(this.CurrentPath, scalar));
         }
 
         private void EmitMappingEnd(HclEvent evt)
         {
             this.indent = this.indents.Pop();
             this.state = this.states.Pop();
+            this.path.Pop();
             this.WriteIndent();
             this.WriteIndicator("}", false, false, true);
 
@@ -213,9 +271,19 @@
 
         private void EmitSequenceStart(HclEvent evt)
         {
-            this.states.Push(this.state);
+            if (this.events.Peek() is SequenceEnd)
+            {
+                // Write empty sequence
+                this.WriteIndicator("[]", true, false, true);
+                this.WriteIndent();
+                this.events.Dequeue();
+                return;
+            }
 
-            if (this.state == EmitterState.OmitSequence)
+            this.states.Push(this.state);
+            this.path.Push("*");
+
+            if (this.state == EmitterState.Block)
             {
                 return;
             }
@@ -229,9 +297,11 @@
         private void EmitSequenceEnd(HclEvent evt)
         {
             this.state = this.states.Pop();
+            this.path.Pop();
 
-            if (this.state == EmitterState.OmitSequence)
+            if (this.state == EmitterState.Block)
             {
+                this.state = this.states.Pop();
                 return;
             }
 
@@ -248,6 +318,7 @@
         private void EmitPolicyStart(HclEvent evt)
         {
             this.states.Push(this.state);
+            this.state = EmitterState.Policy;
             this.WriteIndicator("jsonencode(", true, false, true);
             this.IncreaseIndent();
             this.WriteIndent();
@@ -296,6 +367,67 @@
             }
 
             this.isWhitespace = false;
+        }
+
+        private AttributeContent AnalyzeAttribute(MappingKey evt)
+        {
+            var nextEvent = this.events.Peek();
+
+            if (nextEvent is Scalar scalar)
+            {
+                if (scalar.Value == null)
+                {
+                    return AttributeContent.Null;
+                }
+                
+                return string.IsNullOrWhiteSpace(scalar.Value) ? AttributeContent.EmptyString : AttributeContent.HasValue;
+            }
+
+            if (!(nextEvent is CollectionStart))
+            {
+                throw new HclSerializerException($"Expected MAPPING-START, SEQUENCE-START or POLICY-START. Got {nextEvent.GetType().Name}");
+            }
+
+            var level = 0;
+            var ind = 0;
+            var evts = this.events.ToList();
+
+            do
+            {
+                nextEvent = evts[ind];
+
+                if (nextEvent is Scalar)
+                {
+                    return AttributeContent.HasValue;
+                }
+
+                level += nextEvent.NestingIncrease;
+                ++ind;
+            }
+            while (level > 0);
+
+            return AttributeContent.EmptyCollection;
+        }
+
+        private void ConsumeAttribute()
+        {
+            var nextEvent = this.events.Peek();
+
+            if (nextEvent is Scalar scalar)
+            {
+                this.events.Dequeue();
+                return;
+            }
+
+            var level = 0;
+
+            do
+            {
+                var evt = this.events.Dequeue();
+                level += evt.NestingIncrease;
+            }
+            while (level > 0);
+
         }
 
         private void Write(char value)

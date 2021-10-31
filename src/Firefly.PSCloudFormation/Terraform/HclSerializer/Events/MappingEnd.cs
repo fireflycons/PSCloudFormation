@@ -1,10 +1,7 @@
 ﻿namespace Firefly.PSCloudFormation.Terraform.HclSerializer.Events
 {
-    internal class MappingEnd : HclEvent
+    internal class MappingEnd : CollectionEnd
     {
-        /// <inheritdoc />
-        public override int NestingIncrease => -1;
-
         /// <inheritdoc />
         internal override EventType Type => EventType.MappingEnd;
     }

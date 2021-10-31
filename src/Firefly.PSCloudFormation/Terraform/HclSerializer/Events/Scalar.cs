@@ -10,9 +10,15 @@
         {
             this.IsQuoted = isQuoted;
 
+            if (value == null)
+            {
+                return;
+            }
+
             if (value is bool)
             {
                 this.Value = value.ToString().ToLowerInvariant();
+                this.IsQuoted = false;
             }
             else
             {
@@ -62,7 +68,7 @@
         public override string ToString()
         {
             return
-                $"{this.GetType().Name}, Value = {this.Value}, IsQuoted = {this.IsQuoted}, IsPolicyDocument = {this.IsPolicyDocument}";
+                $"{this.GetType().Name}, Value = {(this.Value == null ? "<null>" : this.Value == string.Empty ? "<empty>" : this.Value)}, IsQuoted = {this.IsQuoted}, IsPolicyDocument = {this.IsPolicyDocument}";
         }
     }
 }
