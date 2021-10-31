@@ -8,82 +8,177 @@
     using Firefly.PSCloudFormation.Terraform.HclSerializer.Events;
     using Firefly.PSCloudFormation.Terraform.HclSerializer.Traits;
 
+    /// <summary>
+    /// HCL Emitter. Inspired by YamlDotNet emitter
+    /// </summary>
+    /// <seealso cref="Firefly.PSCloudFormation.Terraform.HclSerializer.IHclEmitter" />
     internal class HclEmitter : IHclEmitter
     {
-        private readonly TextWriter output;
-
-        private int column;
-
-        private readonly Stack<EmitterState> states = new Stack<EmitterState>();
-
+        /// <summary>
+        /// Queue of events to process
+        /// </summary>
         private readonly Queue<HclEvent> events = new Queue<HclEvent>();
 
+        /// <summary>
+        /// Stack of indent levels
+        /// </summary>
         private readonly Stack<int> indents = new Stack<int>();
 
+        /// <summary>
+        /// Sink for HCL output
+        /// </summary>
+        private readonly TextWriter output;
+
+        /// <summary>
+        /// Stack used to create resource attribute path (e.g. <c>root_block_device.iops</c> in an EC2 instance).
+        /// </summary>
         private readonly Stack<string> path = new Stack<string>();
 
+        /// <summary>
+        /// Stack of states processed as emitter descends object graph
+        /// </summary>
+        private readonly Stack<EmitterState> states = new Stack<EmitterState>();
+
+        /// <summary>
+        /// The current column number in the output
+        /// </summary>
+        private int column;
+
+        /// <summary>
+        /// The current resource path attribute (e.g. <c>iops</c>)
+        /// </summary>
         private string currentKey;
 
+        /// <summary>
+        /// The current resource name
+        /// </summary>
         private string currentResourceName;
 
+        /// <summary>
+        /// The current resource type
+        /// </summary>
         private string currentResourceType;
 
+        /// <summary>
+        /// The current indent level (in chars)
+        /// </summary>
         private int indent;
 
+        /// <summary>
+        /// Whether the last thing emitted was an indentation
+        /// </summary>
         private bool isIndentation;
 
+        /// <summary>
+        /// Whether the last thing emitted was whitespace.
+        /// </summary>
         private bool isWhitespace;
 
-        private EmitterState state;
-
+        /// <summary>
+        /// The resource traits for the current resource being serialized.
+        /// </summary>
         private ResourceTraits resourceTraits = new ResourceTraits();
 
+        /// <summary>
+        /// Current state of the emitter.
+        /// </summary>
+        private EmitterState state;
+
+        /// <summary>
+        /// Initializes a new instance of the <see cref="HclEmitter"/> class.
+        /// </summary>
+        /// <param name="output">The output stream.</param>
         public HclEmitter(TextWriter output)
         {
             this.output = output;
             this.state = EmitterState.None;
         }
 
-        private enum EmitterState
-        {
-            None,
-
-            Mapping,
-
-            Sequence,
-
-            Policy,
-
-            Block
-        }
-
+        /// <summary>
+        /// Result of attribute analysis
+        /// </summary>
         private enum AttributeContent
         {
+            /// <summary>
+            /// Next event is a scalar with value <c>null</c>
+            /// </summary>
             Null,
 
+            /// <summary>
+            /// Next event is a scalar with value empty string
+            /// </summary>
             EmptyString,
 
+            /// <summary>
+            /// Next group of events is an empty sequence, mapping, block including any nesting of the same.
+            /// </summary>
             EmptyCollection,
 
+            /// <summary>
+            /// Attribute has some kind of value
+            /// </summary>
             HasValue
         }
 
+        /// <summary>
+        /// States the emitter can be in
+        /// </summary>
+        private enum EmitterState
+        {
+            /// <summary>
+            /// Undefined
+            /// </summary>
+            None,
+
+            /// <summary>
+            /// In a regular mapping type, like tags.
+            /// </summary>
+            Mapping,
+
+            /// <summary>
+            /// In a sequence
+            /// </summary>
+            Sequence,
+
+            /// <summary>
+            /// In a policy declaration (<c>jsonencode</c>)
+            /// </summary>
+            Policy,
+
+            /// <summary>
+            /// In a block definition.
+            /// </summary>
+            Block
+        }
+
+        /// <summary>
+        /// Gets the path of the current attribute (e.g. <c>root_block_device.iops</c> in an EC2 instance).
+        /// Where there is a sequence in the path, this is represented by <c>*</c>.
+        /// </summary>
+        /// <value>
+        /// The current path.
+        /// </value>
         private string CurrentPath =>
             string.Join(".", this.path.Where(p => p != null).Concat(new[] { this.currentKey }).ToList());
 
+        /// <summary>
+        /// Gets the depth within the object graph.
+        /// </summary>
+        /// <value>
+        /// The depth.
+        /// </value>
         private int Depth => this.path.Where(p => p != null).Count();
 
-        private void IncreaseIndent()
+        /// <summary>
+        /// Emits the next event.
+        /// Events are queued until an entire resource is collected, the that resource is written out.
+        /// </summary>
+        /// <param name="event">The event.</param>
+        public void Emit(HclEvent @event)
         {
-            this.indents.Push(this.indent);
-            this.indent += 2;
-        }
+            this.events.Enqueue(@event);
 
-        public void Emit(HclEvent evt)
-        {
-            this.events.Enqueue(evt);
-
-            if (evt.Type != EventType.ResourceEnd)
+            if (@event.Type != EventType.ResourceEnd)
             {
                 return;
             }
@@ -91,77 +186,242 @@
             this.state = EmitterState.None;
             while (this.events.Any())
             {
-                evt = this.events.Dequeue();
+                @event = this.events.Dequeue();
 
-                if (evt is MappingKey key && this.resourceTraits.IgnoredAttributes.Contains(key.Value))
+                if (@event is MappingKey key && this.resourceTraits.IgnoredAttributes.Contains(key.Value))
                 {
                     // Swallow this event and its descendents.
                     var level = 0;
 
                     do
                     {
-                        evt = this.events.Dequeue();
-                        level += evt.NestingIncrease;
+                        @event = this.events.Dequeue();
+                        level += @event.NestingIncrease;
                     }
                     while (level > 0);
                 }
                 else
                 {
-                    this.EmitNode(evt);
+                    this.EmitNode(@event);
                 }
             }
         }
 
         /// <summary>
-        /// Expect a node.
+        /// Asserts an event is of the requested type and casts to it.
         /// </summary>
-        private void EmitNode(HclEvent evt)
+        /// <typeparam name="T"></typeparam>
+        /// <param name="event">The event.</param>
+        /// <returns>Type casted event.</returns>
+        /// <exception cref="System.ArgumentException">Expected {typeof(T).Name} - event</exception>
+        private static T GetTypedEvent<T>(HclEvent @event)
+            where T : HclEvent
         {
-            switch (evt.Type)
+            if (!(@event is T hclEvent))
+            {
+                throw new ArgumentException($"Expected {typeof(T).Name}", nameof(@event));
+            }
+
+            return hclEvent;
+        }
+
+        /// <summary>
+        /// Analyzes an attribute's value to see whether it has a value, is null or is ann empty collection.
+        /// </summary>
+        /// <param name="event">The event.</param>
+        /// <returns>Result of analysis.</returns>
+        /// <exception cref="Firefly.PSCloudFormation.Terraform.HclSerializer.HclSerializerException">Expected MappingStart, SequenceStart or PolicyStart. Got {nextEvent.GetType().Name}</exception>
+        private AttributeContent AnalyzeAttribute(MappingKey @event)
+        {
+            var nextEvent = this.events.Peek();
+
+            if (nextEvent is Scalar scalar)
+            {
+                if (scalar.Value == null)
+                {
+                    return AttributeContent.Null;
+                }
+
+                return string.IsNullOrWhiteSpace(scalar.Value)
+                           ? AttributeContent.EmptyString
+                           : AttributeContent.HasValue;
+            }
+
+            if (!(nextEvent is CollectionStart))
+            {
+                throw new HclSerializerException(
+                    $"Expected MappingStart, SequenceStart or PolicyStart. Got {nextEvent.GetType().Name}");
+            }
+
+            var level = 0;
+            var ind = 0;
+            var evts = this.events.ToList();
+
+            do
+            {
+                nextEvent = evts[ind];
+
+                if (nextEvent is Scalar)
+                {
+                    return AttributeContent.HasValue;
+                }
+
+                level += nextEvent.NestingIncrease;
+                ++ind;
+            }
+            while (level > 0);
+
+            return AttributeContent.EmptyCollection;
+        }
+
+        /// <summary>
+        /// Consumes an attribute's value from the event queue without emitting it,.
+        /// </summary>
+        private void ConsumeAttribute()
+        {
+            var nextEvent = this.events.Peek();
+
+            if (nextEvent is Scalar scalar)
+            {
+                this.events.Dequeue();
+                return;
+            }
+
+            var level = 0;
+
+            do
+            {
+                var evt = this.events.Dequeue();
+                level += evt.NestingIncrease;
+            }
+            while (level > 0);
+        }
+
+        /// <summary>
+        /// Emits a mapping end.
+        /// </summary>
+        /// <param name="event">The event.</param>
+        private void EmitMappingEnd(HclEvent @event)
+        {
+            var m = GetTypedEvent<MappingEnd>(@event);
+
+            this.indent = this.indents.Pop();
+            this.state = this.states.Pop();
+            this.path.Pop();
+            this.WriteIndent();
+            this.WriteIndicator("}", false, false, true);
+
+            if (this.state == EmitterState.Sequence)
+            {
+                this.Write(',');
+            }
+        }
+
+        /// <summary>
+        /// Emits a mapping key.
+        /// </summary>
+        /// <param name="event">A <see cref="MappingKey"/> event.</param>
+        private void EmitMappingKey(HclEvent @event)
+        {
+            var key = GetTypedEvent<MappingKey>(@event);
+            var lastKey = this.currentKey;
+
+            this.currentKey = key.Value;
+
+            var analysis = this.AnalyzeAttribute(key);
+
+            if (analysis != AttributeContent.HasValue && !this.resourceTraits.ShouldEmitAttribute(this.CurrentPath))
+            {
+                this.ConsumeAttribute();
+                this.currentKey = lastKey;
+                return;
+            }
+
+            this.WriteIndent();
+            this.EmitScalar(@event);
+
+            var isPotentiallyBlock = this.events.Count >= 2 && this.events.First() is SequenceStart
+                                                            && this.events.Skip(1).First() is MappingStart
+                                                            && !this.states.Contains(EmitterState.Policy);
+
+            if (isPotentiallyBlock && !this.resourceTraits.NonBlockTypeAttributes.Contains(key.Value))
+            {
+                this.states.Push(this.state);
+                this.state = EmitterState.Block;
+            }
+            else
+            {
+                this.WriteIndicator("=", true, false, false);
+            }
+        }
+
+        /// <summary>
+        /// Emits a mapping start.
+        /// </summary>
+        /// <param name="event">A <see cref="MappingStart"/> event.</param>
+        private void EmitMappingStart(HclEvent @event)
+        {
+            var m = GetTypedEvent<MappingStart>(@event);
+
+            this.states.Push(this.state);
+            this.path.Push(this.currentKey);
+            this.state = EmitterState.Mapping;
+            this.WriteIndicator("{", true, false, false);
+            this.IncreaseIndent();
+            this.WriteIndent();
+        }
+
+        /// <summary>
+        /// Emits the next node.
+        /// </summary>
+        /// <param name="event">The event to write.</param>
+        private void EmitNode(HclEvent @event)
+        {
+            switch (@event.Type)
             {
                 case EventType.ResourceStart:
 
-                    this.EmitResourceStart(evt);
+                    this.EmitResourceStart(@event);
                     break;
 
                 case EventType.MappingKey:
 
-                    this.EmitMappingKey(evt, false);
+                    this.EmitMappingKey(@event);
                     break;
 
                 case EventType.ScalarValue:
 
-                    this.EmitScalarValue(evt);
+                    this.EmitScalarValue(@event);
                     break;
 
                 case EventType.SequenceStart:
 
-                    this.EmitSequenceStart(evt);
+                    this.EmitSequenceStart(@event);
                     break;
 
                 case EventType.SequenceEnd:
 
-                    this.EmitSequenceEnd(evt);
+                    this.EmitSequenceEnd(@event);
                     break;
 
                 case EventType.MappingStart:
 
-                    this.EmitMappingStart(evt);
+                    this.EmitMappingStart(@event);
                     break;
 
                 case EventType.MappingEnd:
 
-                    this.EmitMappingEnd(evt);
+                    this.EmitMappingEnd(@event);
                     break;
 
                 case EventType.PolicyStart:
 
-                    this.EmitPolicyStart(evt);
+                    this.EmitPolicyStart(@event);
                     break;
 
                 case EventType.PolicyEnd:
 
-                    this.EmitPolicyEnd(evt);
+                    this.EmitPolicyEnd(@event);
                     break;
 
                 case EventType.ResourceEnd:
@@ -177,156 +437,14 @@
             }
         }
 
-        private void EmitResourceStart(HclEvent evt)
+        /// <summary>
+        /// Emits a policy end.
+        /// </summary>
+        /// <param name="event">The event.</param>
+        private void EmitPolicyEnd(HclEvent @event)
         {
-            if (!(evt is ResourceStart rs))
-            {
-                throw new ArgumentException("Expected RESOURCE-START.", nameof(evt));
-            }
+            var p = GetTypedEvent<PolicyEnd>(@event);
 
-            this.Write("resource");
-            this.isWhitespace = false;
-            this.resourceTraits = ResourceTraits.GetTraits(rs.ResourceType);
-            this.currentResourceName = rs.ResourceName;
-            this.currentResourceType = rs.ResourceType;
-            this.EmitScalar(new Scalar(rs.ResourceType, true));
-            this.EmitScalar(new Scalar(rs.ResourceName, true));
-        }
-
-        private void EmitMappingStart(HclEvent evt)
-        {
-            this.states.Push(this.state);
-            this.path.Push(this.currentKey);
-            this.state = EmitterState.Mapping;
-            this.WriteIndicator("{", true, false, false);
-            this.IncreaseIndent();
-            this.WriteIndent();
-        }
-
-        private void EmitMappingKey(HclEvent evt, bool isFirst)
-        {
-            if (!(evt is MappingKey scalar))
-            {
-                throw new HclSerializerException($"Expected MAPPING-KEY, got {evt.GetType().Name}");
-            }
-
-            var lastKey = this.currentKey;
-            this.currentKey = scalar.Value;
-
-            var analysis = this.AnalyzeAttribute(scalar);
-
-            if (analysis != AttributeContent.HasValue && !this.resourceTraits.ShouldEmitAttribute(this.CurrentPath))
-            {
-                this.ConsumeAttribute();
-                this.currentKey = lastKey;
-                return;
-            }
-
-            this.WriteIndent();
-            this.EmitScalar(evt);
-
-            var isPotentiallyBlock = this.events.Count >= 2 && this.events.First() is SequenceStart
-                                                            && this.events.Skip(1).First() is MappingStart
-                                                            && !this.states.Contains(EmitterState.Policy);
-
-            if (isPotentiallyBlock && !this.resourceTraits.NonBlockTypeAttributes.Contains(scalar.Value))
-            {
-                this.states.Push(this.state);
-                this.state = EmitterState.Block;
-            }
-            else
-            {
-                this.WriteIndicator("=", true, false, false);
-            }
-        }
-
-        private void EmitScalarValue(HclEvent evt)
-        {
-            if (!(evt is Scalar scalar))
-            {
-                throw new HclSerializerException($"Expected SCALAR. Got {evt.GetType().Name}");
-            }
-
-
-            if (this.state == EmitterState.Sequence)
-            {
-                this.WriteIndent();
-            }
-
-            this.EmitScalar(this.resourceTraits.ApplyDefaultValue(this.CurrentPath, scalar));
-        }
-
-        private void EmitMappingEnd(HclEvent evt)
-        {
-            this.indent = this.indents.Pop();
-            this.state = this.states.Pop();
-            this.path.Pop();
-            this.WriteIndent();
-            this.WriteIndicator("}", false, false, true);
-
-            if (this.state == EmitterState.Sequence)
-            {
-                this.Write(',');
-            }
-        }
-
-        private void EmitSequenceStart(HclEvent evt)
-        {
-            if (this.events.Peek() is SequenceEnd)
-            {
-                // Write empty sequence
-                this.WriteIndicator("[]", true, false, true);
-                this.WriteIndent();
-                this.events.Dequeue();
-                return;
-            }
-
-            this.states.Push(this.state);
-            this.path.Push("*");
-
-            if (this.state == EmitterState.Block)
-            {
-                return;
-            }
-
-            this.WriteIndicator("[", true, false, true);
-            this.IncreaseIndent();
-            this.WriteIndent();
-            this.state = EmitterState.Sequence;
-        }
-
-        private void EmitSequenceEnd(HclEvent evt)
-        {
-            this.state = this.states.Pop();
-            this.path.Pop();
-
-            if (this.state == EmitterState.Block)
-            {
-                this.state = this.states.Pop();
-                return;
-            }
-
-            this.indent = this.indents.Pop();
-            this.WriteIndent();
-            this.WriteIndicator("]", false, false, false);
-
-            if (this.state == EmitterState.Sequence)
-            {
-                this.Write(',');
-            }
-        }
-
-        private void EmitPolicyStart(HclEvent evt)
-        {
-            this.states.Push(this.state);
-            this.state = EmitterState.Policy;
-            this.WriteIndicator("jsonencode(", true, false, true);
-            this.IncreaseIndent();
-            this.WriteIndent();
-        }
-
-        private void EmitPolicyEnd(HclEvent evt)
-        {
             this.indent = this.indents.Pop();
             this.state = this.states.Pop();
             this.WriteIndent();
@@ -338,12 +456,45 @@
             }
         }
 
-        private void EmitScalar(HclEvent evt)
+        /// <summary>
+        /// Emits a policy start.
+        /// </summary>
+        /// <param name="event">The event.</param>
+        private void EmitPolicyStart(HclEvent @event)
         {
-            if (!(evt is Scalar scalar))
-            {
-                throw new ArgumentException("Expected SCALAR.", nameof(evt));
-            }
+            var p = GetTypedEvent<PolicyStart>(@event);
+
+            this.states.Push(this.state);
+            this.state = EmitterState.Policy;
+            this.WriteIndicator("jsonencode(", true, false, true);
+            this.IncreaseIndent();
+            this.WriteIndent();
+        }
+
+        /// <summary>
+        /// Emits the resource start.
+        /// </summary>
+        /// <param name="event">A <see cref="ResourceStart"/> event.</param>
+        private void EmitResourceStart(HclEvent @event)
+        {
+            var rs = GetTypedEvent<ResourceStart>(@event);
+
+            this.Write("resource");
+            this.isWhitespace = false;
+            this.resourceTraits = ResourceTraits.GetTraits(rs.ResourceType);
+            this.currentResourceName = rs.ResourceName;
+            this.currentResourceType = rs.ResourceType;
+            this.EmitScalar(new Scalar(rs.ResourceType, true));
+            this.EmitScalar(new Scalar(rs.ResourceName, true));
+        }
+
+        /// <summary>
+        /// Emits a scalar.
+        /// </summary>
+        /// <param name="event">The event.</param>
+        private void EmitScalar(HclEvent @event)
+        {
+            var scalar = GetTypedEvent<Scalar>(@event);
 
             if (!this.isWhitespace)
             {
@@ -370,79 +521,113 @@
             this.isWhitespace = false;
         }
 
-        private AttributeContent AnalyzeAttribute(MappingKey evt)
+        /// <summary>
+        /// Emits a scalar value.
+        /// </summary>
+        /// <param name="event">A <see cref="ScalarValue"/> event.</param>
+        private void EmitScalarValue(HclEvent @event)
         {
-            var nextEvent = this.events.Peek();
+            var scalar = GetTypedEvent<ScalarValue>(@event);
 
-            if (nextEvent is Scalar scalar)
+            if (this.state == EmitterState.Sequence)
             {
-                if (scalar.Value == null)
-                {
-                    return AttributeContent.Null;
-                }
-                
-                return string.IsNullOrWhiteSpace(scalar.Value) ? AttributeContent.EmptyString : AttributeContent.HasValue;
+                this.WriteIndent();
             }
 
-            if (!(nextEvent is CollectionStart))
-            {
-                throw new HclSerializerException($"Expected MAPPING-START, SEQUENCE-START or POLICY-START. Got {nextEvent.GetType().Name}");
-            }
-
-            var level = 0;
-            var ind = 0;
-            var evts = this.events.ToList();
-
-            do
-            {
-                nextEvent = evts[ind];
-
-                if (nextEvent is Scalar)
-                {
-                    return AttributeContent.HasValue;
-                }
-
-                level += nextEvent.NestingIncrease;
-                ++ind;
-            }
-            while (level > 0);
-
-            return AttributeContent.EmptyCollection;
+            this.EmitScalar(this.resourceTraits.ApplyDefaultValue(this.CurrentPath, scalar));
         }
 
-        private void ConsumeAttribute()
+        /// <summary>
+        /// Emits a sequence end.
+        /// </summary>
+        /// <param name="event">The event.</param>
+        private void EmitSequenceEnd(HclEvent @event)
         {
-            var nextEvent = this.events.Peek();
+            var se = GetTypedEvent<SequenceEnd>(@event);
 
-            if (nextEvent is Scalar scalar)
+            this.state = this.states.Pop();
+            this.path.Pop();
+
+            if (this.state == EmitterState.Block)
             {
+                this.state = this.states.Pop();
+                return;
+            }
+
+            this.indent = this.indents.Pop();
+            this.WriteIndent();
+            this.WriteIndicator("]", false, false, false);
+
+            if (this.state == EmitterState.Sequence)
+            {
+                this.Write(',');
+            }
+        }
+
+        /// <summary>
+        /// Emits a sequence start.
+        /// </summary>
+        /// <param name="event">The event.</param>
+        private void EmitSequenceStart(HclEvent @event)
+        {
+            var ss = GetTypedEvent<SequenceStart>(@event);
+
+            if (this.events.Peek() is SequenceEnd)
+            {
+                // Write empty sequence
+                this.WriteIndicator("[]", true, false, true);
+                this.WriteIndent();
                 this.events.Dequeue();
                 return;
             }
 
-            var level = 0;
+            this.states.Push(this.state);
+            this.path.Push("*");
 
-            do
+            if (this.state == EmitterState.Block)
             {
-                var evt = this.events.Dequeue();
-                level += evt.NestingIncrease;
+                return;
             }
-            while (level > 0);
 
+            this.WriteIndicator("[", true, false, true);
+            this.IncreaseIndent();
+            this.WriteIndent();
+            this.state = EmitterState.Sequence;
         }
 
+        /// <summary>
+        /// Increases the indentation level.
+        /// </summary>
+        private void IncreaseIndent()
+        {
+            this.indents.Push(this.indent);
+            this.indent += 2;
+        }
+
+        /// <summary>
+        /// Writes a character to the output stream
+        /// </summary>
+        /// <param name="value">The value.</param>
         private void Write(char value)
         {
             this.output.Write(value);
             ++this.column;
         }
 
+        /// <summary>
+        /// Writes a string to the output stream.
+        /// </summary>
+        /// <param name="value">The value.</param>
         private void Write(string value)
         {
             this.output.Write(value);
             this.column += value.Length;
         }
 
+        /// <summary>
+        /// Writes a line break to the output stream.
+        /// </summary>
+        /// <param name="breakCharacter">The break character.</param>
         private void WriteBreak(char breakCharacter = '\n')
         {
             if (breakCharacter == '\n')
@@ -457,6 +642,9 @@
             this.column = 0;
         }
 
+        /// <summary>
+        /// Writes indentation to the output stream.
+        /// </summary>
         private void WriteIndent()
         {
             var currentIndent = Math.Max(this.indent, 0);
@@ -478,6 +666,13 @@
             this.isIndentation = true;
         }
 
+        /// <summary>
+        /// Writes an indicator (syntactic sugar) to the output stream.
+        /// </summary>
+        /// <param name="indicator">The indicator.</param>
+        /// <param name="needWhitespace">if set to <c>true</c> whitespace should be prepended.</param>
+        /// <param name="whitespace">if set to <c>true</c> whitespace is being output.</param>
+        /// <param name="indentation">if set to <c>true</c> indentation is being output.</param>
         private void WriteIndicator(string indicator, bool needWhitespace, bool whitespace, bool indentation)
         {
             if (needWhitespace && !this.isWhitespace)

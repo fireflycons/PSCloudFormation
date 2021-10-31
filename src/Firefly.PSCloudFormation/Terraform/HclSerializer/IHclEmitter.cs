@@ -7,7 +7,7 @@
         /// <summary>
         /// Emits the specified event.
         /// </summary>
-        /// <param name="evt">The event.</param>
-        void Emit(HclEvent evt);
+        /// <param name="event">The event.</param>
+        void Emit(HclEvent @event);
     }
 }
