@@ -1,17 +1,39 @@
 ﻿namespace Firefly.PSCloudFormation.Terraform.HclSerializer.Events
 {
-    using System.Linq;
+    using System;
+    using System.ComponentModel.Design;
+    using System.Reflection;
 
-    using Newtonsoft.Json.Linq;
+    using Firefly.PSCloudFormation.Terraform.State;
 
+    /// <summary>
+    /// Base class for scalar types.
+    /// </summary>
+    /// <seealso cref="Firefly.PSCloudFormation.Terraform.HclSerializer.Events.HclEvent" />
     internal class Scalar : HclEvent
     {
+        /// <summary>
+        /// Initializes a new instance of the <see cref="Scalar"/> class.
+        /// </summary>
+        /// <param name="value">The value.</param>
+        /// <param name="isQuoted">if set to <c>true</c> [is quoted].</param>
         public Scalar(object value, bool isQuoted)
         {
             this.IsQuoted = isQuoted;
 
             if (value == null)
             {
+                return;
+            }
+
+            if (value is string s && s.StartsWith(typeof(Reference).Namespace))
+            {
+                // Re-hydrate a smuggled in "Reference" type.
+                var split = s.Split(':');
+                var type = Assembly.GetCallingAssembly().GetType(split[0]);
+                var reference = (Reference)Activator.CreateInstance(type, split[1]);
+                this.Value = reference.ReferenceExpression;
+                this.IsQuoted = false;
                 return;
             }
 
@@ -29,31 +51,32 @@
                     return;
                 }
 
-                var firstChar = this.Value.TrimStart().First();
-
-                if (!(firstChar == '{' || firstChar == '['))
-                {
-                    // Value is not JSON
-                    return;
-                }
-
-                try
-                {
-                    // If JSON, then embedded policy document
-                    var jobject = JObject.Parse(this.Value);
-                    this.IsPolicyDocument = jobject.ContainsKey("Statement");
-                }
-                catch
-                {
-                    // Deliberately swallow. String is not valid JSON
-                }
+                this.IsPolicyDocument = Serializer.TryGetPolicy(this.Value, out _);
             }
         }
 
+        /// <summary>
+        /// Gets a value indicating whether the value contains a policy document
+        /// </summary>
+        /// <value>
+        ///   <c>true</c> if this instance is policy document; otherwise, <c>false</c>.
+        /// </value>
         public bool IsPolicyDocument { get; }
 
+        /// <summary>
+        /// Gets a value indicating whether the value should be quoted when emitted.
+        /// </summary>
+        /// <value>
+        ///   <c>true</c> if this instance is quoted; otherwise, <c>false</c>.
+        /// </value>
         public bool IsQuoted { get; }
 
+        /// <summary>
+        /// Gets the value.
+        /// </summary>
+        /// <value>
+        /// The value.
+        /// </value>
         public string Value { get; }
 
         /// <inheritdoc />

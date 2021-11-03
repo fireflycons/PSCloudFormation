@@ -70,16 +70,16 @@
         /// The resources.
         /// </value>
         [JsonProperty("resources")]
-        public List<Resource> Resources { get; set; }
+        public List<ResourceDeclaration> Resources { get; set; }
 
         /// <summary>
         /// Generates the change graph.
         /// </summary>
         /// <returns>A digraph showing relationships between resources</returns>
-        public BidirectionalGraph<Resource, TaggedEdge<Resource, ResourceDependency>> GenerateChangeGraph()
+        public BidirectionalGraph<ResourceDeclaration, TaggedEdge<ResourceDeclaration, ResourceDependency>> GenerateChangeGraph()
         {
-            var edges = new List<TaggedEdge<Resource, ResourceDependency>>();
-            var graph = new BidirectionalGraph<Resource, TaggedEdge<Resource, ResourceDependency>>();
+            var edges = new List<TaggedEdge<ResourceDeclaration, ResourceDependency>>();
+            var graph = new BidirectionalGraph<ResourceDeclaration, TaggedEdge<ResourceDeclaration, ResourceDependency>>();
 
             foreach (var r1 in this.Resources)
             {
@@ -87,7 +87,7 @@
                     from r2 in this.Resources.Where(r => r.ResourceInstance.Id != r1.ResourceInstance.Id)
                     let dependency = r2.ResourceInstance.References(r1)
                     where dependency != null
-                    select new TaggedEdge<Resource, ResourceDependency>(r1, r2, dependency));
+                    select new TaggedEdge<ResourceDeclaration, ResourceDependency>(r1, r2, dependency));
             }
 
             graph.AddVertexRange(this.Resources);
@@ -100,7 +100,7 @@
         /// </summary>
         /// <param name="graph">The graph.</param>
         /// <returns>A DOT format digraph, primarily for use in debugging.</returns>
-        public string GenerateDotGraph(BidirectionalGraph<Resource, TaggedEdge<Resource, ResourceDependency>> graph)
+        public string GenerateDotGraph(BidirectionalGraph<ResourceDeclaration, TaggedEdge<ResourceDeclaration, ResourceDependency>> graph)
         {
             return graph.ToGraphviz(
                 algorithm =>

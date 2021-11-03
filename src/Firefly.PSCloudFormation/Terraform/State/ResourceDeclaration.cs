@@ -8,12 +8,12 @@
     using Newtonsoft.Json;
 
     /// <summary>
-    /// Represents a resource from the state file.
+    /// Represents a resource declaration from the state file.
     /// When importing from an existing AWS stack, the assumption is that the import
     /// will only find one resource instance per resource in the state.
     /// </summary>
     [DebuggerDisplay("{Address}")]
-    internal class Resource
+    internal class ResourceDeclaration
     {
         /// <summary>
         /// The instances of this resource. When importing from a CloudFormation stack, there should only be one instance per resource.

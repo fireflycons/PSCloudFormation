@@ -32,6 +32,43 @@
             }
         }
 
+        public static bool TryGetPolicy(string text, out JObject policyDocument)
+        {
+            bool isPolicy = false;
+            policyDocument = null;
+
+            if (string.IsNullOrWhiteSpace(text))
+            {
+                return false;
+            }
+
+            var firstChar = text.TrimStart().First();
+
+            if (!(firstChar == '{' || firstChar == '['))
+            {
+                // Value is not JSON
+                return false;
+            }
+
+            try
+            {
+                // If JSON, then possibly embedded policy document
+                policyDocument = JObject.Parse(text);
+                isPolicy = policyDocument.ContainsKey("Statement");
+            }
+            catch
+            {
+                // Deliberately swallow. String is not valid JSON
+            }
+
+            if (!isPolicy)
+            {
+                policyDocument = null;
+            }
+
+            return isPolicy;
+        }
+
         /// <summary>
         /// Recursively walk the properties of a <c>JToken</c>
         /// </summary>
@@ -70,8 +107,9 @@
 
                     // A reference inserted by the walk through the dependency graph
                     var con = node.Value<JConstructor>();
-
-                    this.emitter.Emit(new ScalarValue((Reference)con.First()));
+                    var reference = Reference.FromJConstructor(con);
+                    
+                    this.emitter.Emit(new ScalarValue(reference));
                     break;
 
                 case JTokenType.Property:

@@ -75,16 +75,16 @@
         /// The parent.
         /// </value>
         [JsonIgnore]
-        public Resource Parent { get; set; }
+        public ResourceDeclaration Parent { get; set; }
 
         /// <summary>
         /// Determine whether this resource's attributes reference the ID of the given resource
         /// </summary>
-        /// <param name="resource">The resource to check.</param>
+        /// <param name="resourceDeclaration">The resource to check.</param>
         /// <returns>A <see cref="ResourceDependency"/> if there is a reference; else <c>null</c></returns>
-        public ResourceDependency References(Resource resource)
+        public ResourceDependency References(ResourceDeclaration resourceDeclaration)
         {
-            var id = resource.ResourceInstance.Id;
+            var id = resourceDeclaration.ResourceInstance.Id;
             ResourceDependency dependency = null;
 
             // Walk JSON attributes looking for a match on ID
@@ -130,17 +130,70 @@
                 // Add input resource to this resource's dependencies
                 if (this.Dependencies == null)
                 {
-                    this.Dependencies = new List<string> { resource.Address };
+                    this.Dependencies = new List<string> { resourceDeclaration.Address };
                 }
                 else
                 {
-                    this.Dependencies.Add(resource.Address);
+                    this.Dependencies.Add(resourceDeclaration.Address);
                 }
 
                 break;
             }
 
             return dependency;
+        }
+
+        public List<JToken> FindId(string id)
+        {
+            var foundValues = new List<JToken>();
+            this.WalkNode(this.Attributes, id, foundValues);
+            return foundValues;
+        }
+
+
+        /// <summary>
+        /// Recursively walk the properties of a <c>JToken</c>
+        /// </summary>
+        /// <param name="node">The starting node.</param>
+        private void WalkNode(
+            JToken node, string id, List <JToken> results)
+        {
+            switch (node.Type)
+            {
+                case JTokenType.Object:
+
+                    foreach (var child in node.Children<JProperty>())
+                    {
+                        if (child.Value is JValue value && value.Value is string s && s.Contains(id))
+                        {
+                            results.Add(child);
+                        }
+
+                        this.WalkNode(child.Value, id, results);
+                    }
+
+                    // do something?
+                    break;
+
+                case JTokenType.Array:
+
+                    foreach (var child in node.Children())
+                    {
+                        if (child is JValue value && value.Value is string s && s.Contains(id))
+                        {
+                            results.Add(node);
+                        }
+
+                        this.WalkNode(child, id, results);
+                    }
+
+                    break;
+
+                default:
+
+                    // Value
+                    break;
+            }
         }
     }
 }
