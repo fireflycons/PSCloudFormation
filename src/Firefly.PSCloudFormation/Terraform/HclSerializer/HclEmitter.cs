@@ -39,6 +39,8 @@
         /// </summary>
         private readonly Stack<EmitterState> states = new Stack<EmitterState>();
 
+        private readonly ResourceTraitsCollection allResourceTraits;
+
         /// <summary>
         /// The current column number in the output
         /// </summary>
@@ -77,7 +79,7 @@
         /// <summary>
         /// The resource traits for the current resource being serialized.
         /// </summary>
-        private ResourceTraits resourceTraits = new ResourceTraits();
+        private IResourceTraits resourceTraits = new ResourceTraits();
 
         /// <summary>
         /// Current state of the emitter.
@@ -92,6 +94,8 @@
         {
             this.output = output;
             this.state = EmitterState.None;
+            this.allResourceTraits = ResourceTraitsCollection.Load();
+            this.resourceTraits = this.allResourceTraits.TraitsAll;
         }
 
         /// <summary>
@@ -188,7 +192,7 @@
             {
                 @event = this.events.Dequeue();
 
-                if (@event is MappingKey key && this.resourceTraits.IgnoredAttributes.Contains(key.Value))
+                if (@event is MappingKey key && this.resourceTraits.UnconfigurableAttributes.Contains(key.Value))
                 {
                     // Swallow this event and its descendents.
                     var level = 0;
@@ -330,7 +334,7 @@
 
             var analysis = this.AnalyzeAttribute(key);
 
-            if (analysis != AttributeContent.HasValue && !this.resourceTraits.ShouldEmitAttribute(this.CurrentPath))
+            if (this.resourceTraits.IsConflictingArgument(this.CurrentPath) || (analysis != AttributeContent.HasValue && !this.resourceTraits.ShouldEmitAttribute(this.CurrentPath)))
             {
                 this.ConsumeAttribute();
                 this.currentKey = lastKey;
@@ -429,7 +433,7 @@
                     this.indents.Clear();
                     this.column = 0;
                     this.indent = 0;
-                    this.resourceTraits = new ResourceTraits();
+                    this.resourceTraits = this.allResourceTraits.TraitsAll;
                     this.currentKey = null;
                     this.WriteBreak();
                     this.WriteBreak();
@@ -481,7 +485,7 @@
 
             this.Write("resource");
             this.isWhitespace = false;
-            this.resourceTraits = ResourceTraits.GetTraits(rs.ResourceType);
+            this.resourceTraits = this.allResourceTraits[rs.ResourceType];
             this.currentResourceName = rs.ResourceName;
             this.currentResourceType = rs.ResourceType;
             this.EmitScalar(new Scalar(rs.ResourceType, true));
