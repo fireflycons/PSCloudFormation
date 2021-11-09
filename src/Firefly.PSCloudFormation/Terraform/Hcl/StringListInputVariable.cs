@@ -63,6 +63,12 @@
             return hcl.ToString();
         }
 
+        /// <inheritdoc />
+        protected override string GenerateValidationStanza()
+        {
+            return string.Empty;
+        }
+
         private List<string> CurrentValueToList()
         {
             List<string> strings;

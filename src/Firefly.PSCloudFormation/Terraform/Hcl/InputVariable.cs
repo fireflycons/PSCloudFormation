@@ -1,14 +1,8 @@
 ﻿namespace Firefly.PSCloudFormation.Terraform.Hcl
 {
-    using System;
-    using System.Collections;
     using System.Collections.Generic;
-    using System.Linq;
-    using System.Runtime.CompilerServices;
     using System.Text;
     using System.Text.RegularExpressions;
-
-    using Amazon.Runtime;
 
     using Firefly.CloudFormationParser;
     using Firefly.PSCloudFormation.Utils;
@@ -29,17 +23,12 @@
         private static readonly Regex WillNotMatchRegex = new Regex(@"[z]{50}");
 
         /// <summary>
-        /// The stack parameter from the parsed template.
-        /// </summary>
-        private readonly IParameter stackParameter;
-
-        /// <summary>
         /// Initializes a new instance of the <see cref="InputVariable"/> class.
         /// </summary>
         /// <param name="stackParameter">The stack parameter.</param>
         protected InputVariable(IParameter stackParameter)
         {
-            this.stackParameter = stackParameter;
+            this.StackParameter = stackParameter;
             this.CurrentValue = stackParameter.GetCurrentValue();
         }
 
@@ -68,7 +57,7 @@
         /// <value>
         /// The default value.
         /// </value>
-        public string DefaultValue => this.stackParameter.Default;
+        public string DefaultValue => this.StackParameter.Default;
 
         /// <summary>
         /// Gets the description.
@@ -76,13 +65,7 @@
         /// <value>
         /// The description.
         /// </value>
-        public string Description => this.stackParameter.Description;
-
-        /// <inheritdoc />
-        public virtual IList<string> ListIdentity => new List<string> { this.DefaultValue }; 
-
-        /// <inheritdoc />
-        public string ScalarIdentity => this.CurrentValue.ToString();
+        public string Description => this.StackParameter.Description;
 
         /// <summary>
         /// <para>
@@ -106,13 +89,19 @@
         /// </value>
         public bool IsScalar => !this.Type.StartsWith("list(");
 
+        /// <inheritdoc />
+        public virtual IList<string> ListIdentity => new List<string> { this.DefaultValue };
+
         /// <summary>
         /// Gets the name.
         /// </summary>
         /// <value>
         /// The name.
         /// </value>
-        public string Name => this.stackParameter.Name;
+        public string Name => this.StackParameter.Name;
+
+        /// <inheritdoc />
+        public string ScalarIdentity => this.CurrentValue.ToString();
 
         /// <summary>
         /// Gets a value indicating whether this <see cref="InputVariable"/> is sensitive.
@@ -120,7 +109,7 @@
         /// <value>
         ///   <c>true</c> if sensitive; otherwise, <c>false</c>.
         /// </value>
-        public bool Sensitive => this.stackParameter.NoEcho;
+        public bool Sensitive => this.StackParameter.NoEcho;
 
         /// <summary>
         /// Gets the type.
@@ -129,6 +118,11 @@
         /// The type.
         /// </value>
         public abstract string Type { get; }
+
+        /// <summary>
+        /// The stack parameter from the parsed template.
+        /// </summary>
+        protected IParameter StackParameter { get; }
 
         /// <summary>
         /// Factory method to create an input variable of the correct type.
@@ -190,24 +184,6 @@
             return null;
         }
 
-        public int IndexOf(string value)
-        {
-            if (this.IsScalar)
-            {
-                return -1;
-            }
-
-            foreach (var (item, ind) in this.ListIdentity.WithIndex())
-            {
-                if (item == value)
-                {
-                    return ind;
-                }
-            }
-
-            return -1;
-        }
-
         /// <summary>
         /// Generates HCL code for this parameter.
         /// </summary>
@@ -230,32 +206,8 @@
                 hcl.AppendLine("  sensitive = true");
             }
 
-            if (this.stackParameter.AllowedPattern != null)
-            {
-                var expression = this.stackParameter.AllowedPattern.ToString().Replace(@"\", @"\\").Replace("\"", "\\\"");
-                var errorMessage = this.stackParameter.ConstraintDescription != null
-                                       ? this.stackParameter.ConstraintDescription.Replace("\"", "\\\"")
-                                       : "Value does not match provided regular expression.";
-
-                // Fussy terraform
-                if (!char.IsUpper(errorMessage.First()))
-                {
-                    errorMessage = errorMessage[0].ToString().ToUpperInvariant() + errorMessage.Substring(1);
-                }
-
-                if (!errorMessage.EndsWith("."))
-                {
-                    errorMessage += ".";
-                }
-
-                hcl.AppendLine("  validation {");
-                hcl.AppendLine($"    condition     = can(regex(\"{expression}\", var.{this.Name}))");
-                hcl.AppendLine(
-                    $"    error_message = \"{errorMessage}\"");
-                hcl.AppendLine("  }");
-            }
-
             hcl.AppendLine(this.GenerateDefaultStanza(final));
+            hcl.AppendLine(this.GenerateValidationStanza());
             hcl.AppendLine("}");
 
             return hcl.ToString();
@@ -272,6 +224,23 @@
             return hcl.ToString();
         }
 
+        public int IndexOf(string value)
+        {
+            if (this.IsScalar)
+            {
+                return -1;
+            }
+
+            foreach (var (item, ind) in this.ListIdentity.WithIndex())
+            {
+                if (item == value)
+                {
+                    return ind;
+                }
+            }
+
+            return -1;
+        }
 
         /// <summary>
         /// Converts to string.
@@ -290,5 +259,11 @@
         /// <param name="final">While resolving HCL, output the current value as the default but finally, output the true default.</param>
         /// <returns>Default stanza for the variable declaration</returns>
         protected abstract string GenerateDefaultStanza(bool final);
+
+        /// <summary>
+        /// Generates the validation stanza.
+        /// </summary>
+        /// <returns>Validation stanza for the variable declaration</returns>
+        protected abstract string GenerateValidationStanza();
     }
 }

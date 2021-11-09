@@ -66,6 +66,12 @@
             return hcl.ToString();
         }
 
+        /// <inheritdoc />
+        protected override string GenerateValidationStanza()
+        {
+            return string.Empty;
+        }
+
         private List<double> CurrentValueToList()
         {
             List<double> doubles;

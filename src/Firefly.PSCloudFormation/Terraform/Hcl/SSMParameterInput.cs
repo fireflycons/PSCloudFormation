@@ -49,5 +49,11 @@
         {
             return string.Empty;
         }
+
+        /// <inheritdoc />
+        protected override string GenerateValidationStanza()
+        {
+            return string.Empty;
+        }
     }
 }

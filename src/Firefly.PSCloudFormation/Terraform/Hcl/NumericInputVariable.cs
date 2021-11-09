@@ -1,5 +1,9 @@
 ﻿namespace Firefly.PSCloudFormation.Terraform.Hcl
 {
+    using System.Collections.Generic;
+    using System.Linq;
+    using System.Text;
+
     using Firefly.CloudFormationParser;
 
     /// <summary>
@@ -39,6 +43,54 @@
             }
 
             return string.Empty;
+        }
+
+        /// <inheritdoc />
+        protected override string GenerateValidationStanza()
+        {
+            var hcl = new StringBuilder();
+            var validationExpressions = new Dictionary<string, bool>();
+            var errorMessage = this.StackParameter.ConstraintDescription != null
+                                   ? this.StackParameter.ConstraintDescription.Replace("\"", "\\\"")
+                                   : "Value does not match provided validation constraint.";
+
+            // Fussy terraform
+            if (!char.IsUpper(errorMessage.First()))
+            {
+                errorMessage = errorMessage[0].ToString().ToUpperInvariant() + errorMessage.Substring(1);
+            }
+
+            if (!errorMessage.EndsWith("."))
+            {
+                errorMessage += ".";
+            }
+
+
+            if (this.StackParameter.MaxValue.HasValue)
+            {
+                validationExpressions.Add($"var.{this.Name} <= {this.StackParameter.MaxValue.Value}", true);
+            }
+
+            if (this.StackParameter.MinValue.HasValue)
+            {
+                validationExpressions.Add($"var.{this.Name} >= {this.StackParameter.MinValue.Value}", true);
+            }
+
+            if (this.StackParameter.AllowedValues != null && this.StackParameter.AllowedValues.Any())
+            {
+                var items = string.Join(", ", this.StackParameter.AllowedValues);
+                validationExpressions.Add($"contains([{items}], var.{this.Name})", false);
+            }
+
+            var conditions = string.Join(" && ", validationExpressions.Select(e => e.Value ? $"({e.Key})" : e.Key));
+
+            hcl.AppendLine("  validation {");
+            hcl.AppendLine($"    condition     = {conditions}");
+            hcl.AppendLine(
+                $"    error_message = \"{errorMessage}\"");
+            hcl.Append("  }");
+
+            return hcl.ToString();
         }
     }
 }
