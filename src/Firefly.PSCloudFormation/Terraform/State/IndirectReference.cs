@@ -4,11 +4,16 @@
 
     internal class IndirectReference : Reference
     {
-        public IndirectReference()
-            : base("TODO")
+        /// <summary>
+        /// Initializes a new instance of the <see cref="IndirectReference"/> class.
+        /// </summary>
+        /// <param name="attributeAddress">The resource address.</param>
+        public IndirectReference(string attributeAddress)
+            : base(attributeAddress)
         {
         }
 
-        public override string ReferenceExpression => throw new NotImplementedException();
+        /// <inheritdoc />
+        public override string ReferenceExpression => $"{this.ObjectAddress}";
     }
 }

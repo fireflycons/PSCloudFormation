@@ -1,11 +1,13 @@
 ﻿namespace Firefly.PSCloudFormation.Terraform.Hcl
 {
     using System;
+    using System.Collections;
     using System.Collections.Generic;
     using System.Linq;
     using System.Text;
 
-    using Amazon.CloudFormation.Model;
+    using Firefly.CloudFormationParser;
+    using Firefly.PSCloudFormation.Terraform.HclSerializer;
 
     /// <summary>
     /// A string list input variable
@@ -17,42 +19,84 @@
         /// Initializes a new instance of the <see cref="StringListInputVariable"/> class.
         /// </summary>
         /// <param name="stackParameter">The AWS stack parameter to create from.</param>
-        public StringListInputVariable(ParameterDeclaration stackParameter)
+        public StringListInputVariable(IParameter stackParameter)
             : base(stackParameter)
         {
         }
 
-        /// <summary>
-        /// Gets the type.
-        /// </summary>
-        /// <value>
-        /// The type.
-        /// </value>
+        /// <inheritdoc />
         public override string Type => "list(string)";
 
-        /// <summary>
-        /// Generates the default stanza.
-        /// </summary>
-        /// <returns>
-        /// Default stanza for the variable declaration
-        /// </returns>
-        protected override string GenerateDefaultStanza()
+        /// <inheritdoc />
+        public override IList<string> ListIdentity => this.CurrentValueToList();
+
+        /// <inheritdoc />
+        protected override string GenerateDefaultStanza(bool final)
         {
             var hcl = new StringBuilder();
+            List<string> @default;
 
-            var defaultValue = string.IsNullOrEmpty(this.DefaultValue)
-                                   ? new List<string> { string.Empty }
-                                   : this.DefaultValue.Split(new[] { ',' }, StringSplitOptions.RemoveEmptyEntries).ToList();
+            if (final)
+            {
+                @default = string.IsNullOrEmpty(this.DefaultValue)
+                               ? new List<string> { string.Empty }
+                               : this.DefaultValue.Split(new[] { ',' }, StringSplitOptions.RemoveEmptyEntries).ToList();
+            }
+            else
+            {
+                @default = this.CurrentValueToList();
+
+                if (@default == null)
+                {
+                    return string.Empty;
+                }
+            }
 
             hcl.AppendLine($"{DefaultDeclaration}[");
-            foreach (var val in defaultValue)
+            foreach (var val in @default)
             {
                 hcl.AppendLine($"    \"{val}\",");
             }
 
-            hcl.AppendLine("  ]");
+            hcl.Append("  ]");
 
             return hcl.ToString();
+        }
+
+        private List<string> CurrentValueToList()
+        {
+            List<string> strings;
+
+            switch (this.CurrentValue)
+            {
+                case null:
+
+                    return null;
+
+                case string s:
+
+                    strings = s.Split(new[] { ',' }, StringSplitOptions.RemoveEmptyEntries)
+                        .Select(str => str.Trim()).ToList();
+                    break;
+
+                case IEnumerable enumerable:
+
+                    strings = new List<string>();
+
+                    foreach (var val in enumerable)
+                    {
+                        strings.Add(val.ToString().Trim());
+                    }
+
+                    break;
+
+                default:
+                    throw new HclSerializerException(
+                        $"Cannot serialize input variable of type {this.CurrentValue.GetType().Name}");
+
+            }
+
+            return strings;
         }
     }
 }

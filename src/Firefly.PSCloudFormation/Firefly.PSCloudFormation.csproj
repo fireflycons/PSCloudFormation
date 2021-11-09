@@ -16,10 +16,14 @@
   </PropertyGroup>
   <ItemGroup>
     <None Remove="Resources\ChangesetFormatter.xslt" />
+    <None Remove="Resources\ResourceTraits.yaml" />
+    <None Remove="Resources\terraform-block.hcl" />
     <None Remove="Resources\terraform-resource-map.json" />
   </ItemGroup>
   <ItemGroup>
     <EmbeddedResource Include="Resources\ChangesetFormatter.xslt" />
+    <EmbeddedResource Include="Resources\ResourceTraits.yaml" />
+    <EmbeddedResource Include="Resources\terraform-block.hcl" />
     <EmbeddedResource Include="Resources\terraform-resource-map.json" />
   </ItemGroup>
   <ItemGroup>
@@ -27,7 +31,7 @@
     <PackageReference Include="Firefly.CrossPlatformZip" Version="0.5.2" />
     <PackageReference Include="Firefly.EmbeddedResourceLoader" Version="0.1.6" />
     <PackageReference Include="Firefly.PowerShell.DynamicParameters" Version="0.2.2" />
-    <PackageReference Include="Newtonsoft.Json" Version="13.0.1" />
+    <PackageReference Include="Newtonsoft.Json" Version="12.0.*" />
     <PackageReference Include="PowerShellStandard.Library" Version="5.1.0" />
     <PackageReference Include="sly" Version="2.6.4.1" />
   </ItemGroup>
@@ -37,11 +41,10 @@
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
     </PackageReference>
   </ItemGroup>
-  <ItemGroup Condition="'$(SolutionName)' == 'Firefly.PSCloudFormation.debug'">
+  <ItemGroup Condition="$(SolutionName.EndsWith ('debug'))">
     <ProjectReference Include="..\..\..\Firefly.CloudFormation\src\Firefly.CloudFormation\Firefly.CloudFormation.csproj" />
-    <ProjectReference Include="..\..\..\Firefly.CloudFormationParser\src\Firefly.CloudFormationParser\Firefly.CloudFormationParser.csproj" />
   </ItemGroup>
-  <ItemGroup Condition="'$(SolutionName)' == 'Firefly.PSCloudFormation'">
+  <ItemGroup Condition="!$(SolutionName.EndsWith ('debug'))">
     <PackageReference Include="Firefly.CloudFormation" Version="2.0.0" />
   </ItemGroup>
   <ItemGroup>

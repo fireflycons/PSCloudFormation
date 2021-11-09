@@ -6,6 +6,8 @@
     using System.Linq;
     using System.Text.RegularExpressions;
 
+    using Firefly.PSCloudFormation.Terraform.State;
+
     /// <summary>
     /// Represents a resource definition in HCL script
     /// </summary>

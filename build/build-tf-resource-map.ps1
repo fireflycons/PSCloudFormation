@@ -104,6 +104,9 @@ class TranslationRule
     [TranslationRule]::new('aws_cloudwatch_log_', 'aws_logs_', $false)
     [TranslationRule]::new('aws_cloudwatch_event_', 'aws_events_', $false)
     [TranslationRule]::new('aws_schemas_', 'aws_eventschemas_', $false)
+    [TranslationRule]::new('aws_cognito_user_group', 'aws_cognito_userpoolgroup', $true)
+    [TranslationRule]::new('aws_cognito_identity_pool_roles_attachment', 'aws_cognito_identitypoolroleattachment', $true)
+    [TranslationRule]::new('aws_iam_policy', 'aws_iam_managedpolicy', $true)
 )
 try
 {

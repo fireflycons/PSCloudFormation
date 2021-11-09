@@ -14,7 +14,7 @@
     internal class ResourceTraits : IResourceTraits
     {
         /// <inheritdoc />
-        public List<string> ConflictingArguments { get; set; } = new List<string>();
+        public List<List<string>> ConflictingArguments { get; set; } = new List<List<string>>();
 
         /// <inheritdoc />
         public Dictionary<string, object> DefaultValues { get; set; } = new Dictionary<string, object>();

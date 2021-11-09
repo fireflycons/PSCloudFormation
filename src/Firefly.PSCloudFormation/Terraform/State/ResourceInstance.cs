@@ -4,6 +4,8 @@
     using System.Diagnostics;
     using System.Linq;
 
+    using Firefly.PSCloudFormation.Terraform.Hcl;
+
     using Newtonsoft.Json;
     using Newtonsoft.Json.Linq;
 
@@ -77,86 +79,21 @@
         [JsonIgnore]
         public ResourceDeclaration Parent { get; set; }
 
-        /// <summary>
-        /// Determine whether this resource's attributes reference the ID of the given resource
-        /// </summary>
-        /// <param name="resourceDeclaration">The resource to check.</param>
-        /// <returns>A <see cref="ResourceDependency"/> if there is a reference; else <c>null</c></returns>
-        public ResourceDependency References(ResourceDeclaration resourceDeclaration)
+        public HashSet<JToken> FindId(IReferencedItem id)
         {
-            var id = resourceDeclaration.ResourceInstance.Id;
-            ResourceDependency dependency = null;
-
-            // Walk JSON attributes looking for a match on ID
-            foreach (var attr in this.Attributes)
-            {
-                var key = attr.Key;
-                var value = attr.Value;
-
-                if (key == "id")
-                {
-                    continue;
-                }
-
-                switch (value)
-                {
-                    case JValue jv:
-
-                        if (id == jv.Value<string>())
-                        {
-                            dependency = new ResourceDependency { TargetAttribute = key, IsArrayMember = false };
-                        }
-
-                        break;
-
-                    case JArray ja:
-
-                        foreach (var arrayValue in ja.Where(j => j.Type == JTokenType.String))
-                        {
-                            if (id == ((JValue)arrayValue).Value<string>())
-                            {
-                                dependency = new ResourceDependency { TargetAttribute = key, IsArrayMember = true };
-                            }
-                        }
-
-                        break;
-                }
-
-                if (dependency == null)
-                {
-                    continue;
-                }
-
-                // Add input resource to this resource's dependencies
-                if (this.Dependencies == null)
-                {
-                    this.Dependencies = new List<string> { resourceDeclaration.Address };
-                }
-                else
-                {
-                    this.Dependencies.Add(resourceDeclaration.Address);
-                }
-
-                break;
-            }
-
-            return dependency;
-        }
-
-        public List<JToken> FindId(string id)
-        {
-            var foundValues = new List<JToken>();
+            var foundValues = new HashSet<JToken>();
             this.WalkNode(this.Attributes, id, foundValues);
             return foundValues;
         }
-
-
+        
         /// <summary>
         /// Recursively walk the properties of a <c>JToken</c>
         /// </summary>
         /// <param name="node">The starting node.</param>
+        /// <param name="id">The id to find</param>
+        /// <param name="results">List into which matches are placed</param>
         private void WalkNode(
-            JToken node, string id, List <JToken> results)
+            JToken node, IReferencedItem id, ICollection<JToken> results)
         {
             switch (node.Type)
             {
@@ -164,35 +101,45 @@
 
                     foreach (var child in node.Children<JProperty>())
                     {
-                        if (child.Value is JValue value && value.Value is string s && s.Contains(id))
-                        {
-                            results.Add(child);
-                        }
-
-                        this.WalkNode(child.Value, id, results);
+                        this.CheckReference(child, child.Value, id, results);
                     }
 
-                    // do something?
                     break;
 
                 case JTokenType.Array:
 
                     foreach (var child in node.Children())
                     {
-                        if (child is JValue value && value.Value is string s && s.Contains(id))
-                        {
-                            results.Add(node);
-                        }
-
-                        this.WalkNode(child, id, results);
+                        this.CheckReference(node, child, id, results);
                     }
 
                     break;
+            }
+        }
 
-                default:
-
-                    // Value
-                    break;
+        private void CheckReference(JToken node, JToken child, IReferencedItem id, ICollection<JToken> results)
+        {
+            if (child is JValue value && value.Value is string stringValue)
+            {
+                if (id.IsScalar)
+                {
+                    if (stringValue.Contains(id.ScalarIdentity))
+                    {
+                        results.Add(node);
+                    }
+                }
+                else
+                {
+                    // If any of the id's values match, then it is a match
+                    if (id.ListIdentity.Any(item => stringValue.Contains(item)))
+                    {
+                        results.Add(node);
+                    }
+                }
+            }
+            else
+            {
+                this.WalkNode(child, id, results);
             }
         }
     }

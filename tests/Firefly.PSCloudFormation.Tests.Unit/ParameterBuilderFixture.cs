@@ -21,9 +21,11 @@
         public ParameterBuilderFixture()
         {
             var templateBody = this.ParamterTestJson;
-            var mockTemplateResolver = new Mock<IInputFileResolver>();
+            var mockTemplateResolver = new Mock<ITemplateResolver>();
 
             mockTemplateResolver.Setup(r => r.FileContent).Returns(templateBody);
+            mockTemplateResolver.Setup(r => r.NoEchoParameters).Returns(new List<string>());
+
             var templateManager = new TemplateManager(mockTemplateResolver.Object, StackOperation.Create, null);
             this.ParameterDictionary = templateManager.GetStackDynamicParameters(new Dictionary<string, string>());
         }

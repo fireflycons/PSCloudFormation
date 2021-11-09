@@ -73,54 +73,6 @@
         public List<ResourceDeclaration> Resources { get; set; }
 
         /// <summary>
-        /// Generates the change graph.
-        /// </summary>
-        /// <returns>A digraph showing relationships between resources</returns>
-        public BidirectionalGraph<ResourceDeclaration, TaggedEdge<ResourceDeclaration, ResourceDependency>> GenerateChangeGraph()
-        {
-            var edges = new List<TaggedEdge<ResourceDeclaration, ResourceDependency>>();
-            var graph = new BidirectionalGraph<ResourceDeclaration, TaggedEdge<ResourceDeclaration, ResourceDependency>>();
-
-            foreach (var r1 in this.Resources)
-            {
-                edges.AddRange(
-                    from r2 in this.Resources.Where(r => r.ResourceInstance.Id != r1.ResourceInstance.Id)
-                    let dependency = r2.ResourceInstance.References(r1)
-                    where dependency != null
-                    select new TaggedEdge<ResourceDeclaration, ResourceDependency>(r1, r2, dependency));
-            }
-
-            graph.AddVertexRange(this.Resources);
-            graph.AddEdgeRange(edges);
-            return graph;
-        }
-
-        /// <summary>
-        /// Generates the dot graph.
-        /// </summary>
-        /// <param name="graph">The graph.</param>
-        /// <returns>A DOT format digraph, primarily for use in debugging.</returns>
-        public string GenerateDotGraph(BidirectionalGraph<ResourceDeclaration, TaggedEdge<ResourceDeclaration, ResourceDependency>> graph)
-        {
-            return graph.ToGraphviz(
-                algorithm =>
-                    {
-                        var font = new GraphvizFont("Arial", 9);
-
-                        algorithm.CommonVertexFormat.Font = font;
-                        algorithm.CommonEdgeFormat.Font = font;
-                        algorithm.GraphFormat.RankDirection = GraphvizRankDirection.LR;
-                        algorithm.FormatVertex += (sender, args) =>
-                            {
-                                args.VertexFormat.Label = args.Vertex.Name;
-                                args.VertexFormat.Shape = GraphvizVertexShape.Box;
-                            };
-
-                        algorithm.FormatEdge += (sender, args) => { args.EdgeFormat.Label.Value = args.Edge.Tag?.TargetAttribute; };
-                    });
-        }
-
-        /// <summary>
         /// Saves the state file to the specified path.
         /// </summary>
         /// <param name="path">The path.</param>

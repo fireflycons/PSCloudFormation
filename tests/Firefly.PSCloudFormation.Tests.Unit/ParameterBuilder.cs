@@ -64,14 +64,15 @@ namespace Firefly.PSCloudFormation.Tests.Unit
         public void ShouldCreateTheSameParameterDictionaryForYamlEquivalentTemplate()
         {
             var templateBody = this.fixture.ParameterTestYaml;
-            var mockTemplateResolver = new Mock<IInputFileResolver>();
+            var mockTemplateResolver = new Mock<ITemplateResolver>();
 
             mockTemplateResolver.Setup(r => r.FileContent).Returns(templateBody);
+            mockTemplateResolver.Setup(r => r.NoEchoParameters).Returns(new List<string>());
             var templateManager = new TemplateManager(mockTemplateResolver.Object, StackOperation.Create, null);
 
-            var yamlDict = templateManager.GetStackDynamicParameters(new Dictionary<string, string>());
+            var runtimeDefinedParameterDictionary = templateManager.GetStackDynamicParameters(new Dictionary<string, string>());
 
-            yamlDict.Should().BeEquivalentTo(
+            runtimeDefinedParameterDictionary.Should().BeEquivalentTo(
                 this.fixture.ParameterDictionary,
                 options => options.ComparingByMembers<Attribute>());
         }

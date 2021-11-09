@@ -158,6 +158,12 @@
             return !errors.Any() ? null : new PlanErrorCollection(errors.OrderByDescending(e => e.LineNumber));
         }
 
+        /// <inheritdoc />
+        public string Evaluate(string expression)
+        {
+            throw new NotImplementedException();
+        }
+
         /// <summary>
         /// Runs terraform with AWS credentials in the environment
         /// </summary>

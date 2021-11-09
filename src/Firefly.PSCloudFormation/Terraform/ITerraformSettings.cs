@@ -1,10 +1,24 @@
 ﻿namespace Firefly.PSCloudFormation.Terraform
 {
+    using System.Collections.Generic;
+
+    using Amazon.CloudFormation.Model;
+
+    using Firefly.CloudFormationParser;
+
     /// <summary>
     /// Settings for terraform exporter
     /// </summary>
     internal interface ITerraformSettings
     {
+        /// <summary>
+        /// Gets the aws account identifier.
+        /// </summary>
+        /// <value>
+        /// The aws account identifier.
+        /// </value>
+        string AwsAccountId { get; }
+
         /// <summary>
         /// Gets the AWS region.
         /// </summary>
@@ -14,12 +28,28 @@
         string AwsRegion { get; }
 
         /// <summary>
-        /// Gets the Terraform workspace directory where the generated code and state will be stored.
+        /// Gets a value indicating whether [non interactive].
         /// </summary>
         /// <value>
-        /// The workspace directory.
+        ///   <c>true</c> if [non interactive]; otherwise, <c>false</c>.
         /// </value>
-        string WorkspaceDirectory { get; }
+        bool NonInteractive { get; }
+
+        /// <summary>
+        /// Gets the physical resources as reported by the stack.
+        /// </summary>
+        /// <value>
+        /// The physical resources.
+        /// </value>
+        IReadOnlyCollection<StackResource> PhysicalResources { get; }
+
+        /// <summary>
+        /// Gets the resources.
+        /// </summary>
+        /// <value>
+        /// The resources.
+        /// </value>
+        IReadOnlyCollection<CloudFormationResource> Resources { get; }
 
         /// <summary>
         /// Gets the runner that drives the Terraform binary.
@@ -30,11 +60,19 @@
         ITerraformRunner Runner { get; }
 
         /// <summary>
-        /// Gets a value indicating whether [non interactive].
+        /// Gets the template as parsed by CloudFormation Parser.
         /// </summary>
         /// <value>
-        ///   <c>true</c> if [non interactive]; otherwise, <c>false</c>.
+        /// The template.
         /// </value>
-        bool NonInteractive { get; }
+        ITemplate Template { get; }
+
+        /// <summary>
+        /// Gets the Terraform workspace directory where the generated code and state will be stored.
+        /// </summary>
+        /// <value>
+        /// The workspace directory.
+        /// </value>
+        string WorkspaceDirectory { get; }
     }
 }

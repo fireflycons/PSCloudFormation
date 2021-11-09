@@ -31,7 +31,7 @@
         /// <value>
         /// The conflicting arguments.
         /// </value>
-        List<string> ConflictingArguments { get; }
+        List<List<string>> ConflictingArguments { get; }
 
         /// <summary>
         /// Gets the unconfigurable attributes.

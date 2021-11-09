@@ -1,0 +1,146 @@
+﻿- Group: all
+  Resources:
+    - Resource: all                   # Common traits for all resources - merged with specific resources.
+      NonBlockTypeAttributes:         # Emiited as e.g. 'tags = {}'' (rather than 'tags {}'')
+        - tags
+      UnconfigurableAttributes:       # State properties that have no HCL equivalent, because they are computed.
+        - arn
+        - id
+        - create_date
+        - creation_date
+        - last_modified_date
+        - unique_id
+        - tags_all
+        - timeouts
+        - owner_id
+      RequiredAttributes: []          # Must be present in HCL, even if null or empty
+      DefaultValues: {}               # Values to set if state value is null
+      ConflictingArguments: []        # Where aruments confict. choose the first from this list.
+- Group: Autoscaling
+  Resources:
+    - Resource: aws_autoscaling_group
+      ConflictingArguments:
+        - - vpc_zone_identifier
+          - availability_zones
+- Group: CloudFront
+  Resources:
+    - Resource: aws_cloudfront_distribution
+      UnconfigurableAttributes:
+        - trusted_key_groups
+        - trusted_signers
+        - caller_reference
+        - etag
+        - last_modified_time
+        - status
+        - hosted_zone_id
+        - in_progress_validation_batches
+        - domain_name
+- Group: Cognito
+  Resources:
+    - Resource: aws_cognito_user_pool
+      UnconfigurableAttributes:
+        - domain
+        - endpoint
+        - estimated_number_of_users
+      ConflictingArguments:
+        - - verification_message_template
+          - email_verification_message
+          - email_verification_subject
+- Group: EC2
+  Resources:
+    - Resource: aws_instance
+      UnconfigurableAttributes:
+        - instance_state
+        - primary_network_interface_id
+        - private_dns
+        - device_name
+        - volume_id
+- Group: EFS
+  Resources:
+    - Resource: aws_efs_file_system
+      UnconfigurableAttributes:
+        - size_in_bytes
+        - dns_name
+        - number_of_mount_targets
+    - Resource: aws_efs_mount_target
+      UnconfigurableAttributes:
+        - availability_zone_id
+        - availability_zone_name
+        - dns_name
+        - file_system_arn
+        - mount_target_dns_name
+        - network_interface_id
+        - ip_address
+- Group: Lambda
+  Resources:
+    - Resource: aws_lambda_function
+      UnconfigurableAttributes:
+        - last_modified
+        - qualified_arn
+        - invoke_arn
+        - source_code_size
+        - version
+- Group: RDS
+  Resources:
+    - Resource: aws_db_instance
+      UnconfigurableAttributes:
+        - latest_restorable_time
+        - address
+        - endpoint
+        - engine_version_actual
+        - hosted_zone_id
+        - resource_id
+        - status
+- Group: Route53
+  Resources:
+    - Resource: aws_route53_record
+      UnconfigurableAttributes:
+        - fqdn
+      ConflictingArguments:
+        - - alias
+          - ttl
+- Group: S3
+  Resources:
+    - Resource: aws_s3_bucket
+      UnconfigurableAttributes:
+        - bucket_domain_name
+        - bucket_regional_domain_name
+        - region
+        - private_dns
+        - device_name
+        - volume_id
+      DefaultValues:
+        acl: private
+        force_destroy: false
+    - Resource: aws_s3_bucket_policy
+      RequiredAttributes:
+        - policy
+- Group: SecretsManager
+  Resources:
+    - Resource: aws_secretsmanager_secret
+      UnconfigurableAttributes:
+        - rotation_enabled
+- Group: SSM
+  Resources:
+    - Resource: aws_sssm_parameter
+      UnconfigurableAttributes:
+        - version
+- Group: VPC
+  Resources:
+    - Resource: aws_security_group
+      NonBlockTypeAttributes:
+        - ingress
+        - egress
+      UnconfigurableAttributes:
+        - owner_id
+      RequiredAttributes:
+        - ingress.*.description
+        - ingress.*.ipv6_cidr_blocks
+        - ingress.*.cidr_blocks
+        - ingress.*.prefix_list_ids
+        - ingress.*.security_groups
+        - egress.*.description
+        - egress.*.ipv6_cidr_blocks
+        - egress.*.cidr_blocks
+        - egress.*.prefix_list_ids
+        - egress.*.security_groups

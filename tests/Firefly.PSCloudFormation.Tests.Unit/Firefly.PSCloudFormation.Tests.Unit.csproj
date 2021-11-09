@@ -76,6 +76,7 @@
     <None Remove="Resources\ParameterTest.json" />
     <None Remove="Resources\ParameterTest.yaml" />
     <None Remove="Resources\progetDockerCloudFormation.yaml" />
+    <None Remove="Resources\Terraform\FindId_Attributes.json" />
     <None Remove="Resources\Terraform\terraform.tfstate" />
   </ItemGroup>
 
@@ -153,6 +154,7 @@
     <EmbeddedResource Include="Resources\no_package.yaml" />
     <EmbeddedResource Include="Resources\ParameterTest.json" />
     <EmbeddedResource Include="Resources\ParameterTest.yaml" />
+    <EmbeddedResource Include="Resources\Terraform\FindId_Attributes.json" />
     <EmbeddedResource Include="Resources\Terraform\terraform.tfstate" />
   </ItemGroup>
 

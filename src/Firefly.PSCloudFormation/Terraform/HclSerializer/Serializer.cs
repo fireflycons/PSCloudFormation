@@ -1,6 +1,7 @@
 ﻿namespace Firefly.PSCloudFormation.Terraform.HclSerializer
 {
     using System.Linq;
+    using System.Management.Automation;
 
     using Firefly.PSCloudFormation.Terraform.HclSerializer.Events;
     using Firefly.PSCloudFormation.Terraform.State;
@@ -10,6 +11,8 @@
     internal class Serializer
     {
         private readonly IHclEmitter emitter;
+
+        private string currentResourceType;
 
         public Serializer(IHclEmitter emitter)
         {
@@ -24,10 +27,9 @@
         {
             foreach (var r in stateFile.Resources)
             {
+                this.currentResourceType = r.Type;
                 this.emitter.Emit(new ResourceStart(r.Type, r.Name));
-
                 this.WalkNode(r.Instances.First().Attributes);
-
                 this.emitter.Emit(new ResourceEnd());
             }
         }
@@ -84,6 +86,21 @@
 
                     foreach (var child in node.Children<JProperty>())
                     {
+                        if (this.currentResourceType == "aws_iam_role" && child.Name == "inline_policy" && child.Value is JArray policies)
+                        {
+                            // Multiple inline_policy blocks need to be emitted.
+                            foreach (var policy in policies)
+                            {
+                                this.emitter.Emit(new MappingKey("inline_policy"));
+                                this.emitter.Emit(new SequenceStart());
+                                this.WalkNode(policy);
+                                this.emitter.Emit(new SequenceEnd());
+                            }
+
+                            continue;
+                        }
+
+                        // TODO: Block key, not mapping. HCLEmitter line 347
                         this.emitter.Emit(new MappingKey(child.Name));
                         this.WalkNode(child.Value);
                     }

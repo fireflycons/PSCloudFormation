@@ -30,7 +30,7 @@
         }
 
         /// <inheritdoc />
-        public List<string> ConflictingArguments { get; }
+        public List<List<string>> ConflictingArguments { get; }
 
         /// <inheritdoc />
         public Dictionary<string, object> DefaultValues { get; }
@@ -59,12 +59,16 @@
         /// <inheritdoc />
         public bool ShouldEmitAttribute(string currentPath)
         {
-            if (this.ConflictingArguments.Any() && this.ConflictingArguments.Contains(currentPath)
-                                                && this.ConflictingArguments.First() != currentPath)
+            if (this.ConflictingArguments.Any())
             {
-                return false;
+                foreach (var argumentGroup in this.ConflictingArguments)
+                {
+                    if (argumentGroup.Contains(currentPath) && argumentGroup.First() != currentPath)
+                    {
+                        return false;
+                    }
+                }
             }
-
 
             return this.RequiredAttributes.Contains(currentPath) || this.DefaultValues.ContainsKey(currentPath);
         }
@@ -72,12 +76,21 @@
         /// <inheritdoc />
         public bool IsConflictingArgument(string currentPath)
         {
-            if (!this.ConflictingArguments.Any() || !this.ConflictingArguments.Contains(currentPath))
+            if (!this.ConflictingArguments.Any())
             {
                 return false;
             }
 
-            return this.ConflictingArguments.First() != currentPath;
+
+            foreach (var argumentGroup in this.ConflictingArguments)
+            {
+                if (argumentGroup.Contains(currentPath) && argumentGroup.First() != currentPath)
+                {
+                    return true;
+                }
+            }
+
+            return false;
         }
     }
 }

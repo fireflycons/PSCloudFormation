@@ -1,0 +1,11 @@
+﻿{
+    "security_groups": [
+        "sg-00000000"
+    ],
+    "subnet_id": "subnet-00000000",
+    "subnet_ids": [
+        "subnet-00000000",
+        "subnet-11111111"
+    ],
+    "vpc_id": "vpc-00000000"
+}

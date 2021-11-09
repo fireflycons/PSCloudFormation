@@ -190,24 +190,7 @@
             this.state = EmitterState.None;
             while (this.events.Any())
             {
-                @event = this.events.Dequeue();
-
-                if (@event is MappingKey key && this.resourceTraits.UnconfigurableAttributes.Contains(key.Value))
-                {
-                    // Swallow this event and its descendents.
-                    var level = 0;
-
-                    do
-                    {
-                        @event = this.events.Dequeue();
-                        level += @event.NestingIncrease;
-                    }
-                    while (level > 0);
-                }
-                else
-                {
-                    this.EmitNode(@event);
-                }
+                this.EmitNode(this.events.Dequeue());
             }
         }
 
@@ -334,7 +317,10 @@
 
             var analysis = this.AnalyzeAttribute(key);
 
-            if (this.resourceTraits.IsConflictingArgument(this.CurrentPath) || (analysis != AttributeContent.HasValue && !this.resourceTraits.ShouldEmitAttribute(this.CurrentPath)))
+            if (this.resourceTraits.IsConflictingArgument(this.CurrentPath)
+                || this.resourceTraits.UnconfigurableAttributes.Contains(this.CurrentPath)
+                || (analysis != AttributeContent.HasValue
+                    && !this.resourceTraits.ShouldEmitAttribute(this.CurrentPath)))
             {
                 this.ConsumeAttribute();
                 this.currentKey = lastKey;

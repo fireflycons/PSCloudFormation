@@ -1,11 +1,14 @@
 ﻿namespace Firefly.PSCloudFormation.Terraform.Hcl
 {
     using System;
+    using System.Collections;
     using System.Collections.Generic;
+    using System.Globalization;
     using System.Linq;
     using System.Text;
 
-    using Amazon.CloudFormation.Model;
+    using Firefly.CloudFormationParser;
+    using Firefly.PSCloudFormation.Terraform.HclSerializer;
 
     /// <summary>
     /// A numeric list input variable
@@ -17,35 +20,43 @@
         /// Initializes a new instance of the <see cref="NumericListInputVariable"/> class.
         /// </summary>
         /// <param name="stackParameter">The AWS stack parameter to create from.</param>
-        public NumericListInputVariable(ParameterDeclaration stackParameter)
+        public NumericListInputVariable(IParameter stackParameter)
             : base(stackParameter)
         {
         }
 
-        /// <summary>
-        /// Gets the type.
-        /// </summary>
-        /// <value>
-        /// The type.
-        /// </value>
+        /// <inheritdoc />
         public override string Type => "list(number)";
 
-        /// <summary>
-        /// Generates the default stanza.
-        /// </summary>
-        /// <returns>
-        /// Default stanza for the variable declaration
-        /// </returns>
-        protected override string GenerateDefaultStanza()
+        /// <inheritdoc />
+        public override IList<string> ListIdentity => this.CurrentValueToList().Select(d => d.ToString(CultureInfo.InvariantCulture)).ToList();
+
+        /// <inheritdoc />
+        protected override string GenerateDefaultStanza(bool final)
         {
             var hcl = new StringBuilder();
+            List<double> @default;
 
-            var defaultValue = string.IsNullOrEmpty(this.DefaultValue)
-                                   ? new List<double> { 0 }
-                                   : this.DefaultValue.Split(new[] { ',' }, StringSplitOptions.RemoveEmptyEntries).Select(double.Parse).ToList();
+            if (final)
+            {
+                @default = string.IsNullOrEmpty(this.DefaultValue)
+                               ? new List<double> { 0 }
+                               : this.DefaultValue.Split(new[] { ',' }, StringSplitOptions.RemoveEmptyEntries)
+                                   .Select(double.Parse).ToList();
+            }
+            else
+            {
+                @default = this.CurrentValueToList();
+
+                if (@default == null)
+                {
+                    return string.Empty;
+                }
+            }
+
 
             hcl.AppendLine($"{DefaultDeclaration}[");
-            foreach (var val in defaultValue)
+            foreach (var val in @default)
             {
                 hcl.AppendLine($"    {val},");
             }
@@ -53,6 +64,42 @@
             hcl.AppendLine("  ]");
 
             return hcl.ToString();
+        }
+
+        private List<double> CurrentValueToList()
+        {
+            List<double> doubles;
+
+            switch (this.CurrentValue)
+            {
+                case null:
+
+                    return null;
+
+                case string s:
+
+                    doubles = s.Split(new[] { ',' }, StringSplitOptions.RemoveEmptyEntries)
+                        .Select(str => double.Parse(str.Trim())).ToList();
+                    break;
+
+                case IEnumerable enumerable:
+
+                    doubles = new List<double>();
+
+                    foreach (var val in enumerable)
+                    {
+                        doubles.Add(double.Parse(val.ToString()));
+                    }
+
+                    break;
+
+                default:
+                    throw new HclSerializerException(
+                        $"Cannot serialize input variable of type {this.CurrentValue.GetType().Name}");
+
+            }
+
+            return doubles;
         }
     }
 }

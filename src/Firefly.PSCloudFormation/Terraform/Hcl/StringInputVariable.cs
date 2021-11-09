@@ -1,6 +1,6 @@
 ﻿namespace Firefly.PSCloudFormation.Terraform.Hcl
 {
-    using Amazon.CloudFormation.Model;
+    using Firefly.CloudFormationParser;
 
     /// <summary>
     /// A string scalar input variable
@@ -12,30 +12,28 @@
         /// Initializes a new instance of the <see cref="StringInputVariable"/> class.
         /// </summary>
         /// <param name="stackParameter">The AWS stack parameter to create from.</param>
-        public StringInputVariable(ParameterDeclaration stackParameter)
+        public StringInputVariable(IParameter stackParameter)
             : base(stackParameter)
         {
         }
 
-        /// <summary>
-        /// Gets the type.
-        /// </summary>
-        /// <value>
-        /// The type.
-        /// </value>
+        /// <inheritdoc />
         public override string Type => "string";
 
-        /// <summary>
-        /// Generates the default stanza.
-        /// </summary>
-        /// <returns>
-        /// Default stanza for the variable declaration
-        /// </returns>
-        protected override string GenerateDefaultStanza()
+        /// <inheritdoc />
+        protected override string GenerateDefaultStanza(bool final)
         {
-            var defaultValue = string.IsNullOrEmpty(this.DefaultValue) ? string.Empty : this.DefaultValue;
+            if (final)
+            {
+                if (this.DefaultValue == null)
+                {
+                    return string.Empty;
+                }
 
-            return $"{DefaultDeclaration}\"{defaultValue}\"";
+                return $"{DefaultDeclaration}\"{this.DefaultValue}\"";
+            }
+
+            return this.CurrentValue == null ? string.Empty : $"{DefaultDeclaration}\"{this.CurrentValue}\"";
         }
     }
 }

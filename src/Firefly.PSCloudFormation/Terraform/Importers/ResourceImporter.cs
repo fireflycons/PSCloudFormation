@@ -5,10 +5,8 @@
     using System.Collections.ObjectModel;
     using System.Management.Automation.Host;
 
-    using Firefly.CloudFormationParser.GraphObjects;
+    using Firefly.PSCloudFormation.Terraform.Hcl;
     using Firefly.PSCloudFormation.Utils;
-
-    using QuikGraph;
 
     /// <summary>
     /// Base class for classes that attempt interactively to fix import issues
@@ -18,8 +16,38 @@
         /// <summary>
         /// The resource importers
         /// </summary>
-        private static readonly Dictionary<string, Type> ResourceImporters =
-            new Dictionary<string, Type> { { "aws_lambda_permission", typeof(LambdaPermissionImporter) } };
+        private static readonly Dictionary<string, Type> ResourceImporters = new Dictionary<string, Type>
+                                                                                 {
+                                                                                     {
+                                                                                         "aws_lambda_permission",
+                                                                                         typeof(
+                                                                                             LambdaPermissionImporter)
+                                                                                     },
+                                                                                     {
+                                                                                         "aws_iam_policy",
+                                                                                         typeof(
+                                                                                             IAMManagedPolicyImporter)
+                                                                                     },
+                                                                                     {
+                                                                                         "aws_route53_record",
+                                                                                         typeof(Route53RecordImporter)
+                                                                                     },
+                                                                                     {
+                                                                                         "aws_cognito_identity_pool_roles_attachment",
+                                                                                         typeof(
+                                                                                             CognitoIdentityPoolRoleAttachmentImporter)
+                                                                                     },
+                                                                                     {
+                                                                                         "aws_cognito_user_pool_client",
+                                                                                         typeof(
+                                                                                             CognitoUserPoolClientImporter)
+                                                                                     },
+                                                                                     {
+                                                                                         "aws_cognito_user_group",
+                                                                                         typeof(
+                                                                                             CognitoUserGroupImporter)
+                                                                                     }
+                                                                                 };
 
         /// <summary>
         /// Initializes a new instance of the <see cref="ResourceImporter"/> class.
@@ -27,26 +55,18 @@
         /// <param name="resource">Name of the resource.</param>
         /// <param name="ui">The UI.</param>
         /// <param name="resourcesToImport">The resources to import.</param>
-        /// <param name="dependencyGraph">CloudFormation dependency graph.</param>
+        /// <param name="settings">Terraform export settings.</param>
         protected ResourceImporter(
             ResourceImport resource,
             IUserInterface ui,
             IList<ResourceImport> resourcesToImport,
-            IBidirectionalGraph<IVertex, TaggedEdge<IVertex, EdgeDetail>> dependencyGraph)
+            ITerraformSettings settings)
         {
-            this.DependencyGraph = dependencyGraph;
             this.Resource = resource;
             this.Ui = ui;
             this.ResourcesToImport = resourcesToImport;
+            this.Settings = settings;
         }
-
-        /// <summary>
-        /// Gets the dependency graph.
-        /// </summary>
-        /// <value>
-        /// The dependency graph.
-        /// </value>
-        protected IBidirectionalGraph<IVertex, TaggedEdge<IVertex, EdgeDetail>> DependencyGraph { get; }
 
         /// <summary>
         /// Gets the name of the resource.
@@ -65,6 +85,14 @@
         protected IList<ResourceImport> ResourcesToImport { get; }
 
         /// <summary>
+        /// Gets the settings.
+        /// </summary>
+        /// <value>
+        /// The settings.
+        /// </value>
+        protected ITerraformSettings Settings { get; }
+
+        /// <summary>
         /// Gets the UI.
         /// </summary>
         /// <value>
@@ -78,13 +106,13 @@
         /// <param name="resource">The resource being imported.</param>
         /// <param name="ui">The UI.</param>
         /// <param name="resourcesToImport">The resources to import.</param>
-        /// <param name="dependencyGraph">CloudFormation dependency graph.</param>
+        /// <param name="settings">Terraform export settings.</param>
         /// <returns>A <see cref="ResourceImporter"/> derivative, or <c>null</c> if none found.</returns>
         public static ResourceImporter Create(
             ResourceImport resource,
             IUserInterface ui,
             IList<ResourceImport> resourcesToImport,
-            IBidirectionalGraph<IVertex, TaggedEdge<IVertex, EdgeDetail>> dependencyGraph)
+            ITerraformSettings settings)
         {
             if (!ResourceImporters.ContainsKey(resource.TerraformType))
             {
@@ -96,7 +124,17 @@
                 resource,
                 ui,
                 resourcesToImport,
-                dependencyGraph);
+                settings);
+        }
+
+        /// <summary>
+        /// Determines whether the given resource requires use of a resource importer.
+        /// </summary>
+        /// <param name="terraformResourceType">Type of the terraform resource.</param>
+        /// <returns><c>true</c> if importer is required.</returns>
+        public static bool RequiresResoureImporter(string terraformResourceType)
+        {
+            return ResourceImporters.ContainsKey(terraformResourceType);
         }
 
         /// <summary>

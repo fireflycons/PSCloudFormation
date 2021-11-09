@@ -7,6 +7,7 @@
     /// PowerShell host user interface
     /// </summary>
     /// <seealso cref="Firefly.PSCloudFormation.Utils.IUserInterface" />
+    // ReSharper disable once InconsistentNaming
     internal class PSUserInterface : IUserInterface
     {
         /// <summary>
@@ -40,6 +41,12 @@
             int defaultChoice)
         {
             return this.ui.PromptForChoice(message, caption, choices, defaultChoice);
+        }
+
+        /// <inheritdoc />
+        public void Information(string message)
+        {
+            this.ui.WriteLine(message);
         }
     }
 }

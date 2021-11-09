@@ -32,5 +32,12 @@
         /// </summary>
         /// <returns>A <see cref="PlanErrorCollection"/> containing plan errors; else <c>null</c> if none.</returns>
         PlanErrorCollection RunPlan();
+
+        /// <summary>
+        /// Evaluates the specified expression by invoking <c>terraform console</c>
+        /// </summary>
+        /// <param name="expression">The expression.</param>
+        /// <returns>Evaluation result</returns>
+        string Evaluate(string expression);
     }
 }

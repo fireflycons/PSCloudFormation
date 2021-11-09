@@ -1,4 +1,4 @@
-﻿namespace Firefly.PSCloudFormation.Terraform
+﻿namespace Firefly.PSCloudFormation.Terraform.Hcl
 {
     using System.Diagnostics;
 
@@ -32,6 +32,12 @@
         /// </value>
         public string PhysicalId { get; set; }
 
+        /// <summary>
+        /// Gets or sets the logical identifier.
+        /// </summary>
+        /// <value>
+        /// The logical identifier.
+        /// </value>
         public string LogicalId { get; set; }
 
         /// <summary>
@@ -42,6 +48,12 @@
         /// </value>
         public string AwsType { get; set; }
 
+        /// <summary>
+        /// Gets or sets the type of the terraform.
+        /// </summary>
+        /// <value>
+        /// The type of the terraform.
+        /// </value>
         public string TerraformType { get; set; }
     }
 }

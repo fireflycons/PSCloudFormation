@@ -17,6 +17,7 @@
     /// </summary>
     public class TemplateManager
     {
+
         /// <summary>
         /// Map of AWS-Specific parameter type to validation regex
         /// </summary>
@@ -85,13 +86,19 @@
         private readonly ILogger logger;
 
         /// <summary>
+        /// The template resolver
+        /// </summary>
+        private readonly ITemplateResolver templateResolver;
+
+        /// <summary>
         /// Initializes a new instance of the <see cref="TemplateManager"/> class.
         /// </summary>
         /// <param name="templateResolver">The template resolver.</param>
         /// <param name="stackOperation">Stack operation being performed</param>
         /// <param name="logger">Logger to send error messages to.</param>
-        public TemplateManager(IInputFileResolver templateResolver, StackOperation stackOperation, ILogger logger)
+        public TemplateManager(ITemplateResolver templateResolver, StackOperation stackOperation, ILogger logger)
         {
+            this.templateResolver = templateResolver;
             this.logger = logger;
             this.stackOperation = stackOperation;
 
@@ -131,9 +138,10 @@
                 {
                     var builder = new RuntimeDefinedParameterBuilder(param.Name, GetClrTypeFromAwsType(param.Type));
 
-                    if (param.Default == null && this.stackOperation == StackOperation.Create && !fileParameters.ContainsKey(param.Name))
+                    if ((param.Default == null && this.stackOperation == StackOperation.Create && !fileParameters.ContainsKey(param.Name)) || (this.stackOperation == StackOperation.Export && this.templateResolver.NoEchoParameters.Contains(param.Name)))
                     {
                         // Only make parameter mandatory when creating, and the parameter isn't defined in a parameter file
+                        // or if exporting a stack and parameter is NoEcho
                         builder.WithMandatory();
                     }
 

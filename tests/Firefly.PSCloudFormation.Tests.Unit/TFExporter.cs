@@ -33,34 +33,34 @@ namespace Firefly.PSCloudFormation.Tests.Unit
             this.output = output;
         }
 
-        [Fact]
-        public void ShouldLoadResourceMap()
-        {
-            var resources = new List<StackResource>
-                                {
-                                    new StackResource
-                                        {
-                                            LogicalResourceId = "MyInstance", ResourceType = "AWS::EC2::Instance", PhysicalResourceId = "i-01234567"
-                                        }
-                                };
+        //[Fact]
+        //public void ShouldLoadResourceMap()
+        //{
+        //    var resources = new List<StackResource>
+        //                        {
+        //                            new StackResource
+        //                                {
+        //                                    LogicalResourceId = "MyInstance", ResourceType = "AWS::EC2::Instance", PhysicalResourceId = "i-01234567"
+        //                                }
+        //                        };
 
-            var logger = new TestLogger(this.output);
+        //    var logger = new TestLogger(this.output);
 
-            var runner = new Mock<ITerraformRunner>();
-            var settings = new Mock<ITerraformSettings>();
-            var ui = new Mock<IUserInterface>();
+        //    var runner = new Mock<ITerraformRunner>();
+        //    var settings = new Mock<ITerraformSettings>();
+        //    var ui = new Mock<IUserInterface>();
             
-            using var tempDirectory = new TempDirectory();
+        //    using var tempDirectory = new TempDirectory();
 
-            settings.Setup(s => s.Runner).Returns(runner.Object);
-            settings.Setup(s => s.AwsRegion).Returns("eu-west-1");
-            settings.Setup(s => s.WorkspaceDirectory).Returns(tempDirectory);
-            File.WriteAllText(Path.Combine(tempDirectory, "terraform.tfstate"), this.stateFile);
+        //    settings.Setup(s => s.Runner).Returns(runner.Object);
+        //    settings.Setup(s => s.AwsRegion).Returns("eu-west-1");
+        //    settings.Setup(s => s.WorkspaceDirectory).Returns(tempDirectory);
+        //    File.WriteAllText(Path.Combine(tempDirectory, "terraform.tfstate"), this.stateFile);
 
-            var exp = new TerraformExporter(resources, new List<ParameterDeclaration>(), settings.Object, logger, ui.Object);
-            exp.Export();
+        //    var exp = new LegacyTerraformExporter(resources, new List<ParameterDeclaration>(), settings.Object, logger, ui.Object);
+        //    exp.Export();
 
-            File.Exists(Path.Combine(tempDirectory, "main.tf")).Should().BeTrue();
-        }
+        //    File.Exists(Path.Combine(tempDirectory, "main.tf")).Should().BeTrue();
+        //}
     }
 }

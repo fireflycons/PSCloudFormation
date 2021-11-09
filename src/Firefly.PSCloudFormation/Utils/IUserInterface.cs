@@ -17,5 +17,11 @@
         /// <param name="defaultChoice">The default choice.</param>
         /// <returns>Selected choice</returns>
         int PromptForChoice(string caption, string message, Collection<ChoiceDescription> choices, int defaultChoice);
+
+        /// <summary>
+        /// Write an information message
+        /// </summary>
+        /// <param name="message">The message.</param>
+        void Information(string message);
     }
 }
