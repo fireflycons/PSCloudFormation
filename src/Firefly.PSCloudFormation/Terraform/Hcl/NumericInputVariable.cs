@@ -82,6 +82,11 @@
                 validationExpressions.Add($"contains([{items}], var.{this.Name})", false);
             }
 
+            if (!validationExpressions.Any())
+            {
+                return string.Empty;
+            }
+
             var conditions = string.Join(" && ", validationExpressions.Select(e => e.Value ? $"({e.Key})" : e.Key));
 
             hcl.AppendLine("  validation {");
