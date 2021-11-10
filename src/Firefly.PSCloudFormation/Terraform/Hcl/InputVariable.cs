@@ -1,5 +1,6 @@
 ﻿namespace Firefly.PSCloudFormation.Terraform.Hcl
 {
+    using System;
     using System.Collections.Generic;
     using System.Text;
     using System.Text.RegularExpressions;
@@ -16,6 +17,16 @@
         /// Text fragment to insert when declaring input variable default
         /// </summary>
         public const string DefaultDeclaration = "  default     = ";
+
+        /// <summary>
+        /// Valid pseudo parameter types
+        /// </summary>
+        private static readonly Dictionary<string, Type> PseudoParameterTypes = new Dictionary<string, Type>
+            {
+                { "AWS::Region", typeof(AWSRegionInput) },
+                { "AWS::AccountId", typeof(AWSAccountIdInput) },
+                { "AWS::Partition", typeof(AWSPartitionInput) }
+            };
 
         /// <summary>
         /// A regex that won't match anything. ARNs aren't part of the equation for parameters.
@@ -70,6 +81,8 @@
         /// <summary>
         /// <para>
         /// Gets a value indicating whether this instance is a data source rather than an input variable.
+        /// Data sources are emitted for <c>AWS::SSM::Parameter::Value</c> and pseudo-parameters like
+        /// <c>AWS::Region</c>
         /// </para>
         /// <para>
         /// If the CloudFormation parameter type is <c>AWS::SSM::Parameter::Value</c>, then in terraform
@@ -120,7 +133,7 @@
         public abstract string Type { get; }
 
         /// <summary>
-        /// The stack parameter from the parsed template.
+        /// Gets the stack parameter from the parsed template.
         /// </summary>
         protected IParameter StackParameter { get; }
 
@@ -132,6 +145,17 @@
         /// <returns>Subclass of <see cref="InputVariable"/></returns>
         public static InputVariable CreateParameter(IParameter stackParameter)
         {
+            if (PseudoParameterTypes.ContainsKey(stackParameter.Name))
+            {
+                return (PseudoParameterInput)Activator.CreateInstance(PseudoParameterTypes[stackParameter.Name], stackParameter);
+            }
+
+            if (stackParameter.Name.StartsWith("AWS::"))
+            {
+                // Unsupported pseudo-parameter
+                return null;
+            }
+
             switch (stackParameter.Type)
             {
                 case "String":

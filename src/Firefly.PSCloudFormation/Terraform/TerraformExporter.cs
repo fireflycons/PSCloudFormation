@@ -108,6 +108,7 @@
 
             var cwd = Directory.GetCurrentDirectory();
             var importedResources = new List<ResourceImport>();
+            var errorCount = 0;
 
             try
             {
@@ -147,11 +148,10 @@
                         }
                     }
 
-                    var commandOutput = new List<string>();
                     var success = this.settings.Runner.Run(
                         "import",
                         false,
-                        msg => commandOutput.Add(msg),
+                        msg => { },
                         resource.Address,
                         resourceToImport);
 
@@ -207,6 +207,20 @@
                     }
                 }
 
+                var fmtOutput = new List<string>();
+
+                try
+                {
+                    this.logger.LogInformation("Formatting output...");
+                    this.settings.Runner.Run("fmt", true, (msg) => fmtOutput.Add(msg));
+                    this.logger.LogInformation("Validating output...");
+                    this.settings.Runner.Run("validate", false, (msg) => { });
+                }
+                catch
+                {
+                    errorCount += fmtOutput.Count(line => line.Contains("Error:"));
+                }
+
                 this.logger.LogInformation("Complete!");
             }
             finally
@@ -246,11 +260,7 @@
                     this.logger.LogWarning(warning);
                 }
 
-                this.logger.LogInformation($"\n       Warnings: {this.warnings.Count}");
-
-                this.logger.LogInformation(
-                    "\nYou will still need to make manual edits to the script, for instance to add inputs/outputs or dependencies between resources.");
-
+                this.logger.LogInformation($"\n       Errors: {errorCount}, Warnings: {this.warnings.Count}");
                 Directory.SetCurrentDirectory(cwd);
             }
         }
@@ -319,8 +329,7 @@
             this.logger.LogInformation("Importing parameters...");
             var parameters = new List<InputVariable>();
 
-            // TODO SSM parameters should be rendered as data sources
-            foreach (var p in this.settings.Template.Parameters)
+            foreach (var p in this.settings.Template.Parameters.Concat(this.settings.Template.PseudoParameters))
             {
                 var hclParam = InputVariable.CreateParameter(p);
 
@@ -434,8 +443,11 @@
             StateFile hclGenerationStateFile,
             IReadOnlyCollection<InputVariable> inputVariables)
         {
+            var edges = this.settings.Template.DependencyGraph.Edges.Where(
+                e => e.Source is IParameterVertex && e.Target is ResourceVertex);
+
             foreach (var edge in this.settings.Template.DependencyGraph.Edges.Where(
-                e => e.Source is ParameterVertex && e.Target is ResourceVertex))
+                e => e.Source is IParameterVertex && e.Target is ResourceVertex))
             {
                 var referredParameter = inputVariables.First(p => p.Name == edge.Source.Name);
                 var referringAwsResource = this.settings.Resources.First(r => r.LogicalResourceId == edge.Target.Name);
@@ -452,131 +464,133 @@
                 var referringState = hclGenerationStateFile.Resources
                     .First(r => r.Address == referringTerraformResource.Address).Instances.First();
 
-                if (edge.Tag?.ReferenceType == ReferenceType.ParameterReference)
+                if (edge.Tag?.ReferenceType != ReferenceType.ParameterReference)
                 {
-                    Reference newValue;
+                    continue;
+                }
 
-                    if (referredParameter.IsDataSource)
+                Reference newValue;
+
+                if (referredParameter.IsDataSource)
+                {
+                    newValue = new DataSourceReference(referredParameter.Address);
+                }
+                else
+                {
+                    newValue = new ParameterReference(referredParameter.Address);
+                }
+
+                var con = newValue.ToJConstructor();
+                var resourceAttributes = referringState.Attributes.ToString();
+
+                foreach (var node in referringState.FindId(referredParameter))
+                {
+                    // TODO: deal with list() parameter values
+                    switch (node)
                     {
-                        newValue = new DataSourceReference(referredParameter.Address);
-                    }
-                    else
-                    {
-                        newValue = new ParameterReference(referredParameter.Address);
-                    }
+                        case JProperty jp when jp.Value is JValue jv:
 
-                    var con = newValue.ToJConstructor();
-                    var resourceAttributes = referringState.Attributes.ToString();
+                            if (Serializer.TryGetPolicy(jv.Value<string>(), out var policy))
+                            {
+                                var replacementMade = false;
+                                ReplacePolicyReference(policy, referredParameter, con, ref replacementMade);
 
-                    foreach (var node in referringState.FindId(referredParameter))
-                    {
-                        // TODO: deal with list() parameter values
-                        switch (node)
-                        {
-                            case JProperty jp when jp.Value is JValue jv:
-
-                                if (Serializer.TryGetPolicy(jv.Value<string>(), out var policy))
+                                if (replacementMade)
                                 {
-                                    var replacementMade = false;
-                                    ReplacePolicyReference(policy, referredParameter, con, ref replacementMade);
-
-                                    if (replacementMade)
-                                    {
-                                        jv.Value = policy.ToString(Formatting.None);
-                                    }
+                                    jv.Value = policy.ToString(Formatting.None);
                                 }
-                                else
+                            }
+                            else
+                            {
+                                if (referredParameter.IsScalar)
                                 {
-                                    if (referredParameter.IsScalar)
-                                    {
-                                        var stringValue = jv.Value<string>();
+                                    var stringValue = jv.Value<string>();
 
-                                        if (stringValue != null)
-                                        {
-                                            if (stringValue == referredParameter.ScalarIdentity)
-                                            {
-                                                jp.Value = con;
-                                            }
-                                            else if (stringValue.Contains(referredParameter.ScalarIdentity))
-                                            {
-                                                jp.Value = new JValue(
-                                                    stringValue.Replace(
-                                                        referredParameter.CurrentValue.ToString(),
-                                                        $"${{{referredParameter.Address}}}"));
-                                            }
-                                        }
-                                        else
+                                    if (stringValue != null)
+                                    {
+                                        if (stringValue == referredParameter.ScalarIdentity)
                                         {
                                             jp.Value = con;
+                                        }
+                                        else if (stringValue.Contains(referredParameter.ScalarIdentity))
+                                        {
+                                            jp.Value = new JValue(
+                                                stringValue.Replace(
+                                                    referredParameter.CurrentValue.ToString(),
+                                                    $"${{{referredParameter.Address}}}"));
                                         }
                                     }
                                     else
                                     {
-                                        // Where the input var is a list, the individual value is replaced with an indexed reference. 
-                                        var ind = referredParameter.IndexOf(jv.Value<string>());
+                                        jp.Value = con;
+                                    }
+                                }
+                                else
+                                {
+                                    // Where the input var is a list, the individual value is replaced with an indexed reference. 
+                                    var ind = referredParameter.IndexOf(jv.Value<string>());
 
-                                        if (ind == -1)
+                                    if (ind == -1)
+                                    {
+                                        continue;
+                                    }
+
+                                    newValue = new ParameterReference(referredParameter.Address, ind);
+                                    jp.Value = newValue.ToJConstructor();
+                                }
+                            }
+
+                            break;
+
+                        case JArray ja:
+
+                            if (referredParameter.IsScalar)
+                            {
+                                for (var ind = 0; ind < ja.Count; ++ind)
+                                {
+                                    var stringVal = ja[ind].Value<string>();
+
+                                    if (stringVal == referredParameter.CurrentValue.ToString())
+                                    {
+                                        ja.RemoveAt(ind);
+                                        ja.Add(con);
+                                    }
+                                }
+                            }
+                            else
+                            {
+                                // Where the input var is a list and all its values match all the values in this JArray
+                                // then the JArray is replaced with the reference
+                                if (referredParameter.ListIdentity.OrderBy(s => s)
+                                    .SequenceEqual(ja.Values<string>().OrderBy(s => s)))
+                                {
+                                    if (ja.Parent is JProperty jp)
+                                    {
+                                        jp.Value = con;
+                                    }
+                                }
+                                else
+                                {
+                                    // When there isn't a complete match on all values, then the individual value is replaced with and indexed reference.
+                                    for (var jarrayIndex = 0; jarrayIndex < ja.Count; ++jarrayIndex)
+                                    {
+                                        if (!(ja[jarrayIndex] is JValue jv) || !(jv.Value is string s))
                                         {
                                             continue;
                                         }
 
-                                        newValue = new ParameterReference(referredParameter.Address, ind);
-                                        jp.Value = newValue.ToJConstructor();
-                                    }
-                                }
+                                        var paramIndex = referredParameter.IndexOf(s);
 
-                                break;
-
-                            case JArray ja:
-
-                                if (referredParameter.IsScalar)
-                                {
-                                    for (var ind = 0; ind < ja.Count; ++ind)
-                                    {
-                                        var stringVal = ja[ind].Value<string>();
-
-                                        if (stringVal == referredParameter.CurrentValue.ToString())
+                                        if (paramIndex != -1)
                                         {
-                                            ja.RemoveAt(ind);
-                                            ja.Add(con);
+                                            newValue = new ParameterReference(referredParameter.Address, paramIndex);
+                                            ja[jarrayIndex] = newValue.ToJConstructor();
                                         }
                                     }
                                 }
-                                else
-                                {
-                                    // Where the input var is a list and all its values match all the values in this JArray
-                                    // then the JArray is replaced with the reference
-                                    if (referredParameter.ListIdentity.OrderBy(s => s)
-                                        .SequenceEqual(ja.Values<string>().OrderBy(s => s)))
-                                    {
-                                        if (ja.Parent is JProperty jp)
-                                        {
-                                            jp.Value = con;
-                                        }
-                                    }
-                                    else
-                                    {
-                                        // When there isn't a complete match on all values, then the individual value is replaced with and indexed reference.
-                                        for (var jarrayIndex = 0; jarrayIndex < ja.Count; ++jarrayIndex)
-                                        {
-                                            if (!(ja[jarrayIndex] is JValue jv) || !(jv.Value is string s))
-                                            {
-                                                continue;
-                                            }
+                            }
 
-                                            var paramIndex = referredParameter.IndexOf(s);
-
-                                            if (paramIndex != -1)
-                                            {
-                                                newValue = new ParameterReference(referredParameter.Address, paramIndex);
-                                                ja[jarrayIndex] = newValue.ToJConstructor();
-                                            }
-                                        }
-                                    }
-                                }
-
-                                break;
-                        }
+                            break;
                     }
                 }
             }
