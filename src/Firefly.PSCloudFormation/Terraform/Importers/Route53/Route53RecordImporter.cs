@@ -1,9 +1,6 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Text;
-
-namespace Firefly.PSCloudFormation.Terraform.Importers
+﻿namespace Firefly.PSCloudFormation.Terraform.Importers.Route53
 {
+    using System.Collections.Generic;
     using System.Linq;
 
     using Firefly.CloudFormationParser.Intrinsics;
@@ -82,7 +79,7 @@ namespace Firefly.PSCloudFormation.Terraform.Importers
             }
 
             // ZONEID_RECORDNAME_TYPE
-            return $"{zoneId}_{Resource.PhysicalId}_{type}";
+            return $"{zoneId}_{this.Resource.PhysicalId}_{type}";
         }
     }
 }

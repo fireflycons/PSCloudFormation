@@ -6,6 +6,10 @@
     using System.Management.Automation.Host;
 
     using Firefly.PSCloudFormation.Terraform.Hcl;
+    using Firefly.PSCloudFormation.Terraform.Importers.Cognito;
+    using Firefly.PSCloudFormation.Terraform.Importers.IAM;
+    using Firefly.PSCloudFormation.Terraform.Importers.Lambda;
+    using Firefly.PSCloudFormation.Terraform.Importers.Route53;
     using Firefly.PSCloudFormation.Utils;
 
     /// <summary>

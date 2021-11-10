@@ -1,4 +1,4 @@
-﻿namespace Firefly.PSCloudFormation.Terraform.Importers
+﻿namespace Firefly.PSCloudFormation.Terraform.Importers.IAM
 {
     using System.Collections.Generic;
 
