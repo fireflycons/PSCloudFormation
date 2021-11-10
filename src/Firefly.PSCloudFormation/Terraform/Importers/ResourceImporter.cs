@@ -6,6 +6,7 @@
     using System.Management.Automation.Host;
 
     using Firefly.PSCloudFormation.Terraform.Hcl;
+    using Firefly.PSCloudFormation.Terraform.Importers.ApiGateway;
     using Firefly.PSCloudFormation.Terraform.Importers.Cognito;
     using Firefly.PSCloudFormation.Terraform.Importers.IAM;
     using Firefly.PSCloudFormation.Terraform.Importers.Lambda;
@@ -50,6 +51,34 @@
                                                                                          "aws_cognito_user_group",
                                                                                          typeof(
                                                                                              CognitoUserGroupImporter)
+                                                                                     },
+                                                                                     {
+                                                                                         "aws_api_gateway_base_path_mapping",
+                                                                                         typeof(ApiGatewayBasePathMappingImporter)
+                                                                                     },
+                                                                                     {
+                                                                                         "aws_api_gateway_request_validator",
+                                                                                         typeof(ApiGatewayApiDependencyImporter)
+                                                                                     },
+                                                                                     {
+                                                                                         "aws_api_gateway_usage_plan_key",
+                                                                                         typeof(ApiGatewayUsagePlanKeyImporter)
+                                                                                     },
+                                                                                     {
+                                                                                         "aws_api_gateway_stage",
+                                                                                         typeof(ApiGatewayApiDependencyImporter)
+                                                                                     },
+                                                                                     {
+                                                                                         "aws_api_gateway_resource",
+                                                                                         typeof(ApiGatewayResourceImporter)
+                                                                                     },
+                                                                                     {
+                                                                                         "aws_api_gateway_model",
+                                                                                         typeof(ApiGatewayResourceImporter)
+                                                                                     },
+                                                                                     {
+                                                                                         "aws_api_gateway_method",
+                                                                                         typeof(ApiGatewayMethodImporter)
                                                                                      }
                                                                                  };
 

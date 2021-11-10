@@ -7,8 +7,10 @@
         - arn
         - id
         - create_date
+        - created_date
         - creation_date
         - last_modified_date
+        - last_updated_date
         - unique_id
         - tags_all
         - timeouts
@@ -16,6 +18,35 @@
       RequiredAttributes: []          # Must be present in HCL, even if null or empty
       DefaultValues: {}               # Values to set if state value is null
       ConflictingArguments: []        # Where aruments confict. choose the first from this list.
+- Group: API Gateway
+  Resources:
+    - Resource: aws_api_gateway_rest_api
+      UnconfigurableAttributes:
+        - root_resource_id
+        - execution_arn
+        - lambda_permission
+    - Resource: aws_api_gateway_api_key
+      UnconfigurableAttributes:
+        - value
+    - Resource: aws_api_gateway_domain_name
+      UnconfigurableAttributes:
+        - certificate_upload_date
+        - cloudfront_domain_name
+        - cloudfront_zone_id
+        - regional_domain_name
+        - regional_zone_id
+    - Resource: aws_api_gateway_resource
+      UnconfigurableAttributes:
+        - path
+    - Resource: aws_api_gateway_usage_plan_key
+      UnconfigurableAttributes:
+        - name
+        - value
+    - Resource: aws_api_gateway_stage
+      UnconfigurableAttributes:
+        - invoke_url
+        - execution_arn
+        - lambda_permissions
 - Group: Autoscaling
   Resources:
     - Resource: aws_autoscaling_group
