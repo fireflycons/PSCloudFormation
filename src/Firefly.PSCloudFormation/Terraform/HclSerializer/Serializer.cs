@@ -1,7 +1,6 @@
 ﻿namespace Firefly.PSCloudFormation.Terraform.HclSerializer
 {
     using System.Linq;
-    using System.Management.Automation;
 
     using Firefly.PSCloudFormation.Terraform.HclSerializer.Events;
     using Firefly.PSCloudFormation.Terraform.State;
@@ -20,24 +19,17 @@
         }
 
         /// <summary>
-        /// Serializes the specified state file to HCL.
+        /// Tests <paramref name="text"/> to see if it is JSON.
         /// </summary>
-        /// <param name="stateFile">The state file.</param>
-        public void Serialize(StateFile stateFile)
+        /// <param name="text">The text.</param>
+        /// <param name="requirePolicy">if set to <c>true</c> require the JSON to be a policy document.</param>
+        /// <param name="jsonDocument">The JSON document.</param>
+        /// <returns><c>true</c> if the value is JSON and meets the policy conditions; else <c>false</c></returns>
+        /// <exception cref="Firefly.PSCloudFormation.Terraform.HclSerializer.HclSerializerException">Expected policy document and got JSON that is not a policy</exception>
+        public static bool TryGetJson(string text, bool requirePolicy, out JObject jsonDocument)
         {
-            foreach (var r in stateFile.Resources)
-            {
-                this.currentResourceType = r.Type;
-                this.emitter.Emit(new ResourceStart(r.Type, r.Name));
-                this.WalkNode(r.Instances.First().Attributes);
-                this.emitter.Emit(new ResourceEnd());
-            }
-        }
-
-        public static bool TryGetPolicy(string text, out JObject policyDocument)
-        {
-            bool isPolicy = false;
-            policyDocument = null;
+            var isJson = false;
+            jsonDocument = null;
 
             if (string.IsNullOrWhiteSpace(text))
             {
@@ -55,28 +47,48 @@
             try
             {
                 // If JSON, then possibly embedded policy document
-                policyDocument = JObject.Parse(text);
-                isPolicy = policyDocument.ContainsKey("Statement");
+                jsonDocument = JObject.Parse(text);
+
+                if (requirePolicy && !jsonDocument.ContainsKey("Statement"))
+                {
+                    throw new HclSerializerException("Expected policy document and got JSON that is not a policy");
+                }
+
+                isJson = true;
             }
             catch
             {
                 // Deliberately swallow. String is not valid JSON
             }
 
-            if (!isPolicy)
+            if (!isJson)
             {
-                policyDocument = null;
+                jsonDocument = null;
             }
 
-            return isPolicy;
+            return isJson;
+        }
+
+        /// <summary>
+        /// Serializes the specified state file to HCL.
+        /// </summary>
+        /// <param name="stateFile">The state file.</param>
+        public void Serialize(StateFile stateFile)
+        {
+            foreach (var r in stateFile.Resources)
+            {
+                this.currentResourceType = r.Type;
+                this.emitter.Emit(new ResourceStart(r.Type, r.Name));
+                this.WalkNode(r.Instances.First().Attributes);
+                this.emitter.Emit(new ResourceEnd());
+            }
         }
 
         /// <summary>
         /// Recursively walk the properties of a <c>JToken</c>
         /// </summary>
         /// <param name="node">The starting node.</param>
-        private void WalkNode(
-            JToken node)
+        private void WalkNode(JToken node)
         {
             switch (node.Type)
             {
@@ -86,7 +98,8 @@
 
                     foreach (var child in node.Children<JProperty>())
                     {
-                        if (this.currentResourceType == "aws_iam_role" && child.Name == "inline_policy" && child.Value is JArray policies)
+                        if (this.currentResourceType == "aws_iam_role" && child.Name == "inline_policy"
+                                                                       && child.Value is JArray policies)
                         {
                             // Multiple inline_policy blocks need to be emitted.
                             foreach (var policy in policies)
@@ -125,7 +138,7 @@
                     // A reference inserted by the walk through the dependency graph
                     var con = node.Value<JConstructor>();
                     var reference = Reference.FromJConstructor(con);
-                    
+
                     this.emitter.Emit(new ScalarValue(reference));
                     break;
 
@@ -146,12 +159,12 @@
 
                     var scalar = new ScalarValue(((JValue)node).Value);
 
-                    if (scalar.IsPolicyDocument)
+                    if (scalar.IsJsonDocument)
                     {
                         var policy = JObject.Parse(scalar.Value);
-                        this.emitter.Emit(new PolicyStart());
+                        this.emitter.Emit(new JsonStart());
                         this.WalkNode(policy);
-                        this.emitter.Emit(new PolicyEnd());
+                        this.emitter.Emit(new JsonEnd());
                     }
                     else
                     {

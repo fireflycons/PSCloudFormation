@@ -51,7 +51,7 @@
                     return;
                 }
 
-                this.IsPolicyDocument = Serializer.TryGetPolicy(this.Value, out _);
+                this.IsJsonDocument = Serializer.TryGetJson(this.Value, false, out _);
             }
         }
 
@@ -61,7 +61,7 @@
         /// <value>
         ///   <c>true</c> if this instance is policy document; otherwise, <c>false</c>.
         /// </value>
-        public bool IsPolicyDocument { get; }
+        public bool IsJsonDocument { get; }
 
         /// <summary>
         /// Gets a value indicating whether the value should be quoted when emitted.
@@ -91,7 +91,7 @@
         public override string ToString()
         {
             return
-                $"{this.GetType().Name}, Value = {(this.Value == null ? "<null>" : this.Value == string.Empty ? "<empty>" : this.Value)}, IsQuoted = {this.IsQuoted}, IsPolicyDocument = {this.IsPolicyDocument}";
+                $"{this.GetType().Name}, Value = {(this.Value == null ? "<null>" : this.Value == string.Empty ? "<empty>" : this.Value)}, IsQuoted = {this.IsQuoted}, IsPolicyDocument = {this.IsJsonDocument}";
         }
     }
 }

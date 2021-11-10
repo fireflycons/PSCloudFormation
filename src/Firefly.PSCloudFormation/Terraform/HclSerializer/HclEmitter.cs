@@ -145,9 +145,9 @@
             Sequence,
 
             /// <summary>
-            /// In a policy declaration (<c>jsonencode</c>)
+            /// In a JSON block (<c>jsonencode</c>)
             /// </summary>
-            Policy,
+            Json,
 
             /// <summary>
             /// In a block definition.
@@ -332,7 +332,7 @@
 
             var isPotentiallyBlock = this.events.Count >= 2 && this.events.First() is SequenceStart
                                                             && this.events.Skip(1).First() is MappingStart
-                                                            && !this.states.Contains(EmitterState.Policy);
+                                                            && !this.states.Contains(EmitterState.Json);
 
             if (isPotentiallyBlock && !this.resourceTraits.NonBlockTypeAttributes.Contains(key.Value))
             {
@@ -404,14 +404,14 @@
                     this.EmitMappingEnd(@event);
                     break;
 
-                case EventType.PolicyStart:
+                case EventType.JsonStart:
 
-                    this.EmitPolicyStart(@event);
+                    this.EmitJsonStart(@event);
                     break;
 
-                case EventType.PolicyEnd:
+                case EventType.JsonEnd:
 
-                    this.EmitPolicyEnd(@event);
+                    this.EmitJsonEnd(@event);
                     break;
 
                 case EventType.ResourceEnd:
@@ -431,9 +431,9 @@
         /// Emits a policy end.
         /// </summary>
         /// <param name="event">The event.</param>
-        private void EmitPolicyEnd(HclEvent @event)
+        private void EmitJsonEnd(HclEvent @event)
         {
-            var p = GetTypedEvent<PolicyEnd>(@event);
+            var p = GetTypedEvent<JsonEnd>(@event);
 
             this.indent = this.indents.Pop();
             this.state = this.states.Pop();
@@ -450,12 +450,12 @@
         /// Emits a policy start.
         /// </summary>
         /// <param name="event">The event.</param>
-        private void EmitPolicyStart(HclEvent @event)
+        private void EmitJsonStart(HclEvent @event)
         {
-            var p = GetTypedEvent<PolicyStart>(@event);
+            var p = GetTypedEvent<JsonStart>(@event);
 
             this.states.Push(this.state);
-            this.state = EmitterState.Policy;
+            this.state = EmitterState.Json;
             this.WriteIndicator("jsonencode(", true, false, true);
             this.IncreaseIndent();
             this.WriteIndent();
