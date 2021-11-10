@@ -33,9 +33,9 @@
         /// <inheritdoc />
         public override string GetImportId(string caption, string message)
         {
-            // All dependencies that have this permission as a target
+            // All dependencies that have this attachment as a target
             var dependencies = this.Settings.Template.DependencyGraph.Edges
-                .Where(e => e.Target.TemplateObject.Name == this.Resource.LogicalId).Where(
+                .Where(e => e.Target.TemplateObject.Name == this.Resource.LogicalId && e.Source.TemplateObject is IResource).Where(
                     d => ((IResource)d.Source.TemplateObject).Type == "AWS::Cognito::IdentityPool").ToList();
 
             // There should be a 1:1 relationship between attachment and pool.

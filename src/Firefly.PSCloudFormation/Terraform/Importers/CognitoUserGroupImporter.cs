@@ -30,7 +30,7 @@
         {
             // All dependencies that have this group as a target
             var dependencies = this.Settings.Template.DependencyGraph.Edges
-                .Where(e => e.Target.TemplateObject.Name == this.Resource.LogicalId).Where(
+                .Where(e => e.Target.TemplateObject.Name == this.Resource.LogicalId && e.Source.TemplateObject is IResource).Where(
                     d => ((IResource)d.Source.TemplateObject).Type == "AWS::Cognito::UserPool").ToList();
 
             // There should be a 1:1 relationship between pool and group
