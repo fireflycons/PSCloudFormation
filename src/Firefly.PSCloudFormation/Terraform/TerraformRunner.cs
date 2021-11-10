@@ -1,7 +1,6 @@
 ﻿namespace Firefly.PSCloudFormation.Terraform
 {
     using System;
-    using System.Collections.Generic;
     using System.Diagnostics;
     using System.IO;
     using System.Linq;
@@ -10,11 +9,6 @@
     using Amazon.Runtime;
 
     using Firefly.CloudFormation;
-    using Firefly.PSCloudFormation.Terraform.Hcl;
-    using Firefly.PSCloudFormation.Terraform.PlanDeserialization;
-
-    using Newtonsoft.Json;
-
     using InvalidOperationException = Amazon.CloudFormation.Model.InvalidOperationException;
 
     /// <summary>
@@ -70,27 +64,6 @@
         }
 
         /// <summary>
-        /// Gets the resource definition by calling <c>terraform state show</c>.
-        /// </summary>
-        /// <param name="address">The address.</param>
-        /// <returns>
-        /// Resource definition in HCL
-        /// </returns>
-        public HclResource GetResourceDefinition(string address)
-        {
-            var definitionText = new List<string>();
-
-            this.logger.LogInformation($"Getting resource definition for {address}");
-
-            this.RunProcess(
-                $"state show -no-color {address}",
-                msg => definitionText.Add(msg),
-                msg => this.logger.LogError(msg));
-
-            return new HclResource(address, definitionText);
-        }
-
-        /// <summary>
         /// Runs ad-hoc Terraform commands.
         /// </summary>
         /// <param name="command">The command (e.g. plan, import etc).</param>
@@ -127,35 +100,6 @@
             }
 
             return exitCode == 0;
-        }
-
-        /// <summary>
-        /// Runs <c>terraform plan</c> on the current script.
-        /// </summary>
-        /// <returns>
-        /// A <see cref="PlanErrorCollection" /> containing plan errors; else <c>null</c> if none.
-        /// </returns>
-        public PlanErrorCollection RunPlan()
-        {
-            var output = new List<string>();
-
-            // Each line of the output is a discrete JSON object
-            var exitCode = this.RunProcess("plan -json", msg => output.Add(msg), msg => output.Add(msg));
-
-            if (exitCode == 0)
-            {
-                // No errors in plan
-                return null;
-            }
-
-            var errors = (from statement in output
-                          where statement.Contains("\"@level\":\"error\"")
-                          select JsonConvert.DeserializeObject<PlanError>(statement))
-                .ToList();
-
-            // Errors will be processed in reverse order so that adjusting the file content
-            // does not put the line numbers out of kilter.
-            return !errors.Any() ? null : new PlanErrorCollection(errors.OrderByDescending(e => e.LineNumber));
         }
 
         /// <inheritdoc />
