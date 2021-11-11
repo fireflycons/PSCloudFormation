@@ -5,13 +5,12 @@
     using System.Collections.ObjectModel;
     using System.Management.Automation.Host;
 
-    using Firefly.PSCloudFormation.Terraform.Hcl;
     using Firefly.PSCloudFormation.Terraform.Importers.ApiGateway;
     using Firefly.PSCloudFormation.Terraform.Importers.Cognito;
     using Firefly.PSCloudFormation.Terraform.Importers.IAM;
     using Firefly.PSCloudFormation.Terraform.Importers.Lambda;
     using Firefly.PSCloudFormation.Terraform.Importers.Route53;
-    using Firefly.PSCloudFormation.Utils;
+    using Firefly.PSCloudFormation.Terraform.Importers.VPC;
 
     /// <summary>
     /// Base class for classes that attempt interactively to fix import issues
@@ -79,85 +78,65 @@
                                                                                      {
                                                                                          "aws_api_gateway_method",
                                                                                          typeof(ApiGatewayMethodImporter)
+                                                                                     },
+                                                                                     {
+                                                                                         "aws_route",
+                                                                                         typeof(RouteImporter)
+                                                                                     },
+                                                                                     {
+                                                                                         "aws_route_table_association",
+                                                                                         typeof(RouteTableAssociationImporter)
                                                                                      }
                                                                                  };
 
         /// <summary>
         /// Initializes a new instance of the <see cref="ResourceImporter"/> class.
         /// </summary>
-        /// <param name="resource">Name of the resource.</param>
-        /// <param name="ui">The UI.</param>
-        /// <param name="resourcesToImport">The resources to import.</param>
-        /// <param name="settings">Terraform export settings.</param>
+        /// <param name="importSettings">The import settings.</param>
+        /// <param name="terraformSettings">The terraform settings.</param>
         protected ResourceImporter(
-            ResourceImport resource,
-            IUserInterface ui,
-            IList<ResourceImport> resourcesToImport,
-            ITerraformSettings settings)
+            IResourceImporterSettings importSettings,
+            ITerraformSettings terraformSettings)
         {
-            this.Resource = resource;
-            this.Ui = ui;
-            this.ResourcesToImport = resourcesToImport;
-            this.Settings = settings;
+            this.ImportSettings = importSettings;
+            this.TerraformSettings = terraformSettings;
         }
 
         /// <summary>
-        /// Gets the name of the resource.
+        /// Gets the import settings.
         /// </summary>
         /// <value>
-        /// The name of the resource.
+        /// The import settings.
         /// </value>
-        protected ResourceImport Resource { get; }
+        protected IResourceImporterSettings ImportSettings { get; }
 
         /// <summary>
-        /// Gets the resources to import.
+        /// Gets the terraform settings.
         /// </summary>
         /// <value>
-        /// The resources to import.
+        /// The terraform settings.
         /// </value>
-        protected IList<ResourceImport> ResourcesToImport { get; }
-
-        /// <summary>
-        /// Gets the settings.
-        /// </summary>
-        /// <value>
-        /// The settings.
-        /// </value>
-        protected ITerraformSettings Settings { get; }
-
-        /// <summary>
-        /// Gets the UI.
-        /// </summary>
-        /// <value>
-        /// The UI.
-        /// </value>
-        protected IUserInterface Ui { get; }
+        protected ITerraformSettings TerraformSettings { get; }
 
         /// <summary>
         /// Factory to create a resource importer for given resource type.
         /// </summary>
-        /// <param name="resource">The resource being imported.</param>
-        /// <param name="ui">The UI.</param>
-        /// <param name="resourcesToImport">The resources to import.</param>
-        /// <param name="settings">Terraform export settings.</param>
-        /// <returns>A <see cref="ResourceImporter"/> derivative, or <c>null</c> if none found.</returns>
+        /// <param name="importSettings">The import settings.</param>
+        /// <param name="terraformSettings">The terraform settings.</param>
+        /// <returns>Appropriate subtype of <see cref="ResourceImporter"/></returns>
         public static ResourceImporter Create(
-            ResourceImport resource,
-            IUserInterface ui,
-            IList<ResourceImport> resourcesToImport,
-            ITerraformSettings settings)
+            IResourceImporterSettings importSettings,
+            ITerraformSettings terraformSettings)
         {
-            if (!ResourceImporters.ContainsKey(resource.TerraformType))
+            if (!ResourceImporters.ContainsKey(importSettings.Resource.TerraformType))
             {
                 return null;
             }
 
             return (ResourceImporter)Activator.CreateInstance(
-                ResourceImporters[resource.TerraformType],
-                resource,
-                ui,
-                resourcesToImport,
-                settings);
+                ResourceImporters[importSettings.Resource.TerraformType],
+                importSettings,
+                terraformSettings);
         }
 
         /// <summary>
@@ -196,7 +175,7 @@
                 choices.Add(new ChoiceDescription($"&{Labels[i + 1]} {selections[i]}"));
             }
 
-            var selection = this.Ui.PromptForChoice(caption, message, choices, 0);
+            var selection = this.ImportSettings.Ui.PromptForChoice(caption, message, choices, 0);
 
             if (selection == 0)
             {
@@ -204,6 +183,35 @@
             }
 
             return selection - 1;
+        }
+
+        /// <summary>
+        /// Issue a warning
+        /// </summary>
+        /// <param name="message">The message.</param>
+        protected void LogWarning(string message)
+        {
+            this.ImportSettings.Logger.LogWarning(message);
+            this.ImportSettings.Warnings.Add(message);
+        }
+
+        /// <summary>
+        /// Issue an error
+        /// </summary>
+        /// <param name="message">The message.</param>
+        protected void LogError(string message)
+        {
+            this.ImportSettings.Logger.LogError($"ERROR: {message}");
+            this.ImportSettings.Warnings.Add(message);
+        }
+
+        /// <summary>
+        /// Issue an information message
+        /// </summary>
+        /// <param name="message">The message.</param>
+        protected void LogInformation(string message)
+        {
+            this.ImportSettings.Logger.LogInformation(message);
         }
     }
 }

@@ -1,13 +1,9 @@
 ﻿namespace Firefly.PSCloudFormation.Terraform.Importers.ApiGateway
 {
-    using System;
-    using System.Collections.Generic;
     using System.Linq;
 
     using Firefly.CloudFormationParser;
     using Firefly.CloudFormationParser.GraphObjects;
-    using Firefly.PSCloudFormation.Terraform.Hcl;
-    using Firefly.PSCloudFormation.Utils;
 
     /// <summary>
     /// Imports <c>DOMAIN/BASEPATH</c>
@@ -18,25 +14,21 @@
         /// <summary>
         /// Initializes a new instance of the <see cref="ApiGatewayBasePathMappingImporter"/> class.
         /// </summary>
-        /// <param name="resource">The resource being imported.</param>
-        /// <param name="ui">The UI.</param>
-        /// <param name="resourcesToImport">The resources to import.</param>
-        /// <param name="settings">Terraform export settings.</param>
+        /// <param name="importSettings">The import settings.</param>
+        /// <param name="terraformSettings">The terraform settings.</param>
         public ApiGatewayBasePathMappingImporter(
-            ResourceImport resource,
-            IUserInterface ui,
-            IList<ResourceImport> resourcesToImport,
-            ITerraformSettings settings)
-            : base(resource, ui, resourcesToImport, settings)
+            IResourceImporterSettings importSettings,
+            ITerraformSettings terraformSettings)
+            : base(importSettings, terraformSettings)
         {
         }
 
         /// <inheritdoc />
         public override string GetImportId(string caption, string message)
         {
-            var dependencies = this.Settings.Template.DependencyGraph.Edges
+            var dependencies = this.TerraformSettings.Template.DependencyGraph.Edges
                 .Where(
-                    e => e.Target.TemplateObject.Name == this.Resource.LogicalId && e.Source.TemplateObject is IResource
+                    e => e.Target.TemplateObject.Name == this.ImportSettings.Resource.LogicalId && e.Source.TemplateObject is IResource
                          && e.Tag != null && e.Tag.ReferenceType == ReferenceType.DirectReference).Where(
                     d => ((IResource)d.Source.TemplateObject).Type == "AWS::ApiGateway::DomainName").ToList();
 
@@ -45,12 +37,12 @@
             {
                 var r = (IResource)dependencies.First().Source.TemplateObject;
 
-                this.Ui.Information($"Auto-selected API Domain Name \"{r.Name}\" based on dependency graph.");
+                this.LogInformation($"Auto-selected API Domain Name \"{r.Name}\" based on dependency graph.");
 
-                var domain = this.ResourcesToImport
+                var domain = this.ImportSettings.ResourcesToImport
                     .First(rr => rr.AwsType == r.Type && rr.LogicalId == r.Name).PhysicalId;
 
-                var basePath = this.Settings.Template.Resources.First(tr => tr.Name == this.Resource.LogicalId)
+                var basePath = this.TerraformSettings.Template.Resources.First(tr => tr.Name == this.ImportSettings.Resource.LogicalId)
                     .GetResourcePropertyValue("BasePath")?.ToString() ?? string.Empty;
 
                 return $"{domain}/{basePath}";
@@ -60,14 +52,14 @@
             // and is most likely a bug there.
             if (dependencies.Count == 0)
             {
-                this.Ui.Information(
-                    $"Cannot find related API Domain Name for {this.Resource.LogicalId}. This is probably a bug in Firefly.CloudFormationParser");
+                this.LogError(
+                    $"Cannot find related API Domain Name for {this.ImportSettings.Resource.LogicalId}. This is probably a bug in Firefly.CloudFormationParser");
             }
 
             if (dependencies.Count > 1)
             {
-                this.Ui.Information(
-                    $"Multiple API Domain Names relating to {this.Resource.LogicalId}. This is probably a bug in Firefly.CloudFormationParser");
+                this.LogError(
+                    $"Multiple API Domain Names relating to {this.ImportSettings.Resource.LogicalId}. This is probably a bug in Firefly.CloudFormationParser");
             }
 
             return null;

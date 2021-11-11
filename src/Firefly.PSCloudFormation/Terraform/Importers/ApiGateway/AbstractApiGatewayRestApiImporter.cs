@@ -17,16 +17,12 @@
         /// <summary>
         /// Initializes a new instance of the <see cref="AbstractApiGatewayRestApiImporter"/> class.
         /// </summary>
-        /// <param name="resource">The resource being imported.</param>
-        /// <param name="ui">The UI.</param>
-        /// <param name="resourcesToImport">The resources to import.</param>
-        /// <param name="settings">Terraform export settings.</param>
+        /// <param name="importSettings">The import settings.</param>
+        /// <param name="terraformSettings">The terraform settings.</param>
         protected AbstractApiGatewayRestApiImporter(
-            ResourceImport resource,
-            IUserInterface ui,
-            IList<ResourceImport> resourcesToImport,
-            ITerraformSettings settings)
-            : base(resource, ui, resourcesToImport, settings)
+            IResourceImporterSettings importSettings,
+            ITerraformSettings terraformSettings)
+            : base(importSettings, terraformSettings)
         {
         }
 
@@ -37,9 +33,9 @@
         protected string GetRestApiId()
         {
             // All dependencies that have this attachment as a target
-            var dependencies = this.Settings.Template.DependencyGraph.Edges
+            var dependencies = this.TerraformSettings.Template.DependencyGraph.Edges
                 .Where(
-                    e => e.Target.TemplateObject.Name == this.Resource.LogicalId && e.Source.TemplateObject is IResource
+                    e => e.Target.TemplateObject.Name == this.ImportSettings.Resource.LogicalId && e.Source.TemplateObject is IResource
                          && e.Tag != null && e.Tag.ReferenceType == ReferenceType.DirectReference).Where(
                     d => ((IResource)d.Source.TemplateObject).Type == "AWS::ApiGateway::RestApi").ToList();
 
@@ -48,9 +44,9 @@
             {
                 var r = (IResource)dependencies.First().Source.TemplateObject;
 
-                this.Ui.Information($"Auto-selected REST API \"{r.Name}\" based on dependency graph.");
+                this.LogInformation($"Auto-selected REST API \"{r.Name}\" based on dependency graph.");
 
-                var referencedId = this.ResourcesToImport.First(rr => rr.AwsType == r.Type && rr.LogicalId == r.Name)
+                var referencedId = this.ImportSettings.ResourcesToImport.First(rr => rr.AwsType == r.Type && rr.LogicalId == r.Name)
                     .PhysicalId;
 
                 return referencedId;
@@ -60,14 +56,14 @@
             // and is most likely a bug there.
             if (dependencies.Count == 0)
             {
-                this.Ui.Information(
-                    $"Cannot find related REST API for {this.Resource.LogicalId}. This is probably a bug in Firefly.CloudFormationParser");
+                this.LogError(
+                    $"Cannot find related REST API for {this.ImportSettings.Resource.LogicalId}. This is probably a bug in Firefly.CloudFormationParser");
             }
 
             if (dependencies.Count > 1)
             {
-                this.Ui.Information(
-                    $"Multiple REST APIs relating to {this.Resource.LogicalId}. This is probably a bug in Firefly.CloudFormationParser");
+                this.LogError(
+                    $"Multiple REST APIs relating to {this.ImportSettings.Resource.LogicalId}. This is probably a bug in Firefly.CloudFormationParser");
             }
 
             return null;

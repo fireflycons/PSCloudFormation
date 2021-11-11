@@ -1,12 +1,7 @@
 ﻿namespace Firefly.PSCloudFormation.Terraform.Importers.ApiGateway
 {
-    using System.Collections.Generic;
-
-    using Firefly.PSCloudFormation.Terraform.Hcl;
-    using Firefly.PSCloudFormation.Utils;
-
     /// <summary>
-    /// Imports REST-API-ID/RESOURCE-ID
+    /// <see href="https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/api_gateway_resource#import" />
     /// </summary>
     /// <seealso cref="Firefly.PSCloudFormation.Terraform.Importers.ApiGateway.AbstractApiGatewayRestApiImporter" />
     internal class ApiGatewayResourceImporter : AbstractApiGatewayRestApiImporter
@@ -14,16 +9,12 @@
         /// <summary>
         /// Initializes a new instance of the <see cref="ApiGatewayResourceImporter"/> class.
         /// </summary>
-        /// <param name="resource">The resource being imported.</param>
-        /// <param name="ui">The UI.</param>
-        /// <param name="resourcesToImport">The resources to import.</param>
-        /// <param name="settings">Terraform export settings.</param>
+        /// <param name="importSettings">The import settings.</param>
+        /// <param name="terraformSettings">The terraform settings.</param>
         public ApiGatewayResourceImporter(
-            ResourceImport resource,
-            IUserInterface ui,
-            IList<ResourceImport> resourcesToImport,
-            ITerraformSettings settings)
-            : base(resource, ui, resourcesToImport, settings)
+            IResourceImporterSettings importSettings,
+            ITerraformSettings terraformSettings)
+            : base(importSettings, terraformSettings)
         {
         }
 
@@ -46,7 +37,7 @@
                 return null;
             }
 
-            return $"{restApi}/{this.Resource.PhysicalId}";
+            return $"{restApi}/{this.ImportSettings.Resource.PhysicalId}";
         }
     }
 }

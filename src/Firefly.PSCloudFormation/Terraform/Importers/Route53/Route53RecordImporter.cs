@@ -1,30 +1,31 @@
 ﻿namespace Firefly.PSCloudFormation.Terraform.Importers.Route53
 {
-    using System.Collections.Generic;
     using System.Linq;
 
     using Firefly.CloudFormationParser.Intrinsics;
-    using Firefly.PSCloudFormation.Terraform.Hcl;
-    using Firefly.PSCloudFormation.Utils;
 
+    /// <summary>
+    /// <see href="https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/route53_record#import" />
+    /// </summary>
+    /// <seealso cref="Firefly.PSCloudFormation.Terraform.Importers.ResourceImporter" />
     internal class Route53RecordImporter : ResourceImporter
     {
         /// <summary>
         /// Initializes a new instance of the <see cref="Route53RecordImporter"/> class.
         /// </summary>
-        /// <param name="resource">The resource being imported.</param>
-        /// <param name="ui">The UI.</param>
-        /// <param name="resourcesToImport">The resources to import.</param>
-        /// <param name="settings">Terraform export settings.</param>
-        public Route53RecordImporter(ResourceImport resource, IUserInterface ui, IList<ResourceImport> resourcesToImport, ITerraformSettings settings)
-            : base(resource, ui, resourcesToImport, settings)
+        /// <param name="importSettings">The import settings.</param>
+        /// <param name="terraformSettings">The terraform settings.</param>
+        public Route53RecordImporter(
+            IResourceImporterSettings importSettings,
+            ITerraformSettings terraformSettings)
+            : base(importSettings, terraformSettings)
         {
         }
 
         /// <inheritdoc />
         public override string GetImportId(string caption, string message)
         {
-            var tempateResource = this.Settings.Resources.First(r => r.LogicalResourceId == this.Resource.LogicalId)
+            var tempateResource = this.TerraformSettings.Resources.First(r => r.LogicalResourceId == this.ImportSettings.Resource.LogicalId)
                 .TemplateResource;
 
             // ReSharper disable once PossibleNullReferenceException - can't be null for this resource type.
@@ -35,7 +36,7 @@
 
             if (zoneIdProperty == null)
             {
-                this.Ui.Information($"Cannot determine Zone ID for resource \"{this.Resource.LogicalId}\"");
+                this.LogError($"Cannot determine Zone ID for resource \"{this.ImportSettings.Resource.LogicalId}\"");
                 return null;
             }
 
@@ -46,7 +47,7 @@
             {
                 case IIntrinsic intrinsic:
 
-                    type =  intrinsic.Evaluate(this.Settings.Template).ToString();
+                    type =  intrinsic.Evaluate(this.TerraformSettings.Template).ToString();
                     break;
 
                 case string s:
@@ -56,7 +57,7 @@
 
                 default:
 
-                    this.Ui.Information($"Invalid type {typeProperty.GetType().Name} for R53 recordset \"Type\" property.");
+                    this.LogError($"Invalid type {typeProperty.GetType().Name} for R53 recordset \"Type\" property.");
                     return null;
             }
 
@@ -64,7 +65,7 @@
             {
                 case IIntrinsic intrinsic:
 
-                    zoneId = intrinsic.Evaluate(this.Settings.Template).ToString();
+                    zoneId = intrinsic.Evaluate(this.TerraformSettings.Template).ToString();
                     break;
 
                 case string s:
@@ -74,12 +75,12 @@
 
                 default:
 
-                    this.Ui.Information($"Invalid type {typeProperty.GetType().Name} for R53 recordset \"ZoneId\" property.");
+                    this.LogError($"Invalid type {typeProperty.GetType().Name} for R53 recordset \"ZoneId\" property.");
                     return null;
             }
 
             // ZONEID_RECORDNAME_TYPE
-            return $"{zoneId}_{this.Resource.PhysicalId}_{type}";
+            return $"{zoneId}_{this.ImportSettings.Resource.PhysicalId}_{type}";
         }
     }
 }
