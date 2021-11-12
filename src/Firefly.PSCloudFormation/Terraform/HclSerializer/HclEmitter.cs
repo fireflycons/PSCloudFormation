@@ -174,7 +174,7 @@
         /// The current path.
         /// </value>
         private string CurrentPath =>
-            string.Join(".", this.path.Where(p => p != null).Concat(new[] { this.currentKey }).ToList());
+            string.Join(".", this.path.Where(p => p != null).Reverse());
 
         /// <summary>
         /// Emits the next event.
@@ -302,7 +302,6 @@
 
             this.indent = this.indents.Pop();
             this.state = this.states.Pop();
-            this.path.Pop();
             this.WriteIndent();
             this.WriteIndicator("}", false, false, true);
 
@@ -322,6 +321,7 @@
             var lastKey = this.currentKey;
 
             this.currentKey = key.Value;
+            this.path.Push(this.currentKey);
 
             var analysis = this.AnalyzeAttribute(key);
 
@@ -332,6 +332,7 @@
             {
                 this.ConsumeAttribute();
                 this.currentKey = lastKey;
+                this.path.Pop();
                 return;
             }
 
@@ -362,7 +363,6 @@
             var m = GetTypedEvent<MappingStart>(@event);
 
             this.states.Push(this.state);
-            this.path.Push(this.currentKey);
             this.state = EmitterState.Mapping;
             this.WriteIndicator("{", true, false, false);
             this.IncreaseIndent();
@@ -517,6 +517,12 @@
             }
 
             this.isWhitespace = false;
+
+            if ((this.state == EmitterState.Mapping || this.state == EmitterState.Block) && @event is ScalarValue)
+            {
+                // When emitting a scalar mapping value, pop this value's key from the path
+                this.path.Pop();
+            }
         }
 
         /// <summary>
@@ -544,6 +550,9 @@
             var se = GetTypedEvent<SequenceEnd>(@event);
 
             this.state = this.states.Pop();
+
+            // Pop twice - once for sequence and once for sequence's mapping key
+            this.path.Pop();
             this.path.Pop();
 
             if (this.state == EmitterState.Block)
@@ -572,6 +581,9 @@
 
             if (this.events.Peek() is SequenceEnd)
             {
+                // Pop key for this empty block as we are consuming SequenceEnd
+                this.path.Pop();
+
                 // Write empty sequence
                 this.WriteIndicator("[]", true, false, true);
                 this.WriteIndent();
