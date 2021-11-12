@@ -4,6 +4,7 @@
     using System.Collections.Generic;
     using System.IO;
     using System.Linq;
+    using System.Text.RegularExpressions;
 
     using Firefly.PSCloudFormation.Terraform.HclSerializer.Events;
     using Firefly.PSCloudFormation.Terraform.HclSerializer.Traits;
@@ -14,6 +15,11 @@
     /// <seealso cref="Firefly.PSCloudFormation.Terraform.HclSerializer.IHclEmitter" />
     internal class HclEmitter : IHclEmitter
     {
+        /// <summary>
+        /// Matches tokens embedded in scalars that should not be treated as interpolations.
+        /// </summary>
+        private static readonly Regex NonInterpolatedTokenRegex = new Regex(@"(?<token>\$\{[^.\}]+\})");
+
         /// <summary>
         /// Queue of events to process
         /// </summary>
@@ -114,6 +120,11 @@
             EmptyString,
 
             /// <summary>
+            /// Next event is a scalar with value <c>false</c>
+            /// </summary>
+            BooleanFalse,
+
+            /// <summary>
             /// Next group of events is an empty sequence, mapping, block including any nesting of the same.
             /// </summary>
             EmptyCollection,
@@ -164,14 +175,6 @@
         /// </value>
         private string CurrentPath =>
             string.Join(".", this.path.Where(p => p != null).Concat(new[] { this.currentKey }).ToList());
-
-        /// <summary>
-        /// Gets the depth within the object graph.
-        /// </summary>
-        /// <value>
-        /// The depth.
-        /// </value>
-        private int Depth => this.path.Where(p => p != null).Count();
 
         /// <summary>
         /// Emits the next event.
@@ -227,6 +230,11 @@
                 if (scalar.Value == null)
                 {
                     return AttributeContent.Null;
+                }
+
+                if (bool.TryParse(scalar.Value, out var boolValue) && !boolValue)
+                {
+                    return AttributeContent.BooleanFalse;
                 }
 
                 return string.IsNullOrWhiteSpace(scalar.Value)
@@ -496,7 +504,7 @@
                 this.Write('"');
             }
 
-            this.Write(scalar.Value);
+            this.Write(NonInterpolatedTokenRegex.Replace(scalar.Value, match => "$" + match.Groups["token"].Value));
 
             if (scalar.IsQuoted)
             {
