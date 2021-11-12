@@ -302,6 +302,13 @@
 
             this.indent = this.indents.Pop();
             this.state = this.states.Pop();
+
+            if (this.state == EmitterState.Mapping)
+            {
+                // Extra pop for nested mappings
+                this.path.Pop();
+            }
+
             this.WriteIndent();
             this.WriteIndicator("}", false, false, true);
 
@@ -424,6 +431,12 @@
 
                 case EventType.ResourceEnd:
 
+                    if (this.path.Count > 0)
+                    {
+                        throw new HclSerializerException(
+                            $"Internal error. Resource \"{this.currentResourceType}.{this.currentResourceName}. Path not empty: {this.CurrentPath}");
+                    }
+
                     this.indents.Clear();
                     this.column = 0;
                     this.indent = 0;
@@ -447,6 +460,9 @@
             this.state = this.states.Pop();
             this.WriteIndent();
             this.WriteIndicator(")", false, false, false);
+
+            // Pop path at end of JSON blocks
+            this.path.Pop();
 
             if (this.state == EmitterState.Sequence)
             {
