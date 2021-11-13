@@ -3,6 +3,7 @@
     using System.Linq;
 
     using Firefly.CloudFormationParser;
+    using Firefly.CloudFormationParser.Intrinsics.Functions;
 
     /// <summary>
     /// <see href="https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/lambda_permission#import" />
@@ -47,6 +48,18 @@
             // and is most likely a bug there.
             if (dependencies.Count == 0)
             {
+                var functionResource =
+                    this.TerraformSettings.Template.Resources.First(
+                        r => r.Name == this.ImportSettings.Resource.LogicalId);
+
+                var value = functionResource.Properties["FunctionName"];
+
+                if (value is ImportValueIntrinsic intrinsic)
+                {
+                    this.LogWarning($"Lambda function \"{intrinsic.Evaluate(this.TerraformSettings.Template)}\" for permission \"{this.ImportSettings.Resource.LogicalId}\" is imported from another stack");
+                    return null;
+                }
+
                 this.LogError(
                     $"Cannot find related lambda function for permission {this.ImportSettings.Resource.LogicalId}. This is probably a bug in Firefly.CloudFormationParser");
             }
