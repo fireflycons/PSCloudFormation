@@ -28,6 +28,9 @@
         public ITerraformRunner Runner { get; set; }
 
         /// <inheritdoc />
+        public string StackName { get; set; }
+
+        /// <inheritdoc />
         public ITemplate Template { get; set; }
 
         /// <inheritdoc />

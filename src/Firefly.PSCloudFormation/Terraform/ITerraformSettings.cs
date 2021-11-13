@@ -12,10 +12,10 @@
     internal interface ITerraformSettings
     {
         /// <summary>
-        /// Gets the aws account identifier.
+        /// Gets the AWS account identifier.
         /// </summary>
         /// <value>
-        /// The aws account identifier.
+        /// The AWS account identifier.
         /// </value>
         string AwsAccountId { get; }
 
@@ -58,6 +58,14 @@
         /// The runner.
         /// </value>
         ITerraformRunner Runner { get; }
+
+        /// <summary>
+        /// Gets the name of the stack being exported.
+        /// </summary>
+        /// <value>
+        /// The name of the stack.
+        /// </value>
+        string StackName { get; }
 
         /// <summary>
         /// Gets the template as parsed by CloudFormation Parser.

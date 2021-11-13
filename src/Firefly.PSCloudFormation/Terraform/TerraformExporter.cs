@@ -38,7 +38,12 @@
         /// when the dependent resource is imported.
         /// </summary>
         private static readonly List<string> MergedResources =
-            new List<string> { "AWS::CloudFront::CloudFrontOriginAccessIdentity", "AWS::IAM::Policy" };
+            new List<string> { "AWS::CloudFront::CloudFrontOriginAccessIdentity", "AWS::IAM::Policy", "AWS::EC2::SecurityGroupIngress", "AWS::EC2::SecurityGroupEgress", "AWS::EC2::VPCGatewayAttachment" };
+
+        /// <summary>
+        /// These resources are currently not supported for import.
+        /// </summary>
+        private static readonly List<string> UnsupportedResources = new List<string> { "AWS::ApiGateway::Deployment" };
 
         /// <summary>
         /// The logger
@@ -61,6 +66,11 @@
         private readonly List<string> warnings = new List<string>();
 
         /// <summary>
+        /// The accumulated errors
+        /// </summary>
+        private readonly List<string> errors = new List<string>();
+
+        /// <summary>
         /// Initializes a new instance of the <see cref="TerraformExporter"/> class.
         /// </summary>
         /// <param name="settings">The settings.</param>
@@ -81,6 +91,8 @@
             var initialHcl = new StringBuilder();
             var finalHcl = new StringBuilder();
             var unmappedResources = new List<string>();
+
+            this.logger.LogInformation("\nInitializing inputs and resources...");
 
             initialHcl.AppendLine(terraformBlock.Replace("#REGION#", this.settings.AwsRegion));
             finalHcl.AppendLine(terraformBlock.Replace("#REGION#", this.settings.AwsRegion));
@@ -108,7 +120,8 @@
 
             var cwd = Directory.GetCurrentDirectory();
             var importedResources = new List<ResourceImport>();
-            var errorCount = 0;
+            var terraformExecutionErrorCount = 0;
+            var warningCount = 0;
 
             try
             {
@@ -122,22 +135,30 @@
 
                 this.logger.LogInformation("\nInitializing workspace...");
                 this.settings.Runner.Run("init", true, null);
-                this.logger.LogInformation($"\nImporting {totalResources} mapped resources to terraform state...");
+                this.logger.LogInformation($"\nImporting {totalResources} mapped resources from stack \"{this.settings.StackName}\" to terraform state...");
 
-                //importedResources = resourcesToImport;
+                // importedResources = resourcesToImport;
 
                 foreach (var resource in resourcesToImport)
                 {
                     var resourceToImport = resource.PhysicalId;
 
-                    this.logger.LogInformation($"Importing resource {++imported}/{totalResources} - {resource.Address}");
+                    this.logger.LogInformation(
+                        $"\nImporting resource {++imported}/{totalResources} - {resource.Address}");
 
+                    // PeeringRoute (AWS::EC2::Route): unexpected format of ID ("fc-ba-Peeri-VOSMB8EXFM2J"), expected ROUTETABLEID_DESTINATION
+                    // PrivateRouteTableAssociationA (AWS::EC2::SubnetRouteTableAssociation): Unexpected format for import: rtbassoc-0f37b1f143000066c. Use 'subnet ID/route table ID' or 'gateway ID/route table ID
                     if (ResourceImporter.RequiresResoureImporter(resource.TerraformType))
                     {
                         var importer = ResourceImporter.Create(
-                            resource,
-                            this.ui,
-                            resourcesToImport,
+                            new ResourceImporterSettings
+                                {
+                                    Errors = this.errors,
+                                    Logger = this.logger,
+                                    Resource = resource,
+                                    ResourcesToImport = resourcesToImport,
+                                    Warnings = this.warnings
+                                },
                             this.settings);
 
                         if (importer != null)
@@ -145,13 +166,20 @@
                             resourceToImport = importer.GetImportId(
                                 $"Select related resource for {resource.AwsAddress}",
                                 null);
+
+                            if (resourceToImport == null)
+                            {
+                                continue;
+                            }
                         }
                     }
 
+                    var cmdOutput = new List<string>();
                     var success = this.settings.Runner.Run(
                         "import",
                         false,
-                        msg => { },
+                        msg => cmdOutput.Add(msg),
+                        "-no-color",
                         resource.Address,
                         resourceToImport);
 
@@ -161,7 +189,12 @@
                     }
                     else
                     {
-                        this.warnings.Add($"Could not import {resource.AwsAddress}");
+                        var error = cmdOutput.FirstOrDefault(o => o.StartsWith("Error: "))?.Substring(7);
+
+                        this.errors.Add(
+                            error != null
+                                ? $"ERROR: {resource.AwsAddress}: {error}"
+                                : $"ERROR: Could not import {resource.AwsAddress}");
                     }
                 }
 
@@ -207,24 +240,42 @@
                     }
                 }
 
-                var fmtOutput = new List<string>();
+                var validationOutput = new List<string>();
 
                 try
                 {
                     this.logger.LogInformation("Formatting output...");
-                    this.settings.Runner.Run("fmt", true, (msg) => fmtOutput.Add(msg));
+                    this.settings.Runner.Run("fmt", true, (msg) => validationOutput.Add(msg));
                     this.logger.LogInformation("Validating output...");
-                    this.settings.Runner.Run("validate", false, (msg) => { });
+                    this.settings.Runner.Run("validate", true, (msg) => validationOutput.Add(msg));
                 }
                 catch
                 {
-                    errorCount += fmtOutput.Count(line => line.Contains("Error:"));
+                    terraformExecutionErrorCount += validationOutput.Count(line => line.Contains("Error:"));
                 }
 
-                this.logger.LogInformation("Complete!");
+                warningCount += validationOutput.Count(line => line.Contains("Warning:"));
+
+                if (terraformExecutionErrorCount + this.errors.Count > 0)
+                {
+                    throw new HclSerializerException($"Stack \"{this.settings.StackName}\": Errors were detected!");
+                }
+
+                this.logger.LogInformation($"Export of stack \"{this.settings.StackName}\" to terraform complete!");
+            }
+            catch (HclSerializerException)
+            {
+                throw;
+            }
+            catch (Exception e)
+            {
+                this.errors.Add($"ERROR: Internal error: {e.Message}");
+                throw;
             }
             finally
             {
+                this.logger.LogInformation("\n");
+
                 // Scan for AWS::Cloudformation::Init metadata and warn about it.
                 foreach (var templateResource in this.settings.Template.Resources.Where(
                     r => r.Metadata != null && r.Metadata.Keys.Contains("AWS::CloudFormation::Init")))
@@ -252,15 +303,31 @@
                         $"Resource \"{templateResource.Name}\" contains embedded function code (ZipFile) which is not imported.");
                 }
 
-                this.warnings.Add(
+                var totalErrors = terraformExecutionErrorCount + this.errors.Count;
+
+                if (totalErrors == 0)
+                {
+                    this.warnings.Add(
                     "DO NOT APPLY THIS CONFIGURATION TO AN EXISTING PRODUCTION STACK WITHOUT FIRST THOROUGHLY TESTING ON A COPY.");
+                }
+
+                foreach (var error in this.errors)
+                {
+                    this.logger.LogError(error);
+                }
 
                 foreach (var warning in this.warnings)
                 {
                     this.logger.LogWarning(warning);
                 }
 
-                this.logger.LogInformation($"\n       Errors: {errorCount}, Warnings: {this.warnings.Count}");
+                if (this.settings.Resources.Any(r => r.StackResource.ResourceType.StartsWith("Custom::")))
+                {
+                    this.logger.LogInformation("\nIt appears this stack contains custom resources. For a suggestion on how to manage these with terraform, see");
+                    this.logger.LogInformation("https://trackit.io/trackit-whitepapers/cloudformation-to-terraform-conversion/");
+                }
+
+                this.logger.LogInformation($"\n       Errors: {totalErrors}, Warnings: {warningCount + this.warnings.Count}\n");
                 Directory.SetCurrentDirectory(cwd);
             }
         }
@@ -368,6 +435,15 @@
                     continue;
                 }
 
+                if (UnsupportedResources.Contains(resource.StackResource.ResourceType))
+                {
+                    var wrn =
+                        $"{resource.LogicalResourceId} ({resource.ResourceType}): Not supported for import.";
+                    this.logger.LogWarning(wrn);
+                    this.warnings.Add(wrn);
+                    continue;
+                }
+
                 var mapping = resourceMap.FirstOrDefault(m => m.Aws == resource.ResourceType);
 
                 if (mapping == null)
@@ -449,7 +525,6 @@
             foreach (var edge in this.settings.Template.DependencyGraph.Edges.Where(
                 e => e.Source is IParameterVertex && e.Target is ResourceVertex))
             {
-                var referredParameter = inputVariables.First(p => p.Name == edge.Source.Name);
                 var referringAwsResource = this.settings.Resources.First(r => r.LogicalResourceId == edge.Target.Name);
 
                 var referringTerraformResource =
@@ -458,6 +533,27 @@
                 if (referringTerraformResource == null)
                 {
                     // Resource wasn't imported
+                    continue;
+                }
+
+                var referredParameter = inputVariables.FirstOrDefault(p => p.Name == edge.Source.Name);
+
+                if (referredParameter == null)
+                {
+                    if (edge.Source.Name.StartsWith("AWS::"))
+                    {
+                        this.warnings.Add($"Resource \"{referringAwsResource.LogicalResourceId}\" references \"{edge.Source.Name}\" which is unsupported in terraform.");
+                    }
+                    else
+                    {
+                        var msg = $"Cannot find input variable with name \"{edge.Source.Name}\"";
+
+                        if (!this.warnings.Contains(msg))
+                        {
+                            this.warnings.Add(msg);
+                        }
+                    }
+
                     continue;
                 }
 
@@ -490,7 +586,7 @@
                     {
                         case JProperty jp when jp.Value is JValue jv:
 
-                            if (Serializer.TryGetPolicy(jv.Value<string>(), out var policy))
+                            if (Serializer.TryGetJson(jv.Value<string>(), true, out var policy))
                             {
                                 var replacementMade = false;
                                 ReplacePolicyReference(policy, referredParameter, con, ref replacementMade);
@@ -548,6 +644,12 @@
                             {
                                 for (var ind = 0; ind < ja.Count; ++ind)
                                 {
+                                    if (ja[ind] is JConstructor)
+                                    {
+                                        // this one's already been set to something else
+                                        continue;
+                                    }
+
                                     var stringVal = ja[ind].Value<string>();
 
                                     if (stringVal == referredParameter.CurrentValue.ToString())
@@ -685,7 +787,7 @@
                 {
                     case JProperty jp when jp.Value is JValue jv:
 
-                        if (Serializer.TryGetPolicy(jv.Value<string>(), out var policy))
+                        if (Serializer.TryGetJson(jv.Value<string>(), true, out var policy))
                         {
                             var replacementMade = false;
                             ReplacePolicyReference(policy, referredAwsResource, con, ref replacementMade);
