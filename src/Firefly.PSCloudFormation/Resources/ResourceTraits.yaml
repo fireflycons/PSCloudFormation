@@ -1,4 +1,53 @@
-﻿- Group: all
+﻿#####################################################################################################
+#
+# Very much a work in progress! Resources getting added all the time.
+#
+# This file contains lists of resource attributes that require special handling
+# when emitting HCL. They are grouped as follows
+#
+# UnconfigurableAttributes
+#    Resource attributes that if present in the HCL cause an Unconfigurable Attribute error.
+#
+# NonBlockTypeAttributes
+#    Attributes that should have their value emitted as a mapping rather than a block, e.g. 'tags'
+#
+# RequiredAttributes
+#    Attributes which must always be present, even if they have no value, or a
+#    Missing Required Argument error is raised.
+#
+# DefaultValues
+#    A map of attribute name to default value to provide defaults for required attributes
+#    that have a null or empty value in the state file.
+#
+# ConflictingArguments
+#    A list of lists of attributes that conflict if both present in resource definition.
+#    Where conflicts are found, the first attribute in the sub-list is emitted and the
+#    reamining ones supressed.
+#
+# For each of these attributes, they should be specified in 'path' syntax, eg.
+# resource "null_resource" "test" {
+#   arn = "arn:aws:blah"                    # Path is 'arn'
+#   my_list [
+#      {
+#        "value1"                           # Path is 'my_list.#.value1'. All 'value1' is included
+#      }
+#   ]
+#   my_map1 = {
+#     my_map2 = {
+#       my_key = "my-value"                  # Path is 'my_map1.my_map2.my_key'
+#     }
+#   }
+#   my_block {
+#     my_key = "my_value"                    # Path is 'my_block.#.my_key' because some blocks are repeatable.
+#   }
+# }
+#
+# Wildcards may be specificed anywhere in the key path
+# '*arn' matches all root-level attributes with names ending in 'arn'
+#
+#####################################################################################################
+
+- Group: all
   Resources:
     - Resource: all                   # Common traits for all resources - merged with specific resources.
       NonBlockTypeAttributes:         # Emiited as e.g. 'tags = {}'' (rather than 'tags {}'')
@@ -9,23 +58,26 @@
         - 'owner_id'
         - 'unique_id'
         - '*_date'
+        - '*_time'
         - tags_all
         - timeouts
       RequiredAttributes: []          # Must be present in HCL, even if null or empty
       DefaultValues: {}               # Values to set if state value is null
       ConflictingArguments: []        # Where aruments confict. choose the first from this list.
+
 - Group: API Gateway
   Resources:
     - Resource: aws_api_gateway_rest_api
       UnconfigurableAttributes:
         - lambda_permission
+        - root_resource_id
     - Resource: aws_api_gateway_api_key
       UnconfigurableAttributes:
         - value
     - Resource: aws_api_gateway_domain_name
       UnconfigurableAttributes:
-        - cloudfront_domain_name
-        - regional_domain_name
+        - '*_domain_name'
+        - '*_zone_id'
     - Resource: aws_api_gateway_resource
       UnconfigurableAttributes:
         - path
@@ -37,12 +89,14 @@
       UnconfigurableAttributes:
         - invoke_url
         - lambda_permissions
+
 - Group: Autoscaling
   Resources:
     - Resource: aws_autoscaling_group
       ConflictingArguments:
         - - vpc_zone_identifier
           - availability_zones
+
 - Group: CloudFront
   Resources:
     - Resource: aws_cloudfront_distribution
@@ -54,6 +108,8 @@
         - status
         - in_progress_validation_batches
         - domain_name
+        - hosted_zone_id
+
 - Group: Cognito
   Resources:
     - Resource: aws_cognito_user_pool
@@ -65,6 +121,7 @@
         - - verification_message_template
           - email_verification_message
           - email_verification_subject
+
 - Group: EC2
   Resources:
     - Resource: aws_instance
@@ -72,6 +129,10 @@
         - instance_state
         - private_dns
         - device_name
+        - primary_network_interface_id
+        - root_block_device.#.volume_id
+        - root_block_device.#.device_name
+
 - Group: EFS
   Resources:
     - Resource: aws_efs_file_system
@@ -81,10 +142,11 @@
         - number_of_mount_targets
     - Resource: aws_efs_mount_target
       UnconfigurableAttributes:
-        - availability_zone_name
-        - dns_name
-        - mount_target_dns_name
+        - network_interface_id
+        - availability_zone_*
+        - '*dns_name'
         - ip_address
+
 - Group: Lambda
   Resources:
     - Resource: aws_lambda_function
@@ -92,15 +154,18 @@
         - last_modified
         - source_code_size
         - version
+
 - Group: RDS
   Resources:
     - Resource: aws_db_instance
       UnconfigurableAttributes:
+        - '*_id'
         - latest_restorable_time
         - address
         - endpoint
         - engine_version_actual
         - status
+
 - Group: Route53
   Resources:
     - Resource: aws_route53_record
@@ -109,6 +174,9 @@
       ConflictingArguments:
         - - alias
           - ttl
+      RequiredAttributes:
+        - alias.#.evaluate_target_health
+
 - Group: S3
   Resources:
     - Resource: aws_s3_bucket
@@ -124,16 +192,25 @@
     - Resource: aws_s3_bucket_policy
       RequiredAttributes:
         - policy
+
 - Group: SecretsManager
   Resources:
     - Resource: aws_secretsmanager_secret
       UnconfigurableAttributes:
         - rotation_enabled
+
+- Group: SNS
+  Resources:
+    - Resource: aws_sns_topic
+      UnconfigurableAttributes:
+        - owner
+
 - Group: SSM
   Resources:
-    - Resource: aws_sssm_parameter
+    - Resource: aws_ssm_parameter
       UnconfigurableAttributes:
         - version
+
 - Group: VPC
   Resources:
     - Resource: aws_security_group
@@ -143,6 +220,19 @@
       RequiredAttributes:
         - ingress.#.*
         - egress.#.*
+    - Resource: aws_network_acl
+      NonBlockTypeAttributes:
+        - ingress
+        - egress
+      RequiredAttributes:
+        - ingress.#.*_port
+        - ingress.#.rule_no
+        - ingress.#.action
+        - ingress.#.protocol
+        - egress.#.*_port
+        - egress.#.rule_no
+        - egress.#.action
+        - egress.#.protocol
     - Resource: aws_route
       UnconfigurableAttributes:
         - origin
@@ -151,19 +241,7 @@
       NonBlockTypeAttributes:
         - route
       RequiredAttributes:
-        - route.#.carrier_gateway_id
-        - route.#.cidr_block
-        - route.#.destination_prefix_list_id
-        - route.#.egress_only_gateway_id
-        - route.#.gateway_id
-        - route.#.instance_id
-        - route.#.ipv6_cidr_block
-        - route.#.local_gateway_id
-        - route.#.nat_gateway_id
-        - route.#.network_interface_id
-        - route.#.transit_gateway_id
-        - route.#.vpc_endpoint_id
-        - route.#.vpc_peering_connection_id
+        - route.#.*
     - Resource: aws_vpc
       UnconfigurableAttributes:
         - '*_id'
