@@ -165,18 +165,18 @@
       UnconfigurableAttributes:
         - owner_id
       RequiredAttributes:
-        - ingress.*.description
-        - ingress.*.ipv6_cidr_blocks
-        - ingress.*.cidr_blocks
-        - ingress.*.prefix_list_ids
-        - ingress.*.security_groups
-        - ingress.*.self
-        - egress.*.description
-        - egress.*.ipv6_cidr_blocks
-        - egress.*.cidr_blocks
-        - egress.*.prefix_list_ids
-        - egress.*.security_groups
-        - egress.*.self
+        - ingress.#.description
+        - ingress.#.ipv6_cidr_blocks
+        - ingress.#.cidr_blocks
+        - ingress.#.prefix_list_ids
+        - ingress.#.security_groups
+        - ingress.#.self
+        - egress.#.description
+        - egress.#.ipv6_cidr_blocks
+        - egress.#.cidr_blocks
+        - egress.#.prefix_list_ids
+        - egress.#.security_groups
+        - egress.#.self
     - Resource: aws_route
       UnconfigurableAttributes:
         - origin
@@ -185,19 +185,19 @@
       NonBlockTypeAttributes:
         - route
       RequiredAttributes:
-        - route.*.carrier_gateway_id
-        - route.*.cidr_block
-        - route.*.destination_prefix_list_id
-        - route.*.egress_only_gateway_id
-        - route.*.gateway_id
-        - route.*.instance_id
-        - route.*.ipv6_cidr_block
-        - route.*.local_gateway_id
-        - route.*.nat_gateway_id
-        - route.*.network_interface_id
-        - route.*.transit_gateway_id
-        - route.*.vpc_endpoint_id
-        - route.*.vpc_peering_connection_id
+        - route.#.carrier_gateway_id
+        - route.#.cidr_block
+        - route.#.destination_prefix_list_id
+        - route.#.egress_only_gateway_id
+        - route.#.gateway_id
+        - route.#.instance_id
+        - route.#.ipv6_cidr_block
+        - route.#.local_gateway_id
+        - route.#.nat_gateway_id
+        - route.#.network_interface_id
+        - route.#.transit_gateway_id
+        - route.#.vpc_endpoint_id
+        - route.#.vpc_peering_connection_id
     - Resource: aws_vpc
       UnconfigurableAttributes:
         - default_network_acl_id

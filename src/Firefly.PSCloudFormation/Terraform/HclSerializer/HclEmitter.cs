@@ -608,7 +608,7 @@
             }
 
             this.states.Push(this.state);
-            this.path.Push("*");
+            this.path.Push("#");
 
             if (this.state == EmitterState.Block)
             {
