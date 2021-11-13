@@ -18,7 +18,7 @@
         private ResourceTraitsCollection(List<ResourceGroup> resourceGroups)
         {
             // Flatten resource list. Grouping only for legibility in the YAML
-            this.ResourceTraits = new List<ResourceTraits>();
+            this.ResourceTraits = new List<IResourceTraits>();
 
             foreach (var g in resourceGroups)
             {
@@ -31,7 +31,7 @@
         /// <summary>
         /// Gets traits shared by all resources.
         /// </summary>
-        public ResourceTraits TraitsAll { get; }
+        public IResourceTraits TraitsAll { get; }
 
         /// <summary>
         /// Gets the resource traits.
@@ -39,7 +39,7 @@
         /// <value>
         /// The resource traits.
         /// </value>
-        private List<ResourceTraits> ResourceTraits { get; }
+        private List<IResourceTraits> ResourceTraits { get; }
 
         /// <summary>
         /// Gets the <see cref="IResourceTraits"/> with the specified resource type.

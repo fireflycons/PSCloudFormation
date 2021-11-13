@@ -4,17 +4,13 @@
       NonBlockTypeAttributes:         # Emiited as e.g. 'tags = {}'' (rather than 'tags {}'')
         - tags
       UnconfigurableAttributes:       # State properties that have no HCL equivalent, because they are computed.
-        - arn
-        - id
-        - create_date
-        - created_date
-        - creation_date
-        - last_modified_date
-        - last_updated_date
-        - unique_id
+        - '*arn'                      # Wildcard attribute name match, so no attributes ending in 'arn' will be emitted anywhere 
+        - 'id'
+        - 'owner_id'
+        - 'unique_id'
+        - '*_date'
         - tags_all
         - timeouts
-        - owner_id
       RequiredAttributes: []          # Must be present in HCL, even if null or empty
       DefaultValues: {}               # Values to set if state value is null
       ConflictingArguments: []        # Where aruments confict. choose the first from this list.
@@ -22,19 +18,14 @@
   Resources:
     - Resource: aws_api_gateway_rest_api
       UnconfigurableAttributes:
-        - root_resource_id
-        - execution_arn
         - lambda_permission
     - Resource: aws_api_gateway_api_key
       UnconfigurableAttributes:
         - value
     - Resource: aws_api_gateway_domain_name
       UnconfigurableAttributes:
-        - certificate_upload_date
         - cloudfront_domain_name
-        - cloudfront_zone_id
         - regional_domain_name
-        - regional_zone_id
     - Resource: aws_api_gateway_resource
       UnconfigurableAttributes:
         - path
@@ -45,7 +36,6 @@
     - Resource: aws_api_gateway_stage
       UnconfigurableAttributes:
         - invoke_url
-        - execution_arn
         - lambda_permissions
 - Group: Autoscaling
   Resources:
@@ -61,9 +51,7 @@
         - trusted_signers
         - caller_reference
         - etag
-        - last_modified_time
         - status
-        - hosted_zone_id
         - in_progress_validation_batches
         - domain_name
 - Group: Cognito
@@ -82,10 +70,8 @@
     - Resource: aws_instance
       UnconfigurableAttributes:
         - instance_state
-        - primary_network_interface_id
         - private_dns
         - device_name
-        - volume_id
 - Group: EFS
   Resources:
     - Resource: aws_efs_file_system
@@ -95,20 +81,15 @@
         - number_of_mount_targets
     - Resource: aws_efs_mount_target
       UnconfigurableAttributes:
-        - availability_zone_id
         - availability_zone_name
         - dns_name
-        - file_system_arn
         - mount_target_dns_name
-        - network_interface_id
         - ip_address
 - Group: Lambda
   Resources:
     - Resource: aws_lambda_function
       UnconfigurableAttributes:
         - last_modified
-        - qualified_arn
-        - invoke_arn
         - source_code_size
         - version
 - Group: RDS
@@ -119,8 +100,6 @@
         - address
         - endpoint
         - engine_version_actual
-        - hosted_zone_id
-        - resource_id
         - status
 - Group: Route53
   Resources:
@@ -139,7 +118,6 @@
         - region
         - private_dns
         - device_name
-        - volume_id
       DefaultValues:
         acl: private
         force_destroy: false
@@ -162,21 +140,9 @@
       NonBlockTypeAttributes:
         - ingress
         - egress
-      UnconfigurableAttributes:
-        - owner_id
       RequiredAttributes:
-        - ingress.#.description
-        - ingress.#.ipv6_cidr_blocks
-        - ingress.#.cidr_blocks
-        - ingress.#.prefix_list_ids
-        - ingress.#.security_groups
-        - ingress.#.self
-        - egress.#.description
-        - egress.#.ipv6_cidr_blocks
-        - egress.#.cidr_blocks
-        - egress.#.prefix_list_ids
-        - egress.#.security_groups
-        - egress.#.self
+        - ingress.#.*
+        - egress.#.*
     - Resource: aws_route
       UnconfigurableAttributes:
         - origin
@@ -200,11 +166,7 @@
         - route.#.vpc_peering_connection_id
     - Resource: aws_vpc
       UnconfigurableAttributes:
-        - default_network_acl_id
-        - default_route_table_id
-        - default_security_group_id
-        - dhcp_options_id
-        - main_route_table_id
+        - '*_id'
     - Resource: aws_vpc_peering_connection
       UnconfigurableAttributes:
         - accept_status

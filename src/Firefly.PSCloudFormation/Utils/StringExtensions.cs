@@ -1,6 +1,7 @@
 ﻿namespace Firefly.PSCloudFormation.Utils
 {
     using System.Linq;
+    using System.Text.RegularExpressions;
 
     internal static class StringExtensions
     {
@@ -22,6 +23,29 @@
                               : new char[] { char.ToLowerInvariant(c) });
 
             return new string(result.ToArray());
+        }
+
+        /// <summary>
+        /// Perform a string wildcard match as in PowerShell's <c>-like</c> operator..
+        /// </summary>
+        /// <param name="self">The self.</param>
+        /// <param name="pattern">The pattern.</param>
+        /// <returns><c>true</c> if match; else <c>false</c></returns>
+        public static bool WildcardMatch(this string self, string pattern)
+        {
+            if (self == null)
+            {
+                return false;
+            }
+
+            if (!pattern.Contains("*"))
+            {
+                return self == pattern;
+            }
+
+            var rx = new Regex(pattern.Replace(".", @"\.").Replace("*", ".*"));
+
+            return rx.IsMatch(self);
         }
     }
 }

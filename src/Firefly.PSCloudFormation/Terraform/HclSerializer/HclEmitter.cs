@@ -8,6 +8,7 @@
 
     using Firefly.PSCloudFormation.Terraform.HclSerializer.Events;
     using Firefly.PSCloudFormation.Terraform.HclSerializer.Traits;
+    using Firefly.PSCloudFormation.Utils;
 
     /// <summary>
     /// HCL Emitter. Inspired by YamlDotNet emitter
@@ -19,6 +20,8 @@
         /// Matches tokens embedded in scalars that should not be treated as interpolations.
         /// </summary>
         private static readonly Regex NonInterpolatedTokenRegex = new Regex(@"(?<token>\$\{[^.\}]+\})");
+
+        private readonly ResourceTraitsCollection allResourceTraits;
 
         /// <summary>
         /// Queue of events to process
@@ -44,8 +47,6 @@
         /// Stack of states processed as emitter descends object graph
         /// </summary>
         private readonly Stack<EmitterState> states = new Stack<EmitterState>();
-
-        private readonly ResourceTraitsCollection allResourceTraits;
 
         /// <summary>
         /// The current column number in the output
@@ -85,7 +86,7 @@
         /// <summary>
         /// The resource traits for the current resource being serialized.
         /// </summary>
-        private IResourceTraits resourceTraits = new ResourceTraits();
+        private IResourceTraits resourceTraits;
 
         /// <summary>
         /// Current state of the emitter.
@@ -102,37 +103,6 @@
             this.state = EmitterState.None;
             this.allResourceTraits = ResourceTraitsCollection.Load();
             this.resourceTraits = this.allResourceTraits.TraitsAll;
-        }
-
-        /// <summary>
-        /// Result of attribute analysis
-        /// </summary>
-        private enum AttributeContent
-        {
-            /// <summary>
-            /// Next event is a scalar with value <c>null</c>
-            /// </summary>
-            Null,
-
-            /// <summary>
-            /// Next event is a scalar with value empty string
-            /// </summary>
-            EmptyString,
-
-            /// <summary>
-            /// Next event is a scalar with value <c>false</c>
-            /// </summary>
-            BooleanFalse,
-
-            /// <summary>
-            /// Next group of events is an empty sequence, mapping, block including any nesting of the same.
-            /// </summary>
-            EmptyCollection,
-
-            /// <summary>
-            /// Attribute has some kind of value
-            /// </summary>
-            HasValue
         }
 
         /// <summary>
@@ -173,8 +143,7 @@
         /// <value>
         /// The current path.
         /// </value>
-        private string CurrentPath =>
-            string.Join(".", this.path.Where(p => p != null).Reverse());
+        private string CurrentPath => string.Join(".", this.path.Where(p => p != null).Reverse());
 
         /// <summary>
         /// Emits the next event.
@@ -200,7 +169,7 @@
         /// <summary>
         /// Asserts an event is of the requested type and casts to it.
         /// </summary>
-        /// <typeparam name="T"></typeparam>
+        /// <typeparam name="T">Expected subtype of the event passed as argument.</typeparam>
         /// <param name="event">The event.</param>
         /// <returns>Type casted event.</returns>
         /// <exception cref="System.ArgumentException">Expected {typeof(T).Name} - event</exception>
@@ -293,6 +262,43 @@
         }
 
         /// <summary>
+        /// Emits a policy end.
+        /// </summary>
+        /// <param name="event">The event.</param>
+        private void EmitJsonEnd(HclEvent @event)
+        {
+            var p = GetTypedEvent<JsonEnd>(@event);
+
+            this.indent = this.indents.Pop();
+            this.state = this.states.Pop();
+            this.WriteIndent();
+            this.WriteIndicator(")", false, false, false);
+
+            // Pop path at end of JSON blocks
+            this.path.Pop();
+
+            if (this.state == EmitterState.Sequence)
+            {
+                this.Write(',');
+            }
+        }
+
+        /// <summary>
+        /// Emits a policy start.
+        /// </summary>
+        /// <param name="event">The event.</param>
+        private void EmitJsonStart(HclEvent @event)
+        {
+            var p = GetTypedEvent<JsonStart>(@event);
+
+            this.states.Push(this.state);
+            this.state = EmitterState.Json;
+            this.WriteIndicator("jsonencode(", true, false, true);
+            this.IncreaseIndent();
+            this.WriteIndent();
+        }
+
+        /// <summary>
         /// Emits a mapping end.
         /// </summary>
         /// <param name="event">The event.</param>
@@ -330,12 +336,7 @@
             this.currentKey = key.Value;
             this.path.Push(this.currentKey);
 
-            var analysis = this.AnalyzeAttribute(key);
-
-            if (this.resourceTraits.IsConflictingArgument(this.CurrentPath)
-                || this.resourceTraits.UnconfigurableAttributes.Contains(this.CurrentPath)
-                || (analysis != AttributeContent.HasValue
-                    && !this.resourceTraits.ShouldEmitAttribute(this.CurrentPath)))
+            if (!this.resourceTraits.ShouldEmitAttribute(this.CurrentPath, this.AnalyzeAttribute(key)))
             {
                 this.ConsumeAttribute();
                 this.currentKey = lastKey;
@@ -446,43 +447,6 @@
                     this.WriteBreak();
                     break;
             }
-        }
-
-        /// <summary>
-        /// Emits a policy end.
-        /// </summary>
-        /// <param name="event">The event.</param>
-        private void EmitJsonEnd(HclEvent @event)
-        {
-            var p = GetTypedEvent<JsonEnd>(@event);
-
-            this.indent = this.indents.Pop();
-            this.state = this.states.Pop();
-            this.WriteIndent();
-            this.WriteIndicator(")", false, false, false);
-
-            // Pop path at end of JSON blocks
-            this.path.Pop();
-
-            if (this.state == EmitterState.Sequence)
-            {
-                this.Write(',');
-            }
-        }
-
-        /// <summary>
-        /// Emits a policy start.
-        /// </summary>
-        /// <param name="event">The event.</param>
-        private void EmitJsonStart(HclEvent @event)
-        {
-            var p = GetTypedEvent<JsonStart>(@event);
-
-            this.states.Push(this.state);
-            this.state = EmitterState.Json;
-            this.WriteIndicator("jsonencode(", true, false, true);
-            this.IncreaseIndent();
-            this.WriteIndent();
         }
 
         /// <summary>

@@ -43,19 +43,20 @@
         List<string> UnconfigurableAttributes { get; }
 
         /// <summary>
+        /// Gets the terraform resource type.
+        /// </summary>
+        /// <value>
+        /// The type of the resource.
+        /// </value>
+        string ResourceType { get; }
+
+        /// <summary>
         /// Applies any default value to the given scalar if its current value is <c>null</c>.
         /// </summary>
         /// <param name="currentPath">Current attribute path.</param>
         /// <param name="scalar">The scalar to check</param>
         /// <returns>Original scalar if unchanged, else new scalar with default value set.</returns>
         Scalar ApplyDefaultValue(string currentPath, Scalar scalar);
-
-        /// <summary>
-        /// Determines wither a null or empty attribute should still be emitted.
-        /// </summary>
-        /// <param name="currentPath">Current attribute path.</param>
-        /// <returns><c>true</c> if attribute should be emitted; else <c>false</c></returns>
-        bool ShouldEmitAttribute(string currentPath);
 
         /// <summary>
         /// Determines if argument at current path would conflict with another resource argument, thus should not be emitted

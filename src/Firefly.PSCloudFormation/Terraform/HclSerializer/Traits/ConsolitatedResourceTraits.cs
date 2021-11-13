@@ -4,6 +4,7 @@
     using System.Linq;
 
     using Firefly.PSCloudFormation.Terraform.HclSerializer.Events;
+    using Firefly.PSCloudFormation.Utils;
 
     internal class ConsolitatedResourceTraits : IResourceTraits
     {
@@ -27,6 +28,8 @@
 
             // No default values defined for all resources
             this.DefaultValues = specificResourceTraits.DefaultValues;
+
+            this.ResourceType = specificResourceTraits.ResourceType;
         }
 
         /// <inheritdoc />
@@ -45,32 +48,18 @@
         public List<string> UnconfigurableAttributes { get; }
 
         /// <inheritdoc />
+        public string ResourceType { get; }
+
+        /// <inheritdoc />
         public Scalar ApplyDefaultValue(string currentPath, Scalar scalar)
         {
-            if (this.DefaultValues.ContainsKey(currentPath) && scalar.Value == null)
+            if (this.DefaultValues.Keys.Any(currentPath.WildcardMatch) && scalar.Value == null)
             {
                 var newValue = this.DefaultValues[currentPath];
                 return new Scalar(newValue, newValue is string);
             }
 
             return scalar;
-        }
-
-        /// <inheritdoc />
-        public bool ShouldEmitAttribute(string currentPath)
-        {
-            if (this.ConflictingArguments.Any())
-            {
-                foreach (var argumentGroup in this.ConflictingArguments)
-                {
-                    if (argumentGroup.Contains(currentPath) && argumentGroup.First() != currentPath)
-                    {
-                        return false;
-                    }
-                }
-            }
-
-            return this.RequiredAttributes.Contains(currentPath) || this.DefaultValues.ContainsKey(currentPath);
         }
 
         /// <inheritdoc />
@@ -81,16 +70,9 @@
                 return false;
             }
 
-
-            foreach (var argumentGroup in this.ConflictingArguments)
-            {
-                if (argumentGroup.Contains(currentPath) && argumentGroup.First() != currentPath)
-                {
-                    return true;
-                }
-            }
-
-            return false;
+            return this.ConflictingArguments.Any(
+                argumentGroup => argumentGroup.Any(currentPath.WildcardMatch)
+                                 && !currentPath.WildcardMatch(argumentGroup.First()));
         }
     }
 }

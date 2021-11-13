@@ -1,9 +1,12 @@
-﻿namespace Firefly.PSCloudFormation.Terraform.HclSerializer.Traits
+﻿using Firefly.PSCloudFormation.Terraform.HclSerializer.Events;
+
+namespace Firefly.PSCloudFormation.Terraform.HclSerializer.Traits
 {
-    using System;
     using System.Collections.Generic;
+    using System.Linq;
 
     using Firefly.PSCloudFormation.Terraform.HclSerializer.Events;
+    using Firefly.PSCloudFormation.Utils;
 
     using YamlDotNet.Serialization;
 
@@ -13,6 +16,7 @@
     /// </summary>
     internal class ResourceTraits : IResourceTraits
     {
+        /// <inheritdoc />
         /// <inheritdoc />
         public List<List<string>> ConflictingArguments { get; set; } = new List<List<string>>();
 
@@ -50,12 +54,6 @@
         public Scalar ApplyDefaultValue(string currentPath, Scalar scalar)
         {
             return scalar;
-        }
-
-        /// <inheritdoc />
-        public bool ShouldEmitAttribute(string currentPath)
-        {
-            return this.RequiredAttributes.Contains(currentPath) || this.DefaultValues.ContainsKey(currentPath);
         }
 
         /// <inheritdoc />
