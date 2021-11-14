@@ -20,7 +20,7 @@
         [InlineData("*.#.*", "egress.#.cidr_blocks", true)]
         public void ShouldPerformWildcardMatch(string pattern, string text, bool expectedResult)
         {
-            text.WildcardMatch(pattern).Should().Be(expectedResult);
+            text.IsLike(pattern).Should().Be(expectedResult);
         }
     }
 }

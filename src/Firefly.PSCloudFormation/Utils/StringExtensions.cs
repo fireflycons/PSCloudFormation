@@ -31,7 +31,7 @@
         /// <param name="self">The self.</param>
         /// <param name="pattern">The pattern.</param>
         /// <returns><c>true</c> if match; else <c>false</c></returns>
-        public static bool WildcardMatch(this string self, string pattern)
+        public static bool IsLike(this string self, string pattern)
         {
             if (self == null)
             {
