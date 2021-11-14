@@ -52,12 +52,18 @@
                     this.TerraformSettings.Template.Resources.First(
                         r => r.Name == this.ImportSettings.Resource.LogicalId);
 
-                var value = functionResource.Properties["FunctionName"];
-
-                if (value is ImportValueIntrinsic intrinsic)
+                if (functionResource.GetResourcePropertyValue("FunctionName") is string importName)
                 {
-                    this.LogWarning($"Lambda function \"{intrinsic.Evaluate(this.TerraformSettings.Template)}\" for permission \"{this.ImportSettings.Resource.LogicalId}\" is imported from another stack");
-                    return null;
+                    var functionArn = this.TerraformSettings.StackExports.FirstOrDefault(e => e.Name == importName)?.Value;
+
+                    if (functionArn == null)
+                    {
+                        this.LogWarning($"Permission \"{this.ImportSettings.Resource.LogicalId}\". Cannot resolve related function which is imported from another stack.");
+                        return null;
+                    }
+
+                    this.LogWarning($"Resource \"{this.ImportSettings.Resource.LogicalId}\" references a resource imported from another stack.");
+                    return $"{functionArn.Split(':').Last()}/{this.ImportSettings.Resource.PhysicalId}";
                 }
 
                 this.LogError(

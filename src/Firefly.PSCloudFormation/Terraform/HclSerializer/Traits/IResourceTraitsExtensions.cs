@@ -25,13 +25,13 @@
                 throw new ArgumentNullException(nameof(self));
             }
 
-            if (self.RequiredAttributes.Any(currentPath.WildcardMatch))
+            if (self.RequiredAttributes.Any(currentPath.IsLike))
             {
                 // Required attributes overrides unconfigurable attributes
                 return true;
             }
 
-            if (self.IsConflictingArgument(currentPath) || self.UnconfigurableAttributes.Any(currentPath.WildcardMatch))
+            if (self.IsConflictingArgument(currentPath) || self.UnconfigurableAttributes.Any(currentPath.IsLike))
             {
                 // Even when it has a value
                 return false;

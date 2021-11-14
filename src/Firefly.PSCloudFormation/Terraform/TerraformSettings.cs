@@ -10,7 +10,7 @@
     /// Settings object passed to the exporter mechanism
     /// </summary>
     /// <seealso cref="Firefly.PSCloudFormation.Terraform.ITerraformSettings" />
-    internal class TerrafomSettings : ITerraformSettings
+    internal class TerraformSettings : ITerraformSettings
     {
         /// <inheritdoc />
         public string AwsAccountId { get; set; }
@@ -35,6 +35,9 @@
 
         /// <inheritdoc />
         public string WorkspaceDirectory { get; set; }
+
+        /// <inheritdoc />
+        public IReadOnlyCollection<Export> StackExports { get; set;  }
 
         /// <inheritdoc />
         public bool NonInteractive { get; set; }

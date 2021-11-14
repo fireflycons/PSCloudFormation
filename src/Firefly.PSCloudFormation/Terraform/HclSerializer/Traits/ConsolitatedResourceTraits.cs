@@ -53,7 +53,7 @@
         /// <inheritdoc />
         public Scalar ApplyDefaultValue(string currentPath, Scalar scalar)
         {
-            if (this.DefaultValues.Keys.Any(currentPath.WildcardMatch) && scalar.Value == null)
+            if (this.DefaultValues.Keys.Any(currentPath.IsLike) && scalar.Value == null)
             {
                 var newValue = this.DefaultValues[currentPath];
                 return new Scalar(newValue, newValue is string);
@@ -71,8 +71,8 @@
             }
 
             return this.ConflictingArguments.Any(
-                argumentGroup => argumentGroup.Any(currentPath.WildcardMatch)
-                                 && !currentPath.WildcardMatch(argumentGroup.First()));
+                argumentGroup => argumentGroup.Any(currentPath.IsLike)
+                                 && !currentPath.IsLike(argumentGroup.First()));
         }
     }
 }

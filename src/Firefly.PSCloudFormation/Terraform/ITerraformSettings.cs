@@ -82,5 +82,13 @@
         /// The workspace directory.
         /// </value>
         string WorkspaceDirectory { get; }
+
+        /// <summary>
+        /// Gets the list of stack exports for use when evaluating <c>Fn::Import</c>
+        /// </summary>
+        /// <value>
+        /// The stack exports.
+        /// </value>
+        IReadOnlyCollection<Export> StackExports { get; }
     }
 }

@@ -404,8 +404,8 @@
                 if (hclParam == null)
                 {
                     var wrn = p is PseudoParameter
-                                  ? $"Cannot import AWS pseudo-parameter '{p.Name}' as it is not supported by terraform."
-                                  : $"Cannot import stack parameter '{p.Name}'.";
+                                  ? $"Pseudo-parameter '{p.Name}' cannot be imported as it is not supported by terraform."
+                                  : $"Stack parameter '{p.Name}' cannot be imported.";
 
                     this.logger.LogWarning(wrn);
                     this.warnings.Add(wrn);
@@ -442,7 +442,7 @@
                 if (UnsupportedResources.Contains(resource.StackResource.ResourceType))
                 {
                     var wrn =
-                        $"{resource.LogicalResourceId} ({resource.ResourceType}): Not supported for import.";
+                        $"Resource \"{resource.LogicalResourceId}\" ({resource.ResourceType}): Not supported for import.";
                     this.logger.LogWarning(wrn);
                     this.warnings.Add(wrn);
                     continue;
@@ -453,7 +453,7 @@
                 if (mapping == null)
                 {
                     var wrn =
-                        $"{resource.LogicalResourceId} ({resource.ResourceType}): No corresponding terraform resource.";
+                        $"Resource \"{resource.LogicalResourceId}\" ({resource.ResourceType}): No corresponding terraform resource.";
                     this.logger.LogWarning(wrn);
                     this.warnings.Add(wrn);
                 }
