@@ -9,6 +9,7 @@
     using Firefly.CloudFormationParser;
     using Firefly.CloudFormationParser.GraphObjects;
     using Firefly.PSCloudFormation.Terraform.Importers.ApiGateway;
+    using Firefly.PSCloudFormation.Terraform.Importers.ApiGatewayV2;
     using Firefly.PSCloudFormation.Terraform.Importers.Cognito;
     using Firefly.PSCloudFormation.Terraform.Importers.IAM;
     using Firefly.PSCloudFormation.Terraform.Importers.Lambda;
@@ -58,31 +59,43 @@
                                                                                      },
                                                                                      {
                                                                                          "aws_api_gateway_base_path_mapping",
-                                                                                         typeof(ApiGatewayBasePathMappingImporter)
+                                                                                         typeof(
+                                                                                             ApiGatewayBasePathMappingImporter)
                                                                                      },
                                                                                      {
                                                                                          "aws_api_gateway_request_validator",
-                                                                                         typeof(ApiGatewayApiDependencyImporter)
+                                                                                         typeof(
+                                                                                             ApiGatewayApiDependencyImporter)
                                                                                      },
                                                                                      {
                                                                                          "aws_api_gateway_usage_plan_key",
-                                                                                         typeof(ApiGatewayUsagePlanKeyImporter)
+                                                                                         typeof(
+                                                                                             ApiGatewayUsagePlanKeyImporter)
                                                                                      },
                                                                                      {
                                                                                          "aws_api_gateway_stage",
-                                                                                         typeof(ApiGatewayApiDependencyImporter)
+                                                                                         typeof(
+                                                                                             ApiGatewayApiDependencyImporter)
                                                                                      },
                                                                                      {
                                                                                          "aws_api_gateway_resource",
-                                                                                         typeof(ApiGatewayResourceImporter)
+                                                                                         typeof(
+                                                                                             ApiGatewayResourceImporter)
                                                                                      },
                                                                                      {
                                                                                          "aws_api_gateway_model",
-                                                                                         typeof(ApiGatewayResourceImporter)
+                                                                                         typeof(
+                                                                                             ApiGatewayResourceImporter)
                                                                                      },
                                                                                      {
                                                                                          "aws_api_gateway_method",
-                                                                                         typeof(ApiGatewayMethodImporter)
+                                                                                         typeof(
+                                                                                             ApiGatewayMethodImporter)
+                                                                                     },
+                                                                                     {
+                                                                                         "aws_apigatewayv2_stage",
+                                                                                         typeof(
+                                                                                             ApiGatewayV2StageImporter)
                                                                                      },
                                                                                      {
                                                                                          "aws_route",
@@ -90,7 +103,8 @@
                                                                                      },
                                                                                      {
                                                                                          "aws_route_table_association",
-                                                                                         typeof(RouteTableAssociationImporter)
+                                                                                         typeof(
+                                                                                             RouteTableAssociationImporter)
                                                                                      }
                                                                                  };
 
@@ -105,6 +119,13 @@
         {
             this.ImportSettings = importSettings;
             this.TerraformSettings = terraformSettings;
+
+            var dependencies = this.TerraformSettings.Template.DependencyGraph.Edges.Where(
+                e => e.Target.TemplateObject.Name == this.ImportSettings.Resource.LogicalId
+                     && e.Source.TemplateObject is IResource && e.Tag != null
+                     && e.Tag.ReferenceType == ReferenceType.DirectReference).Where(
+                d => ((IResource)d.Source.TemplateObject).Type == this.ReferencedAwsResource).ToList();
+
         }
 
         /// <summary>
@@ -195,31 +216,12 @@
         protected ResourceDependency GetResourceDependency(string awsResourceType)
         {
             // !Ref dependency
-            var dependencies = this.TerraformSettings.Template.DependencyGraph.Edges.Where(
-                e => e.Target.TemplateObject.Name == this.ImportSettings.Resource.LogicalId
-                     && e.Source.TemplateObject is IResource && e.Tag != null
-                     && e.Tag.ReferenceType == ReferenceType.DirectReference).Where(
-                d => ((IResource)d.Source.TemplateObject).Type == awsResourceType).ToList();
+            var dependencies = this.GetDependencies(awsResourceType);
 
-            if (dependencies.Count == 1)
+            if (dependencies == null)
             {
-                var referencedTemplateObject = (IResource)dependencies.First().Source.TemplateObject;
-                var referringTemplateObject = (IResource)dependencies.First().Target.TemplateObject;
-
-                this.LogInformation($"Auto-selected {referencedTemplateObject.Type} \"{referencedTemplateObject.Name}\" based on dependency graph.");
-
-                var referencedId = this.ImportSettings.ResourcesToImport
-                    .First(rr => rr.AwsType == referencedTemplateObject.Type && rr.LogicalId == referencedTemplateObject.Name);
-
-                return new ResourceDependency(referencedId, referringTemplateObject, referencedTemplateObject);
+                return null;
             }
-
-            // !GetAtt dependency
-            dependencies = this.TerraformSettings.Template.DependencyGraph.Edges.Where(
-                e => e.Target.TemplateObject.Name == this.ImportSettings.Resource.LogicalId
-                     && e.Source.TemplateObject is IResource && e.Tag != null
-                     && e.Tag.ReferenceType == ReferenceType.AttributeReference).Where(
-                d => ((IResource)d.Source.TemplateObject).Type == awsResourceType).ToList();
 
             switch (dependencies.Count)
             {
@@ -281,6 +283,15 @@
             return null;
         }
 
+        protected string GetThisResourcePropertyValue(string propertyPath)
+        {
+            var thisResource =
+                this.TerraformSettings.Template.Resources.First(
+                    r => r.Name == this.ImportSettings.Resource.LogicalId);
+
+            return thisResource.GetResourcePropertyValue(propertyPath)?.ToString();
+        }
+
         /// <summary>
         /// Issue a warning
         /// </summary>
@@ -308,6 +319,59 @@
         protected void LogInformation(string message)
         {
             this.ImportSettings.Logger.LogInformation(message);
+        }
+
+        /// <summary>
+        /// Gets the graph edge list of dependencies.
+        /// </summary>
+        /// <param name="awsResourceType">Type of the AWS resource.</param>
+        /// <returns>List of matching graph edges</returns>
+        private List<TaggedEdge<IVertex, EdgeDetail>> GetDependencies(string awsResourceType)
+        {
+            // !Ref dependency
+            var dependencies = this.TerraformSettings.Template.DependencyGraph.Edges.Where(
+                e => e.Target.TemplateObject.Name == this.ImportSettings.Resource.LogicalId
+                     && e.Source.TemplateObject is IResource && e.Tag != null
+                     && e.Tag.ReferenceType == ReferenceType.DirectReference).Where(
+                d => ((IResource)d.Source.TemplateObject).Type == awsResourceType).ToList();
+
+            if (dependencies.Count > 1)
+            {
+                // More than one dependency
+                this.LogError(
+                    $"Cannot find related {awsResourceType} for {this.ImportSettings.Resource.LogicalId}. Multiple possibilities found");
+
+                return null;
+            }
+
+            switch (dependencies.Count)
+            {
+                case 0:
+                    {
+                        // !GetAtt dependency
+                        dependencies = this.TerraformSettings.Template.DependencyGraph.Edges.Where(
+                            e => e.Target.TemplateObject.Name == this.ImportSettings.Resource.LogicalId
+                                 && e.Source.TemplateObject is IResource && e.Tag != null
+                                 && e.Tag.ReferenceType == ReferenceType.AttributeReference).Where(
+                            d => ((IResource)d.Source.TemplateObject).Type == awsResourceType).ToList();
+
+                        if (dependencies.Count > 1)
+                        {
+                            // More than one dependency
+                            this.LogError(
+                                $"Cannot find related {awsResourceType} for {this.ImportSettings.Resource.LogicalId}. Multiple possibilities found");
+
+                            return null;
+                        }
+
+                        break;
+                    }
+
+                case 1:
+                    return dependencies;
+            }
+
+            return dependencies;
         }
     }
 }
