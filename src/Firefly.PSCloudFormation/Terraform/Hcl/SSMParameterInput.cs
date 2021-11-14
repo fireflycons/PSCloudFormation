@@ -45,7 +45,7 @@
         }
 
         /// <inheritdoc />
-        protected override string GenerateDefaultStanza(bool final)
+        protected override string GenerateDefaultStanza()
         {
             return string.Empty;
         }

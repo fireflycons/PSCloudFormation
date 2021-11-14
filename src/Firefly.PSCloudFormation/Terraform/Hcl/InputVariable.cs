@@ -231,7 +231,7 @@
                 hcl.AppendLine("  sensitive = true");
             }
 
-            hcl.AppendLine(this.GenerateDefaultStanza(final));
+            hcl.AppendLine(this.GenerateDefaultStanza());
             hcl.AppendLine(this.GenerateValidationStanza());
             hcl.AppendLine("}");
 
@@ -244,9 +244,7 @@
         /// <returns>HCL variable value assignment.</returns>
         public virtual string GenerateTfVar()
         {
-            var hcl = new StringBuilder();
-
-            return hcl.ToString();
+            return string.Empty;
         }
 
         public int IndexOf(string value)
@@ -281,9 +279,8 @@
         /// <summary>
         /// Generates the default stanza.
         /// </summary>
-        /// <param name="final">While resolving HCL, output the current value as the default but finally, output the true default.</param>
         /// <returns>Default stanza for the variable declaration</returns>
-        protected abstract string GenerateDefaultStanza(bool final);
+        protected abstract string GenerateDefaultStanza();
 
         /// <summary>
         /// Generates the validation stanza.

@@ -32,28 +32,26 @@
         public override IList<string> ListIdentity => this.CurrentValueToList().Select(d => d.ToString(CultureInfo.InvariantCulture)).ToList();
 
         /// <inheritdoc />
-        protected override string GenerateDefaultStanza(bool final)
+        public override string GenerateTfVar()
+        {
+            return this.CurrentValue == null
+                       ? string.Empty
+                       : new StringBuilder()
+                           .AppendLine($"{this.Name} = [")
+                           .AppendLine(string.Join(",\n", this.ListIdentity.Select(v => $"  {v}")))
+                           .AppendLine("]")
+                           .ToString();
+        }
+
+        /// <inheritdoc />
+        protected override string GenerateDefaultStanza()
         {
             var hcl = new StringBuilder();
-            List<double> @default;
 
-            if (final)
-            {
-                @default = string.IsNullOrEmpty(this.DefaultValue)
+            var @default = string.IsNullOrEmpty(this.DefaultValue)
                                ? new List<double> { 0 }
                                : this.DefaultValue.Split(new[] { ',' }, StringSplitOptions.RemoveEmptyEntries)
                                    .Select(double.Parse).ToList();
-            }
-            else
-            {
-                @default = this.CurrentValueToList();
-
-                if (@default == null)
-                {
-                    return string.Empty;
-                }
-            }
-
 
             hcl.AppendLine($"{DefaultDeclaration}[");
             foreach (var val in @default)

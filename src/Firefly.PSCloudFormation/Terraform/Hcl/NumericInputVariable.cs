@@ -25,24 +25,17 @@
         public override string Type => "number";
 
         /// <inheritdoc />
-        protected override string GenerateDefaultStanza(bool final)
+        public override string GenerateTfVar()
         {
-            if (final)
-            {
-                if (!string.IsNullOrEmpty(this.DefaultValue))
-                {
-                    return $"{DefaultDeclaration}{double.Parse(this.DefaultValue)}";
-                }
-            }
-            else
-            {
-                if (this.CurrentValue != null)
-                {
-                    return $"{DefaultDeclaration}{double.Parse(this.CurrentValue.ToString())}";
-                }
-            }
+            return this.CurrentValue == null ? string.Empty : $"{this.Name} = {this.CurrentValue}";
+        }
 
-            return string.Empty;
+        /// <inheritdoc />
+        protected override string GenerateDefaultStanza()
+        {
+            return this.CurrentValue != null
+                       ? $"{DefaultDeclaration}{double.Parse(this.CurrentValue.ToString())}"
+                       : string.Empty;
         }
 
         /// <inheritdoc />

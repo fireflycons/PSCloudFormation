@@ -31,26 +31,25 @@
         public override IList<string> ListIdentity => this.CurrentValueToList();
 
         /// <inheritdoc />
-        protected override string GenerateDefaultStanza(bool final)
+        public override string GenerateTfVar()
+        {
+            return this.CurrentValue == null
+                       ? string.Empty
+                       : new StringBuilder()
+                           .AppendLine($"{this.Name} = [")
+                           .AppendLine(string.Join(",\n", this.ListIdentity.Select(v => $"  \"{v}\"")))
+                           .AppendLine("]")
+                           .ToString();
+        }
+
+        /// <inheritdoc />
+        protected override string GenerateDefaultStanza()
         {
             var hcl = new StringBuilder();
-            List<string> @default;
 
-            if (final)
-            {
-                @default = string.IsNullOrEmpty(this.DefaultValue)
+            var @default = string.IsNullOrEmpty(this.DefaultValue)
                                ? new List<string> { string.Empty }
                                : this.DefaultValue.Split(new[] { ',' }, StringSplitOptions.RemoveEmptyEntries).ToList();
-            }
-            else
-            {
-                @default = this.CurrentValueToList();
-
-                if (@default == null)
-                {
-                    return string.Empty;
-                }
-            }
 
             hcl.AppendLine($"{DefaultDeclaration}[");
             foreach (var val in @default)

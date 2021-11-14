@@ -25,6 +25,12 @@
         public override string Type => "string";
 
         /// <inheritdoc />
+        public override string GenerateTfVar()
+        {
+            return this.CurrentValue == null ? string.Empty : $"{this.Name} = \"{this.CurrentValue}\"";
+        }
+
+        /// <inheritdoc />
         protected override string GenerateValidationStanza()
         {
             var hcl = new StringBuilder();
@@ -84,19 +90,9 @@
         }
 
         /// <inheritdoc />
-        protected override string GenerateDefaultStanza(bool final)
+        protected override string GenerateDefaultStanza()
         {
-            if (final)
-            {
-                if (this.DefaultValue == null)
-                {
-                    return string.Empty;
-                }
-
-                return $"{DefaultDeclaration}\"{this.DefaultValue}\"";
-            }
-
-            return this.CurrentValue == null ? string.Empty : $"{DefaultDeclaration}\"{this.CurrentValue}\"";
+            return this.DefaultValue == null ? string.Empty : $"{DefaultDeclaration}\"{this.DefaultValue}\"";
         }
     }
 }

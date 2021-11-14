@@ -6,6 +6,7 @@
     using System.IO;
     using System.Linq;
     using System.Text;
+    using System.Xml;
 
     using Firefly.CloudFormation;
     using Firefly.CloudFormationParser.GraphObjects;
@@ -21,6 +22,8 @@
     using Newtonsoft.Json;
     using Newtonsoft.Json.Linq;
 
+    using Formatting = Newtonsoft.Json.Formatting;
+
     internal class TerraformExporter : AutoResourceLoader
     {
         /// <summary>
@@ -32,6 +35,11 @@
         /// Name of the Terraform state file
         /// </summary>
         private const string StateFileName = "terraform.tfstate";
+
+        /// <summary>
+        /// Name of the variable values file
+        /// </summary>
+        private const string VarsFile = "terraform.tfvars";
 
         /// <summary>
         /// These resources have no direct terraform representation.
@@ -90,20 +98,13 @@
         public void Export()
         {
             var initialHcl = new StringBuilder();
-            var finalHcl = new StringBuilder();
             var unmappedResources = new List<string>();
 
             this.logger.LogInformation("\nInitializing inputs and resources...");
 
             initialHcl.AppendLine(terraformBlock.Replace("#REGION#", this.settings.AwsRegion));
-            finalHcl.AppendLine(terraformBlock.Replace("#REGION#", this.settings.AwsRegion));
 
             var parameters = this.ProcessInputVariables();
-
-            foreach (var hclParameter in parameters)
-            {
-                finalHcl.AppendLine(hclParameter.GenerateHcl(true));
-            }
 
             var resourcesToImport = this.ProcessResources(initialHcl, unmappedResources);
 
@@ -131,6 +132,11 @@
 
                 Directory.SetCurrentDirectory(this.settings.WorkspaceDirectory);
 
+                if (File.Exists(VarsFile))
+                {
+                    File.Delete(VarsFile);
+                }
+
                 // Write out initial HCL with empty resource declarations, so that terraform import has something to work with
                 File.WriteAllText(MainScriptFile, initialHcl.ToString(), new UTF8Encoding(false));
 
@@ -147,19 +153,17 @@
                     this.logger.LogInformation(
                         $"\nImporting resource {++imported}/{totalResources} - {resource.Address}");
 
-                    // PeeringRoute (AWS::EC2::Route): unexpected format of ID ("fc-ba-Peeri-VOSMB8EXFM2J"), expected ROUTETABLEID_DESTINATION
-                    // PrivateRouteTableAssociationA (AWS::EC2::SubnetRouteTableAssociation): Unexpected format for import: rtbassoc-0f37b1f143000066c. Use 'subnet ID/route table ID' or 'gateway ID/route table ID
-                    if (ResourceImporter.RequiresResoureImporter(resource.TerraformType))
+                    if (ResourceImporter.RequiresResourceImporter(resource.TerraformType))
                     {
                         var importer = ResourceImporter.Create(
                             new ResourceImporterSettings
-                                {
-                                    Errors = this.errors,
-                                    Logger = this.logger,
-                                    Resource = resource,
-                                    ResourcesToImport = resourcesToImport,
-                                    Warnings = this.warnings
-                                },
+                            {
+                                Errors = this.errors,
+                                Logger = this.logger,
+                                Resource = resource,
+                                ResourcesToImport = resourcesToImport,
+                                Warnings = this.warnings
+                            },
                             this.settings);
 
                         if (importer != null)
@@ -213,13 +217,14 @@
                 // Wire up dependencies
                 this.ResolveResourceDependencies(importedResources, generatationStateFile);
                 this.ResolveInputDependencies(importedResources, generatationStateFile, parameters);
-                var outputs = this.ResolveOutputDependencies(importedResources, generatationStateFile);
+                var outputs = this.ResolveOutputDependencies(importedResources);
 
                 // Serialize to HCL
-                this.logger.LogInformation("Writing main.tf");
+                this.logger.LogInformation($"Writing {MainScriptFile}");
 
+                // Write main.tf
                 using (var stream = new FileStream(
-                    Path.Combine(this.settings.WorkspaceDirectory, "main.tf"),
+                    Path.Combine(this.settings.WorkspaceDirectory, MainScriptFile),
                     FileMode.Create,
                     FileAccess.Write))
                 using (var s = new StreamWriter(stream, new UTF8Encoding(false)))
@@ -229,7 +234,7 @@
                     // TODO: Suppress any vars not referenced (e.g. only existed for condition blocks)
                     foreach (var param in parameters.OrderBy(p => p.IsDataSource).ThenBy(p => p.Name))
                     {
-                        s.WriteLine(param.GenerateHcl(false));
+                        s.WriteLine(param.GenerateHcl(true));
                     }
 
                     var serializer = new Serializer(new HclEmitter(s));
@@ -238,6 +243,34 @@
                     foreach (var output in outputs)
                     {
                         s.WriteLine(output.GenerateHcl());
+                    }
+                }
+
+                // Write terraform.tfvars
+                this.logger.LogInformation($"Writing {VarsFile}");
+
+                using (var stream = new FileStream(
+                    Path.Combine(this.settings.WorkspaceDirectory, VarsFile),
+                    FileMode.Create,
+                    FileAccess.Write))
+                using (var s = new StreamWriter(stream, new UTF8Encoding(false)))
+                {
+                    s.WriteLine("###################################################################");
+                    s.WriteLine("#");
+                    s.WriteLine($"# Variable values as per current state of stack \"{this.settings.StackName}\"");
+                    s.WriteLine("#");
+                    s.WriteLine("###################################################################");
+                    s.WriteLine();
+
+                    foreach (var param in parameters.OrderBy(p => p.Name))
+                    {
+                        var hcl = param.GenerateTfVar();
+
+                        if (!string.IsNullOrEmpty(hcl))
+                        {
+                            s.WriteLine(param.GenerateTfVar());
+                            s.WriteLine();
+                        }
                     }
                 }
 
@@ -475,9 +508,12 @@
             return resourcesToImport;
         }
 
-        private List<OutputValue> ResolveOutputDependencies(
-            List<ResourceImport> importedResources,
-            StateFile generatationStateFile)
+        /// <summary>
+        /// Resolves dependencies between resources and output values.
+        /// </summary>
+        /// <param name="importedResources">The imported resources.</param>
+        /// <returns>List of output values to emit.</returns>
+        private List<OutputValue> ResolveOutputDependencies(List<ResourceImport> importedResources)
         {
             var outputValues = new List<OutputValue>();
 
@@ -791,19 +827,31 @@
                 {
                     case JProperty jp when jp.Value is JValue jv:
 
-                        if (Serializer.TryGetJson(jv.Value<string>(), true, out var policy))
+                        if (jv.Type == JTokenType.String)
                         {
-                            var replacementMade = false;
-                            ReplacePolicyReference(policy, referredAwsResource, con, ref replacementMade);
+                            var stringValue = jv.Value<string>();
 
-                            if (replacementMade)
+                            if (Serializer.TryGetJson(stringValue, true, out var policy))
                             {
-                                jv.Value = policy.ToString(Formatting.None);
+                                var replacementMade = false;
+                                ReplacePolicyReference(policy, referredAwsResource, con, ref replacementMade);
+
+                                if (replacementMade)
+                                {
+                                    jv.Value = policy.ToString(Formatting.None);
+                                }
                             }
-                        }
-                        else
-                        {
-                            jp.Value = con;
+                            else
+                            {
+                                if (stringValue == referredAwsResource.PhysicalResourceId || referredAwsResource.ArnRegex.IsMatch(stringValue))
+                                {
+                                    jp.Value = con;
+                                }
+                                else if (stringValue.Contains(referredAwsResource.PhysicalResourceId))
+                                {
+                                    jp.Value = new JValue(stringValue.Replace(con.Name, "${" + con.Name + "}"));
+                                }
+                            }
                         }
 
                         break;
