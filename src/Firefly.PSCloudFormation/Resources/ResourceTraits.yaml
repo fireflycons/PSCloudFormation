@@ -90,6 +90,21 @@
         - invoke_url
         - lambda_permissions
 
+- Group: API Gateway V2
+  Resources:
+    - Resource: aws_apigatewayv2_api
+      UnconfigurableAttributes:
+        - api_endpoint
+        - invoke_url
+        - aws_lambda_permissions
+    - Resource: aws_apigatewayv2_stage
+      UnconfigurableAttributes:
+        - invoke_url
+        - aws_lambda_permissions
+      RequiredAttributes:
+        - access_log_settings.#.destination_arn
+        - ttl.#.attribute_name
+
 - Group: Autoscaling
   Resources:
     - Resource: aws_autoscaling_group
@@ -121,6 +136,12 @@
         - - verification_message_template
           - email_verification_message
           - email_verification_subject
+
+- Group: DynamoDB
+  Resources:
+    - Resource: aws_dynamodb_table
+      RequiredAttributes:
+        - ttl.#.attribute_name
 
 - Group: EC2
   Resources:
@@ -204,6 +225,12 @@
     - Resource: aws_sns_topic
       UnconfigurableAttributes:
         - owner
+    - Resource: aws_sns_topic_subscription
+      UnconfigurableAttributes:
+        - confirmation_was_authenticated
+        - pending_confirmation
+      RequiredAttributes:
+        - topic_arn
 
 - Group: SSM
   Resources:
