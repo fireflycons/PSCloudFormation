@@ -23,15 +23,18 @@
         }
 
         /// <inheritdoc />
+        protected override string ReferencedAwsResource => string.Empty;
+
+        /// <inheritdoc />
         public override string GetImportId(string caption, string message)
         {
-            var tempateResource = this.TerraformSettings.Resources.First(r => r.LogicalResourceId == this.ImportSettings.Resource.LogicalId)
+            var templateResource = this.TerraformSettings.Resources.First(r => r.LogicalResourceId == this.ImportSettings.Resource.LogicalId)
                 .TemplateResource;
 
             // ReSharper disable once PossibleNullReferenceException - can't be null for this resource type.
-            var typeProperty = tempateResource.Properties["Type"];
-            var zoneIdProperty = tempateResource.Properties.ContainsKey("HostedZoneId")
-                                     ? tempateResource.Properties["HostedZoneId"]
+            var typeProperty = templateResource.Properties["Type"];
+            var zoneIdProperty = templateResource.Properties.ContainsKey("HostedZoneId")
+                                     ? templateResource.Properties["HostedZoneId"]
                                      : null;
 
             if (zoneIdProperty == null)

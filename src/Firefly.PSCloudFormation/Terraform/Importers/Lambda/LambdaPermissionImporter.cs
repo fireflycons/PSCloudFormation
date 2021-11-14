@@ -3,7 +3,6 @@
     using System.Linq;
 
     using Firefly.CloudFormationParser;
-    using Firefly.CloudFormationParser.Intrinsics.Functions;
 
     /// <summary>
     /// <see href="https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/lambda_permission#import" />
@@ -16,20 +15,19 @@
         /// </summary>
         /// <param name="importSettings">The import settings.</param>
         /// <param name="terraformSettings">The terraform settings.</param>
-        public LambdaPermissionImporter(
-            IResourceImporterSettings importSettings,
-            ITerraformSettings terraformSettings)
+        public LambdaPermissionImporter(IResourceImporterSettings importSettings, ITerraformSettings terraformSettings)
             : base(importSettings, terraformSettings)
         {
         }
 
         /// <inheritdoc />
+        protected override string ReferencedAwsResource => "AWS::Lambda::Function";
+
+        /// <inheritdoc />
         public override string GetImportId(string caption, string message)
         {
             // All dependencies that have this permission as a target
-            var dependencies = this.TerraformSettings.Template.DependencyGraph.Edges
-                .Where(e => e.Target.TemplateObject.Name == this.ImportSettings.Resource.LogicalId && e.Source.TemplateObject is IResource).Where(
-                    d => ((IResource)d.Source.TemplateObject).Type == "AWS::Lambda::Function").ToList();
+            var dependencies = this.GetResourceDependencies();
 
             // There should be a 1:1 relationship between permission and lambda.
             if (dependencies.Count == 1)
@@ -38,8 +36,8 @@
 
                 this.LogInformation($"Auto-selected lambda function \"{r.Name}\" based on dependency graph.");
 
-                var referencedId = this.ImportSettings.ResourcesToImport.First(rr => rr.AwsType == r.Type && rr.LogicalId == r.Name)
-                    .PhysicalId;
+                var referencedId = this.ImportSettings.ResourcesToImport
+                    .First(rr => rr.AwsType == r.Type && rr.LogicalId == r.Name).PhysicalId;
 
                 return $"{referencedId}/{this.ImportSettings.Resource.PhysicalId}";
             }
@@ -54,15 +52,18 @@
 
                 if (functionResource.GetResourcePropertyValue("FunctionName") is string importName)
                 {
-                    var functionArn = this.TerraformSettings.StackExports.FirstOrDefault(e => e.Name == importName)?.Value;
+                    var functionArn = this.TerraformSettings.StackExports.FirstOrDefault(e => e.Name == importName)
+                        ?.Value;
 
                     if (functionArn == null)
                     {
-                        this.LogWarning($"Permission \"{this.ImportSettings.Resource.LogicalId}\". Cannot resolve related function which is imported from another stack.");
+                        this.LogWarning(
+                            $"Permission \"{this.ImportSettings.Resource.LogicalId}\". Cannot resolve related function which is imported from another stack.");
                         return null;
                     }
 
-                    this.LogWarning($"Resource \"{this.ImportSettings.Resource.LogicalId}\" references a resource imported from another stack.");
+                    this.LogWarning(
+                        $"Resource \"{this.ImportSettings.Resource.LogicalId}\" references a resource imported from another stack.");
                     return $"{functionArn.Split(':').Last()}/{this.ImportSettings.Resource.PhysicalId}";
                 }
 

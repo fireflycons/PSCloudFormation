@@ -23,6 +23,9 @@
         {
         }
 
+        /// <inheritdoc />
+        protected override string ReferencedAwsResource => string.Empty;
+
         /// <inhericdoc />
         public override string GetImportId(string caption, string message)
         {

@@ -3,7 +3,6 @@
     using System.Linq;
 
     using Firefly.CloudFormationParser;
-    using Firefly.CloudFormationParser.GraphObjects;
 
     /// <summary>
     /// <see href="https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/api_gateway_method#import" />
@@ -16,9 +15,7 @@
         /// </summary>
         /// <param name="importSettings">The import settings.</param>
         /// <param name="terraformSettings">The terraform settings.</param>
-        public ApiGatewayMethodImporter(
-            IResourceImporterSettings importSettings,
-            ITerraformSettings terraformSettings)
+        public ApiGatewayMethodImporter(IResourceImporterSettings importSettings, ITerraformSettings terraformSettings)
             : base(importSettings, terraformSettings)
         {
         }
@@ -33,11 +30,7 @@
                 return null;
             }
 
-            var dependencies = this.TerraformSettings.Template.DependencyGraph.Edges
-                .Where(
-                    e => e.Target.TemplateObject.Name == this.ImportSettings.Resource.LogicalId && e.Source.TemplateObject is IResource
-                         && e.Tag != null && e.Tag.ReferenceType == ReferenceType.DirectReference).Where(
-                    d => ((IResource)d.Source.TemplateObject).Type == "AWS::ApiGateway::Resource").ToList();
+            var dependencies = this.GetResourceDependencies("AWS::ApiGateway::Resource");
 
             // There should be a 1:1 relationship between attachment and pool.
             if (dependencies.Count == 1)
@@ -46,7 +39,8 @@
 
                 this.LogInformation($"Auto-selected ApiResource \"{r.Name}\" based on dependency graph.");
 
-                var httpMethod = this.TerraformSettings.Template.Resources.First(tr => tr.Name == this.ImportSettings.Resource.LogicalId)
+                var httpMethod = this.TerraformSettings.Template.Resources
+                    .First(tr => tr.Name == this.ImportSettings.Resource.LogicalId)
                     .GetResourcePropertyValue("HttpMethod")?.ToString();
 
                 if (httpMethod != null)

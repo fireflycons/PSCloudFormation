@@ -3,7 +3,6 @@
     using System.Linq;
 
     using Firefly.CloudFormationParser;
-    using Firefly.CloudFormationParser.GraphObjects;
 
     /// <summary>
     /// Imports <c>DOMAIN/BASEPATH</c>
@@ -24,13 +23,12 @@
         }
 
         /// <inheritdoc />
+        protected override string ReferencedAwsResource => "AWS::ApiGateway::DomainName";
+
+        /// <inheritdoc />
         public override string GetImportId(string caption, string message)
         {
-            var dependencies = this.TerraformSettings.Template.DependencyGraph.Edges
-                .Where(
-                    e => e.Target.TemplateObject.Name == this.ImportSettings.Resource.LogicalId && e.Source.TemplateObject is IResource
-                         && e.Tag != null && e.Tag.ReferenceType == ReferenceType.DirectReference).Where(
-                    d => ((IResource)d.Source.TemplateObject).Type == "AWS::ApiGateway::DomainName").ToList();
+            var dependencies = this.GetResourceDependencies();
 
             // There should be a 1:1 relationship between attachment and pool.
             if (dependencies.Count == 1)
@@ -42,8 +40,10 @@
                 var domain = this.ImportSettings.ResourcesToImport
                     .First(rr => rr.AwsType == r.Type && rr.LogicalId == r.Name).PhysicalId;
 
-                var basePath = this.TerraformSettings.Template.Resources.First(tr => tr.Name == this.ImportSettings.Resource.LogicalId)
-                    .GetResourcePropertyValue("BasePath")?.ToString() ?? string.Empty;
+                var basePath =
+                    this.TerraformSettings.Template.Resources
+                        .First(tr => tr.Name == this.ImportSettings.Resource.LogicalId)
+                        .GetResourcePropertyValue("BasePath")?.ToString() ?? string.Empty;
 
                 return $"{domain}/{basePath}";
             }

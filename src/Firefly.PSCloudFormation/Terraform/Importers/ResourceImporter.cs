@@ -3,14 +3,19 @@
     using System;
     using System.Collections.Generic;
     using System.Collections.ObjectModel;
+    using System.Linq;
     using System.Management.Automation.Host;
 
+    using Firefly.CloudFormationParser;
+    using Firefly.CloudFormationParser.GraphObjects;
     using Firefly.PSCloudFormation.Terraform.Importers.ApiGateway;
     using Firefly.PSCloudFormation.Terraform.Importers.Cognito;
     using Firefly.PSCloudFormation.Terraform.Importers.IAM;
     using Firefly.PSCloudFormation.Terraform.Importers.Lambda;
     using Firefly.PSCloudFormation.Terraform.Importers.Route53;
     using Firefly.PSCloudFormation.Terraform.Importers.VPC;
+
+    using QuikGraph;
 
     /// <summary>
     /// Base class for classes that attempt interactively to fix import issues
@@ -103,6 +108,14 @@
         }
 
         /// <summary>
+        /// Gets the referenced AWS resource, e.g. a AWS::Lambda::Permission references a AWS::Lambda::Function, so the function type goes here.
+        /// </summary>
+        /// <value>
+        /// The referenced AWS resource.
+        /// </value>
+        protected abstract string ReferencedAwsResource { get; }
+
+        /// <summary>
         /// Gets the import settings.
         /// </summary>
         /// <value>
@@ -144,7 +157,7 @@
         /// </summary>
         /// <param name="terraformResourceType">Type of the terraform resource.</param>
         /// <returns><c>true</c> if importer is required.</returns>
-        public static bool RequiresResoureImporter(string terraformResourceType)
+        public static bool RequiresResourceImporter(string terraformResourceType)
         {
             return ResourceImporters.ContainsKey(terraformResourceType);
         }
@@ -157,6 +170,40 @@
         /// <returns>The resource selected by the user, else <c>null</c> if cancelled.</returns>
         public abstract string GetImportId(string caption, string message);
 
+        /// <summary>
+        /// Gets the resource dependency graph edges for the resource type identified by <see cref="ReferencedAwsResource"/>.
+        /// </summary>
+        /// <returns>List of matching resource graph edges</returns>
+        protected IReadOnlyCollection<TaggedEdge<IVertex, EdgeDetail>> GetResourceDependencies()
+        {
+            return this.GetResourceDependencies(this.ReferencedAwsResource);
+        }
+
+        /// <summary>
+        /// Gets the resource dependency graph edges for the resource type identified by the given argument.
+        /// </summary>
+        /// <param name="awsResourceType">Resource type to find graph edges for.</param>
+        /// <returns>List of matching resource graph edges</returns>
+        protected IReadOnlyCollection<TaggedEdge<IVertex, EdgeDetail>> GetResourceDependencies(string awsResourceType)
+        {
+            var dependencies = this.TerraformSettings.Template.DependencyGraph.Edges.Where(
+                e => e.Target.TemplateObject.Name == this.ImportSettings.Resource.LogicalId
+                     && e.Source.TemplateObject is IResource && e.Tag != null
+                     && e.Tag.ReferenceType == ReferenceType.DirectReference).Where(
+                d => ((IResource)d.Source.TemplateObject).Type == awsResourceType).ToList();
+
+            if (dependencies.Count > 0)
+            {
+                return dependencies;
+            }
+
+            return this.TerraformSettings.Template.DependencyGraph.Edges.Where(
+                e => e.Target.TemplateObject.Name == this.ImportSettings.Resource.LogicalId
+                     && e.Source.TemplateObject is IResource && e.Tag != null
+                     && e.Tag.ReferenceType == ReferenceType.AttributeReference).Where(
+                d => ((IResource)d.Source.TemplateObject).Type == awsResourceType).ToList();
+        }
+        
         /// <summary>
         /// Interactively selects the resource.
         /// </summary>

@@ -1,12 +1,8 @@
 ﻿namespace Firefly.PSCloudFormation.Terraform.Importers.ApiGateway
 {
-    using System.Collections.Generic;
     using System.Linq;
 
     using Firefly.CloudFormationParser;
-    using Firefly.CloudFormationParser.GraphObjects;
-    using Firefly.PSCloudFormation.Terraform.Hcl;
-    using Firefly.PSCloudFormation.Utils;
 
     /// <summary>
     /// Serves to determine the REST-API-ID that is required to import several other resources.
@@ -26,6 +22,9 @@
         {
         }
 
+        /// <inheritdoc />
+        protected override string ReferencedAwsResource => "AWS::ApiGateway::RestApi";
+
         /// <summary>
         /// Gets the REST API identifier.
         /// </summary>
@@ -33,11 +32,7 @@
         protected string GetRestApiId()
         {
             // All dependencies that have this attachment as a target
-            var dependencies = this.TerraformSettings.Template.DependencyGraph.Edges
-                .Where(
-                    e => e.Target.TemplateObject.Name == this.ImportSettings.Resource.LogicalId && e.Source.TemplateObject is IResource
-                         && e.Tag != null && e.Tag.ReferenceType == ReferenceType.DirectReference).Where(
-                    d => ((IResource)d.Source.TemplateObject).Type == "AWS::ApiGateway::RestApi").ToList();
+            var dependencies = this.GetResourceDependencies();
 
             // There should be a 1:1 relationship between attachment and pool.
             if (dependencies.Count == 1)
@@ -46,8 +41,8 @@
 
                 this.LogInformation($"Auto-selected REST API \"{r.Name}\" based on dependency graph.");
 
-                var referencedId = this.ImportSettings.ResourcesToImport.First(rr => rr.AwsType == r.Type && rr.LogicalId == r.Name)
-                    .PhysicalId;
+                var referencedId = this.ImportSettings.ResourcesToImport
+                    .First(rr => rr.AwsType == r.Type && rr.LogicalId == r.Name).PhysicalId;
 
                 return referencedId;
             }
@@ -67,7 +62,6 @@
             }
 
             return null;
-
         }
     }
 }

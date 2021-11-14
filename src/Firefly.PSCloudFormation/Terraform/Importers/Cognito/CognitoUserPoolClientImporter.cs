@@ -23,12 +23,13 @@
         }
 
         /// <inheritdoc />
+        protected override string ReferencedAwsResource => "AWS::Cognito::UserPool";
+
+        /// <inheritdoc />
         public override string GetImportId(string caption, string message)
         {
             // All dependencies that have this client as a target
-            var dependencies = this.TerraformSettings.Template.DependencyGraph.Edges
-                .Where(e => e.Target.TemplateObject.Name == this.ImportSettings.Resource.LogicalId && e.Source.TemplateObject is IResource).Where(
-                    d => ((IResource)d.Source.TemplateObject).Type == "AWS::Cognito::UserPool").ToList();
+            var dependencies = this.GetResourceDependencies();
 
             // There should be a 1:1 relationship between pool and client.
             if (dependencies.Count == 1)

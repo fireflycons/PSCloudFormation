@@ -11,17 +11,19 @@
         /// </summary>
         /// <param name="importSettings">The import settings.</param>
         /// <param name="terraformSettings">The terraform settings.</param>
-        public IAMManagedPolicyImporter(
-            IResourceImporterSettings importSettings,
-            ITerraformSettings terraformSettings)
+        public IAMManagedPolicyImporter(IResourceImporterSettings importSettings, ITerraformSettings terraformSettings)
             : base(importSettings, terraformSettings)
         {
         }
 
         /// <inheritdoc />
+        protected override string ReferencedAwsResource => string.Empty;
+
+        /// <inheritdoc />
         public override string GetImportId(string caption, string message)
         {
-            return $"arn:aws:iam::{this.TerraformSettings.AwsAccountId}:policy/{this.ImportSettings.Resource.PhysicalId}";
+            return
+                $"arn:aws:iam::{this.TerraformSettings.AwsAccountId}:policy/{this.ImportSettings.Resource.PhysicalId}";
         }
     }
 }

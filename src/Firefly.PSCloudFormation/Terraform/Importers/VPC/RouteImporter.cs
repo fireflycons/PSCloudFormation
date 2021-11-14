@@ -23,9 +23,12 @@
         {
         }
 
+        /// <inheritdoc />
+        protected override string ReferencedAwsResource => "AWS::EC2::RouteTable";
+
         public override string GetImportId(string caption, string message)
         {
-            var tempateResource = this.TerraformSettings.Resources
+            var templateResource = this.TerraformSettings.Resources
                 .First(r => r.LogicalResourceId == this.ImportSettings.Resource.LogicalId).TemplateResource;
 
             var dependencies = this.TerraformSettings.Template.DependencyGraph.Edges.Where(
@@ -45,8 +48,8 @@
                 var referencedId = this.ImportSettings.ResourcesToImport.First(rr => rr.AwsType == r.Type && rr.LogicalId == r.Name)
                     .PhysicalId;
 
-                var v4Cidr = tempateResource.GetResourcePropertyValue("DestinationCidrBlock");
-                var v6Cidr = tempateResource.GetResourcePropertyValue("DestinationIpv6CidrBlock");
+                var v4Cidr = templateResource.GetResourcePropertyValue("DestinationCidrBlock");
+                var v6Cidr = templateResource.GetResourcePropertyValue("DestinationIpv6CidrBlock");
 
                 if (v4Cidr is string)
                 {
