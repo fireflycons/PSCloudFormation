@@ -20,12 +20,12 @@
         }
 
         /// <inheritdoc />
-        public override string Address => "data.aws_partition.current.partition";
+        public override string Address => "data.aws_partition.partition.partition";
 
         /// <inheritdoc />
         public override string GenerateHcl(bool final)
         {
-            return "data \"aws_partition\" \"current\" {}\n";
+            return "data \"aws_partition\" \"partition\" {}\n";
         }
     }
 }

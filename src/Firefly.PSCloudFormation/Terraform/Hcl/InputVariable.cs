@@ -25,7 +25,8 @@
             {
                 { "AWS::Region", typeof(AWSRegionInput) },
                 { "AWS::AccountId", typeof(AWSAccountIdInput) },
-                { "AWS::Partition", typeof(AWSPartitionInput) }
+                { "AWS::Partition", typeof(AWSPartitionInput) },
+                { "AWS::URLSuffix", typeof(AWSUrlSuffixInput) }
             };
 
         /// <summary>
