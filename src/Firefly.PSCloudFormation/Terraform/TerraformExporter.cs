@@ -10,6 +10,7 @@
     using Firefly.CloudFormation;
     using Firefly.CloudFormationParser.GraphObjects;
     using Firefly.CloudFormationParser.Intrinsics.Functions;
+    using Firefly.CloudFormationParser.TemplateObjects;
     using Firefly.EmbeddedResourceLoader;
     using Firefly.PSCloudFormation.Terraform.Hcl;
     using Firefly.PSCloudFormation.Terraform.HclSerializer;
@@ -137,7 +138,7 @@
                 this.settings.Runner.Run("init", true, null);
                 this.logger.LogInformation($"\nImporting {totalResources} mapped resources from stack \"{this.settings.StackName}\" to terraform state...");
 
-                // importedResources = resourcesToImport;
+                //importedResources = resourcesToImport;
 
                 foreach (var resource in resourcesToImport)
                 {
@@ -402,7 +403,10 @@
 
                 if (hclParam == null)
                 {
-                    var wrn = $"Cannot import stack parameter '{p.Name}'";
+                    var wrn = p is PseudoParameter
+                                  ? $"Cannot import AWS pseudo-parameter '{p.Name}' as it is not supported by terraform."
+                                  : $"Cannot import stack parameter '{p.Name}'.";
+
                     this.logger.LogWarning(wrn);
                     this.warnings.Add(wrn);
                 }
@@ -542,7 +546,7 @@
                 {
                     if (edge.Source.Name.StartsWith("AWS::"))
                     {
-                        this.warnings.Add($"Resource \"{referringAwsResource.LogicalResourceId}\" references \"{edge.Source.Name}\" which is unsupported in terraform.");
+                        this.warnings.Add($"Resource \"{referringAwsResource.LogicalResourceId}\" references \"{edge.Source.Name}\" which is not supported by terraform.");
                     }
                     else
                     {

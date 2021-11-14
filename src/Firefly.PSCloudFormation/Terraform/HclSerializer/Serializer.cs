@@ -98,22 +98,6 @@
 
                     foreach (var child in node.Children<JProperty>())
                     {
-                        if (this.currentResourceType == "aws_iam_role" && child.Name == "inline_policy"
-                                                                       && child.Value is JArray policies)
-                        {
-                            // Multiple inline_policy blocks need to be emitted.
-                            foreach (var policy in policies)
-                            {
-                                this.emitter.Emit(new MappingKey("inline_policy"));
-                                this.emitter.Emit(new SequenceStart());
-                                this.WalkNode(policy);
-                                this.emitter.Emit(new SequenceEnd());
-                            }
-
-                            continue;
-                        }
-
-                        // TODO: Block key, not mapping. HCLEmitter line 347
                         this.emitter.Emit(new MappingKey(child.Name));
                         this.WalkNode(child.Value);
                     }

@@ -22,6 +22,25 @@
         {
         }
 
+        /// <summary>
+        /// Initializes a new instance of the <see cref="MappingKey"/> class.
+        /// </summary>
+        /// <param name="key">The key.</param>
+        /// <param name="isBlockKey">if set to <c>true</c> [is block key].</param>
+        public MappingKey(string key, bool isBlockKey)
+        : this (key)
+        {
+            this.IsBlockKey = isBlockKey;
+        }
+
+        /// <summary>
+        /// Gets a value indicating whether this instance is a block key.
+        /// </summary>
+        /// <value>
+        ///   <c>true</c> if this instance is block key; otherwise, <c>false</c>.
+        /// </value>
+        public bool IsBlockKey { get; }
+
         /// <inheritdoc />
         internal override EventType Type => EventType.MappingKey;
 

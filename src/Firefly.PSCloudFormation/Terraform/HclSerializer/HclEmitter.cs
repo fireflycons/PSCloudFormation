@@ -59,6 +59,11 @@
         private string currentKey;
 
         /// <summary>
+        /// The current block key if emitting a block
+        /// </summary>
+        private string currentBlockKey;
+
+        /// <summary>
         /// The current resource name
         /// </summary>
         private string currentResourceName;
@@ -305,20 +310,33 @@
         private void EmitMappingEnd(HclEvent @event)
         {
             var m = GetTypedEvent<MappingEnd>(@event);
+            var previousState = this.state = this.states.Pop();
 
             this.indent = this.indents.Pop();
-            this.state = this.states.Pop();
 
-            if (this.state == EmitterState.Mapping)
+            if (this.state == EmitterState.Mapping && this.path.Any())
             {
-                // Extra pop for nested mappings
+                // Extra pop for nested mappings - path may be empty when coming to the end of a sequence of blocks (must be able to do this better!)
                 this.path.Pop();
             }
 
             this.WriteIndent();
             this.WriteIndicator("}", false, false, true);
 
-            if (this.state == EmitterState.Sequence)
+            var mappingStart = this.events.Peek() as MappingStart;
+
+            if (previousState == EmitterState.Block && mappingStart != null)
+            {
+                this.indents.Pop();
+                this.path.Pop(); // #
+                this.path.Pop(); // block key
+                this.WriteIndent();
+                this.EmitMappingKey(new MappingKey(this.currentBlockKey, true));
+                this.IncreaseIndent();
+                return;
+            }
+
+            if (this.state == EmitterState.Sequence || mappingStart != null)
             {
                 this.Write(',');
             }
@@ -336,6 +354,11 @@
             this.currentKey = key.Value;
             this.path.Push(this.currentKey);
 
+            if (key.IsBlockKey)
+            {
+                this.path.Push("#"); // Still effectively within sequence
+            }
+
             if (!this.resourceTraits.ShouldEmitAttribute(this.CurrentPath, this.AnalyzeAttribute(key)))
             {
                 this.ConsumeAttribute();
@@ -347,14 +370,17 @@
             this.WriteIndent();
             this.EmitScalar(@event);
 
-            var isPotentiallyBlock = this.events.Count >= 2 && this.events.First() is SequenceStart
-                                                            && this.events.Skip(1).First() is MappingStart
-                                                            && !this.states.Contains(EmitterState.Json);
+            var isPotentiallyBlock = key.IsBlockKey || (this.events.Count >= 2 && this.events.First() is SequenceStart
+                                                                               && this.events.Skip(1).First() is
+                                                                                   MappingStart
+                                                                               && !this.states.Contains(
+                                                                                   EmitterState.Json));
 
             if (isPotentiallyBlock && !this.resourceTraits.NonBlockTypeAttributes.Contains(key.Value))
             {
                 this.states.Push(this.state);
                 this.state = EmitterState.Block;
+                this.currentBlockKey = key.Value;
             }
             else
             {
