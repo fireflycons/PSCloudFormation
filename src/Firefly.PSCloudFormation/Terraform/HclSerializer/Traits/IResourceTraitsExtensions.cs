@@ -25,13 +25,19 @@
                 throw new ArgumentNullException(nameof(self));
             }
 
+            if (self.RequiredAttributes.Any(currentPath.WildcardMatch))
+            {
+                // Required attributes overrides unconfigurable attributes
+                return true;
+            }
+
             if (self.IsConflictingArgument(currentPath) || self.UnconfigurableAttributes.Any(currentPath.WildcardMatch))
             {
                 // Even when it has a value
                 return false;
             }
 
-            return analysis == AttributeContent.HasValue || self.RequiredAttributes.Any(currentPath.WildcardMatch);
+            return analysis == AttributeContent.HasValue;
         }
     }
 }
