@@ -336,9 +336,10 @@
                 return;
             }
 
-            if (this.state == EmitterState.Sequence || mappingStart != null)
+            if (this.state == EmitterState.Sequence && mappingStart != null)
             {
                 this.Write(',');
+                this.WriteIndent();
             }
         }
 
