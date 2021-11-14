@@ -92,6 +92,7 @@ class TranslationRule
     [TranslationRule]::new('aws_internet_gateway', 'aws_ec2_internetgateway', $true)
     [TranslationRule]::new('aws_flow_log', 'aws_ec2_flowlog', $true)
     [TranslationRule]::new('aws_cloudwatch_log_group', 'aws_logs_loggroup', $true)
+    [TranslationRule]::new('aws_sns_topic_subscription', 'aws_sns_subscription', $true)
     [TranslationRule]::new('aws_rds_cluster', 'aws_rds_dbcluster', $false)
     [TranslationRule]::new('aws_redshift_', 'aws_redshift_cluster', $false)
     [TranslationRule]::new('aws_acm_', 'aws_certificatemanager_', $false)
@@ -189,6 +190,7 @@ try
     $matched = [Linq.Enumerable]::ToList([Linq.Enumerable]::Join($tfResources, $awsResources, $keyDelegate, $keyDelegate, $resultDelegate))
     Write-Host "Writing C# resource..."
     $matched | ConvertTo-Json | Out-File -FilePath ../src/Firefly.PSCloudFormation/Resources/terraform-resource-map.json
+    Write-Host "Wrote $($matched.Count) mappings"
 }
 finally
 {
