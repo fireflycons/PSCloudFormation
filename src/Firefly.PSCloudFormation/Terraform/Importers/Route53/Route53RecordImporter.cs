@@ -26,6 +26,9 @@
         protected override string ReferencedAwsResource => string.Empty;
 
         /// <inheritdoc />
+        protected override string ReferencingPropertyPath { get; }
+
+        /// <inheritdoc />
         public override string GetImportId(string caption, string message)
         {
             var templateResource = this.TerraformSettings.Resources.First(r => r.LogicalResourceId == this.ImportSettings.Resource.LogicalId)

@@ -24,6 +24,9 @@
         protected override string ReferencedAwsResource => string.Empty;
 
         /// <inheritdoc />
+        protected override string ReferencingPropertyPath => null;
+
+        /// <inheritdoc />
         public override string GetImportId(string caption, string message)
         {
             return string.Join("/", this.ImportSettings.Resource.PhysicalId.Split(':').Reverse());

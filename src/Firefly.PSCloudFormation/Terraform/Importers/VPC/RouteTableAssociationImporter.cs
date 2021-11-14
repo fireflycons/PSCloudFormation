@@ -26,7 +26,10 @@
         /// <inheritdoc />
         protected override string ReferencedAwsResource => string.Empty;
 
-        /// <inhericdoc />
+        /// <inheritdoc />
+        protected override string ReferencingPropertyPath => null;
+
+        /// <inheritdoc />
         public override string GetImportId(string caption, string message)
         {
             var rtbId = this.GetRouteTable();
@@ -57,63 +60,12 @@
 
         private string GetInternetGateway()
         {
-            var dependencies = this.TerraformSettings.Template.DependencyGraph.Edges.Where(
-                e => e.Target.TemplateObject.Name == this.ImportSettings.Resource.LogicalId
-                     && e.Source.TemplateObject is IResource && e.Tag != null
-                     && e.Tag.ReferenceType == ReferenceType.DirectReference).Where(
-                d => ((IResource)d.Source.TemplateObject).Type == "AWS::EC2::InternetGateway").ToList();
-
-            if (dependencies.Count == 1)
-            {
-                var r = (IResource)dependencies.First().Source.TemplateObject;
-
-                this.LogInformation($"Auto-selected IGW \"{r.Name}\" based on dependency graph.");
-
-                var referencedId = this.ImportSettings.ResourcesToImport
-                    .First(rr => rr.AwsType == r.Type && rr.LogicalId == r.Name).PhysicalId;
-
-                return referencedId;
-            }
-
-            return null;
+            return this.GetResourceDependency("AWS::EC2::InternetGateway")?.Resource.PhysicalId;
         }
 
         private string GetRouteTable()
         {
-            // Route table must exist
-            var dependencies = this.TerraformSettings.Template.DependencyGraph.Edges.Where(
-                e => e.Target.TemplateObject.Name == this.ImportSettings.Resource.LogicalId
-                     && e.Source.TemplateObject is IResource && e.Tag != null
-                     && e.Tag.ReferenceType == ReferenceType.DirectReference).Where(
-                d => ((IResource)d.Source.TemplateObject).Type == "AWS::EC2::RouteTable").ToList();
-
-            if (dependencies.Count == 1)
-            {
-                var r = (IResource)dependencies.First().Source.TemplateObject;
-
-                this.LogInformation($"Auto-selected route table \"{r.Name}\" based on dependency graph.");
-
-                var referencedId = this.ImportSettings.ResourcesToImport
-                    .First(rr => rr.AwsType == r.Type && rr.LogicalId == r.Name).PhysicalId;
-
-                return referencedId;
-            }
-
-            // If we get here, then Firefly.CloudFormationParser did not correctly resolve the dependency
-            // and is most likely a bug there.
-            if (dependencies.Count == 0)
-            {
-                this.LogError(
-                    $"Cannot find related route table for {this.ImportSettings.Resource.LogicalId}. This is probably a bug in Firefly.CloudFormationParser");
-            }
-
-            if (dependencies.Count > 1)
-            {
-                this.LogError(
-                    $"Multiple subnets route table to {this.ImportSettings.Resource.LogicalId}. This is probably a bug in Firefly.CloudFormationParser");
-            }
-
-            return null;
+            return this.GetResourceDependency("AWS::EC2::RouteTable")?.Resource.PhysicalId;
         }
 
         private string GetSubnet()

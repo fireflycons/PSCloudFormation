@@ -19,6 +19,9 @@
         }
 
         /// <inheritdoc />
+        protected override string ReferencingPropertyPath => null;
+
+        /// <inheritdoc />
         public override string GetImportId(string caption, string message)
         {
             return this.GetResourceId();
@@ -32,12 +35,7 @@
         {
             var restApi = this.GetRestApiId();
 
-            if (restApi == null)
-            {
-                return null;
-            }
-
-            return $"{restApi}/{this.ImportSettings.Resource.PhysicalId}";
+            return restApi == null ? null : $"{restApi}/{this.ImportSettings.Resource.PhysicalId}";
         }
     }
 }

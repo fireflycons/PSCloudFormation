@@ -1,9 +1,5 @@
 ﻿namespace Firefly.PSCloudFormation.Terraform.Importers.Cognito
 {
-    using System.Linq;
-
-    using Firefly.CloudFormationParser;
-
     /// <summary>
     /// <see href="https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/cognito_identity_pool_roles_attachment#import" />
     /// </summary>
@@ -26,39 +22,29 @@
         protected override string ReferencedAwsResource => "AWS::Cognito::IdentityPool";
 
         /// <inheritdoc />
+        protected override string ReferencingPropertyPath => null;
+
+        /// <inheritdoc />
         public override string GetImportId(string caption, string message)
         {
             // All dependencies that have this attachment as a target
-            var dependencies = this.GetResourceDependencies();
+            var dependency = this.GetResourceDependency();
 
-            // There should be a 1:1 relationship between attachment and pool.
-            if (dependencies.Count == 1)
+            if (dependency == null)
             {
-                var r = (IResource)dependencies.First().Source.TemplateObject;
-
-                this.LogInformation($"Auto-selected identity pool \"{r.Name}\" based on dependency graph.");
-
-                var referencedId = this.ImportSettings.ResourcesToImport.First(rr => rr.AwsType == r.Type && rr.LogicalId == r.Name)
-                    .PhysicalId;
-
-                return referencedId;
+                return null;
             }
 
-            // If we get here, then Firefly.CloudFormationParser did not correctly resolve the dependency
-            // and is most likely a bug there.
-            if (dependencies.Count == 0)
+            switch (dependency.DependencyType)
             {
-                this.LogError(
-                    $"Cannot find related lambda function for permission {this.ImportSettings.Resource.LogicalId}. This is probably a bug in Firefly.CloudFormationParser");
-            }
+                case DependencyType.Resource:
 
-            if (dependencies.Count > 1)
-            {
-                this.LogError(
-                    $"Multiple lambdas found relating to permission {this.ImportSettings.Resource.LogicalId}. This is probably a bug in Firefly.CloudFormationParser");
-            }
+                    return dependency.Resource.PhysicalId;
 
-            return null;
+                default:
+
+                    return null;
+            }
         }
     }
 }

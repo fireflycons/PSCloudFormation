@@ -20,6 +20,9 @@
         protected override string ReferencedAwsResource => string.Empty;
 
         /// <inheritdoc />
+        protected override string ReferencingPropertyPath { get; }
+
+        /// <inheritdoc />
         public override string GetImportId(string caption, string message)
         {
             return

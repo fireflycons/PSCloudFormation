@@ -1,10 +1,5 @@
 ﻿namespace Firefly.PSCloudFormation.Terraform.Importers.VPC
 {
-    using System.Linq;
-
-    using Firefly.CloudFormationParser;
-    using Firefly.CloudFormationParser.GraphObjects;
-
     /// <summary>
     /// <see href="https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/route#import" />
     /// </summary>
@@ -26,61 +21,45 @@
         /// <inheritdoc />
         protected override string ReferencedAwsResource => "AWS::EC2::RouteTable";
 
+        /// <inheritdoc />
+        protected override string ReferencingPropertyPath => null;
+
+        /// <inheritdoc />
         public override string GetImportId(string caption, string message)
         {
-            var templateResource = this.TerraformSettings.Resources
-                .First(r => r.LogicalResourceId == this.ImportSettings.Resource.LogicalId).TemplateResource;
+            var dependency = this.GetResourceDependency();
 
-            var dependencies = this.TerraformSettings.Template.DependencyGraph.Edges.Where(
-                e => e.Target.TemplateObject.Name == this.ImportSettings.Resource.LogicalId && e.Source.TemplateObject is IResource
-                                                                             && e.Tag != null
-                                                                             && e.Tag.ReferenceType
-                                                                             == ReferenceType.DirectReference).Where(
-                d => ((IResource)d.Source.TemplateObject).Type == "AWS::EC2::RouteTable").ToList();
-
-            // There should be a 1:1 relationship between attachment and pool.
-            if (dependencies.Count == 1)
+            if (dependency == null)
             {
-                var r = (IResource)dependencies.First().Source.TemplateObject;
-
-                this.LogInformation($"Auto-selected Route Table \"{r.Name}\" based on dependency graph.");
-
-                var referencedId = this.ImportSettings.ResourcesToImport.First(rr => rr.AwsType == r.Type && rr.LogicalId == r.Name)
-                    .PhysicalId;
-
-                var v4Cidr = templateResource.GetResourcePropertyValue("DestinationCidrBlock");
-                var v6Cidr = templateResource.GetResourcePropertyValue("DestinationIpv6CidrBlock");
-
-                if (v4Cidr is string)
-                {
-                    return $"{referencedId}_{v4Cidr}";
-                }
-
-                if (v6Cidr is string)
-                {
-                    return $"{referencedId}_{v6Cidr}";
-                }
-
-                this.LogError($"Cannot resolve destination for {this.ImportSettings.Resource.LogicalId}.");
-
                 return null;
             }
 
-            // If we get here, then Firefly.CloudFormationParser did not correctly resolve the dependency
-            // and is most likely a bug there.
-            if (dependencies.Count == 0)
+            switch (dependency.DependencyType)
             {
-                this.LogError(
-                    $"Cannot find related Route Table for {this.ImportSettings.Resource.LogicalId}. This is probably a bug in Firefly.CloudFormationParser");
-            }
+                case DependencyType.Resource:
 
-            if (dependencies.Count > 1)
-            {
-                this.LogError(
-                    $"Multiple Route Tables relating to {this.ImportSettings.Resource.LogicalId}. This is probably a bug in Firefly.CloudFormationParser");
-            }
+                    var referencedId = dependency.Resource.PhysicalId;
 
-            return null;
+                    var ipv4Cidr = dependency.ReferringTemplateObject.GetResourcePropertyValue("DestinationCidrBlock");
+                    var ipv6Cidr = dependency.ReferringTemplateObject.GetResourcePropertyValue("DestinationIpv6CidrBlock");
+
+                    if (ipv4Cidr is string)
+                    {
+                        return $"{referencedId}_{ipv4Cidr}";
+                    }
+
+                    if (ipv6Cidr is string)
+                    {
+                        return $"{referencedId}_{ipv6Cidr}";
+                    }
+
+                    this.LogError($"Cannot resolve destination for {this.ImportSettings.Resource.LogicalId}.");
+                    return $"{dependency.Resource.PhysicalId}/{this.ImportSettings.Resource.PhysicalId}";
+
+                default:
+
+                    return null;
+            }
         }
     }
 }

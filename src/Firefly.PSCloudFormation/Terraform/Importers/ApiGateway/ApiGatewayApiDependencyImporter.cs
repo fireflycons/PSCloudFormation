@@ -19,6 +19,9 @@
         }
 
         /// <inheritdoc />
+        protected override string ReferencingPropertyPath => "RestApiId";
+
+        /// <inheritdoc />
         public override string GetImportId(string caption, string message)
         {
             var restApi = this.GetRestApiId();

@@ -116,6 +116,14 @@
         protected abstract string ReferencedAwsResource { get; }
 
         /// <summary>
+        /// Gets the path to the AWS resource property that should be evaluated to get a reference to another resource 
+        /// </summary>
+        /// <value>
+        /// The referencing property path.
+        /// </value>
+        protected abstract string ReferencingPropertyPath { get; }
+
+        /// <summary>
         /// Gets the import settings.
         /// </summary>
         /// <value>
@@ -169,67 +177,108 @@
         /// <param name="message">The message for the interactive session.</param>
         /// <returns>The resource selected by the user, else <c>null</c> if cancelled.</returns>
         public abstract string GetImportId(string caption, string message);
-
+        
         /// <summary>
-        /// Gets the resource dependency graph edges for the resource type identified by <see cref="ReferencedAwsResource"/>.
+        /// Gets the resource referenced by the resource being processed based on the dependency graph edges for the resource type identified by <see cref="ReferencedAwsResource"/>.
         /// </summary>
         /// <returns>List of matching resource graph edges</returns>
-        protected IReadOnlyCollection<TaggedEdge<IVertex, EdgeDetail>> GetResourceDependencies()
+        protected ResourceDependency GetResourceDependency()
         {
-            return this.GetResourceDependencies(this.ReferencedAwsResource);
+            return this.GetResourceDependency(this.ReferencedAwsResource);
         }
 
         /// <summary>
-        /// Gets the resource dependency graph edges for the resource type identified by the given argument.
+        /// Gets the resource referenced by the resource being processed based on the dependency graph edges for the resource type identified by <see cref="ReferencedAwsResource"/>.
         /// </summary>
         /// <param name="awsResourceType">Resource type to find graph edges for.</param>
         /// <returns>List of matching resource graph edges</returns>
-        protected IReadOnlyCollection<TaggedEdge<IVertex, EdgeDetail>> GetResourceDependencies(string awsResourceType)
+        protected ResourceDependency GetResourceDependency(string awsResourceType)
         {
+            // !Ref dependency
             var dependencies = this.TerraformSettings.Template.DependencyGraph.Edges.Where(
                 e => e.Target.TemplateObject.Name == this.ImportSettings.Resource.LogicalId
                      && e.Source.TemplateObject is IResource && e.Tag != null
                      && e.Tag.ReferenceType == ReferenceType.DirectReference).Where(
                 d => ((IResource)d.Source.TemplateObject).Type == awsResourceType).ToList();
 
-            if (dependencies.Count > 0)
+            if (dependencies.Count == 1)
             {
-                return dependencies;
+                var referencedTemplateObject = (IResource)dependencies.First().Source.TemplateObject;
+                var referringTemplateObject = (IResource)dependencies.First().Target.TemplateObject;
+
+                this.LogInformation($"Auto-selected {referencedTemplateObject.Type} \"{referencedTemplateObject.Name}\" based on dependency graph.");
+
+                var referencedId = this.ImportSettings.ResourcesToImport
+                    .First(rr => rr.AwsType == referencedTemplateObject.Type && rr.LogicalId == referencedTemplateObject.Name);
+
+                return new ResourceDependency(referencedId, referringTemplateObject, referencedTemplateObject);
             }
 
-            return this.TerraformSettings.Template.DependencyGraph.Edges.Where(
+            // !GetAtt dependency
+            dependencies = this.TerraformSettings.Template.DependencyGraph.Edges.Where(
                 e => e.Target.TemplateObject.Name == this.ImportSettings.Resource.LogicalId
                      && e.Source.TemplateObject is IResource && e.Tag != null
                      && e.Tag.ReferenceType == ReferenceType.AttributeReference).Where(
                 d => ((IResource)d.Source.TemplateObject).Type == awsResourceType).ToList();
-        }
-        
-        /// <summary>
-        /// Interactively selects the resource.
-        /// </summary>
-        /// <param name="caption">The caption.</param>
-        /// <param name="message">The message.</param>
-        /// <param name="selections">The selections.</param>
-        /// <returns>Selected resource; else -1 if none selected.</returns>
-        protected int SelectResource(string caption, string message, IList<string> selections)
-        {
-            const string Labels = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ";
 
-            var choices = new Collection<ChoiceDescription> { new ChoiceDescription("&0 Skip Resource") };
-
-            for (var i = 0; i < Labels.Length - 1 && i < selections.Count; ++i)
+            switch (dependencies.Count)
             {
-                choices.Add(new ChoiceDescription($"&{Labels[i + 1]} {selections[i]}"));
+                case 1:
+                    {
+                        var referencedTemplateObject = (IResource)dependencies.First().Source.TemplateObject;
+                        var referringTemplateObject = (IResource)dependencies.First().Target.TemplateObject;
+
+                        this.LogInformation($"Auto-selected {referencedTemplateObject.Type} \"{referencedTemplateObject.Name}\" based on dependency graph.");
+
+                        var referencedId = this.ImportSettings.ResourcesToImport
+                            .First(rr => rr.AwsType == referencedTemplateObject.Type && rr.LogicalId == referencedTemplateObject.Name);
+
+                        return new ResourceDependency(referencedId, referringTemplateObject, referencedTemplateObject);
+                    }
+
+                case 0 when string.IsNullOrEmpty(this.ReferencingPropertyPath):
+
+                    this.LogError(
+                        $"Cannot find related {awsResourceType} for {this.ImportSettings.Resource.LogicalId}.");
+
+                    return null;
+
+                case 0:
+                    {
+                        var thisTemplateResource =
+                            this.TerraformSettings.Template.Resources.First(
+                                r => r.Name == this.ImportSettings.Resource.LogicalId);
+
+                        if (thisTemplateResource.GetResourcePropertyValue(this.ReferencingPropertyPath) is string importName)
+                        {
+                            var evaluation = this.TerraformSettings.StackExports.FirstOrDefault(e => e.Name == importName)
+                                ?.Value;
+
+                            if (evaluation == null)
+                            {
+                                this.LogError(
+                                    $"Cannot find related {awsResourceType} for {this.ImportSettings.Resource.LogicalId}.");
+
+                                return null;
+                            }
+
+                            this.LogWarning(
+                                $"Resource \"{this.ImportSettings.Resource.LogicalId}\" references a resource imported from another stack.");
+
+                            return new ResourceDependency(evaluation);
+                        }
+
+                        this.LogError(
+                            $"Cannot find related {awsResourceType} for {this.ImportSettings.Resource.LogicalId}.");
+                        break;
+                    }
             }
 
-            var selection = this.ImportSettings.Ui.PromptForChoice(caption, message, choices, 0);
+            // More than one dependency
+            this.LogError(
+                $"Cannot find related {awsResourceType} for {this.ImportSettings.Resource.LogicalId}. Multiple possibilities found");
 
-            if (selection == 0)
-            {
-                return -1;
-            }
-
-            return selection - 1;
+            return null;
         }
 
         /// <summary>
@@ -249,7 +298,7 @@
         protected void LogError(string message)
         {
             this.ImportSettings.Logger.LogError($"ERROR: {message}");
-            this.ImportSettings.Warnings.Add(message);
+            this.ImportSettings.Errors.Add($"ERROR: {message}");
         }
 
         /// <summary>

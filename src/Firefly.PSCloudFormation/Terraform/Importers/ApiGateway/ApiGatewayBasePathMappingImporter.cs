@@ -2,8 +2,6 @@
 {
     using System.Linq;
 
-    using Firefly.CloudFormationParser;
-
     /// <summary>
     /// Imports <c>DOMAIN/BASEPATH</c>
     /// </summary>
@@ -26,43 +24,35 @@
         protected override string ReferencedAwsResource => "AWS::ApiGateway::DomainName";
 
         /// <inheritdoc />
+        protected override string ReferencingPropertyPath => null;
+
+        /// <inheritdoc />
         public override string GetImportId(string caption, string message)
         {
-            var dependencies = this.GetResourceDependencies();
+            var dependency = this.GetResourceDependency();
 
-            // There should be a 1:1 relationship between attachment and pool.
-            if (dependencies.Count == 1)
+            if (dependency == null)
             {
-                var r = (IResource)dependencies.First().Source.TemplateObject;
-
-                this.LogInformation($"Auto-selected API Domain Name \"{r.Name}\" based on dependency graph.");
-
-                var domain = this.ImportSettings.ResourcesToImport
-                    .First(rr => rr.AwsType == r.Type && rr.LogicalId == r.Name).PhysicalId;
-
-                var basePath =
-                    this.TerraformSettings.Template.Resources
-                        .First(tr => tr.Name == this.ImportSettings.Resource.LogicalId)
-                        .GetResourcePropertyValue("BasePath")?.ToString() ?? string.Empty;
-
-                return $"{domain}/{basePath}";
+                return null;
             }
 
-            // If we get here, then Firefly.CloudFormationParser did not correctly resolve the dependency
-            // and is most likely a bug there.
-            if (dependencies.Count == 0)
+            switch (dependency.DependencyType)
             {
-                this.LogError(
-                    $"Cannot find related API Domain Name for {this.ImportSettings.Resource.LogicalId}. This is probably a bug in Firefly.CloudFormationParser");
-            }
+                case DependencyType.Resource:
 
-            if (dependencies.Count > 1)
-            {
-                this.LogError(
-                    $"Multiple API Domain Names relating to {this.ImportSettings.Resource.LogicalId}. This is probably a bug in Firefly.CloudFormationParser");
-            }
+                    var domain = dependency.Resource.PhysicalId;
 
-            return null;
+                    var basePath =
+                        this.TerraformSettings.Template.Resources
+                            .First(tr => tr.Name == this.ImportSettings.Resource.LogicalId)
+                            .GetResourcePropertyValue("BasePath")?.ToString() ?? string.Empty;
+
+                    return $"{domain}/{basePath}";
+
+                default:
+
+                    return null;
+            }
         }
     }
 }

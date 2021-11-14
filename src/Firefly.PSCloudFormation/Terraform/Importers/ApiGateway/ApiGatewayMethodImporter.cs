@@ -2,8 +2,6 @@
 {
     using System.Linq;
 
-    using Firefly.CloudFormationParser;
-
     /// <summary>
     /// <see href="https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/api_gateway_method#import" />
     /// </summary>
@@ -21,6 +19,9 @@
         }
 
         /// <inheritdoc />
+        protected override string ReferencingPropertyPath => "RestApiId";
+
+        /// <inheritdoc />
         public override string GetImportId(string caption, string message)
         {
             var restApi = this.GetRestApiId();
@@ -30,43 +31,34 @@
                 return null;
             }
 
-            var dependencies = this.GetResourceDependencies("AWS::ApiGateway::Resource");
+            var dependency = this.GetResourceDependency("AWS::ApiGateway::Resource");
 
-            // There should be a 1:1 relationship between attachment and pool.
-            if (dependencies.Count == 1)
+            if (dependency == null)
             {
-                var r = (IResource)dependencies.First().Source.TemplateObject;
-
-                this.LogInformation($"Auto-selected ApiResource \"{r.Name}\" based on dependency graph.");
-
-                var httpMethod = this.TerraformSettings.Template.Resources
-                    .First(tr => tr.Name == this.ImportSettings.Resource.LogicalId)
-                    .GetResourcePropertyValue("HttpMethod")?.ToString();
-
-                if (httpMethod != null)
-                {
-                    var referencedId = this.ImportSettings.ResourcesToImport
-                        .First(rr => rr.AwsType == r.Type && rr.LogicalId == r.Name).PhysicalId;
-
-                    return $"{restApi}/{referencedId}/{httpMethod}";
-                }
+                return null;
             }
 
-            // If we get here, then Firefly.CloudFormationParser did not correctly resolve the dependency
-            // and is most likely a bug there.
-            if (dependencies.Count == 0)
+            switch (dependency.DependencyType)
             {
-                this.LogError(
-                    $"Cannot find related ApiResource for {this.ImportSettings.Resource.LogicalId}. This is probably a bug in Firefly.CloudFormationParser");
-            }
+                case DependencyType.Resource:
 
-            if (dependencies.Count > 1)
-            {
-                this.LogError(
-                    $"Multiple ApiResources relating to {this.ImportSettings.Resource.LogicalId}. This is probably a bug in Firefly.CloudFormationParser");
-            }
+                    var httpMethod = this.TerraformSettings.Template.Resources
+                        .First(tr => tr.Name == this.ImportSettings.Resource.LogicalId)
+                        .GetResourcePropertyValue("HttpMethod")?.ToString();
 
-            return null;
+                    if (httpMethod == null)
+                    {
+                        return null;
+                    }
+
+                    var apiResourceId = dependency.Resource.PhysicalId;
+
+                    return $"{restApi}/{apiResourceId}/{httpMethod}";
+
+                default:
+
+                    return null;
+            }
         }
     }
 }
