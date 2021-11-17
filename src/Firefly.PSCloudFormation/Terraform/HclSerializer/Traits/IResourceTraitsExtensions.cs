@@ -31,7 +31,7 @@
                 return true;
             }
 
-            if (self.IsConflictingArgument(currentPath) || self.UnconfigurableAttributes.Any(currentPath.IsLike))
+            if (self.IsConflictingArgument(currentPath) || self.ComputedAttributes.Any(currentPath.IsLike))
             {
                 // Even when it has a value
                 return false;

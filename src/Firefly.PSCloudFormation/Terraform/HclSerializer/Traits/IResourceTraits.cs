@@ -20,6 +20,14 @@
         List<string> NonBlockTypeAttributes { get; }
 
         /// <summary>
+        /// Gets the attributes stored as map in state, but emitted as block.
+        /// </summary>
+        /// <value>
+        /// The force block attributes.
+        /// </value>
+        List<string> BlockMappingAttributes { get; }
+
+        /// <summary>
         /// Gets list of attributes that must be present for the resource in generated HCL.
         /// </summary>
         List<string> RequiredAttributes { get; }
@@ -34,13 +42,13 @@
         List<List<string>> ConflictingArguments { get; }
 
         /// <summary>
-        /// Gets the unconfigurable attributes.
+        /// Gets the computed attributes.
         /// State properties that have no HCL equivalent, because they are computed.
         /// </summary>
         /// <value>
-        /// The unconfigurable attributes.
+        /// The computed attributes.
         /// </value>
-        List<string> UnconfigurableAttributes { get; }
+        List<string> ComputedAttributes { get; }
 
         /// <summary>
         /// Gets the terraform resource type.

@@ -5,7 +5,7 @@
 # This file contains lists of resource attributes that require special handling
 # when emitting HCL. They are grouped as follows
 #
-# UnconfigurableAttributes
+# ComputedAttributes
 #    Resource attributes that if present in the HCL cause an Unconfigurable Attribute error.
 #
 # NonBlockTypeAttributes
@@ -52,7 +52,9 @@
     - Resource: all                   # Common traits for all resources - merged with specific resources.
       NonBlockTypeAttributes:         # Emiited as e.g. 'tags = {}'' (rather than 'tags {}'')
         - tags
-      UnconfigurableAttributes:       # State properties that have no HCL equivalent, because they are computed.
+#      BlockMappingAttributes:         # Stored as map in state, but emitted as block
+#        - timeouts
+      ComputedAttributes:       # State properties that have no HCL equivalent, because they are computed.
         - '*arn'                      # Wildcard attribute name match, so no attributes ending in 'arn' will be emitted anywhere 
         - 'id'
         - 'owner_id'
@@ -68,37 +70,37 @@
 - Group: API Gateway
   Resources:
     - Resource: aws_api_gateway_rest_api
-      UnconfigurableAttributes:
+      ComputedAttributes:
         - lambda_permission
         - root_resource_id
     - Resource: aws_api_gateway_api_key
-      UnconfigurableAttributes:
+      ComputedAttributes:
         - value
     - Resource: aws_api_gateway_domain_name
-      UnconfigurableAttributes:
+      ComputedAttributes:
         - '*_domain_name'
         - '*_zone_id'
     - Resource: aws_api_gateway_resource
-      UnconfigurableAttributes:
+      ComputedAttributes:
         - path
     - Resource: aws_api_gateway_usage_plan_key
-      UnconfigurableAttributes:
+      ComputedAttributes:
         - name
         - value
     - Resource: aws_api_gateway_stage
-      UnconfigurableAttributes:
+      ComputedAttributes:
         - invoke_url
         - lambda_permissions
 
 - Group: API Gateway V2
   Resources:
     - Resource: aws_apigatewayv2_api
-      UnconfigurableAttributes:
+      ComputedAttributes:
         - api_endpoint
         - invoke_url
         - aws_lambda_permissions
     - Resource: aws_apigatewayv2_stage
-      UnconfigurableAttributes:
+      ComputedAttributes:
         - invoke_url
         - aws_lambda_permissions
       RequiredAttributes:
@@ -115,7 +117,7 @@
 - Group: CloudFront
   Resources:
     - Resource: aws_cloudfront_distribution
-      UnconfigurableAttributes:
+      ComputedAttributes:
         - trusted_key_groups
         - trusted_signers
         - caller_reference
@@ -128,7 +130,7 @@
 - Group: Cognito
   Resources:
     - Resource: aws_cognito_user_pool
-      UnconfigurableAttributes:
+      ComputedAttributes:
         - domain
         - endpoint
         - estimated_number_of_users
@@ -146,7 +148,7 @@
 - Group: EC2
   Resources:
     - Resource: aws_instance
-      UnconfigurableAttributes:
+      ComputedAttributes:
         - instance_state
         - private_dns
         - device_name
@@ -157,12 +159,12 @@
 - Group: EFS
   Resources:
     - Resource: aws_efs_file_system
-      UnconfigurableAttributes:
+      ComputedAttributes:
         - size_in_bytes
         - dns_name
         - number_of_mount_targets
     - Resource: aws_efs_mount_target
-      UnconfigurableAttributes:
+      ComputedAttributes:
         - network_interface_id
         - availability_zone_*
         - '*dns_name'
@@ -171,7 +173,7 @@
 - Group: Lambda
   Resources:
     - Resource: aws_lambda_function
-      UnconfigurableAttributes:
+      ComputedAttributes:
         - last_modified
         - source_code_size
         - version
@@ -179,7 +181,7 @@
 - Group: RDS
   Resources:
     - Resource: aws_db_instance
-      UnconfigurableAttributes:
+      ComputedAttributes:
         - '*_id'
         - latest_restorable_time
         - address
@@ -190,7 +192,7 @@
 - Group: Route53
   Resources:
     - Resource: aws_route53_record
-      UnconfigurableAttributes:
+      ComputedAttributes:
         - fqdn
       ConflictingArguments:
         - - alias
@@ -201,7 +203,7 @@
 - Group: S3
   Resources:
     - Resource: aws_s3_bucket
-      UnconfigurableAttributes:
+      ComputedAttributes:
         - bucket_domain_name
         - bucket_regional_domain_name
         - region
@@ -217,16 +219,16 @@
 - Group: SecretsManager
   Resources:
     - Resource: aws_secretsmanager_secret
-      UnconfigurableAttributes:
+      ComputedAttributes:
         - rotation_enabled
 
 - Group: SNS
   Resources:
     - Resource: aws_sns_topic
-      UnconfigurableAttributes:
+      ComputedAttributes:
         - owner
     - Resource: aws_sns_topic_subscription
-      UnconfigurableAttributes:
+      ComputedAttributes:
         - confirmation_was_authenticated
         - pending_confirmation
       RequiredAttributes:
@@ -235,7 +237,7 @@
 - Group: SSM
   Resources:
     - Resource: aws_ssm_parameter
-      UnconfigurableAttributes:
+      ComputedAttributes:
         - version
 
 - Group: VPC
@@ -261,7 +263,7 @@
         - egress.#.action
         - egress.#.protocol
     - Resource: aws_route
-      UnconfigurableAttributes:
+      ComputedAttributes:
         - origin
         - state
     - Resource: aws_route_table
@@ -270,8 +272,8 @@
       RequiredAttributes:
         - route.#.*
     - Resource: aws_vpc
-      UnconfigurableAttributes:
+      ComputedAttributes:
         - '*_id'
     - Resource: aws_vpc_peering_connection
-      UnconfigurableAttributes:
+      ComputedAttributes:
         - accept_status

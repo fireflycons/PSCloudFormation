@@ -6,6 +6,11 @@
     using Firefly.PSCloudFormation.Terraform.HclSerializer.Events;
     using Firefly.PSCloudFormation.Utils;
 
+    /// <summary>
+    /// Where a given resource type has an entry in <c>ResourceTraits.yaml</c>, an object of this type
+    /// is created which is a union of shared traits and resource specific traits
+    /// </summary>
+    /// <seealso cref="Firefly.PSCloudFormation.Terraform.HclSerializer.Traits.IResourceTraits" />
     internal class ConsolitatedResourceTraits : IResourceTraits
     {
         /// <summary>
@@ -17,8 +22,10 @@
         {
             this.NonBlockTypeAttributes = sharedTraits.NonBlockTypeAttributes
                 .Concat(specificResourceTraits.NonBlockTypeAttributes).ToList();
-            this.UnconfigurableAttributes = sharedTraits.UnconfigurableAttributes
-                .Concat(specificResourceTraits.UnconfigurableAttributes).ToList();
+            this.ComputedAttributes = sharedTraits.ComputedAttributes
+                .Concat(specificResourceTraits.ComputedAttributes).ToList();
+            this.BlockMappingAttributes = sharedTraits.BlockMappingAttributes
+                .Concat(specificResourceTraits.BlockMappingAttributes).ToList();
 
             // No conflicting arguments defined for all resources
             this.ConflictingArguments = specificResourceTraits.ConflictingArguments;
@@ -42,10 +49,13 @@
         public List<string> NonBlockTypeAttributes { get; }
 
         /// <inheritdoc />
+        public List<string> BlockMappingAttributes { get; set; }
+
+        /// <inheritdoc />
         public List<string> RequiredAttributes { get; }
 
         /// <inheritdoc />
-        public List<string> UnconfigurableAttributes { get; }
+        public List<string> ComputedAttributes { get; }
 
         /// <inheritdoc />
         public string ResourceType { get; }

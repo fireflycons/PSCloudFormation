@@ -27,13 +27,16 @@ namespace Firefly.PSCloudFormation.Terraform.HclSerializer.Traits
         public List<string> NonBlockTypeAttributes { get; set; } = new List<string>();
 
         /// <inheritdoc />
+        public List<string> BlockMappingAttributes { get; set; } = new List<string>();
+
+        /// <inheritdoc />
         public List<string> RequiredAttributes { get; set; } = new List<string>();
 
         [YamlMember(Alias = "Resource")]
         public string ResourceType { get; set; }
 
         /// <inheritdoc />
-        public List<string> UnconfigurableAttributes { get; set; } = new List<string>();
+        public List<string> ComputedAttributes { get; set; } = new List<string>();
 
         /// <summary>
         /// Gets traits class for current resource type.
