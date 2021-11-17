@@ -11,6 +11,7 @@
     using Firefly.PSCloudFormation.Terraform.Importers.ApiGateway;
     using Firefly.PSCloudFormation.Terraform.Importers.ApiGatewayV2;
     using Firefly.PSCloudFormation.Terraform.Importers.Cognito;
+    using Firefly.PSCloudFormation.Terraform.Importers.ElasticLoadBalancingV2;
     using Firefly.PSCloudFormation.Terraform.Importers.IAM;
     using Firefly.PSCloudFormation.Terraform.Importers.Lambda;
     using Firefly.PSCloudFormation.Terraform.Importers.Route53;
@@ -105,6 +106,10 @@
                                                                                          "aws_route_table_association",
                                                                                          typeof(
                                                                                              RouteTableAssociationImporter)
+                                                                                     },
+                                                                                     {
+                                                                                         "aws_lb_listener_certificate",
+                                                                                         typeof(ListenerCertificateImporter)
                                                                                      }
                                                                                  };
 
@@ -120,13 +125,28 @@
             this.ImportSettings = importSettings;
             this.TerraformSettings = terraformSettings;
 
-            var dependencies = this.TerraformSettings.Template.DependencyGraph.Edges.Where(
-                e => e.Target.TemplateObject.Name == this.ImportSettings.Resource.LogicalId
-                     && e.Source.TemplateObject is IResource && e.Tag != null
-                     && e.Tag.ReferenceType == ReferenceType.DirectReference).Where(
-                d => ((IResource)d.Source.TemplateObject).Type == this.ReferencedAwsResource).ToList();
+            this.AwsResource =
+                this.TerraformSettings.Template.Resources.First(r => r.Name == this.ImportSettings.Resource.LogicalId);
+
+            // ReSharper disable once VirtualMemberCallInConstructor - ReferencedAwsResource is initialized pre-construction with =>
+            var dependencies = string.IsNullOrEmpty(this.ReferencedAwsResource)
+                                   ? new List<TaggedEdge<IVertex, EdgeDetail>>()
+                                   : this.TerraformSettings.Template.DependencyGraph.Edges.Where(
+                                           e => e.Target.TemplateObject.Name == this.ImportSettings.Resource.LogicalId
+                                                && e.Source.TemplateObject is IResource && e.Tag != null
+                                                && e.Tag.ReferenceType == ReferenceType.DirectReference).Where(
+                                           d => ((IResource)d.Source.TemplateObject).Type == this.ReferencedAwsResource)
+                                       .ToList();
 
         }
+
+        /// <summary>
+        /// Gets the AWS resource parsed from the template that represents the resource being imported.
+        /// </summary>
+        /// <value>
+        /// The aw resource.
+        /// </value>
+        protected IResource AwsResource { get; }
 
         /// <summary>
         /// Gets the referenced AWS resource, e.g. a AWS::Lambda::Permission references a AWS::Lambda::Function, so the function type goes here.
