@@ -42,6 +42,8 @@
         [InlineData("route_table.json")]
         [InlineData("security_group.json")]
         [InlineData("aws_cloudfront_distribution.json")]
+        [InlineData("aws_lb.json")]
+        [InlineData("aws_lb_listener.json")]
         public void ShouldSerializeResource(string stateFile)
         {
             var state = JsonConvert.DeserializeObject<StateFile>(

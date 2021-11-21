@@ -279,7 +279,7 @@
                     return AttributeContent.EmptyCollection;
                 }
 
-                if (currentAnalysis == AttributeContent.BlockObject)
+                if (currentAnalysis == AttributeContent.BlockObject || currentAnalysis == AttributeContent.BlockList)
                 {
                     switch (evt)
                     {
@@ -295,6 +295,8 @@
                             // Found no populated values, so skip it.
                             return AttributeContent.EmptyCollection;
                     }
+
+                    continue;
                 }
 
                 if (lastEvent is SequenceStart && evt is Scalar)
@@ -312,7 +314,7 @@
                     if (lastEvent is SequenceStart && evt is MappingStart)
                     {
                         // There's always going to be _something_ so return now
-                        return AttributeContent.BlockList;
+                        currentAnalysis = AttributeContent.BlockList;
                     }
 
                     if (evt is MappingStart && this.resourceTraits.IsBlockObject(key))

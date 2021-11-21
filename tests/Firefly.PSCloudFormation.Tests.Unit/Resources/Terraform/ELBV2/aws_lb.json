@@ -1,0 +1,83 @@
+{
+    "version": 4,
+    "terraform_version": "1.0.9",
+    "serial": 1,
+    "lineage": "9b5b9a0e-a324-6f97-74a3-d5f717318c76",
+    "outputs": {},
+    "resources": [
+        {
+            "mode": "managed",
+            "type": "aws_lb",
+            "name": "ApplicationLoadBalancer",
+            "provider": "provider[\"registry.terraform.io/hashicorp/aws\"]",
+            "instances": [
+                {
+                    "schema_version": 0,
+                    "attributes": {
+                        "access_logs": [
+                            {
+                                "bucket": "",
+                                "enabled": false,
+                                "prefix": ""
+                            }
+                        ],
+                        "arn": "arn:aws:elasticloadbalancing:eu-west-1:123456789012:loadbalancer/app/my-alb/2253fc09c24c72ec",
+                        "arn_suffix": "app/my-alb/2253fc09c24c72ec",
+                        "customer_owned_ipv4_pool": "",
+                        "dns_name": "my-alb-982835806.eu-west-1.elb.amazonaws.com",
+                        "drop_invalid_header_fields": false,
+                        "enable_cross_zone_load_balancing": null,
+                        "enable_deletion_protection": false,
+                        "enable_http2": true,
+                        "id": "arn:aws:elasticloadbalancing:eu-west-1:123456789012:loadbalancer/app/my-alb/2253fc09c24c72ec",
+                        "idle_timeout": 300,
+                        "internal": false,
+                        "ip_address_type": "ipv4",
+                        "load_balancer_type": "application",
+                        "name": "my-alb",
+                        "name_prefix": null,
+                        "security_groups": [
+                            "sg-03773736dad042f70",
+                            "sg-0825845316f9cd1e3"
+                        ],
+                        "subnet_mapping": [
+                            {
+                                "allocation_id": "",
+                                "ipv6_address": "",
+                                "outpost_id": "",
+                                "private_ipv4_address": "",
+                                "subnet_id": "subnet-024755d73f5ac43fb"
+                            },
+                            {
+                                "allocation_id": "",
+                                "ipv6_address": "",
+                                "outpost_id": "",
+                                "private_ipv4_address": "",
+                                "subnet_id": "subnet-0b2501cb10be2f331"
+                            }
+                        ],
+                        "subnets": [
+                            "subnet-024755d73f5ac43fb",
+                            "subnet-0b2501cb10be2f331"
+                        ],
+                        "tags": {
+                            "name": "lb"
+                        },
+                        "tags_all": {
+                            "name": "lb"
+                        },
+                        "timeouts": {
+                            "create": null,
+                            "delete": null,
+                            "update": null
+                        },
+                        "vpc_id": "vpc-0b608d4c2a9e1596d",
+                        "zone_id": "Z32O12XQLNTSW2"
+                    },
+                    "sensitive_attributes": [],
+                    "private": "eyJlMmJmYjczMC1lY2FhLTExZTYtOGY4OC0zNDM2M2JjN2M0YzAiOnsiY3JlYXRlIjo2MDAwMDAwMDAwMDAsImRlbGV0ZSI6NjAwMDAwMDAwMDAwLCJ1cGRhdGUiOjYwMDAwMDAwMDAwMH0sInNjaGVtYV92ZXJzaW9uIjoiMCJ9"
+                }
+            ]
+        }
+    ]
+}
