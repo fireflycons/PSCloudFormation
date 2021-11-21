@@ -1,5 +1,7 @@
 ﻿namespace Firefly.PSCloudFormation.Tests.Unit.Terraform
 {
+    using System.Text.RegularExpressions;
+
     using Firefly.CloudFormationParser;
     using Firefly.EmbeddedResourceLoader;
     using Firefly.PSCloudFormation.Terraform.Hcl;

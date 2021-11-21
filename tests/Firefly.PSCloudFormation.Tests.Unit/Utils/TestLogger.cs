@@ -84,7 +84,7 @@
         /// <param name="args">The arguments.</param>
         public override void LogDebug(string message, params object[] args)
         {
-            var msg = string.Format(message, args);
+            var msg = this.Format(message, args);
             this.DebugMessages.Add(msg);
             this.output.WriteLine($"DEBUG: {msg}");
         }
@@ -96,7 +96,7 @@
         /// <param name="args">The arguments.</param>
         public override void LogError(string message, params object[] args)
         {
-            var msg = string.Format(message, args);
+            var msg = this.Format(message, args);
             this.ErrorMessages.Add(msg);
 
             this.output.WriteLine($"ERROR: {msg}");
@@ -109,7 +109,7 @@
         /// <param name="args">The arguments.</param>
         public override void LogInformation(string message, params object[] args)
         {
-            var msg = string.Format(message, args);
+            var msg = this.Format(message, args);
             this.InfoMessages.Add(msg);
 
             this.output.WriteLine($"INFO: {msg}");
@@ -131,7 +131,7 @@
         /// <param name="args">The arguments.</param>
         public override void LogWarning(string message, params object[] args)
         {
-            var msg = string.Format(message, args);
+            var msg = this.Format(message, args);
             this.WarningMessages.Add(msg);
 
             this.output.WriteLine("WARN:  " + msg);
@@ -144,9 +144,14 @@
         /// <param name="args">The arguments.</param>
         public override void LogVerbose(string message, params object[] args)
         {
-            var msg = string.Format(message, args);
+            var msg = this.Format(message, args);
             this.VerboseMessages.Add(msg);
             this.output.WriteLine($"VERBOSE: {msg}");
+        }
+
+        private string Format(string text, object[] args)
+        {
+            return args.Length > 0 ? string.Format(text, args) : text;
         }
     }
 }

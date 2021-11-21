@@ -96,8 +96,7 @@
                     break;
 
                 default:
-                    throw new HclSerializerException(
-                        $"Cannot serialize input variable of type {this.CurrentValue.GetType().Name}");
+                    throw new HclSerializerException(null, null, $"Cannot serialize input variable of type {this.CurrentValue.GetType().Name}");
 
             }
 

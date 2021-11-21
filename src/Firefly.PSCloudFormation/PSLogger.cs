@@ -335,7 +335,7 @@
             if (this.cmdlet.MyInvocation.BoundParameters.Keys.Any(
                 k => string.Compare(k, "Verbose", StringComparison.OrdinalIgnoreCase) == 0))
             {
-                this.cmdlet.Host.UI.WriteVerboseLine(string.Format(message, args));
+                this.cmdlet.Host.UI.WriteVerboseLine(!args.Any() ? message : string.Format(message, args));
             }
         }
 
@@ -346,7 +346,7 @@
         /// <param name="args">The arguments.</param>
         public override void LogWarning(string message, params object[] args)
         {
-            this.cmdlet.Host.UI.WriteWarningLine(string.Format(message, args));
+            this.cmdlet.Host.UI.WriteWarningLine(!args.Any() ? message : string.Format(message, args));
         }
 
         /// <summary>

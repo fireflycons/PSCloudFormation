@@ -26,6 +26,15 @@
         {
         }
 
+        /// <summary>
+        /// Gets a value indicating whether this scalar contains an empty value (null, empty string or boolean false).
+        /// </summary>
+        /// <value>
+        ///   <c>true</c> if this instance is empty; otherwise, <c>false</c>.
+        /// </value>
+        public bool IsEmpty =>
+            string.IsNullOrEmpty(this.Value) || (bool.TryParse(this.Value, out var boolVal) && !boolVal);
+
         /// <inheritdoc />
         internal override EventType Type => EventType.ScalarValue;
     }

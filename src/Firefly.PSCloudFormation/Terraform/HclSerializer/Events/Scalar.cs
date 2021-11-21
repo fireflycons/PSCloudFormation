@@ -51,7 +51,7 @@
                     return;
                 }
 
-                this.IsJsonDocument = Serializer.TryGetJson(this.Value, false, out _);
+                this.IsJsonDocument = Serializer.TryGetJson(this.Value, false, "Unknown", "Unknown", out _);
             }
         }
 
@@ -91,7 +91,7 @@
         public override string ToString()
         {
             return
-                $"{this.GetType().Name}, Value = {(this.Value == null ? "<null>" : this.Value == string.Empty ? "<empty>" : this.Value)}, IsQuoted = {this.IsQuoted}, IsPolicyDocument = {this.IsJsonDocument}";
+                $"{this.GetType().Name}, Value = {(this.Value == null ? "<null>" : this.Value == string.Empty ? "<empty>" : this.Value)}, IsQuoted = {this.IsQuoted}, IsJsonDocument = {this.IsJsonDocument}";
         }
     }
 }

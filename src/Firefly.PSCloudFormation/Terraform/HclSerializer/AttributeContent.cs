@@ -6,9 +6,19 @@
     internal enum AttributeContent
     {
         /// <summary>
+        /// No concrete analysis
+        /// </summary>
+        None,
+
+        /// <summary>
         /// Next event is a scalar with value <c>null</c>
         /// </summary>
         Null,
+
+        /// <summary>
+        /// Event is empty scalar; <c>null</c>, <c>false</c> or empty string
+        /// </summary>
+        Empty,
 
         /// <summary>
         /// Next event is a scalar with value empty string
@@ -26,8 +36,28 @@
         EmptyCollection,
 
         /// <summary>
+        /// In a block set/list definition where there is a sequence of repeating blocks.
+        /// </summary>
+        BlockList,
+
+        /// <summary>
+        /// In a block mapping that has no embedded sequence component, like 'timeouts'
+        /// </summary>
+        BlockObject,
+
+        /// <summary>
+        /// Attribute introduces a sequence
+        /// </summary>
+        Sequence,
+
+        /// <summary>
+        /// Attribute introduces a mapping (basic object)
+        /// </summary>
+        Mapping,
+
+        /// <summary>
         /// Attribute has some kind of value
         /// </summary>
-        HasValue
+        Value
     }
 }

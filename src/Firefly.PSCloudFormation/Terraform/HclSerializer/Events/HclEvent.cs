@@ -1,7 +1,18 @@
 ﻿namespace Firefly.PSCloudFormation.Terraform.HclSerializer.Events
 {
+    /// <summary>
+    /// Base class for all emitter events
+    /// </summary>
     internal abstract class HclEvent
     {
+        /// <summary>
+        /// Gets the null event.
+        /// </summary>
+        /// <value>
+        /// The none.
+        /// </value>
+        public static HclEvent None => new NullEvent();
+
         /// <summary>
         /// Gets a value indicating the variation of depth caused by this event.
         /// The value can be either -1, 0 or 1. For start events, it will be 1,

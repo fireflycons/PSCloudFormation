@@ -9,27 +9,28 @@
         /// <summary>
         /// Initializes a new instance of the <see cref="HclSerializerException"/> class.
         /// </summary>
-        public HclSerializerException()
-        {
-        }
-
-        /// <summary>
-        /// Initializes a new instance of the <see cref="HclSerializerException"/> class.
-        /// </summary>
+        /// <param name="resourceName">Name of the resource being serialized.</param>
+        /// <param name="resourceType">Type of the resource being serialized.</param>
         /// <param name="message">The message that describes the error.</param>
-        public HclSerializerException(string message)
+        public HclSerializerException(string resourceName, string resourceType, string message)
             : base(message)
         {
+            this.ResourceName = resourceName;
+            this.ResourceType = resourceType;
         }
 
         /// <summary>
         /// Initializes a new instance of the <see cref="HclSerializerException"/> class.
         /// </summary>
         /// <param name="message">The message.</param>
+        /// <param name="resourceName">Name of the resource being serialized.</param>
+        /// <param name="resourceType">Type of the resource being serialized.</param>
         /// <param name="inner">The inner.</param>
-        public HclSerializerException(string message, Exception inner)
+        public HclSerializerException(string message, string resourceName, string resourceType, Exception inner)
             : base(message, inner)
         {
+            this.ResourceName = resourceName;
+            this.ResourceType = resourceType;
         }
 
         /// <summary>
@@ -41,5 +42,44 @@
             : base(info, context)
         {
         }
+
+        /// <summary>
+        /// Prevents a default instance of the <see cref="HclSerializerException"/> class from being created.
+        /// </summary>
+        private HclSerializerException()
+        {
+        }
+
+        /// <summary>
+        /// Gets a message that describes the current exception.
+        /// </summary>
+        public override string Message
+        {
+            get
+            {
+                if (this.ResourceType == null || this.ResourceName == null)
+                {
+                    return base.Message;
+                }
+
+                return $"Resource \"{this.ResourceType}.{this.ResourceName}\": {base.Message}";
+            }
+        }
+
+        /// <summary>
+        /// Gets the name of the resource being serialized.
+        /// </summary>
+        /// <value>
+        /// The name of the resource.
+        /// </value>
+        public string ResourceName { get; }
+
+        /// <summary>
+        /// Gets the type of the resource being serialized.
+        /// </summary>
+        /// <value>
+        /// The type of the resource.
+        /// </value>
+        public string ResourceType { get; }
     }
 }
