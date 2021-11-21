@@ -7,6 +7,11 @@
 }
 
 provider "aws" {
-    region = "#REGION#"
+ region = "AWS::Region"
+  default_tags {
+    tags = {
+      "tf:StackName" = "AWS::StackName" # Use this to create a resource group
+    }
+  }
 }
 
