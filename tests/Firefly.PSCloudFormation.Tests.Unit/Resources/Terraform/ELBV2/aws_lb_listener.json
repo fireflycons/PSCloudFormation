@@ -1,0 +1,55 @@
+{
+    "version": 4,
+    "terraform_version": "1.0.9",
+    "serial": 1,
+    "lineage": "9b5b9a0e-a324-6f97-74a3-d5f717318c76",
+    "outputs": {},
+    "resources": [
+        {
+            "mode": "managed",
+            "type": "aws_lb_listener",
+            "name": "ALBListener",
+            "provider": "provider[\"registry.terraform.io/hashicorp/aws\"]",
+            "instances": [
+                {
+                    "schema_version": 0,
+                    "attributes": {
+                        "alpn_policy": null,
+                        "arn": "arn:aws:elasticloadbalancing:eu-west-1:123456789012:listener/app/my-alb/2253fc09c24c72ec/3ef53626918c6285",
+                        "certificate_arn": "arn:aws:acm:eu-west-1:123456789012:certificate/75993695-e34c-4d0b-97b4-b60265fcc164",
+                        "default_action": [
+                            {
+                                "authenticate_cognito": [],
+                                "authenticate_oidc": [],
+                                "fixed_response": [
+                                    {
+                                        "content_type": "text/html",
+                                        "message_body": "\u003chtml\u003e\n  \u003chead\u003e\n      \u003ctitle\u003eProget LoadBalancer\u003c/title\u003e\n  \u003c/head\u003e\n  \u003cbody\u003e\n    \u003cp\u003eThis environment is not currently deployed. Please refer to \u003ca href=\"https://reedexpo.atlassian.net/wiki/spaces/RCED/pages/495353943/ProGet\"\u003eProGet Upgrade Instructions\u003c/a\u003e\u003c/p\u003e.\n  \u003c/body\u003e\n\u003c/html\u003e\n",
+                                        "status_code": "503"
+                                    }
+                                ],
+                                "forward": [],
+                                "order": 0,
+                                "redirect": [],
+                                "target_group_arn": "",
+                                "type": "fixed-response"
+                            }
+                        ],
+                        "id": "arn:aws:elasticloadbalancing:eu-west-1:123456789012:listener/app/my-alb/2253fc09c24c72ec/3ef53626918c6285",
+                        "load_balancer_arn": "arn:aws:elasticloadbalancing:eu-west-1:123456789012:loadbalancer/app/my-alb/2253fc09c24c72ec",
+                        "port": 443,
+                        "protocol": "HTTPS",
+                        "ssl_policy": "ELBSecurityPolicy-2016-08",
+                        "tags": {},
+                        "tags_all": {},
+                        "timeouts": {
+                            "read": null
+                        }
+                    },
+                    "sensitive_attributes": [],
+                    "private": "eyJlMmJmYjczMC1lY2FhLTExZTYtOGY4OC0zNDM2M2JjN2M0YzAiOnsicmVhZCI6NjAwMDAwMDAwMDAwfSwic2NoZW1hX3ZlcnNpb24iOiIwIn0="
+                }
+            ]
+        }
+    ]
+}

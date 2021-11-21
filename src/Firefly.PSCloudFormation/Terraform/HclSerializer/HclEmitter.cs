@@ -358,6 +358,15 @@
                 return AttributeContent.BooleanFalse;
             }
 
+            if (double.TryParse(scalar.Value, out var doubleVal) && doubleVal == 0)
+            {
+                // As this stands, all zeros are treated as empty, so if we want a zero emitted
+                // would have to list as a required attribute.
+                // If this is too much hassle, then need to refactor resource traits
+                // to have conditions.
+                return AttributeContent.Empty;
+            }
+
             return string.IsNullOrWhiteSpace(scalar.Value) ? AttributeContent.EmptyString : AttributeContent.Value;
         }
 
@@ -652,16 +661,35 @@
                 this.Write(' ');
             }
 
-            if (scalar.IsQuoted)
+            var value = NonInterpolatedTokenRegex.Replace(scalar.Value, match => "$" + match.Groups["token"].Value);
+
+            if (value.Any(char.IsControl))
             {
-                this.Write('"');
+                // The Unicode standard classifies the characters \u000A (LF), \u000C (FF), and \u000D (CR) as control characters
+                // Emit as here doc
+                this.Write("<<-EOT");
+                foreach (var line in value.Split(new[] { '\r', '\n' }))
+                {
+                    this.WriteIndent();
+                    this.Write(line);
+                }
+
+                this.WriteIndent();
+                this.Write("EOT");
             }
-
-            this.Write(NonInterpolatedTokenRegex.Replace(scalar.Value, match => "$" + match.Groups["token"].Value));
-
-            if (scalar.IsQuoted)
+            else
             {
-                this.Write('"');
+                if (scalar.IsQuoted)
+                {
+                    this.Write('"');
+                }
+
+                this.Write(value);
+
+                if (scalar.IsQuoted)
+                {
+                    this.Write('"');
+                }
             }
 
             if (this.state == EmitterState.Sequence)
