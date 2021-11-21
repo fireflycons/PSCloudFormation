@@ -27,7 +27,7 @@
 
             if (self.RequiredAttributes.Any(currentPath.IsLike))
             {
-                // Required attributes overrides unconfigurable attributes
+                // Required attributes overrides computed attributes attributes
                 return true;
             }
 
@@ -37,7 +37,47 @@
                 return false;
             }
 
-            return analysis == AttributeContent.HasValue;
+            return new[]
+                       {
+                           AttributeContent.BlockList, AttributeContent.BlockObject, AttributeContent.Sequence,
+                           AttributeContent.Mapping, AttributeContent.Value
+                       }.Contains(analysis);
+        }
+
+        /// <summary>
+        /// Determines if argument at current path is not a block, therefore should be emitted as <c>arg = { ... </c>, e.g. SG ingress rules, tags
+        /// </summary>
+        /// <param name="self"><see cref="IResourceTraits"/> derivative</param>
+        /// <param name="currentPath">The current path.</param>
+        /// <returns>
+        ///   <c>true</c> if argument at current path is not a block otherwise, <c>false</c>.
+        /// </returns>
+        public static bool IsNonBlockAttribute(this IResourceTraits self, string currentPath)
+        {
+            if (self == null)
+            {
+                throw new ArgumentNullException(nameof(self));
+            }
+
+            return self.NonBlockTypeAttributes.Any(currentPath.IsLike);
+        }
+
+        /// <summary>
+        /// Determines if argument at current path is a block object, meaning that it does not contain a sequence, e.g. timeouts
+        /// </summary>
+        /// <param name="self"><see cref="IResourceTraits"/> derivative</param>
+        /// <param name="currentPath">The current path.</param>
+        /// <returns>
+        ///   <c>true</c> if argument at current path is a block object otherwise, <c>false</c>.
+        /// </returns>
+        public static bool IsBlockObject(this IResourceTraits self, string currentPath)
+        {
+            if (self == null)
+            {
+                throw new ArgumentNullException(nameof(self));
+            }
+
+            return self.BlockObjectAttributes.Any(currentPath.IsLike);
         }
     }
 }
