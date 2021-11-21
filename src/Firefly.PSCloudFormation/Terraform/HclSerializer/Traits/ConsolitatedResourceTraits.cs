@@ -24,8 +24,8 @@
                 .Concat(specificResourceTraits.NonBlockTypeAttributes).ToList();
             this.ComputedAttributes = sharedTraits.ComputedAttributes
                 .Concat(specificResourceTraits.ComputedAttributes).ToList();
-            this.BlockMappingAttributes = sharedTraits.BlockMappingAttributes
-                .Concat(specificResourceTraits.BlockMappingAttributes).ToList();
+            this.BlockObjectAttributes = sharedTraits.BlockObjectAttributes
+                .Concat(specificResourceTraits.BlockObjectAttributes).ToList();
 
             // No conflicting arguments defined for all resources
             this.ConflictingArguments = specificResourceTraits.ConflictingArguments;
@@ -49,7 +49,7 @@
         public List<string> NonBlockTypeAttributes { get; }
 
         /// <inheritdoc />
-        public List<string> BlockMappingAttributes { get; set; }
+        public List<string> BlockObjectAttributes { get; set; }
 
         /// <inheritdoc />
         public List<string> RequiredAttributes { get; }

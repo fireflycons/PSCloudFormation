@@ -20,12 +20,12 @@
         List<string> NonBlockTypeAttributes { get; }
 
         /// <summary>
-        /// Gets the attributes stored as map in state, but emitted as block.
+        /// Gets the attributes defining a single object type that should be treated as a block, i.e. "Block, Object"
         /// </summary>
         /// <value>
         /// The force block attributes.
         /// </value>
-        List<string> BlockMappingAttributes { get; }
+        List<string> BlockObjectAttributes { get; }
 
         /// <summary>
         /// Gets list of attributes that must be present for the resource in generated HCL.

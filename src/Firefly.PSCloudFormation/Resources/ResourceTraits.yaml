@@ -52,8 +52,8 @@
     - Resource: all                   # Common traits for all resources - merged with specific resources.
       NonBlockTypeAttributes:         # Emiited as e.g. 'tags = {}'' (rather than 'tags {}'')
         - tags
-#      BlockMappingAttributes:         # Stored as map in state, but emitted as block
-#        - timeouts
+      BlockObjectAttributes:         # Stored as map in state, but emitted as block
+        - timeouts
       ComputedAttributes:       # State properties that have no HCL equivalent, because they are computed.
         - '*arn'                      # Wildcard attribute name match, so no attributes ending in 'arn' will be emitted anywhere 
         - 'id'
@@ -170,6 +170,13 @@
         - '*dns_name'
         - ip_address
 
+- Group: IAM
+  Resources:
+    - Resource: aws_iam_role
+      ConflictingArguments:
+        - - name
+          - name_prefix
+
 - Group: Lambda
   Resources:
     - Resource: aws_lambda_function
@@ -267,8 +274,6 @@
         - origin
         - state
     - Resource: aws_route_table
-      NonBlockTypeAttributes:
-        - route
       RequiredAttributes:
         - route.#.*
     - Resource: aws_vpc

@@ -1,12 +1,8 @@
-﻿using Firefly.PSCloudFormation.Terraform.HclSerializer.Events;
-
-namespace Firefly.PSCloudFormation.Terraform.HclSerializer.Traits
+﻿namespace Firefly.PSCloudFormation.Terraform.HclSerializer.Traits
 {
     using System.Collections.Generic;
-    using System.Linq;
 
     using Firefly.PSCloudFormation.Terraform.HclSerializer.Events;
-    using Firefly.PSCloudFormation.Utils;
 
     using YamlDotNet.Serialization;
 
@@ -16,6 +12,12 @@ namespace Firefly.PSCloudFormation.Terraform.HclSerializer.Traits
     /// </summary>
     internal class ResourceTraits : IResourceTraits
     {
+        /// <inheritdoc />
+        public List<string> BlockObjectAttributes { get; set; } = new List<string>();
+
+        /// <inheritdoc />
+        public List<string> ComputedAttributes { get; set; } = new List<string>();
+
         /// <inheritdoc />
         /// <inheritdoc />
         public List<List<string>> ConflictingArguments { get; set; } = new List<List<string>>();
@@ -27,16 +29,11 @@ namespace Firefly.PSCloudFormation.Terraform.HclSerializer.Traits
         public List<string> NonBlockTypeAttributes { get; set; } = new List<string>();
 
         /// <inheritdoc />
-        public List<string> BlockMappingAttributes { get; set; } = new List<string>();
-
-        /// <inheritdoc />
         public List<string> RequiredAttributes { get; set; } = new List<string>();
 
+        /// <inheritdoc />
         [YamlMember(Alias = "Resource")]
         public string ResourceType { get; set; }
-
-        /// <inheritdoc />
-        public List<string> ComputedAttributes { get; set; } = new List<string>();
 
         /// <summary>
         /// Gets traits class for current resource type.
