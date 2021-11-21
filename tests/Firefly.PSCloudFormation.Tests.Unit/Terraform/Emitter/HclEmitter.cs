@@ -40,6 +40,7 @@
         [InlineData("iam_role2.json")]
         [InlineData("aws_apigatewayv2_stage.json")]
         [InlineData("route_table.json")]
+        [InlineData("security_group.json")]
         [InlineData("aws_cloudfront_distribution.json")]
         public void ShouldSerializeResource(string stateFile)
         {

@@ -1,0 +1,94 @@
+{
+    "version": 4,
+    "terraform_version": "1.0.9",
+    "serial": 1,
+    "lineage": "9b5b9a0e-a324-6f97-74a3-d5f717318c76",
+    "outputs": {},
+    "resources": [
+        {
+            "mode": "managed",
+            "type": "aws_security_group",
+            "name": "SgTest",
+            "provider": "provider[\"registry.terraform.io/hashicorp/aws\"]",
+            "instances": [
+                {
+                    "schema_version": 1,
+                    "attributes": {
+                        "arn": "arn:aws:ec2:eu-west-1:123456789012:security-group/sg-048619d29d8970209",
+                        "description": "TestGroupDescription",
+                        "egress": [
+                            {
+                                "cidr_blocks": [
+                                    "0.0.0.0/0"
+                                ],
+                                "description": "",
+                                "from_port": 0,
+                                "ipv6_cidr_blocks": [],
+                                "prefix_list_ids": [],
+                                "protocol": "-1",
+                                "security_groups": [],
+                                "self": false,
+                                "to_port": 0
+                            }
+                        ],
+                        "id": "sg-048619d29d8970209",
+                        "ingress": [
+                            {
+                                "cidr_blocks": [
+                                    "1.1.1.1/32"
+                                ],
+                                "description": "",
+                                "from_port": 1,
+                                "ipv6_cidr_blocks": [],
+                                "prefix_list_ids": [],
+                                "protocol": "tcp",
+                                "security_groups": [],
+                                "self": false,
+                                "to_port": 2
+                            },
+                            {
+                                "cidr_blocks": [
+                                    "2.2.2.2/32"
+                                ],
+                                "description": "",
+                                "from_port": 3,
+                                "ipv6_cidr_blocks": [],
+                                "prefix_list_ids": [],
+                                "protocol": "tcp",
+                                "security_groups": [],
+                                "self": false,
+                                "to_port": 3
+                            },
+                            {
+                                "cidr_blocks": [
+                                    "3.3.3.3/32"
+                                ],
+                                "description": "",
+                                "from_port": 4,
+                                "ipv6_cidr_blocks": [],
+                                "prefix_list_ids": [],
+                                "protocol": "tcp",
+                                "security_groups": [],
+                                "self": false,
+                                "to_port": 5
+                            }
+                        ],
+                        "name": "TestGroup",
+                        "name_prefix": "",
+                        "owner_id": "123456789012",
+                        "revoke_rules_on_delete": null,
+                        "tags": {},
+                        "tags_all": {},
+                        "timeouts": {
+                            "create": null,
+                            "delete": null
+                        },
+                        "vpc_id": "vpc-7e207219"
+                    },
+                    "sensitive_attributes": [],
+                    "private": "eyJlMmJmYjczMC1lY2FhLTExZTYtOGY4OC0zNDM2M2JjN2M0YzAiOnsiY3JlYXRlIjo2MDAwMDAwMDAwMDAsImRlbGV0ZSI6OTAwMDAwMDAwMDAwfSwic2NoZW1hX3ZlcnNpb24iOiIxIn0="
+                }
+            ]
+        }
+    ]
+}
