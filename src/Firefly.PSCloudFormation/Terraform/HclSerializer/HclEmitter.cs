@@ -96,6 +96,11 @@
         private bool isIndentation;
 
         /// <summary>
+        /// <c>true</c> when emitting a <c>jsonencode</c> block
+        /// </summary>
+        private bool isJson;
+
+        /// <summary>
         /// Whether the last thing emitted was whitespace.
         /// </summary>
         private bool isWhitespace;
@@ -292,17 +297,17 @@
                     }
                 }
 
-                if (lastEvent is SequenceStart && (!this.IsTopLevelAttribute || evt is Scalar))
+                if (lastEvent is SequenceStart && evt is Scalar)
                 {
                     return AttributeContent.Sequence;
                 }
 
-                if (lastEvent is MappingStart && !this.IsTopLevelAttribute)
+                if (lastEvent is MappingStart)
                 {
                     return AttributeContent.Mapping;
                 }
 
-                if (this.IsTopLevelAttribute && !this.resourceTraits.IsNonBlockAttribute(key))
+                if (!(this.isJson || this.resourceTraits.IsNonBlockAttribute(key)))
                 {
                     if (lastEvent is SequenceStart && evt is MappingStart)
                     {
@@ -364,6 +369,7 @@
         {
             var p = GetTypedEvent<JsonEnd>(@event);
 
+            this.isJson = false;
             this.indent = this.indents.Pop();
             this.state = this.states.Pop();
             this.WriteIndent();
@@ -387,6 +393,7 @@
         {
             var p = GetTypedEvent<JsonStart>(@event);
 
+            this.isJson = true;
             this.states.Push(this.state);
             this.state = EmitterState.Json;
             this.WriteIndicator("jsonencode(", true, false, true);
@@ -470,33 +477,33 @@
 
                 this.WriteIndent();
 
-                if (analysis == AttributeContent.BlockList)
+                switch (analysis)
                 {
-                    this.blockKeys.Push(this.currentBlockKey);
-                    this.currentBlockKey = key.Value;
+                    case AttributeContent.BlockList:
+
+                        this.blockKeys.Push(this.currentBlockKey);
+                        this.currentBlockKey = key.Value;
+                        this.states.Push(this.state);
+                        this.state = EmitterState.BlockList;
+                        break;
+
+                    case AttributeContent.BlockObject:
+
+                        this.state = EmitterState.BlockObject;
+                        break;
+
+                    default:
+
+                        this.state = EmitterState.Mapping;
+                        break;
                 }
             }
 
             this.EmitScalar(@event);
 
-            switch (analysis)
+            if (this.state == EmitterState.Mapping)
             {
-                case AttributeContent.BlockList:
-
-                    this.states.Push(this.state);
-                    this.state = EmitterState.BlockList;
-                    break;
-
-                case AttributeContent.BlockObject:
-
-                    this.state = EmitterState.BlockObject;
-                    break;
-
-                default:
-
-                    this.state = EmitterState.Mapping;
-                    this.WriteIndicator("=", true, false, false);
-                    break;
+                this.WriteIndicator("=", true, false, false);
             }
         }
 
