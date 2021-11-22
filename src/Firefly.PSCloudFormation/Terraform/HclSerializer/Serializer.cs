@@ -36,7 +36,7 @@
             bool requirePolicy,
             string resourceName,
             string resourceType,
-            out JObject jsonDocument)
+            out JContainer jsonDocument)
         {
             var isJson = false;
             jsonDocument = null;
@@ -57,9 +57,9 @@
             try
             {
                 // If JSON, then possibly embedded policy document
-                jsonDocument = JObject.Parse(text);
+                jsonDocument = firstChar == '{' ? (JContainer)JObject.Parse(text) : JArray.Parse(text);
 
-                if (requirePolicy && !jsonDocument.ContainsKey("Statement"))
+                if (requirePolicy && jsonDocument is JObject jo && !jo.ContainsKey("Statement"))
                 {
                     throw new HclSerializerException(resourceName, resourceType, "Expected policy document and got JSON that is not a policy");
                 }
@@ -156,9 +156,9 @@
 
                     if (scalar.IsJsonDocument)
                     {
-                        var policy = JObject.Parse(scalar.Value);
+                        var json = scalar.JsonDocumentType == JTokenType.Object ? (JContainer)JObject.Parse(scalar.Value) : JArray.Parse(scalar.Value);
                         this.emitter.Emit(new JsonStart());
-                        this.WalkNode(policy);
+                        this.WalkNode(json);
                         this.emitter.Emit(new JsonEnd());
                     }
                     else

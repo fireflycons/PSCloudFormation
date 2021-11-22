@@ -6,6 +6,8 @@
 
     using Firefly.PSCloudFormation.Terraform.State;
 
+    using Newtonsoft.Json.Linq;
+
     /// <summary>
     /// Base class for scalar types.
     /// </summary>
@@ -51,7 +53,12 @@
                     return;
                 }
 
-                this.IsJsonDocument = Serializer.TryGetJson(this.Value, false, "Unknown", "Unknown", out _);
+                this.IsJsonDocument = Serializer.TryGetJson(this.Value, false, "Unknown", "Unknown", out var document);
+
+                if (this.IsJsonDocument)
+                {
+                    this.JsonDocumentType = document.Type;
+                }
             }
         }
 
@@ -63,6 +70,14 @@
         /// </value>
         public bool IsJsonDocument { get; }
 
+        /// <summary>
+        /// Gets the type of the JSON document if <see cref="IsJsonDocument"/> is <c>true</c>.
+        /// </summary>
+        /// <value>
+        /// The type of the JSON document.
+        /// </value>
+        public JTokenType JsonDocumentType { get; } = JTokenType.None;
+             
         /// <summary>
         /// Gets a value indicating whether the value should be quoted when emitted.
         /// </summary>

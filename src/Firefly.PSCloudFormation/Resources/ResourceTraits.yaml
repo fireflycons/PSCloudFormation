@@ -52,9 +52,9 @@
     - Resource: all                   # Common traits for all resources - merged with specific resources.
       NonBlockTypeAttributes:         # Emiited as e.g. 'tags = {}'' (rather than 'tags {}'')
         - tags
-      BlockObjectAttributes:         # Stored as map in state, but emitted as block
+      BlockObjectAttributes:          # Stored as map in state, but emitted as block
         - timeouts
-      ComputedAttributes:       # State properties that have no HCL equivalent, because they are computed.
+      ComputedAttributes:             # State properties that have no HCL equivalent, because they are computed.
         - '*arn'                      # Wildcard attribute name match, so no attributes ending in 'arn' will be emitted anywhere 
         - 'id'
         - 'owner_id'
@@ -113,6 +113,8 @@
       ConflictingArguments:
         - - vpc_zone_identifier
           - availability_zones
+        - - launch_template.#.id
+          - launch_template.#.name
 
 - Group: CloudFront
   Resources:
@@ -155,6 +157,28 @@
         - primary_network_interface_id
         - root_block_device.#.volume_id
         - root_block_device.#.device_name
+    - Resource: aws_launch_template
+      ComputedAttributes:
+        - latest_version
+    - Resource: aws_eip
+      ComputedAttributes:
+        - association_id
+        - domain
+        - private_*
+        - public_*
+    - Resource: aws_nat_gateway
+      ComputedAttributes:
+        - '*_ip'
+        - network_interface_id
+    - Resource: aws_ec2_transit_gateway
+      ComputedAttributes:
+        - '*_default_route_table_id'
+
+- Group: ECS
+  Resources:
+    - Resource: aws_ecs_task_definition
+      ComputedAttributes:
+        - revision
 
 - Group: EFS
   Resources:
@@ -170,18 +194,43 @@
         - '*dns_name'
         - ip_address
 
+- Group: Elastic Loadbalancing V2
+  Resources:
+    - Resource: aws_lb
+      ComputedAttributes:
+        - dns_name
+        - zone_id
+        - vpc_id
+    - Resource: aws_lb_listener
+      RequiredAttributes:
+        - load_balancer_arn
+    - Resource: aws_lb_listener_certificate
+      RequiredAttributes:
+        - listener_arn
+        - certificate_arn
+    - Resource: aws_lb_listener_rule
+      RequiredAttributes:
+        - listener_arn
+
 - Group: IAM
   Resources:
     - Resource: aws_iam_role
       ConflictingArguments:
         - - name
           - name_prefix
+    - Resource: aws_iam_policy
+      ComputedAttributes:
+        - policy_id
 
 - Group: Lambda
   Resources:
     - Resource: aws_lambda_function
       ComputedAttributes:
         - last_modified
+        - source_code_size
+        - version
+    - Resource: aws_lambda_layer_version
+      ComputedAttributes:
         - source_code_size
         - version
 
@@ -261,14 +310,8 @@
         - ingress
         - egress
       RequiredAttributes:
-        - ingress.#.*_port
-        - ingress.#.rule_no
-        - ingress.#.action
-        - ingress.#.protocol
-        - egress.#.*_port
-        - egress.#.rule_no
-        - egress.#.action
-        - egress.#.protocol
+        - ingress.#.*
+        - egress.#.*
     - Resource: aws_route
       ComputedAttributes:
         - origin

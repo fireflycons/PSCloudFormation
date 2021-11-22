@@ -10,12 +10,17 @@
     using Firefly.CloudFormationParser.GraphObjects;
     using Firefly.PSCloudFormation.Terraform.Importers.ApiGateway;
     using Firefly.PSCloudFormation.Terraform.Importers.ApiGatewayV2;
+    using Firefly.PSCloudFormation.Terraform.Importers.ApplicationAutoScaling;
     using Firefly.PSCloudFormation.Terraform.Importers.Cognito;
+    using Firefly.PSCloudFormation.Terraform.Importers.ECS;
     using Firefly.PSCloudFormation.Terraform.Importers.ElasticLoadBalancingV2;
     using Firefly.PSCloudFormation.Terraform.Importers.IAM;
     using Firefly.PSCloudFormation.Terraform.Importers.Lambda;
+    using Firefly.PSCloudFormation.Terraform.Importers.RDS;
     using Firefly.PSCloudFormation.Terraform.Importers.Route53;
     using Firefly.PSCloudFormation.Terraform.Importers.VPC;
+
+    using ICSharpCode.SharpZipLib.Tar;
 
     using QuikGraph;
 
@@ -34,11 +39,11 @@
                                                                                          typeof(
                                                                                              LambdaPermissionImporter)
                                                                                      },
-                                                                                     {
-                                                                                         "aws_iam_policy",
-                                                                                         typeof(
-                                                                                             IAMManagedPolicyImporter)
-                                                                                     },
+                                                                                     //{
+                                                                                     //    "aws_iam_policy",
+                                                                                     //    typeof(
+                                                                                     //        IAMManagedPolicyImporter)
+                                                                                     //},
                                                                                      {
                                                                                          "aws_route53_record",
                                                                                          typeof(Route53RecordImporter)
@@ -108,8 +113,29 @@
                                                                                              RouteTableAssociationImporter)
                                                                                      },
                                                                                      {
+                                                                                         "aws_network_acl_rule",
+                                                                                         typeof(
+                                                                                             NetworkAclEntryImporter)
+                                                                                     },
+                                                                                     {
                                                                                          "aws_lb_listener_certificate",
                                                                                          typeof(ListenerCertificateImporter)
+                                                                                     },
+                                                                                     {
+                                                                                         "aws_db_option_group",
+                                                                                         typeof(DBOptionGroupImporter)
+                                                                                     },
+                                                                                     {
+                                                                                         "aws_ecs_service",
+                                                                                         typeof(ECSServiceImporter)
+                                                                                     },
+                                                                                     {
+                                                                                         "aws_appautoscaling_target",
+                                                                                         typeof(AASServiceScalableTargetImporter)
+                                                                                     },
+                                                                                     {
+                                                                                         "aws_appautoscaling_policy",
+                                                                                         typeof(AASAutoScalingPolicyImporter)
                                                                                      }
                                                                                  };
 
@@ -271,23 +297,21 @@
                             this.TerraformSettings.Template.Resources.First(
                                 r => r.Name == this.ImportSettings.Resource.LogicalId);
 
+                        // Could be an imported value or a property or mapping reference.
                         if (thisTemplateResource.GetResourcePropertyValue(this.ReferencingPropertyPath) is string importName)
                         {
-                            var evaluation = this.TerraformSettings.StackExports.FirstOrDefault(e => e.Name == importName)
+                            var importEvaluation = this.TerraformSettings.StackExports.FirstOrDefault(e => e.Name == importName)
                                 ?.Value;
 
-                            if (evaluation == null)
+                            if (importEvaluation != null)
                             {
-                                this.LogError(
-                                    $"Cannot find related {awsResourceType} for {this.ImportSettings.Resource.LogicalId}.");
+                                this.LogWarning(
+                                    $"Resource \"{this.ImportSettings.Resource.LogicalId}\" references a resource imported from another stack.");
 
-                                return null;
+                                return new ResourceDependency(importEvaluation);
                             }
 
-                            this.LogWarning(
-                                $"Resource \"{this.ImportSettings.Resource.LogicalId}\" references a resource imported from another stack.");
-
-                            return new ResourceDependency(evaluation);
+                            return new ResourceDependency(importName);
                         }
 
                         this.LogError(

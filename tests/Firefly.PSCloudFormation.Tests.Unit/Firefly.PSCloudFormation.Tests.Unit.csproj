@@ -78,11 +78,15 @@
     <None Remove="Resources\progetDockerCloudFormation.yaml" />
     <None Remove="Resources\Terraform\ApiGatewayV2\aws_apigatewayv2_stage.json" />
     <None Remove="Resources\Terraform\aws_cloudfront_distribution.json" />
+    <None Remove="Resources\Terraform\ECS\aws_ecs_task_definition.json" />
+    <None Remove="Resources\Terraform\ELBV2\aws_lb.json" />
+    <None Remove="Resources\Terraform\ELBV2\aws_lb_listener.json" />
     <None Remove="Resources\Terraform\FindId_Attributes.json" />
     <None Remove="Resources\Terraform\iam_role\iam_role1.json" />
     <None Remove="Resources\Terraform\iam_role\iam_role2.json" />
     <None Remove="Resources\Terraform\terraform.tfstate" />
     <None Remove="Resources\Terraform\VPC\route_table.json" />
+    <None Remove="Resources\Terraform\VPC\security_group.json" />
   </ItemGroup>
 
   <ItemGroup>
@@ -161,11 +165,15 @@
     <EmbeddedResource Include="Resources\ParameterTest.yaml" />
     <EmbeddedResource Include="Resources\Terraform\ApiGatewayV2\aws_apigatewayv2_stage.json" />
     <EmbeddedResource Include="Resources\Terraform\aws_cloudfront_distribution.json" />
+    <EmbeddedResource Include="Resources\Terraform\ECS\aws_ecs_task_definition.json" />
+    <EmbeddedResource Include="Resources\Terraform\ELBV2\aws_lb.json" />
+    <EmbeddedResource Include="Resources\Terraform\ELBV2\aws_lb_listener.json" />
     <EmbeddedResource Include="Resources\Terraform\FindId_Attributes.json" />
     <EmbeddedResource Include="Resources\Terraform\iam_role\iam_role1.json" />
     <EmbeddedResource Include="Resources\Terraform\iam_role\iam_role2.json" />
     <EmbeddedResource Include="Resources\Terraform\terraform.tfstate" />
     <EmbeddedResource Include="Resources\Terraform\VPC\route_table.json" />
+    <EmbeddedResource Include="Resources\Terraform\VPC\security_group.json" />
   </ItemGroup>
 
   <ItemGroup>

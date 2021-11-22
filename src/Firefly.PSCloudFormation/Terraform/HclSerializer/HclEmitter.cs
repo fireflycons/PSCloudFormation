@@ -252,6 +252,25 @@
                     return AttributeContent.Value;
             }
 
+            if (this.isJson)
+            {
+                // When reading embedded JSON, emit it all
+                switch (nextEvent)
+                {
+                    case MappingStart _:
+
+                        return AttributeContent.Mapping;
+
+                    case SequenceStart _:
+
+                        return AttributeContent.Sequence;
+
+                    default:
+
+                        return AttributeContent.Value;
+                }
+            }
+
             if (!(nextEvent is CollectionStart))
             {
                 throw new HclSerializerException(
@@ -388,7 +407,7 @@
 
             // Pop path at end of JSON block
             // JSON block is a mapping value so analogous to popping key after scalar value
-            this.path.Pop();
+            this.PopPath();
 
             if (this.state == EmitterState.Sequence)
             {
@@ -431,7 +450,7 @@
             if (this.state == EmitterState.Mapping && this.path.Any())
             {
                 // Extra pop for nested mappings - path may be empty when coming to the end of a sequence of blocks (must be able to do this better!)
-                this.path.Pop();
+                this.PopPath();
             }
 
             this.WriteIndent();
@@ -482,7 +501,7 @@
                 {
                     this.events.ConsumeUntil(new CollectionPeeker().Done, true);
                     this.currentKey = lastKey;
-                    this.path.Pop();
+                    this.PopPath();
                     return;
                 }
 
@@ -705,7 +724,7 @@
                     .Contains(this.state) && @event is ScalarValue)
             {
                 // When emitting a scalar mapping value, pop this value's key from the path
-                this.path.Pop();
+                this.PopPath();
             }
         }
 
@@ -736,11 +755,14 @@
             this.state = this.states.Pop();
 
             // Pop sequence (#)
-            this.path.Pop();
+            this.PopPath();
 
-            // Pop Mapping key for this sequence
-            // Analogous to popping mapping key after a scalar value
-            this.path.Pop();
+            if (this.events.Peek().Type != EventType.JsonEnd)
+            {
+                // Pop Mapping key for this sequence
+                // Analogous to popping mapping key after a scalar value
+                this.PopPath();
+            }
 
             if (this.state == EmitterState.BlockList)
             {
@@ -771,7 +793,7 @@
             if (this.events.Peek() is SequenceEnd)
             {
                 // Pop key for this empty block as we are consuming SequenceEnd
-                this.path.Pop();
+                this.PopPath();
 
                 // Write empty sequence
                 this.WriteIndicator("[]", true, false, true);
@@ -803,6 +825,14 @@
         {
             this.indents.Push(this.indent);
             this.indent += 2;
+        }
+
+        /// <summary>
+        /// Pops the path in one place for easier breakpoint.
+        /// </summary>
+        private void PopPath()
+        {
+            this.path.Pop();
         }
 
         /// <summary>

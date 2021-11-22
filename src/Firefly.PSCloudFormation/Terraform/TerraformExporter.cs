@@ -6,7 +6,6 @@
     using System.IO;
     using System.Linq;
     using System.Text;
-    using System.Xml;
 
     using Firefly.CloudFormation;
     using Firefly.CloudFormationParser.GraphObjects;
@@ -46,8 +45,16 @@
         /// They are merged into the resources that depend on them
         /// when the dependent resource is imported.
         /// </summary>
-        private static readonly List<string> MergedResources =
-            new List<string> { "AWS::CloudFront::CloudFrontOriginAccessIdentity", "AWS::IAM::Policy", "AWS::EC2::SecurityGroupIngress", "AWS::EC2::SecurityGroupEgress", "AWS::EC2::VPCGatewayAttachment" };
+        private static readonly List<string> MergedResources = new List<string>
+                                                                   {
+                                                                       "AWS::CloudFront::CloudFrontOriginAccessIdentity",
+                                                                       "AWS::IAM::Policy",
+                                                                       "AWS::EC2::SecurityGroupIngress",
+                                                                       "AWS::EC2::SecurityGroupEgress",
+                                                                       "AWS::EC2::VPCGatewayAttachment",
+                                                                       "AWS::EC2::SubnetNetworkAclAssociation",
+                                                                       "AWS::EC2::NetworkAclEntry"
+                                                                   };
 
         /// <summary>
         /// These resources are currently not supported for import.
@@ -102,8 +109,10 @@
 
             this.logger.LogInformation("\nInitializing inputs and resources...");
 
-            initialHcl.AppendLine(terraformBlock.Replace("#REGION#", this.settings.AwsRegion));
-
+            initialHcl.AppendLine(terraformBlock
+                .Replace("AWS::Region", this.settings.AwsRegion)
+                .Replace("AWS::StackName", this.settings.StackName));
+            
             var parameters = this.ProcessInputVariables();
 
             var resourcesToImport = this.ProcessResources(initialHcl, unmappedResources);
@@ -203,6 +212,9 @@
                     }
                 }
 
+                // TODO: Post process the state file
+                // - Fix up lambda S3 sources.
+
                 // Now start adjusting the state file in accordance with the template's directed edge graph.
                 this.logger.LogInformation("\nResolving dependencies between resources...");
 
@@ -229,7 +241,9 @@
                     FileAccess.Write))
                 using (var s = new StreamWriter(stream, new UTF8Encoding(false)))
                 {
-                    s.Write(terraformBlock.Replace("#REGION#", this.settings.AwsRegion));
+                    s.Write(terraformBlock
+                        .Replace("AWS::Region", this.settings.AwsRegion)
+                        .Replace("AWS::StackName", this.settings.StackName));
 
                     // TODO: Suppress any vars not referenced (e.g. only existed for condition blocks)
                     foreach (var param in parameters.OrderBy(p => p.IsDataSource).ThenBy(p => p.Name))
@@ -292,7 +306,7 @@
 
                 if (terraformExecutionErrorCount + this.errors.Count > 0)
                 {
-                    throw new HclSerializerException($"Stack \"{this.settings.StackName}\": Errors were detected!");
+                    throw new HclSerializerException(null, null, $"Stack \"{this.settings.StackName}\": Errors were detected!");
                 }
 
                 this.logger.LogInformation($"Export of stack \"{this.settings.StackName}\" to terraform complete!");
@@ -308,6 +322,8 @@
             }
             finally
             {
+                var zipFileDetected = false;
+
                 this.logger.LogInformation("\n");
 
                 // Scan for AWS::Cloudformation::Init metadata and warn about it.
@@ -335,8 +351,16 @@
                 {
                     this.warnings.Add(
                         $"Resource \"{templateResource.Name}\" contains embedded function code (ZipFile) which is not imported.");
+                    zipFileDetected = true;
                 }
 
+                // Scan for bucket polices and warn
+                foreach (var templateResource in this.settings.Template.Resources.Where(
+                    r => r.Type == "AWS::S3::BucketPolicy"))
+                {
+                    this.warnings.Add($"Resource \"{templateResource.Name}\" - Policy likely not imported. Add it in manually.");
+                }
+                    
                 var totalErrors = terraformExecutionErrorCount + this.errors.Count;
 
                 if (totalErrors == 0)
@@ -359,6 +383,12 @@
                 {
                     this.logger.LogInformation("\nIt appears this stack contains custom resources. For a suggestion on how to manage these with terraform, see");
                     this.logger.LogInformation("https://trackit.io/trackit-whitepapers/cloudformation-to-terraform-conversion/");
+                }
+
+                if (zipFileDetected)
+                {
+                    this.logger.LogInformation("\nLambdas with template-embedded code were detected. Manage these by extracting code to a file,");
+                    this.logger.LogInformation("and using the \"filename\" argument of the lambda resource to reference it.");
                 }
 
                 this.logger.LogInformation($"\n       Errors: {totalErrors}, Warnings: {warningCount + this.warnings.Count}\n");
@@ -626,7 +656,7 @@
                     {
                         case JProperty jp when jp.Value is JValue jv:
 
-                            if (Serializer.TryGetJson(jv.Value<string>(), true, out var policy))
+                            if (Serializer.TryGetJson(jv.Value<string>(), true, referringState.Parent.Name, referringState.Parent.Type, out var policy))
                             {
                                 var replacementMade = false;
                                 ReplacePolicyReference(policy, referredParameter, con, ref replacementMade);
@@ -831,7 +861,7 @@
                         {
                             var stringValue = jv.Value<string>();
 
-                            if (Serializer.TryGetJson(stringValue, true, out var policy))
+                            if (Serializer.TryGetJson(stringValue, true, referringState.Parent.Name, referringState.Parent.Type, out var policy))
                             {
                                 var replacementMade = false;
                                 ReplacePolicyReference(policy, referredAwsResource, con, ref replacementMade);
@@ -860,12 +890,15 @@
 
                         for (var ind = 0; ind < ja.Count; ++ind)
                         {
-                            var stringVal = ja[ind].Value<string>();
-
-                            if (stringVal == referredAwsResource.PhysicalResourceId)
+                            if (ja[ind].Type == JTokenType.String)
                             {
-                                ja.RemoveAt(ind);
-                                ja.Add(con);
+                                var stringVal = ja[ind].Value<string>();
+
+                                if (stringVal == referredAwsResource.PhysicalResourceId)
+                                {
+                                    ja.RemoveAt(ind);
+                                    ja.Add(con);
+                                }
                             }
                         }
 

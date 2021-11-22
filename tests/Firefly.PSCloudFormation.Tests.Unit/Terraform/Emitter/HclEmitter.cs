@@ -44,6 +44,7 @@
         [InlineData("aws_cloudfront_distribution.json")]
         [InlineData("aws_lb.json")]
         [InlineData("aws_lb_listener.json")]
+        [InlineData("aws_ecs_task_definition.json")]
         public void ShouldSerializeResource(string stateFile)
         {
             var state = JsonConvert.DeserializeObject<StateFile>(
