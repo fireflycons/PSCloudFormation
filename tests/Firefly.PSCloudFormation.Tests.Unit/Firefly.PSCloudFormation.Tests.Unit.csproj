@@ -78,6 +78,7 @@
     <None Remove="Resources\progetDockerCloudFormation.yaml" />
     <None Remove="Resources\Terraform\ApiGatewayV2\aws_apigatewayv2_stage.json" />
     <None Remove="Resources\Terraform\aws_cloudfront_distribution.json" />
+    <None Remove="Resources\Terraform\ECS\aws_ecs_service.json" />
     <None Remove="Resources\Terraform\ECS\aws_ecs_task_definition.json" />
     <None Remove="Resources\Terraform\ELBV2\aws_lb.json" />
     <None Remove="Resources\Terraform\ELBV2\aws_lb_listener.json" />
@@ -165,6 +166,7 @@
     <EmbeddedResource Include="Resources\ParameterTest.yaml" />
     <EmbeddedResource Include="Resources\Terraform\ApiGatewayV2\aws_apigatewayv2_stage.json" />
     <EmbeddedResource Include="Resources\Terraform\aws_cloudfront_distribution.json" />
+    <EmbeddedResource Include="Resources\Terraform\ECS\aws_ecs_service.json" />
     <EmbeddedResource Include="Resources\Terraform\ECS\aws_ecs_task_definition.json" />
     <EmbeddedResource Include="Resources\Terraform\ELBV2\aws_lb.json" />
     <EmbeddedResource Include="Resources\Terraform\ELBV2\aws_lb_listener.json" />

@@ -35,6 +35,13 @@
             this.output = output;
         }
 
+        /// <summary>
+        /// Tests various features of the emitter such as
+        /// - Block handling
+        /// - Encoded JSON
+        /// - Resource Traits
+        /// </summary>
+        /// <param name="stateFile">The state file.</param>
         [Theory]
         [InlineData("iam_role1.json")]
         [InlineData("iam_role2.json")]
@@ -45,6 +52,7 @@
         [InlineData("aws_lb.json")]
         [InlineData("aws_lb_listener.json")]
         [InlineData("aws_ecs_task_definition.json")]
+        [InlineData("aws_ecs_service.json")]
         public void ShouldSerializeResource(string stateFile)
         {
             var state = JsonConvert.DeserializeObject<StateFile>(

@@ -42,6 +42,14 @@
         List<List<string>> ConflictingArguments { get; }
 
         /// <summary>
+        /// Gets the list of conditional attributes.
+        /// </summary>
+        /// <value>
+        /// The conditional attributes.
+        /// </value>
+        List<ConditionalAttribute> ConditionalAttributes { get; }
+
+        /// <summary>
         /// Gets the computed attributes.
         /// State properties that have no HCL equivalent, because they are computed.
         /// </summary>

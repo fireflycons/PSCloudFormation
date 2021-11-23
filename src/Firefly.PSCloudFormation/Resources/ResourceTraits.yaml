@@ -65,7 +65,8 @@
         - timeouts
       RequiredAttributes: []          # Must be present in HCL, even if null or empty
       DefaultValues: {}               # Values to set if state value is null
-      ConflictingArguments: []        # Where aruments confict. choose the first from this list.
+      ConflictingArguments: []        # Where arguments confict. choose the first from this list.
+      ConditionalAttributes: []
 
 - Group: API Gateway
   Resources:
@@ -129,6 +130,13 @@
         - domain_name
         - hosted_zone_id
 
+- Group: CloudWatch
+  Resources:
+    - Resource: aws_cloudwatch_metric_alarm
+      ConditionalAttributes:
+        - Name: datapoints_to_alarm
+          Value: 0
+
 - Group: Cognito
   Resources:
     - Resource: aws_cognito_user_pool
@@ -160,6 +168,9 @@
     - Resource: aws_launch_template
       ComputedAttributes:
         - latest_version
+      ConditionalAttributes:
+        - Name: block_device_mappings.#.ebs.#.throughput
+          Value: 0
     - Resource: aws_eip
       ComputedAttributes:
         - association_id
@@ -179,6 +190,10 @@
     - Resource: aws_ecs_task_definition
       ComputedAttributes:
         - revision
+    - Resource: aws_ecs_service
+      ConditionalAttributes:
+        - Name: propagate_tags
+          Value: NONE
 
 - Group: EFS
   Resources:
@@ -204,6 +219,15 @@
     - Resource: aws_lb_listener
       RequiredAttributes:
         - load_balancer_arn
+      ConditionalAttributes:
+        - Name: default_action.#.order
+          Value: 0
+    - Resource: aws_lb_listener_rule
+      RequiredAttributes:
+        - listener_arn
+      ConditionalAttributes:
+        - Name: action.#.order
+          Value: 0
     - Resource: aws_lb_listener_certificate
       RequiredAttributes:
         - listener_arn

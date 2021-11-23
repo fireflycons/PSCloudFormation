@@ -36,11 +36,17 @@
             // No default values defined for all resources
             this.DefaultValues = specificResourceTraits.DefaultValues;
 
+            // No conditional attributes defined for all resources
+            this.ConditionalAttributes = specificResourceTraits.ConditionalAttributes;
+
             this.ResourceType = specificResourceTraits.ResourceType;
         }
 
         /// <inheritdoc />
         public List<List<string>> ConflictingArguments { get; }
+
+        /// <inheritdoc />
+        public List<ConditionalAttribute> ConditionalAttributes { get; }
 
         /// <inheritdoc />
         public Dictionary<string, object> DefaultValues { get; }

@@ -245,7 +245,7 @@
             {
                 case Scalar scalar:
 
-                    return AnalyzeScalar(scalar);
+                    return this.AnalyzeScalar(scalar);
 
                 case JsonStart _:
 
@@ -367,7 +367,7 @@
         /// </summary>
         /// <param name="scalar">The scalar.</param>
         /// <returns>Result of analysis.</returns>
-        private static AttributeContent AnalyzeScalar(Scalar scalar)
+        private AttributeContent AnalyzeScalar(Scalar scalar)
         {
             if (scalar.Value == null)
             {
@@ -379,12 +379,8 @@
                 return AttributeContent.BooleanFalse;
             }
 
-            if (double.TryParse(scalar.Value, out var doubleVal) && doubleVal == 0)
+            if (this.resourceTraits.IsOmittedConditionalAttrbute(this.CurrentPath, scalar.Value))
             {
-                // As this stands, all zeros are treated as empty, so if we want a zero emitted
-                // would have to list as a required attribute.
-                // If this is too much hassle, then need to refactor resource traits
-                // to have conditions.
                 return AttributeContent.Empty;
             }
 

@@ -1,0 +1,70 @@
+{
+    "version": 4,
+    "terraform_version": "1.0.9",
+    "serial": 1,
+    "lineage": "9b5b9a0e-a324-6f97-74a3-d5f717318c76",
+    "outputs": {},
+    "resources": [
+        {
+            "mode": "managed",
+            "type": "aws_ecs_service",
+            "name": "Service",
+            "provider": "provider[\"registry.terraform.io/hashicorp/aws\"]",
+            "instances": [
+                {
+                    "schema_version": 0,
+                    "attributes": {
+                        "capacity_provider_strategy": [],
+                        "cluster": "arn:aws:ecs:eu-west-1:123456789012:cluster/my-cluster",
+                        "deployment_circuit_breaker": [
+                            {
+                                "enable": false,
+                                "rollback": false
+                            }
+                        ],
+                        "deployment_controller": [
+                            {
+                                "type": "ECS"
+                            }
+                        ],
+                        "deployment_maximum_percent": 200,
+                        "deployment_minimum_healthy_percent": 100,
+                        "desired_count": 1,
+                        "enable_ecs_managed_tags": false,
+                        "enable_execute_command": false,
+                        "force_new_deployment": null,
+                        "health_check_grace_period_seconds": 0,
+                        "iam_role": "ecs-service-my-cluster-Cluster-KPZ0LNM8MBNQ",
+                        "id": "arn:aws:ecs:eu-west-1:123456789012:service/my-cluster/my-cluster-Cluster-KPZ0LNM8MBNQ-Service-i3AIZzVIZECe",
+                        "launch_type": "EC2",
+                        "load_balancer": [
+                            {
+                                "container_name": "my-task",
+                                "container_port": 3000,
+                                "elb_name": "",
+                                "target_group_arn": "arn:aws:elasticloadbalancing:eu-west-1:123456789012:targetgroup/ecs-r-Targe-1QBZBVBY0TERV/d4be71e912b6bbd3"
+                            }
+                        ],
+                        "name": "my-cluster-Cluster-KPZ0LNM8MBNQ-Service-i3AIZzVIZECe",
+                        "network_configuration": [],
+                        "ordered_placement_strategy": [],
+                        "placement_constraints": [],
+                        "platform_version": "",
+                        "propagate_tags": "NONE",
+                        "scheduling_strategy": "REPLICA",
+                        "service_registries": [],
+                        "tags": {},
+                        "tags_all": {},
+                        "task_definition": "my-task:1",
+                        "timeouts": {
+                            "delete": null
+                        },
+                        "wait_for_steady_state": null
+                    },
+                    "sensitive_attributes": [],
+                    "private": "eyJlMmJmYjczMC1lY2FhLTExZTYtOGY4OC0zNDM2M2JjN2M0YzAiOnsiZGVsZXRlIjoxMjAwMDAwMDAwMDAwfSwic2NoZW1hX3ZlcnNpb24iOiIwIn0="
+                }
+            ]
+        }
+    ]
+}
