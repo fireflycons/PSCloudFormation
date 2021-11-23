@@ -22,7 +22,7 @@
         protected override string ReferencingPropertyPath => "RestApiId";
 
         /// <inheritdoc />
-        public override string GetImportId(string caption, string message)
+        public override string GetImportId()
         {
             var restApi = this.GetRestApiId();
 

@@ -23,7 +23,7 @@
         protected override string ReferencingPropertyPath => null;
 
         /// <inheritdoc />
-        public override string GetImportId(string caption, string message)
+        public override string GetImportId()
         {
             return
                 $"arn:aws:iam::{this.TerraformSettings.AwsAccountId}:policy/{this.ImportSettings.Resource.PhysicalId}";

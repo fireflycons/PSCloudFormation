@@ -29,7 +29,7 @@
         protected override string ReferencingPropertyPath { get; }
 
         /// <inheritdoc />
-        public override string GetImportId(string caption, string message)
+        public override string GetImportId()
         {
             var templateResource = this.TerraformSettings.Resources.First(r => r.LogicalResourceId == this.ImportSettings.Resource.LogicalId)
                 .TemplateResource;

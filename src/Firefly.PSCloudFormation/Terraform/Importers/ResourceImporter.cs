@@ -240,10 +240,8 @@
         /// <summary>
         /// Gets the import identifier.
         /// </summary>
-        /// <param name="caption">The caption for the interactive session.</param>
-        /// <param name="message">The message for the interactive session.</param>
-        /// <returns>The resource selected by the user, else <c>null</c> if cancelled.</returns>
-        public abstract string GetImportId(string caption, string message);
+        /// <returns>The resource selected by the user, else <c>null</c> if not found.</returns>
+        public abstract string GetImportId();
         
         /// <summary>
         /// Gets the resource referenced by the resource being processed based on the dependency graph edges for the resource type identified by <see cref="ReferencedAwsResource"/>.

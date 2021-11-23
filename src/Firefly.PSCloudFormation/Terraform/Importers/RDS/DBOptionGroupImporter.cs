@@ -24,7 +24,7 @@
         protected override string ReferencingPropertyPath => null;
 
         /// <inheritdoc />
-        public override string GetImportId(string caption, string message)
+        public override string GetImportId()
         {
             // DB option group names are always lowercase
             return this.ImportSettings.Resource.PhysicalId.ToLowerInvariant();

@@ -20,7 +20,7 @@
         protected override string ReferencingPropertyPath => "ApiId";
 
         /// <inheritdoc />
-        public override string GetImportId(string caption, string message)
+        public override string GetImportId()
         {
             var apiId = this.GetApiId();
             var stageName = this.GetThisResourcePropertyValue("StageName");

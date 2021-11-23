@@ -44,14 +44,6 @@
         IReadOnlyCollection<ResourceImport> ResourcesToImport { get; }
 
         /// <summary>
-        /// Gets the UI.
-        /// </summary>
-        /// <value>
-        /// The UI.
-        /// </value>
-        IUserInterface Ui { get; }
-
-        /// <summary>
         /// Gets the warning list.
         /// </summary>
         /// <value>

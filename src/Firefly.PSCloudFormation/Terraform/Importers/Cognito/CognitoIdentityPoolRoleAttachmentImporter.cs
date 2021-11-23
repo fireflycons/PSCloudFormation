@@ -25,7 +25,7 @@
         protected override string ReferencingPropertyPath => null;
 
         /// <inheritdoc />
-        public override string GetImportId(string caption, string message)
+        public override string GetImportId()
         {
             // All dependencies that have this attachment as a target
             var dependency = this.GetResourceDependency();

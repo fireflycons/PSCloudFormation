@@ -27,7 +27,7 @@
         protected override string ReferencingPropertyPath => null;
 
         /// <inheritdoc />
-        public override string GetImportId(string caption, string message)
+        public override string GetImportId()
         {
             return string.Join("/", this.ImportSettings.Resource.PhysicalId.Split(':').Reverse());
         }

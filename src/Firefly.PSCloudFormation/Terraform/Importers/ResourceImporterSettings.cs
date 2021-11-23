@@ -24,9 +24,6 @@
         public IReadOnlyCollection<ResourceImport> ResourcesToImport { get; set; }
 
         /// <inheritdoc />
-        public IUserInterface Ui { get; set; }
-
-        /// <inheritdoc />
         public IList<string> Warnings { get; set; }
     }
 }
