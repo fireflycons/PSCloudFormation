@@ -6,7 +6,7 @@
     /// Represents a mapping between an imported AWS resource and a Terraform resource
     /// </summary>
     [DebuggerDisplay("{Address}: {PhysicalId}")]
-    internal class ResourceImport
+    internal class ImportedResource
     {
         /// <summary>
         /// Gets or sets the Terraform resource address.

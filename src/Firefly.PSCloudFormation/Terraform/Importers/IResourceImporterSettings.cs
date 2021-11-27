@@ -33,7 +33,7 @@
         /// <value>
         /// The resource.
         /// </value>
-        ResourceImport Resource { get; }
+        ImportedResource Resource { get; }
 
         /// <summary>
         /// Gets the list of resources to import.
@@ -41,7 +41,7 @@
         /// <value>
         /// The resources to import.
         /// </value>
-        IReadOnlyCollection<ResourceImport> ResourcesToImport { get; }
+        IReadOnlyCollection<ImportedResource> ResourcesToImport { get; }
 
         /// <summary>
         /// Gets the warning list.
