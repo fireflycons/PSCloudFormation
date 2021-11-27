@@ -1,21 +1,27 @@
 ﻿namespace Firefly.PSCloudFormation.Terraform.HclSerializer
 {
     using System.Linq;
-    using System.Runtime.CompilerServices;
 
     using Firefly.PSCloudFormation.Terraform.HclSerializer.Events;
     using Firefly.PSCloudFormation.Terraform.State;
+    using Firefly.PSCloudFormation.Utils.JsonTraversal;
 
     using Newtonsoft.Json.Linq;
 
+    /// <summary>
+    /// Serializes a terraform state file to HCL.
+    /// </summary>
     internal class Serializer
     {
+        /// <summary>
+        /// The emitter
+        /// </summary>
         private readonly IHclEmitter emitter;
 
-        private string currentResourceType;
-
-        private string currentResourceName;
-
+        /// <summary>
+        /// Initializes a new instance of the <see cref="Serializer"/> class.
+        /// </summary>
+        /// <param name="emitter">The emitter.</param>
         public Serializer(IHclEmitter emitter)
         {
             this.emitter = emitter;
@@ -87,86 +93,134 @@
         {
             foreach (var r in stateFile.Resources)
             {
-                this.currentResourceType = r.Type;
-                this.currentResourceName = r.Name;
                 this.emitter.Emit(new ResourceStart(r.Type, r.Name));
-                this.WalkNode(r.Instances.First().Attributes);
+                r.Instances.First().Attributes.Accept(
+                    new EmitterVistor(),
+                    new EmitterContext(this.emitter, r.Type, r.Name));
                 this.emitter.Emit(new ResourceEnd());
             }
         }
 
         /// <summary>
-        /// Recursively walk the properties of a <c>JToken</c>
+        /// Context for visiting a resource definition in the state file.
         /// </summary>
-        /// <param name="node">The starting node.</param>
-        private void WalkNode(JToken node)
+        private class EmitterContext : IJsonVisitorContext<EmitterContext>
         {
-            switch (node.Type)
+            /// <summary>
+            /// Initializes a new instance of the <see cref="EmitterContext"/> class.
+            /// </summary>
+            /// <param name="emitter">The emitter.</param>
+            /// <param name="currentResourceName">Name of the current resource.</param>
+            /// <param name="currentResourceType">Type of the current resource.</param>
+            public EmitterContext(IHclEmitter emitter, string currentResourceName, string currentResourceType)
             {
-                case JTokenType.Object:
+                this.Emitter = emitter;
+                this.CurrentResourceName = currentResourceName;
+                this.CurrentResourceType = currentResourceType;
+            }
 
-                    this.emitter.Emit(new MappingStart());
+            /// <summary>
+            /// Gets the emitter.
+            /// </summary>
+            /// <value>
+            /// The emitter.
+            /// </value>
+            public IHclEmitter Emitter { get; }
 
-                    foreach (var child in node.Children<JProperty>())
-                    {
-                        this.emitter.Emit(new MappingKey(child.Name));
-                        this.WalkNode(child.Value);
-                    }
+            /// <summary>
+            /// Gets the name of the current resource.
+            /// </summary>
+            /// <value>
+            /// The name of the current resource.
+            /// </value>
+            public string CurrentResourceName { get; }
 
-                    this.emitter.Emit(new MappingEnd());
-                    break;
+            /// <summary>
+            /// Gets the type of the current resource.
+            /// </summary>
+            /// <value>
+            /// The type of the current resource.
+            /// </value>
+            public string CurrentResourceType { get; }
 
-                case JTokenType.Array:
+            /// <inheritdoc />
+            public EmitterContext Next(int index)
+            {
+                return this;
+            }
 
-                    this.emitter.Emit(new SequenceStart());
+            /// <inheritdoc />
+            public EmitterContext Next(string name)
+            {
+                return this;
+            }
+        }
 
-                    foreach (var child in node.Children())
-                    {
-                        this.WalkNode(child);
-                    }
+        /// <summary>
+        /// Visitor that generates an event queue for the HCL emitter from a resource definition in the state file. 
+        /// </summary>
+        private class EmitterVistor : JsonVisitor<EmitterContext>
+        {
+            /// <inheritdoc />
+            protected override void Visit(JArray json, EmitterContext context)
+            {
+                context.Emitter.Emit(new SequenceStart());
+                base.Visit(json, context);
+                context.Emitter.Emit(new SequenceEnd());
+            }
 
-                    this.emitter.Emit(new SequenceEnd());
-                    break;
+            /// <inheritdoc />
+            protected override void Visit(JObject json, EmitterContext context)
+            {
+                context.Emitter.Emit(new MappingStart());
+                base.Visit(json, context);
+                context.Emitter.Emit(new MappingEnd());
+            }
 
-                case JTokenType.Constructor:
+            /// <inheritdoc />
+            protected override void Visit(JConstructor json, EmitterContext context)
+            {
+                context.Emitter.Emit(new ScalarValue(Reference.FromJConstructor(json)));
+            }
 
-                    // A reference inserted by the walk through the dependency graph
-                    var con = node.Value<JConstructor>();
-                    var reference = Reference.FromJConstructor(con);
+            /// <inheritdoc />
+            protected override void Visit(JProperty json, EmitterContext context)
+            {
+                context.Emitter.Emit(new MappingKey(json.Name));
+                base.Visit(json, context);
+            }
 
-                    this.emitter.Emit(new ScalarValue(reference));
-                    break;
+            /// <inheritdoc />
+            protected override void Visit(JValue json, EmitterContext context)
+            {
+                switch (json.Type)
+                {
+                    case JTokenType.Property:
+                    case JTokenType.Undefined:
+                    case JTokenType.None:
+                    case JTokenType.Raw:
+                    case JTokenType.Bytes:
 
-                case JTokenType.Property:
-                case JTokenType.Undefined:
-                case JTokenType.None:
-                case JTokenType.Raw:
-                case JTokenType.Bytes:
+                        throw new HclSerializerException(context.CurrentResourceName, context.CurrentResourceType, $"Unexpected token {json.Type} in state file.");
 
-                    throw new HclSerializerException(this.currentResourceName, this.currentResourceType, $"Unexpected token {node.Type} in state file.");
+                    default:
 
-                case JTokenType.Comment:
+                        var scalar = new ScalarValue(json.Value);
 
-                    // Comments not expected in state file. Ignore for now.
-                    break;
+                        if (scalar.IsJsonDocument)
+                        {
+                            var nestedJson = scalar.JsonDocumentType == JTokenType.Object ? (JContainer)JObject.Parse(scalar.Value) : JArray.Parse(scalar.Value);
+                            context.Emitter.Emit(new JsonStart());
+                            nestedJson.Accept(this, context);
+                            context.Emitter.Emit(new JsonEnd());
+                        }
+                        else
+                        {
+                            context.Emitter.Emit(scalar);
+                        }
 
-                default:
-
-                    var scalar = new ScalarValue(((JValue)node).Value);
-
-                    if (scalar.IsJsonDocument)
-                    {
-                        var json = scalar.JsonDocumentType == JTokenType.Object ? (JContainer)JObject.Parse(scalar.Value) : JArray.Parse(scalar.Value);
-                        this.emitter.Emit(new JsonStart());
-                        this.WalkNode(json);
-                        this.emitter.Emit(new JsonEnd());
-                    }
-                    else
-                    {
-                        this.emitter.Emit(scalar);
-                    }
-
-                    break;
+                        break;
+                }
             }
         }
     }
