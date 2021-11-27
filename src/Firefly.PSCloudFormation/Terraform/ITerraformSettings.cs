@@ -28,14 +28,6 @@
         string AwsRegion { get; }
 
         /// <summary>
-        /// Gets a value indicating whether [non interactive].
-        /// </summary>
-        /// <value>
-        ///   <c>true</c> if [non interactive]; otherwise, <c>false</c>.
-        /// </value>
-        bool NonInteractive { get; }
-
-        /// <summary>
         /// Gets the physical resources as reported by the stack.
         /// </summary>
         /// <value>

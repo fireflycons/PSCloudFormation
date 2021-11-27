@@ -38,8 +38,5 @@
 
         /// <inheritdoc />
         public IReadOnlyCollection<Export> StackExports { get; set;  }
-
-        /// <inheritdoc />
-        public bool NonInteractive { get; set; }
     }
 }
