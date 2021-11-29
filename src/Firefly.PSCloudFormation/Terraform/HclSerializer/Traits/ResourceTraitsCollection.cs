@@ -9,29 +9,35 @@
 
     using YamlDotNet.Serialization;
 
-    internal class ResourceTraitsCollection
+    internal static class ResourceTraitsCollection
     {
         /// <summary>
-        /// Initializes a new instance of the <see cref="ResourceTraitsCollection"/> class.
+        /// Initializes static members of the <see cref="ResourceTraitsCollection"/> class.
         /// </summary>
-        /// <param name="resourceGroups">The resource groups.</param>
-        private ResourceTraitsCollection(List<ResourceGroup> resourceGroups)
+        static ResourceTraitsCollection()
         {
-            // Flatten resource list. Grouping only for legibility in the YAML
-            this.ResourceTraits = new List<IResourceTraits>();
-
-            foreach (var g in resourceGroups)
+            using (var stream = new StreamReader(
+                ResourceLoader.GetResourceStream("ResourceTraits.yaml", Assembly.GetCallingAssembly())))
             {
-                this.ResourceTraits.AddRange(g.Resources);
-            }
+                var deserializer = new DeserializerBuilder().Build();
 
-            this.TraitsAll = this.ResourceTraits.First(r => r.ResourceType == "all");
+                var resourceGroups = deserializer.Deserialize<List<ResourceGroup>>(stream);
+
+                ResourceTraits = new List<IResourceTraits>();
+
+                foreach (var g in resourceGroups)
+                {
+                    ResourceTraits.AddRange(g.Resources);
+                }
+
+                TraitsAll = ResourceTraits.First(r => r.ResourceType == "all");
+            }
         }
 
         /// <summary>
         /// Gets traits shared by all resources.
         /// </summary>
-        public IResourceTraits TraitsAll { get; }
+        public static IResourceTraits TraitsAll { get; }
 
         /// <summary>
         /// Gets the resource traits.
@@ -39,7 +45,7 @@
         /// <value>
         /// The resource traits.
         /// </value>
-        private List<IResourceTraits> ResourceTraits { get; }
+        private static List<IResourceTraits> ResourceTraits { get; }
 
         /// <summary>
         /// Gets the <see cref="IResourceTraits"/> with the specified resource type.
@@ -49,34 +55,11 @@
         /// </value>
         /// <param name="resourceType">Type of the resource.</param>
         /// <returns>An <see cref="IResourceTraits"/>.</returns>
-        public IResourceTraits this[string resourceType]
+        public static IResourceTraits Get(string resourceType)
         {
-            get
-            {
-                var traits = this.ResourceTraits.FirstOrDefault(rt => rt.ResourceType == resourceType);
+            var traits = ResourceTraits.FirstOrDefault(rt => rt.ResourceType == resourceType);
 
-                if (traits != null)
-                {
-                    return new ConsolitatedResourceTraits(this.TraitsAll, traits);
-                }
-
-                return this.TraitsAll;
-            }
-        }
-
-        /// <summary>
-        /// Loads this instance.
-        /// </summary>
-        /// <returns>A <see cref="ResourceTraitsCollection"/> representing the YAML traits embedded resource.</returns>
-        public static ResourceTraitsCollection Load()
-        {
-            using (var stream = new StreamReader(
-                ResourceLoader.GetResourceStream("ResourceTraits.yaml", Assembly.GetCallingAssembly())))
-            {
-                var deserializer = new DeserializerBuilder().Build();
-
-                return new ResourceTraitsCollection(deserializer.Deserialize<List<ResourceGroup>>(stream));
-            }
+            return traits != null ? new ConsolitatedResourceTraits(TraitsAll, traits) : TraitsAll;
         }
     }
 }
