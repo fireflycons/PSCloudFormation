@@ -7,6 +7,7 @@
     {
         /// <summary>
         /// Convert camel case string to snake case.
+        /// Handles the case where the first word is all caps.
         /// </summary>
         /// <param name="self">The self.</param>
         /// <returns>Converted string</returns>
@@ -17,12 +18,27 @@
                 return null;
             }
 
-            var result = self.SelectMany(
-                (c, i) => i != 0 && char.IsUpper(c) && !char.IsUpper(self[i - 1])
-                              ? new char[] { '_', char.ToLowerInvariant(c) }
-                              : new char[] { char.ToLowerInvariant(c) });
+            var text = self;
 
-            return new string(result.ToArray());
+            // If there is a string of upper case letters at the start, camel case it first (e.g. DNSName)
+            var caps = new string(self.TakeWhile(char.IsUpper).ToArray());
+
+            if (caps.Length > 2)
+            {
+                var r = new string(
+                    caps.SelectMany(
+                        (c, i) => i > 0 && i < caps.Length - 1
+                                      ? new char[] { char.ToLowerInvariant(c) }
+                                      : new char[] { c }).ToArray());
+
+                text = text.Replace(caps, r);
+            }
+
+            return new string(text.SelectMany(
+                (c, i) => i != 0 && char.IsUpper(c) && !char.IsUpper(text[i - 1])
+                              ? new[] { '_', char.ToLowerInvariant(c) }
+                              : new[] { char.ToLowerInvariant(c) }).ToArray());
+
         }
 
         /// <summary>

@@ -63,7 +63,7 @@
             var events = new List<HclEvent>();
 
             var emitter = new he(sw);
-            var serializer = new Serializer(emitter);
+            var serializer = new StateFileSerializer(emitter);
 
             var action = new Action(() => serializer.Serialize(state));
 

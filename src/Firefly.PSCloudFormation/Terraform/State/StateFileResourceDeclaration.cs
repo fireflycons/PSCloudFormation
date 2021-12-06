@@ -13,12 +13,12 @@
     /// will only find one resource instance per resource in the state.
     /// </summary>
     [DebuggerDisplay("{Address}")]
-    internal class ResourceDeclaration
+    internal class StateFileResourceDeclaration
     {
         /// <summary>
         /// The instances of this resource. When importing from a CloudFormation stack, there should only be one instance per resource.
         /// </summary>
-        private List<ResourceInstance> instances;
+        private List<StateFileResourceInstance> instances;
 
         /// <summary>
         /// Gets or sets the mode.
@@ -64,7 +64,7 @@
         /// </value>
         /// <exception cref="System.InvalidOperationException">More than one instance per resource is unexpected when importing an AWS CloudFormation stack. Please raise an issue.</exception>
         [JsonProperty("instances")]
-        public List<ResourceInstance> Instances
+        public List<StateFileResourceInstance> Instances
         {
             get => this.instances;
 
@@ -92,7 +92,7 @@
         /// The resource instance.
         /// </value>
         [JsonIgnore]
-        public ResourceInstance ResourceInstance => this.instances.FirstOrDefault();
+        public StateFileResourceInstance StateFileResourceInstance => this.instances.FirstOrDefault();
 
         /// <summary>
         /// Gets the resource instance address.

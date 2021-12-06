@@ -50,6 +50,14 @@
         List<ConditionalAttribute> ConditionalAttributes { get; }
 
         /// <summary>
+        /// Gets the map of CloudFormation attribute name to terraform attribute name
+        /// </summary>
+        /// <value>
+        /// The attribute map.
+        /// </value>
+        Dictionary<string, string> AttributeMap { get; }
+
+        /// <summary>
         /// Gets the computed attributes.
         /// State properties that have no HCL equivalent, because they are computed.
         /// </summary>

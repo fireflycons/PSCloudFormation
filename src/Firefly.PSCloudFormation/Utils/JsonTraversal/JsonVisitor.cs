@@ -29,7 +29,7 @@
         // └─ JRaw
 
         /// <summary>
-        /// Handles acceptance if the visitor
+        /// Handles acceptance of the visitor
         /// </summary>
         /// <param name="json">The JSON element to visit.</param>
         /// <param name="context">The context.</param>
@@ -101,10 +101,9 @@
         /// <param name="context">The context.</param>
         protected virtual void Visit(JArray json, TContext context)
         {
-            int i = 0;
-            foreach (JToken token in json)
+            foreach (var (token, i) in json.WithIndex())
             {
-                token.Accept(this, context.Next(i++));
+                token.Accept(this, context.Next(i));
             }
         }
 
@@ -122,7 +121,7 @@
         /// <param name="context">The context.</param>
         protected virtual void Visit(JObject json, TContext context)
         {
-            foreach (JProperty property in json.Properties())
+            foreach (var property in json.Properties())
             {
                 this.Visit(property, context);
             }

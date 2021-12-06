@@ -8,58 +8,50 @@
     using System.Text;
 
     using Firefly.CloudFormation;
-    using Firefly.CloudFormationParser.GraphObjects;
     using Firefly.CloudFormationParser.Intrinsics.Functions;
     using Firefly.CloudFormationParser.TemplateObjects;
     using Firefly.EmbeddedResourceLoader;
+    using Firefly.PSCloudFormation.Terraform.DependencyResolver;
     using Firefly.PSCloudFormation.Terraform.Hcl;
     using Firefly.PSCloudFormation.Terraform.HclSerializer;
     using Firefly.PSCloudFormation.Terraform.Importers;
     using Firefly.PSCloudFormation.Terraform.State;
-    using Firefly.PSCloudFormation.Utils;
 
     using Newtonsoft.Json;
     using Newtonsoft.Json.Linq;
 
-    using Formatting = Newtonsoft.Json.Formatting;
-
-    internal class TerraformExporter : AutoResourceLoader
+    internal partial class TerraformExporter : AutoResourceLoader
     {
-        /// <summary>
-        /// Name of the main script file
-        /// </summary>
-        private const string MainScriptFile = "main.tf";
-
-        /// <summary>
-        /// Name of the Terraform state file
-        /// </summary>
-        private const string StateFileName = "terraform.tfstate";
-
-        /// <summary>
-        /// Name of the variable values file
-        /// </summary>
-        private const string VarsFile = "terraform.tfvars";
-
         /// <summary>
         /// These resources have no direct terraform representation.
         /// They are merged into the resources that depend on them
         /// when the dependent resource is imported.
         /// </summary>
-        private static readonly List<string> MergedResources = new List<string>
-                                                                   {
-                                                                       "AWS::CloudFront::CloudFrontOriginAccessIdentity",
-                                                                       "AWS::IAM::Policy",
-                                                                       "AWS::EC2::SecurityGroupIngress",
-                                                                       "AWS::EC2::SecurityGroupEgress",
-                                                                       "AWS::EC2::VPCGatewayAttachment",
-                                                                       "AWS::EC2::SubnetNetworkAclAssociation",
-                                                                       "AWS::EC2::NetworkAclEntry"
-                                                                   };
+        public static readonly List<string> MergedResources = new List<string>
+                                                                  {
+                                                                      "AWS::CloudFront::CloudFrontOriginAccessIdentity",
+                                                                      "AWS::IAM::Policy",
+                                                                      "AWS::EC2::SecurityGroupIngress",
+                                                                      "AWS::EC2::SecurityGroupEgress",
+                                                                      "AWS::EC2::VPCGatewayAttachment",
+                                                                      "AWS::EC2::SubnetNetworkAclAssociation",
+                                                                      "AWS::EC2::NetworkAclEntry"
+                                                                  };
 
         /// <summary>
         /// These resources are currently not supported for import.
         /// </summary>
-        private static readonly List<string> UnsupportedResources = new List<string> { "AWS::ApiGateway::Deployment" };
+        public static readonly List<string> UnsupportedResources = new List<string> { "AWS::ApiGateway::Deployment" };
+
+        /// <summary>
+        /// Combination of merged and unsupported resources.
+        /// </summary>
+        public static readonly List<string> IgnoredResources = MergedResources.Concat(UnsupportedResources).ToList();
+
+        /// <summary>
+        /// Name of the Terraform state file
+        /// </summary>
+        private const string StateFileName = "terraform.tfstate";
 
         /// <summary>
         /// The logger
@@ -70,11 +62,6 @@
         /// The export settings
         /// </summary>
         private readonly ITerraformSettings settings;
-
-        /// <summary>
-        /// The UI
-        /// </summary>
-        private readonly IUserInterface ui;
 
         /// <summary>
         /// The accumulated warnings
@@ -91,12 +78,10 @@
         /// </summary>
         /// <param name="settings">The settings.</param>
         /// <param name="logger">The logger.</param>
-        /// <param name="ui">User interface abstraction for asking questions of the user.</param>
-        public TerraformExporter(ITerraformSettings settings, ILogger logger, IUserInterface ui)
+        public TerraformExporter(ITerraformSettings settings, ILogger logger)
         {
             this.settings = settings;
             this.logger = logger;
-            this.ui = ui;
         }
 
         /// <summary>
@@ -105,17 +90,17 @@
         public void Export()
         {
             var initialHcl = new StringBuilder();
-            var unmappedResources = new List<string>();
 
             this.logger.LogInformation("\nInitializing inputs and resources...");
 
-            initialHcl.AppendLine(terraformBlock
-                .Replace("AWS::Region", this.settings.AwsRegion)
-                .Replace("AWS::StackName", this.settings.StackName));
-            
+            initialHcl.AppendLine(
+                terraformBlock.Replace("AWS::Region", this.settings.AwsRegion).Replace(
+                    "AWS::StackName",
+                    this.settings.StackName));
+
             var parameters = this.ProcessInputVariables();
 
-            var resourcesToImport = this.ProcessResources(initialHcl, unmappedResources);
+            var resourcesToImport = this.ProcessResources(initialHcl);
 
             if (!resourcesToImport.Any())
             {
@@ -123,193 +108,36 @@
                 return;
             }
 
-            // Set up workspace directory
-            if (!Directory.Exists(this.settings.WorkspaceDirectory))
-            {
-                Directory.CreateDirectory(this.settings.WorkspaceDirectory);
-            }
-
             var cwd = Directory.GetCurrentDirectory();
-            var importedResources = new List<ResourceImport>();
             var terraformExecutionErrorCount = 0;
             var warningCount = 0;
 
             try
             {
-                var totalResources = resourcesToImport.Count;
-                var imported = 0;
+                this.InitializeWorkspace(initialHcl.ToString());
 
-                Directory.SetCurrentDirectory(this.settings.WorkspaceDirectory);
+                //var importedResources = resourcesToImport.Where(r => r.AwsType != "AWS::SecretsManager::SecretTargetAttachment").ToList();
+                var importedResources = this.ImportResources(resourcesToImport);
 
-                if (File.Exists(VarsFile))
-                {
-                    File.Delete(VarsFile);
-                }
-
-                // Write out initial HCL with empty resource declarations, so that terraform import has something to work with
-                File.WriteAllText(MainScriptFile, initialHcl.ToString(), new UTF8Encoding(false));
-
-                this.logger.LogInformation("\nInitializing workspace...");
-                this.settings.Runner.Run("init", true, null);
-                this.logger.LogInformation($"\nImporting {totalResources} mapped resources from stack \"{this.settings.StackName}\" to terraform state...");
-
-                //importedResources = resourcesToImport;
-
-                foreach (var resource in resourcesToImport)
-                {
-                    var resourceToImport = resource.PhysicalId;
-
-                    this.logger.LogInformation(
-                        $"\nImporting resource {++imported}/{totalResources} - {resource.Address}");
-
-                    if (ResourceImporter.RequiresResourceImporter(resource.TerraformType))
-                    {
-                        var importer = ResourceImporter.Create(
-                            new ResourceImporterSettings
-                            {
-                                Errors = this.errors,
-                                Logger = this.logger,
-                                Resource = resource,
-                                ResourcesToImport = resourcesToImport,
-                                Warnings = this.warnings
-                            },
-                            this.settings);
-
-                        if (importer != null)
-                        {
-                            resourceToImport = importer.GetImportId(
-                                $"Select related resource for {resource.AwsAddress}",
-                                null);
-
-                            if (resourceToImport == null)
-                            {
-                                continue;
-                            }
-                        }
-                    }
-
-                    var cmdOutput = new List<string>();
-                    var success = this.settings.Runner.Run(
-                        "import",
-                        false,
-                        msg => cmdOutput.Add(msg),
-                        "-no-color",
-                        resource.Address,
-                        resourceToImport);
-
-                    if (success)
-                    {
-                        importedResources.Add(resource);
-                    }
-                    else
-                    {
-                        var error = cmdOutput.FirstOrDefault(o => o.StartsWith("Error: "))?.Substring(7);
-
-                        this.errors.Add(
-                            error != null
-                                ? $"ERROR: {resource.AwsAddress}: {error}"
-                                : $"ERROR: Could not import {resource.AwsAddress}");
-                    }
-                }
-
-                // TODO: Post process the state file
-                // - Fix up lambda S3 sources.
-
-                // Now start adjusting the state file in accordance with the template's directed edge graph.
-                this.logger.LogInformation("\nResolving dependencies between resources...");
-
-                // One copy of the state file that we will modify and write back out (adding dependencies and sensitive attributes)
-                var stateFile = JsonConvert.DeserializeObject<StateFile>(File.ReadAllText(StateFileName));
-
+                // TODO: Fix up lambda S3 sources.
+                // TODO: Extract inline lambda code to files. Add "ArthurHlt/Zipper" provider as source for the file.
                 // TODO: Analyze state file for null properties that have defaults. Replace these defaults and write back out.
 
-                // A second copy of the state file that we will insert references to inputs, other resources etc. before serialization to HCL.
-                var generatationStateFile = JsonConvert.DeserializeObject<StateFile>(File.ReadAllText(StateFileName));
+                // Copy of the state file that we will insert references to inputs, other resources etc. before serialization to HCL.
+                var stateFile = JsonConvert.DeserializeObject<StateFile>(File.ReadAllText(StateFileName));
 
-                // Wire up dependencies
-                this.ResolveResourceDependencies(importedResources, generatationStateFile);
-                this.ResolveInputDependencies(importedResources, generatationStateFile, parameters);
-                var outputs = this.ResolveOutputDependencies(importedResources);
-
-                // Serialize to HCL
-                this.logger.LogInformation($"Writing {MainScriptFile}");
-
-                // Write main.tf
-                using (var stream = new FileStream(
-                    Path.Combine(this.settings.WorkspaceDirectory, MainScriptFile),
-                    FileMode.Create,
-                    FileAccess.Write))
-                using (var s = new StreamWriter(stream, new UTF8Encoding(false)))
-                {
-                    s.Write(terraformBlock
-                        .Replace("AWS::Region", this.settings.AwsRegion)
-                        .Replace("AWS::StackName", this.settings.StackName));
-
-                    // TODO: Suppress any vars not referenced (e.g. only existed for condition blocks)
-                    foreach (var param in parameters.OrderBy(p => p.IsDataSource).ThenBy(p => p.Name))
-                    {
-                        s.WriteLine(param.GenerateHcl(true));
-                    }
-
-                    var serializer = new Serializer(new HclEmitter(s));
-                    serializer.Serialize(generatationStateFile);
-
-                    foreach (var output in outputs)
-                    {
-                        s.WriteLine(output.GenerateHcl());
-                    }
-                }
-
-                // Write terraform.tfvars
-                this.logger.LogInformation($"Writing {VarsFile}");
-
-                using (var stream = new FileStream(
-                    Path.Combine(this.settings.WorkspaceDirectory, VarsFile),
-                    FileMode.Create,
-                    FileAccess.Write))
-                using (var s = new StreamWriter(stream, new UTF8Encoding(false)))
-                {
-                    s.WriteLine("###################################################################");
-                    s.WriteLine("#");
-                    s.WriteLine($"# Variable values as per current state of stack \"{this.settings.StackName}\"");
-                    s.WriteLine("#");
-                    s.WriteLine("###################################################################");
-                    s.WriteLine();
-
-                    foreach (var param in parameters.OrderBy(p => p.Name))
-                    {
-                        var hcl = param.GenerateTfVar();
-
-                        if (!string.IsNullOrEmpty(hcl))
-                        {
-                            s.WriteLine(param.GenerateTfVar());
-                            s.WriteLine();
-                        }
-                    }
-                }
-
-                var validationOutput = new List<string>();
-
-                try
-                {
-                    this.logger.LogInformation("Formatting output...");
-                    this.settings.Runner.Run("fmt", true, (msg) => validationOutput.Add(msg));
-                    this.logger.LogInformation("Validating output...");
-                    this.settings.Runner.Run("validate", true, (msg) => validationOutput.Add(msg));
-                }
-                catch
-                {
-                    terraformExecutionErrorCount += validationOutput.Count(line => line.Contains("Error:"));
-                }
-
-                warningCount += validationOutput.Count(line => line.Contains("Warning:"));
-
-                if (terraformExecutionErrorCount + this.errors.Count > 0)
-                {
-                    throw new HclSerializerException(null, null, $"Stack \"{this.settings.StackName}\": Errors were detected!");
-                }
+                warningCount += new HclWriter(this.settings, this.logger).Serialize(
+                    stateFile,
+                    importedResources,
+                    parameters);
 
                 this.logger.LogInformation($"Export of stack \"{this.settings.StackName}\" to terraform complete!");
+            }
+            catch (TerraformRunnerException e)
+            {
+                terraformExecutionErrorCount += e.Errors;
+                warningCount += e.Warnings;
+                throw;
             }
             catch (HclSerializerException)
             {
@@ -322,80 +150,205 @@
             }
             finally
             {
-                var zipFileDetected = false;
-
-                this.logger.LogInformation("\n");
-
-                // Scan for AWS::Cloudformation::Init metadata and warn about it.
-                foreach (var templateResource in this.settings.Template.Resources.Where(
-                    r => r.Metadata != null && r.Metadata.Keys.Contains("AWS::CloudFormation::Init")))
-                {
-                    this.warnings.Add(
-                        $"Resource \"{templateResource.Name}\" contains AWS::CloudFormation::Init metadata which is not imported.");
-                }
-
-                // Scan for UserData and warn about it
-                var userDataTypes = new[] { "AWS::AutoScaling::LaunchConfiguration", "AWS::EC2::Instance" };
-
-                foreach (var templateResource in this.settings.Template.Resources.Where(
-                    r => userDataTypes.Contains(r.Type) && r.Properties != null
-                                                        && r.Properties.ContainsKey("UserData")))
-                {
-                    this.warnings.Add(
-                        $"Resource \"{templateResource.Name}\" contains user data which is not correctly imported.");
-                }
-
-                // Scan for lambdas with embedded code (ZipFile) and warn about it
-                foreach (var templateResource in this.settings.Template.Resources.Where(
-                    r => r.Type == "AWS::Lambda::Function" && r.GetResourcePropertyValue("Code.ZipFile") != null))
-                {
-                    this.warnings.Add(
-                        $"Resource \"{templateResource.Name}\" contains embedded function code (ZipFile) which is not imported.");
-                    zipFileDetected = true;
-                }
-
-                // Scan for bucket polices and warn
-                foreach (var templateResource in this.settings.Template.Resources.Where(
-                    r => r.Type == "AWS::S3::BucketPolicy"))
-                {
-                    this.warnings.Add($"Resource \"{templateResource.Name}\" - Policy likely not imported. Add it in manually.");
-                }
-                    
-                var totalErrors = terraformExecutionErrorCount + this.errors.Count;
-
-                if (totalErrors == 0)
-                {
-                    this.warnings.Add(
-                    "DO NOT APPLY THIS CONFIGURATION TO AN EXISTING PRODUCTION STACK WITHOUT FIRST THOROUGHLY TESTING ON A COPY.");
-                }
-
-                foreach (var error in this.errors)
-                {
-                    this.logger.LogError(error);
-                }
-
-                foreach (var warning in this.warnings)
-                {
-                    this.logger.LogWarning(warning);
-                }
-
-                if (this.settings.Resources.Any(r => r.StackResource.ResourceType.StartsWith("Custom::")))
-                {
-                    this.logger.LogInformation("\nIt appears this stack contains custom resources. For a suggestion on how to manage these with terraform, see");
-                    this.logger.LogInformation("https://trackit.io/trackit-whitepapers/cloudformation-to-terraform-conversion/");
-                }
-
-                if (zipFileDetected)
-                {
-                    this.logger.LogInformation("\nLambdas with template-embedded code were detected. Manage these by extracting code to a file,");
-                    this.logger.LogInformation("and using the \"filename\" argument of the lambda resource to reference it.");
-                }
-
-                this.logger.LogInformation($"\n       Errors: {totalErrors}, Warnings: {warningCount + this.warnings.Count}\n");
+                this.WriteSummary(terraformExecutionErrorCount, warningCount);
                 Directory.SetCurrentDirectory(cwd);
             }
         }
 
+        /// <summary>
+        /// Set up the workspace directory, creating if necessary.
+        /// Set current directory to workspace directory.
+        /// Write HCL block with empty resources ready for import
+        /// and run <c>terraform init</c>.
+        /// </summary>
+        /// <param name="initialHcl">Initial HCL to write to workspace</param>
+        private void InitializeWorkspace(string initialHcl)
+        {
+            this.logger.LogInformation("\nInitializing workspace...");
+
+            // Set up workspace directory
+            if (!Directory.Exists(this.settings.WorkspaceDirectory))
+            {
+                Directory.CreateDirectory(this.settings.WorkspaceDirectory);
+            }
+
+            Directory.SetCurrentDirectory(this.settings.WorkspaceDirectory);
+
+            if (File.Exists(HclWriter.VarsFile))
+            {
+                File.Delete(HclWriter.VarsFile);
+            }
+
+            // Write out initial HCL with empty resource declarations, so that terraform import has something to work with
+            File.WriteAllText(HclWriter.MainScriptFile, initialHcl, new UTF8Encoding(false));
+
+            this.settings.Runner.Run("init", true, null);
+        }
+
+        /// <summary>
+        /// Imports the resources by calling <c>terraform import</c> on each.
+        /// </summary>
+        /// <param name="resourcesToImport">The resources to import.</param>
+        /// <returns>List of resources that were imported.</returns>
+        private List<ImportedResource> ImportResources(List<ImportedResource> resourcesToImport)
+        {
+            List<ImportedResource> importedResources = new List<ImportedResource>();
+            var totalResources = resourcesToImport.Count;
+
+            this.logger.LogInformation(
+                $"\nImporting {totalResources} mapped resources from stack \"{this.settings.StackName}\" to terraform state...");
+            var imported = 0;
+            
+            foreach (var resource in resourcesToImport)
+            {
+                var resourceToImport = resource.PhysicalId;
+
+                this.logger.LogInformation($"\nImporting resource {++imported}/{totalResources} - {resource.Address}");
+
+                if (ResourceImporter.RequiresResourceImporter(resource.TerraformType))
+                {
+                    var importer = ResourceImporter.Create(
+                        new ResourceImporterSettings
+                            {
+                                Errors = this.errors,
+                                Logger = this.logger,
+                                Resource = resource,
+                                ResourcesToImport = resourcesToImport,
+                                Warnings = this.warnings
+                            },
+                        this.settings);
+
+                    if (importer != null)
+                    {
+                        resourceToImport = importer.GetImportId();
+
+                        if (resourceToImport == null)
+                        {
+                            continue;
+                        }
+                    }
+                }
+
+                var cmdOutput = new List<string>();
+                var success = this.settings.Runner.Run(
+                    "import",
+                    false,
+                    msg => cmdOutput.Add(msg),
+                    "-no-color",
+                    resource.Address,
+                    resourceToImport);
+
+                if (success)
+                {
+                    importedResources.Add(resource);
+                }
+                else
+                {
+                    var error = cmdOutput.FirstOrDefault(o => o.StartsWith("Error: "))?.Substring(7);
+
+                    this.errors.Add(
+                        error != null
+                            ? $"ERROR: {resource.AwsAddress}: {error}"
+                            : $"ERROR: Could not import {resource.AwsAddress}");
+                }
+            }
+
+            return importedResources;
+        }
+
+        /// <summary>
+        /// Write out the execution summary to console - errors, warnings and recommendations.
+        /// </summary>
+        /// <param name="terraformExecutionErrorCount">The terraform execution error count.</param>
+        /// <param name="warningCount">The warning count.</param>
+        private void WriteSummary(int terraformExecutionErrorCount, int warningCount)
+        {
+            this.logger.LogInformation("\n");
+            this.GenerateWarnings();
+
+            var totalErrors = terraformExecutionErrorCount + this.errors.Count;
+
+            if (totalErrors == 0)
+            {
+                this.warnings.Add(
+                    "DO NOT APPLY THIS CONFIGURATION TO AN EXISTING PRODUCTION STACK WITHOUT FIRST THOROUGHLY TESTING ON A COPY.");
+            }
+
+            foreach (var error in this.errors)
+            {
+                this.logger.LogError(error);
+            }
+
+            foreach (var warning in this.warnings)
+            {
+                this.logger.LogWarning(warning);
+            }
+
+            if (this.settings.Resources.Any(r => r.StackResource.ResourceType.StartsWith("Custom::")))
+            {
+                this.logger.LogInformation(
+                    "\nIt appears this stack contains custom resources. For a suggestion on how to manage these with terraform, see");
+                this.logger.LogInformation("https://trackit.io/trackit-whitepapers/cloudformation-to-terraform-conversion/");
+            }
+
+            if (this.settings.Template.Resources.Any(
+                r => r.Type == "AWS::Lambda::Function" && r.GetResourcePropertyValue("Code.ZipFile") != null))
+            {
+                this.logger.LogInformation(
+                    "\nLambdas with template-embedded code were detected. Manage these by extracting code to a file,");
+                this.logger.LogInformation("and using the \"filename\" argument of the lambda resource to reference it.");
+            }
+
+            this.logger.LogInformation($"\n       Errors: {totalErrors}, Warnings: {warningCount + this.warnings.Count}\n");
+        }
+
+        /// <summary>
+        /// Enumerate the resources and issue warnings for those that aren't fully imported..
+        /// </summary>
+        private void GenerateWarnings()
+        {
+            var zipFileDetected = false;
+
+            // Scan for AWS::Cloudformation::Init metadata and warn about it.
+            foreach (var templateResource in this.settings.Template.Resources.Where(
+                r => r.Metadata != null && r.Metadata.Keys.Contains("AWS::CloudFormation::Init")))
+            {
+                this.warnings.Add(
+                    $"Resource \"{templateResource.Name}\" contains AWS::CloudFormation::Init metadata which is not imported.");
+            }
+
+            // Scan for UserData and warn about it
+            var userDataTypes = new[] { "AWS::AutoScaling::LaunchConfiguration", "AWS::EC2::Instance" };
+
+            foreach (var templateResource in this.settings.Template.Resources.Where(
+                r => userDataTypes.Contains(r.Type) && r.Properties != null && r.Properties.ContainsKey("UserData")))
+            {
+                this.warnings.Add($"Resource \"{templateResource.Name}\" contains user data which is not correctly imported.");
+            }
+
+            // Scan for lambdas with embedded code (ZipFile) and warn about it
+            foreach (var templateResource in this.settings.Template.Resources.Where(
+                r => r.Type == "AWS::Lambda::Function" && r.GetResourcePropertyValue("Code.ZipFile") != null))
+            {
+                this.warnings.Add(
+                    $"Resource \"{templateResource.Name}\" contains embedded function code (ZipFile) which is not imported.");
+                zipFileDetected = true;
+            }
+
+            // Scan for bucket polices and warn
+            foreach (var templateResource in this.settings.Template.Resources.Where(r => r.Type == "AWS::S3::BucketPolicy"))
+            {
+                this.warnings.Add($"Resource \"{templateResource.Name}\" - Policy likely not imported. Add it in manually.");
+            }
+        }
+
+        /// <summary>
+        /// Performs reference replacements within a policy string in the state. 
+        /// </summary>
+        /// <param name="node">The deserialized policy document from the resource's property (inline_policy etc)</param>
+        /// <param name="id">The identifier.</param>
+        /// <param name="replacement">The replacement.</param>
+        /// <param name="replacementMade">if set to <c>true</c> [replacement made].</param>
         private static void ReplacePolicyReference(
             JToken node,
             IReferencedItem id,
@@ -486,12 +439,11 @@
         /// Processes the AWS resources, mapping them to equivalent Terraform resources.
         /// </summary>
         /// <param name="initialHcl">The initial HCL.</param>
-        /// <param name="unmappedResources">(OUT) AWS resources that were not successfully mapped.</param>
-        /// <returns>A list of <see cref="ResourceImport"/> for successfully mapped AWS resources.</returns>
-        private List<ResourceImport> ProcessResources(StringBuilder initialHcl, ICollection<string> unmappedResources)
+        /// <returns>A list of <see cref="ImportedResource"/> for successfully mapped AWS resources.</returns>
+        private List<ImportedResource> ProcessResources(StringBuilder initialHcl)
         {
             var resourceMap = JsonConvert.DeserializeObject<List<ResourceMapping>>(resourceMapJson);
-            var resourcesToImport = new List<ResourceImport>();
+            var resourcesToImport = new List<ImportedResource>();
             this.logger.LogInformation("Processing stack resources and mapping to terraform resource types...");
 
             foreach (var resource in this.settings.Resources)
@@ -525,7 +477,7 @@
                     initialHcl.AppendLine($"resource \"{mapping.Terraform}\" \"{resource.LogicalResourceId}\" {{}}")
                         .AppendLine();
                     resourcesToImport.Add(
-                        new ResourceImport
+                        new ImportedResource
                             {
                                 PhysicalId = resource.PhysicalResourceId,
                                 LogicalId = resource.LogicalResourceId,
@@ -536,375 +488,6 @@
             }
 
             return resourcesToImport;
-        }
-
-        /// <summary>
-        /// Resolves dependencies between resources and output values.
-        /// </summary>
-        /// <param name="importedResources">The imported resources.</param>
-        /// <returns>List of output values to emit.</returns>
-        private List<OutputValue> ResolveOutputDependencies(List<ResourceImport> importedResources)
-        {
-            var outputValues = new List<OutputValue>();
-
-            foreach (var output in this.settings.Template.Outputs)
-            {
-                if (!(output.Value is RefIntrinsic intrinsic))
-                {
-                    continue;
-                }
-
-                var resourceName = intrinsic.Reference;
-                var evaluatedValue = intrinsic.Evaluate(this.settings.Template);
-                var resource = importedResources.FirstOrDefault(r => r.LogicalId == resourceName);
-
-                if (resource == null)
-                {
-                    continue;
-                }
-
-                var terrafromAddress = resource.Address;
-
-                var reference = evaluatedValue.ToString().StartsWith("arn:")
-                                    ? $"{terrafromAddress}.arn"
-                                    : $"{terrafromAddress}.id";
-
-                outputValues.Add(
-                    !string.IsNullOrEmpty(output.Description)
-                        ? new OutputValue(output.Name, reference, output.Description)
-                        : new OutputValue(output.Name, reference));
-            }
-
-            return outputValues;
-        }
-
-        /// <summary>
-        /// Resolves dependencies between resources and parameters.
-        /// </summary>
-        /// <param name="importedResources">The imported resources.</param>
-        /// <param name="hclGenerationStateFile">The HCL generation state file.</param>
-        /// <param name="inputVariables">The input variables.</param>
-        private void ResolveInputDependencies(
-            IReadOnlyCollection<ResourceImport> importedResources,
-            StateFile hclGenerationStateFile,
-            IReadOnlyCollection<InputVariable> inputVariables)
-        {
-            var edges = this.settings.Template.DependencyGraph.Edges.Where(
-                e => e.Source is IParameterVertex && e.Target is ResourceVertex);
-
-            foreach (var edge in this.settings.Template.DependencyGraph.Edges.Where(
-                e => e.Source is IParameterVertex && e.Target is ResourceVertex))
-            {
-                var referringAwsResource = this.settings.Resources.First(r => r.LogicalResourceId == edge.Target.Name);
-
-                var referringTerraformResource =
-                    importedResources.FirstOrDefault(r => referringAwsResource.LogicalResourceId == r.LogicalId);
-
-                if (referringTerraformResource == null)
-                {
-                    // Resource wasn't imported
-                    continue;
-                }
-
-                var referredParameter = inputVariables.FirstOrDefault(p => p.Name == edge.Source.Name);
-
-                if (referredParameter == null)
-                {
-                    if (edge.Source.Name.StartsWith("AWS::"))
-                    {
-                        this.warnings.Add($"Resource \"{referringAwsResource.LogicalResourceId}\" references \"{edge.Source.Name}\" which is not supported by terraform.");
-                    }
-                    else
-                    {
-                        var msg = $"Cannot find input variable with name \"{edge.Source.Name}\"";
-
-                        if (!this.warnings.Contains(msg))
-                        {
-                            this.warnings.Add(msg);
-                        }
-                    }
-
-                    continue;
-                }
-
-                var referringState = hclGenerationStateFile.Resources
-                    .First(r => r.Address == referringTerraformResource.Address).Instances.First();
-
-                if (edge.Tag?.ReferenceType != ReferenceType.ParameterReference)
-                {
-                    continue;
-                }
-
-                Reference newValue;
-
-                if (referredParameter.IsDataSource)
-                {
-                    newValue = new DataSourceReference(referredParameter.Address);
-                }
-                else
-                {
-                    newValue = new ParameterReference(referredParameter.Address);
-                }
-
-                var con = newValue.ToJConstructor();
-                var resourceAttributes = referringState.Attributes.ToString();
-
-                foreach (var node in referringState.FindId(referredParameter))
-                {
-                    // TODO: deal with list() parameter values
-                    switch (node)
-                    {
-                        case JProperty jp when jp.Value is JValue jv:
-
-                            if (Serializer.TryGetJson(jv.Value<string>(), true, referringState.Parent.Name, referringState.Parent.Type, out var policy))
-                            {
-                                var replacementMade = false;
-                                ReplacePolicyReference(policy, referredParameter, con, ref replacementMade);
-
-                                if (replacementMade)
-                                {
-                                    jv.Value = policy.ToString(Formatting.None);
-                                }
-                            }
-                            else
-                            {
-                                if (referredParameter.IsScalar)
-                                {
-                                    var stringValue = jv.Value<string>();
-
-                                    if (stringValue != null)
-                                    {
-                                        if (stringValue == referredParameter.ScalarIdentity)
-                                        {
-                                            jp.Value = con;
-                                        }
-                                        else if (stringValue.Contains(referredParameter.ScalarIdentity))
-                                        {
-                                            jp.Value = new JValue(
-                                                stringValue.Replace(
-                                                    referredParameter.CurrentValue.ToString(),
-                                                    $"${{{referredParameter.Address}}}"));
-                                        }
-                                    }
-                                    else
-                                    {
-                                        jp.Value = con;
-                                    }
-                                }
-                                else
-                                {
-                                    // Where the input var is a list, the individual value is replaced with an indexed reference. 
-                                    var ind = referredParameter.IndexOf(jv.Value<string>());
-
-                                    if (ind == -1)
-                                    {
-                                        continue;
-                                    }
-
-                                    newValue = new ParameterReference(referredParameter.Address, ind);
-                                    jp.Value = newValue.ToJConstructor();
-                                }
-                            }
-
-                            break;
-
-                        case JArray ja:
-
-                            if (referredParameter.IsScalar)
-                            {
-                                for (var ind = 0; ind < ja.Count; ++ind)
-                                {
-                                    if (ja[ind] is JConstructor)
-                                    {
-                                        // this one's already been set to something else
-                                        continue;
-                                    }
-
-                                    var stringVal = ja[ind].Value<string>();
-
-                                    if (stringVal == referredParameter.CurrentValue.ToString())
-                                    {
-                                        ja.RemoveAt(ind);
-                                        ja.Add(con);
-                                    }
-                                }
-                            }
-                            else
-                            {
-                                // Where the input var is a list and all its values match all the values in this JArray
-                                // then the JArray is replaced with the reference
-                                if (referredParameter.ListIdentity.OrderBy(s => s)
-                                    .SequenceEqual(ja.Values<string>().OrderBy(s => s)))
-                                {
-                                    if (ja.Parent is JProperty jp)
-                                    {
-                                        jp.Value = con;
-                                    }
-                                }
-                                else
-                                {
-                                    // When there isn't a complete match on all values, then the individual value is replaced with and indexed reference.
-                                    for (var jarrayIndex = 0; jarrayIndex < ja.Count; ++jarrayIndex)
-                                    {
-                                        if (!(ja[jarrayIndex] is JValue jv) || !(jv.Value is string s))
-                                        {
-                                            continue;
-                                        }
-
-                                        var paramIndex = referredParameter.IndexOf(s);
-
-                                        if (paramIndex != -1)
-                                        {
-                                            newValue = new ParameterReference(referredParameter.Address, paramIndex);
-                                            ja[jarrayIndex] = newValue.ToJConstructor();
-                                        }
-                                    }
-                                }
-                            }
-
-                            break;
-                    }
-                }
-            }
-        }
-
-        /// <summary>
-        /// Resolves dependencies between resources.
-        /// </summary>
-        /// <param name="importedResources">The imported resources.</param>
-        /// <param name="hclGenerationStateFile">The HCL generation state file.</param>
-        private void ResolveResourceDependencies(
-            IReadOnlyCollection<ResourceImport> importedResources,
-            StateFile hclGenerationStateFile)
-        {
-            foreach (var edge in this.settings.Template.DependencyGraph.Edges.Where(
-                e => e.Source is ResourceVertex && e.Target is ResourceVertex))
-            {
-                var referredAwsResource = this.settings.Resources.First(r => r.LogicalResourceId == edge.Source.Name);
-                var referringAwsResource = this.settings.Resources.First(r => r.LogicalResourceId == edge.Target.Name);
-
-                var referredTerraformResource =
-                    importedResources.FirstOrDefault(r => referredAwsResource.LogicalResourceId == r.LogicalId);
-                var referringTerraformResource =
-                    importedResources.FirstOrDefault(r => referringAwsResource.LogicalResourceId == r.LogicalId);
-
-                if (referredTerraformResource == null || referringTerraformResource == null)
-                {
-                    // Resource wasn't imported
-                    continue;
-                }
-
-                var referringState = hclGenerationStateFile.Resources
-                    .First(r => r.Address == referringTerraformResource.Address).Instances.First();
-
-                if (edge.Tag == null)
-                {
-                    continue;
-                }
-
-                switch (edge.Tag.ReferenceType)
-                {
-                    case ReferenceType.DirectReference:
-
-                        {
-                            var reference = new DirectReference(referredTerraformResource.Address);
-                            var con = reference.ToJConstructor();
-
-                            UpdateState(referringState, referredAwsResource, con);
-                            break;
-                        }
-
-                    case ReferenceType.AttributeReference:
-
-                        {
-                            // Referring state needs the attribute name of the referred state where the values match
-                            // Not all attribute names may have 1:1 relationship, so a mapping might be needed.
-                            var attribute = edge.Tag.AttributeName.CamelCaseToSnakeCase();
-
-                            var referredState = hclGenerationStateFile.Resources
-                                .First(r => r.Address == referredTerraformResource.Address).Instances.First();
-
-                            // Get named attribute(s) in referred state
-                            foreach (var prop in referredState.Attributes.Descendants()
-                                .Where(t => t is JProperty jp && jp.Name == attribute))
-                            {
-                                var reference = new IndirectReference($"{referredState.Parent.Address}.{attribute}");
-                                var con = reference.ToJConstructor();
-
-                                UpdateState(referringState, referredAwsResource, con);
-                            }
-
-                            break;
-                        }
-                }
-            }
-        }
-
-        /// <summary>
-        /// Updates the state data with the new reference.
-        /// </summary>
-        /// <param name="referringState">State of the referring.</param>
-        /// <param name="referredAwsResource">The referred AWS resource.</param>
-        /// <param name="con">The <c>JConstructor</c> object to replace the constant value in the state.</param>
-        private static void UpdateState(
-            ResourceInstance referringState,
-            CloudFormationResource referredAwsResource,
-            JConstructor con)
-        {
-            foreach (var node in referringState.FindId(referredAwsResource))
-            {
-                switch (node)
-                {
-                    case JProperty jp when jp.Value is JValue jv:
-
-                        if (jv.Type == JTokenType.String)
-                        {
-                            var stringValue = jv.Value<string>();
-
-                            if (Serializer.TryGetJson(stringValue, true, referringState.Parent.Name, referringState.Parent.Type, out var policy))
-                            {
-                                var replacementMade = false;
-                                ReplacePolicyReference(policy, referredAwsResource, con, ref replacementMade);
-
-                                if (replacementMade)
-                                {
-                                    jv.Value = policy.ToString(Formatting.None);
-                                }
-                            }
-                            else
-                            {
-                                if (stringValue == referredAwsResource.PhysicalResourceId || referredAwsResource.ArnRegex.IsMatch(stringValue))
-                                {
-                                    jp.Value = con;
-                                }
-                                else if (stringValue.Contains(referredAwsResource.PhysicalResourceId))
-                                {
-                                    jp.Value = new JValue(stringValue.Replace(con.Name, "${" + con.Name + "}"));
-                                }
-                            }
-                        }
-
-                        break;
-
-                    case JArray ja:
-
-                        for (var ind = 0; ind < ja.Count; ++ind)
-                        {
-                            if (ja[ind].Type == JTokenType.String)
-                            {
-                                var stringVal = ja[ind].Value<string>();
-
-                                if (stringVal == referredAwsResource.PhysicalResourceId)
-                                {
-                                    ja.RemoveAt(ind);
-                                    ja.Add(con);
-                                }
-                            }
-                        }
-
-                        break;
-                }
-            }
         }
 
         /// <summary>

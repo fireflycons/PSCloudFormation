@@ -5,6 +5,7 @@
     using System.IO;
     using System.Linq;
     using System.Runtime.InteropServices;
+    using System.Security.Cryptography;
 
     using Amazon.Runtime;
 
@@ -76,6 +77,9 @@
         /// <exception cref="System.InvalidOperationException">terraform exited with code {process.ExitCode}</exception>
         public bool Run(string command, bool throwOnError, Action<string> output, params string[] arguments)
         {
+            var errors = 0;
+            var warnings = 0;
+
             var commandtail = $"{command} ";
             commandtail += arguments == null
                                ? string.Empty
@@ -87,16 +91,18 @@
                     {
                         output?.Invoke(msg);
                         this.logger.LogInformation(msg);
+                        errors += msg.Contains("Error:") ? 1 : 0;
                     },
                 msg =>
                     {
                         output?.Invoke(msg);
                         this.logger.LogError(msg);
+                        warnings += msg.Contains("Warning:") ? 1 : 0;
                     });
 
             if (exitCode != 0 && throwOnError)
             {
-                throw new InvalidOperationException($"terraform exited with code {exitCode}");
+                throw new TerraformRunnerException(commandtail, exitCode, errors, warnings);
             }
 
             return exitCode == 0;

@@ -1,29 +1,21 @@
 ﻿namespace Firefly.PSCloudFormation.Commands
 {
     using System;
-    using System.Collections.Generic;
     using System.IO;
     using System.Linq;
     using System.Management.Automation;
-    using System.Runtime.InteropServices.ComTypes;
     using System.Text.RegularExpressions;
     using System.Threading.Tasks;
 
     using Amazon.CloudFormation;
     using Amazon.CloudFormation.Model;
     using Amazon.Runtime;
-    using Amazon.SecurityToken;
-    using Amazon.SecurityToken.Model;
 
-    using Firefly.CloudFormation;
     using Firefly.CloudFormation.Model;
     using Firefly.CloudFormationParser.Serialization.Settings;
     using Firefly.CloudFormationParser.TemplateObjects;
     using Firefly.PSCloudFormation.AbstractCommands;
     using Firefly.PSCloudFormation.Terraform;
-    using Firefly.PSCloudFormation.Utils;
-
-    using CPParameter = Firefly.CloudFormationParser.TemplateObjects.Parameter;
 
     /// <summary>
     /// <para type="synopsis">
@@ -72,25 +64,6 @@
         /// </summary>
         private string workspaceDirectory;
 
-        /// <summary>
-        /// Gets or sets the non interactive.
-        /// <para type="description">
-        /// If set, do not ask the user questions.
-        /// </para>
-        /// <para type="description">
-        /// Some resources such as lambda permissions cannot at this time directly be associated
-        /// with the resources they refer to. In these cases a dialog with the user is initiated
-        /// such that the user may select the appropriate resource e.g. lambda function to
-        /// associate the resource being imported with. This switch disables that user interaction
-        /// meaning that the resource will have to be resolved manually later.
-        /// </para>
-        /// </summary>
-        /// <value>
-        /// The non interactive.
-        /// </value>
-        [Parameter]
-        public SwitchParameter NonInteractive { get; set; }
-
         /// <inheritdoc />
         public override string Select { get; set; }
 
@@ -104,6 +77,7 @@
         /// The workspace directory.
         /// </value>
         [Parameter(Mandatory = true, ValueFromPipelineByPropertyName = true)]
+        // ReSharper disable once UnusedMember.Global
         public string WorkspaceDirectory
         {
             get => this.workspaceDirectory;
@@ -139,7 +113,7 @@
         {
             var state = Path.Combine(this.ResolvedWorkspaceDirectory, "terraform.tfstate");
             var stateBackup = Path.Combine(this.ResolvedWorkspaceDirectory, "terraform.tfstate.backup");
-            
+
             if (File.Exists(state))
             {
                 if (!this.Force)
@@ -159,9 +133,8 @@
                 {
                     File.Delete(file);
                 }
-
             }
-           
+
             var context = this.CreateCloudFormationContext();
 
             using (var client = CreateCloudFormationClient(context))
@@ -208,22 +181,26 @@
                         "Number of parsed resources does not match number of actual physical resources.");
                 }
 
+                // Get all exports, for use where Fn::Import is found
+                var exports = (await client.ListExportsAsync(new ListExportsRequest())).Exports;
+
                 var cr = resources.StackResources.OrderBy(sr => sr.LogicalResourceId).Zip(
                     template.Resources.OrderBy(tr => tr.Name),
                     (sr, tr) => new CloudFormationResource(tr, sr)).ToList();
 
-                var settings = new TerrafomSettings
+                var settings = new TerraformSettings
                                    {
                                        AwsAccountId = mc.Groups["account"].Value,
                                        AwsRegion = mc.Groups["region"].Value,
-                                       NonInteractive = this.NonInteractive,
+                                       StackExports = exports,
                                        Resources = cr,
                                        Runner = new TerraformRunner(context.Credentials, this.Logger),
+                                       StackName = this.StackName,
                                        Template = template,
                                        WorkspaceDirectory = this.ResolvedWorkspaceDirectory
                                    };
 
-                var exporter = new TerraformExporter(settings, this.Logger, new PSUserInterface(this.Host.UI));
+                var exporter = new TerraformExporter(settings, this.Logger);
 
                 try
                 {

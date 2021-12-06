@@ -1,5 +1,6 @@
 ﻿namespace Firefly.PSCloudFormation.Terraform.HclSerializer
 {
+    using System;
     using System.Linq;
 
     using Firefly.PSCloudFormation.Terraform.HclSerializer.Events;
@@ -11,7 +12,7 @@
     /// <summary>
     /// Serializes a terraform state file to HCL.
     /// </summary>
-    internal class Serializer
+    internal class StateFileSerializer
     {
         /// <summary>
         /// The emitter
@@ -19,10 +20,10 @@
         private readonly IHclEmitter emitter;
 
         /// <summary>
-        /// Initializes a new instance of the <see cref="Serializer"/> class.
+        /// Initializes a new instance of the <see cref="StateFileSerializer"/> class.
         /// </summary>
         /// <param name="emitter">The emitter.</param>
-        public Serializer(IHclEmitter emitter)
+        public StateFileSerializer(IHclEmitter emitter)
         {
             this.emitter = emitter;
         }
@@ -72,7 +73,7 @@
 
                 isJson = true;
             }
-            catch
+            catch (Exception e)
             {
                 // Deliberately swallow. String is not valid JSON
             }

@@ -70,7 +70,7 @@
         /// The resources.
         /// </value>
         [JsonProperty("resources")]
-        public List<ResourceDeclaration> Resources { get; set; }
+        public List<StateFileResourceDeclaration> Resources { get; set; }
 
         /// <summary>
         /// Saves the state file to the specified path.

@@ -1,7 +1,6 @@
 ﻿namespace Firefly.PSCloudFormation.Terraform.HclSerializer.Events
 {
     using System;
-    using System.ComponentModel.Design;
     using System.Reflection;
 
     using Firefly.PSCloudFormation.Terraform.State;
@@ -53,7 +52,7 @@
                     return;
                 }
 
-                this.IsJsonDocument = Serializer.TryGetJson(this.Value, false, "Unknown", "Unknown", out var document);
+                this.IsJsonDocument = StateFileSerializer.TryGetJson(this.Value, false, "Unknown", "Unknown", out var document);
 
                 if (this.IsJsonDocument)
                 {

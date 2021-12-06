@@ -8,7 +8,12 @@
 
     internal abstract class Reference
     {
-        private static readonly Regex constructorNameRegex = new Regex(@"^(?<type>[\w\.]+):(?<address>[^\d][\w].*\.[^\d][\w]*)(:(?<index>\d+))?");
+        private const string JConstructorName = "Reference";
+
+        private static readonly Assembly ExecutingAssembly = Assembly.GetExecutingAssembly();
+
+        //private static readonly Regex constructorNameRegex = new Regex(@"^(?<type>[\w\.]+):(?<address>[^\d][\w].*\.[^\d][\w]*)(:(?<index>\d+))?");
+        private static readonly Regex constructorNameRegex = new Regex(@"^(?<type>[\w\.]+):(?<address>[^\d][\w\[\]]*(\.[^\d][\w\[\]]*)*)(:(?<index>\d+))?");
 
         public Reference(string objectAddress, int index)
         : this(objectAddress)
@@ -30,20 +35,29 @@
         public JConstructor ToJConstructor()
         {
             return this.Index == -1
-                       ? new JConstructor($"{this.GetType().FullName}:{this.ObjectAddress}")
-                       : new JConstructor($"{this.GetType().FullName}:{this.ObjectAddress}:{this.Index}");
+                       ? new JConstructor(JConstructorName, this.GetType().FullName, this.ObjectAddress)
+                       : new JConstructor(JConstructorName, this.GetType().FullName, this.ObjectAddress, this.Index);
         }
 
         public static Reference FromJConstructor(JConstructor constructor)
         {
-            var mc = constructorNameRegex.Match(constructor.Name);
+            if (constructor.Name != JConstructorName)
+            {
+                throw new InvalidOperationException($"{constructor.Name} is not a valid internal reference type.");
+            }
 
-            var type = Assembly.GetCallingAssembly().GetType(mc.Groups["type"].Value);
-            var index = mc.Groups["index"].Value;
+            var type = ExecutingAssembly.GetType(constructor[0].Value<string>());
+            var objectAddress = constructor[1].Value<string>();
+            var index = -1;
 
-            return index == string.Empty
-                       ? (Reference)Activator.CreateInstance(type, mc.Groups["address"].Value)
-                       : (Reference)Activator.CreateInstance(type, mc.Groups["address"].Value, int.Parse(index));
+            if (constructor.Count > 2)
+            {
+                index = constructor[2].Value<int>();
+            }
+
+            return index == -1
+                       ? (Reference)Activator.CreateInstance(type, objectAddress)
+                       : (Reference)Activator.CreateInstance(type, objectAddress, index);
         }
 
         /// <summary>

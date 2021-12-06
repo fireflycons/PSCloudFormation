@@ -39,6 +39,9 @@
             // No conditional attributes defined for all resources
             this.ConditionalAttributes = specificResourceTraits.ConditionalAttributes;
 
+            // No attribute map defined for all resources
+            this.AttributeMap = specificResourceTraits.AttributeMap;
+
             this.ResourceType = specificResourceTraits.ResourceType;
         }
 
@@ -47,6 +50,10 @@
 
         /// <inheritdoc />
         public List<ConditionalAttribute> ConditionalAttributes { get; }
+
+
+        /// <inheritdoc />
+        public Dictionary<string, string> AttributeMap { get; }
 
         /// <inheritdoc />
         public Dictionary<string, object> DefaultValues { get; }

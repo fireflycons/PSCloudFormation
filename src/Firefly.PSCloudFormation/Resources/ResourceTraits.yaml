@@ -67,6 +67,7 @@
       DefaultValues: {}               # Values to set if state value is null
       ConflictingArguments: []        # Where arguments confict. choose the first from this list.
       ConditionalAttributes: []
+      AttributeMap: {}                # Where HCL and CF attributes are quire different
 
 - Group: API Gateway
   Resources:
@@ -171,12 +172,17 @@
       ConditionalAttributes:
         - Name: block_device_mappings.#.ebs.#.throughput
           Value: 0
+      AttributeMap:
+        LatestVersionNumber: latest_version
+        DefaultVersionNumber: default_version
     - Resource: aws_eip
       ComputedAttributes:
         - association_id
         - domain
         - private_*
         - public_*
+      AttributeMap:
+        AllocationId: id
     - Resource: aws_nat_gateway
       ComputedAttributes:
         - '*_ip'
@@ -216,6 +222,11 @@
         - dns_name
         - zone_id
         - vpc_id
+      AttributeMap:
+        LoadBalancerFullName: arn_suffix
+    - Resource: aws_lb_target_group
+      AttributeMap:
+        TargetGroupFullName: arn_suffix
     - Resource: aws_lb_listener
       RequiredAttributes:
         - load_balancer_arn
@@ -292,6 +303,8 @@
       DefaultValues:
         acl: private
         force_destroy: false
+      AttributeMap:
+        BucketName: bucket
     - Resource: aws_s3_bucket_policy
       RequiredAttributes:
         - policy
@@ -343,6 +356,10 @@
     - Resource: aws_route_table
       RequiredAttributes:
         - route.#.*
+    - Resource: aws_subnet
+      ConflictingArguments:
+        - - availability_zone
+          - availability_zone_id
     - Resource: aws_vpc
       ComputedAttributes:
         - '*_id'

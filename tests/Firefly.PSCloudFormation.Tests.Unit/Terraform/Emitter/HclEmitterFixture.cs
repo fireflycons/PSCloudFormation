@@ -29,7 +29,7 @@
             this.terraformBlock = ((string)ResourceLoader.GetStringResource(
                                           ResourceLoader.GetResourceStream(
                                               "terraform-block.hcl",
-                                              typeof(Serializer).Assembly))).Replace("AWS::Region", "eu-west-1");
+                                              typeof(StateFileSerializer).Assembly))).Replace("AWS::Region", "eu-west-1");
 
             this.mainDotTf = Path.Combine(this.tempDirectory, "main.tf");
             File.WriteAllText(this.mainDotTf, this.terraformBlock);

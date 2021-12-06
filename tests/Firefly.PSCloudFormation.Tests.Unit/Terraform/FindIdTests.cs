@@ -1,7 +1,5 @@
 ﻿namespace Firefly.PSCloudFormation.Tests.Unit.Terraform
 {
-    using System.Text.RegularExpressions;
-
     using Firefly.CloudFormationParser;
     using Firefly.EmbeddedResourceLoader;
     using Firefly.PSCloudFormation.Terraform.Hcl;
@@ -23,7 +21,7 @@
         [Fact]
         public void WhenInputParameterIsListAndOneElementMatchesThenElementIsFound()
         {
-            var resource = new ResourceInstance { Attributes = resourceAttributes };
+            var resource = new StateFileResourceInstance { Attributes = resourceAttributes };
             var templateParameter = new Mock<IParameter>();
 
             templateParameter.Setup(p => p.Name).Returns("PrivateSubnets");
@@ -31,7 +29,7 @@
             templateParameter.Setup(p => p.GetCurrentValue()).Returns("subnet-00000000,subnet-11111111");
 
             var inputVariable = InputVariable.CreateParameter(templateParameter.Object);
-            var result = resource.FindId(inputVariable);
+            var result = resource.FindId(inputVariable, false);
 
             result.Should().HaveCount(2, "there should be 1 property match and 1 array match");
         }
@@ -39,7 +37,7 @@
         [Fact]
         public void WhenInputParameterIsStringAndAttributeArrayValueMatchesThenElementIsFound()
         {
-            var resource = new ResourceInstance { Attributes = resourceAttributes };
+            var resource = new StateFileResourceInstance { Attributes = resourceAttributes };
             var templateParameter = new Mock<IParameter>();
 
             templateParameter.Setup(p => p.Name).Returns("VpcId");
@@ -48,7 +46,7 @@
 
             var inputVariable = InputVariable.CreateParameter(templateParameter.Object);
 
-            var result = resource.FindId(inputVariable);
+            var result = resource.FindId(inputVariable, false);
 
             result.Should().HaveCount(1).And
                 .AllBeOfType<JArray>("array returned contains the element we are looking for");
@@ -57,7 +55,7 @@
         [Fact]
         public void WhenInputParameterIsStringAndAttributeScalarValueMatchesThenElementIsFound()
         {
-            var resource = new ResourceInstance { Attributes = resourceAttributes };
+            var resource = new StateFileResourceInstance { Attributes = resourceAttributes };
             var templateParameter = new Mock<IParameter>();
 
             templateParameter.Setup(p => p.Name).Returns("VpcId");
@@ -66,7 +64,7 @@
 
             var inputVariable = InputVariable.CreateParameter(templateParameter.Object);
 
-            var result = resource.FindId(inputVariable);
+            var result = resource.FindId(inputVariable, false);
 
             result.Should().HaveCount(1).And
                 .AllBeOfType<JProperty>("property returned has the element we are looking for as its value");

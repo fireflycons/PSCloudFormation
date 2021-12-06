@@ -231,8 +231,14 @@
                 hcl.AppendLine("  sensitive = true");
             }
 
-            hcl.AppendLine(this.GenerateDefaultStanza());
-            hcl.AppendLine(this.GenerateValidationStanza());
+            foreach (var stanza in new[] { this.GenerateDefaultStanza(), this.GenerateValidationStanza() })
+            {
+                if (!string.IsNullOrEmpty(stanza))
+                {
+                    hcl.AppendLine(stanza);
+                }
+            }
+
             hcl.AppendLine("}");
 
             return hcl.ToString();

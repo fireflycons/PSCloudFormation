@@ -6,7 +6,6 @@
 
     using Xunit;
 
-    using se = Firefly.PSCloudFormation.Utils.StringExtensions;
 
     public class StringExtensions
     {
@@ -21,6 +20,16 @@
         public void ShouldPerformWildcardMatch(string pattern, string text, bool expectedResult)
         {
             text.IsLike(pattern).Should().Be(expectedResult);
+        }
+
+        [Theory]
+        [InlineData("FooBar", "foo_bar")]
+        [InlineData("DnsName", "dns_name")]
+        [InlineData("DNSName", "dns_name")]
+        [InlineData("AllocationId", "allocation_id")]
+        public void ShouldConvertCamelCaseToSnakeCase(string text, string expectedResult)
+        {
+            text.CamelCaseToSnakeCase().Should().Be(expectedResult);
         }
     }
 }

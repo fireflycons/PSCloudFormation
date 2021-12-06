@@ -19,6 +19,9 @@
         public List<ConditionalAttribute> ConditionalAttributes { get; set; } = new List<ConditionalAttribute>();
 
         /// <inheritdoc />
+        public Dictionary<string, string> AttributeMap { get; set; } = new Dictionary<string, string>();
+
+        /// <inheritdoc />
         public List<string> ComputedAttributes { get; set; } = new List<string>();
 
         /// <inheritdoc />

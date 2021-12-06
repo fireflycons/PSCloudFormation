@@ -2,8 +2,6 @@
 {
     using System.Text;
 
-    using Amazon.CloudFormation.Model;
-
     using Firefly.CloudFormationParser;
 
     /// <summary>
