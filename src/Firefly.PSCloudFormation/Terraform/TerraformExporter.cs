@@ -94,9 +94,9 @@
             this.logger.LogInformation("\nInitializing inputs and resources...");
 
             initialHcl.AppendLine(
-                terraformBlock.Replace("AWS::Region", this.settings.AwsRegion).Replace(
-                    "AWS::StackName",
-                    this.settings.StackName));
+                HclWriter.GetTerraformBlock(
+                    this.settings.AwsRegion,
+                    this.settings.AddDefaultTag ? this.settings.StackName : null));
 
             var parameters = this.ProcessInputVariables();
 
@@ -516,14 +516,6 @@
         }
 
 #pragma warning disable 649
-
-        /// <summary>
-        /// The terraform block
-        /// </summary>
-        [EmbeddedResource("terraform-block.hcl")]
-
-        // ReSharper disable once StyleCop.SA1600 - Loaded by auto-resource
-        private static string terraformBlock;
 
         /// <summary>
         /// Map of AWS resource type to Terraform resource type, generated during build.

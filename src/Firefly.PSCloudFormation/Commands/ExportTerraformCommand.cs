@@ -94,6 +94,24 @@
             }
         }
 
+        /// <summary>
+        /// Gets or sets the with default tag.
+        /// <para type="description">
+        /// If this switch is present, then a <c>default_tags</c> block is added to the AWS provider declaration.
+        /// A default tag of <c>terraform:stack_name</c> with value being the name of the exported CloudFormation stack
+        /// is added to all resources, enabling you to create a resource group by tag name in the AWS console
+        /// of all resources in the new configuration that support tagging.
+        /// </para>
+        /// <para type="description">
+        /// This has the side effect of marking all imported resources as requiring an in-place change to apply the new tag.
+        /// </para>
+        /// </summary>
+        /// <value>
+        /// The with default tag.
+        /// </value>
+        [Parameter(ValueFromPipelineByPropertyName = true)]
+        public SwitchParameter WithDefaultTag { get; set; }
+
         /// <inheritdoc />
         protected override StackOperation StackOperation => StackOperation.Export;
 
@@ -197,7 +215,8 @@
                                        Runner = new TerraformRunner(context.Credentials, this.Logger),
                                        StackName = this.StackName,
                                        Template = template,
-                                       WorkspaceDirectory = this.ResolvedWorkspaceDirectory
+                                       WorkspaceDirectory = this.ResolvedWorkspaceDirectory,
+                                       AddDefaultTag = this.WithDefaultTag
                                    };
 
                 var exporter = new TerraformExporter(settings, this.Logger);

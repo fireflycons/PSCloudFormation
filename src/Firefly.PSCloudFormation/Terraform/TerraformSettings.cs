@@ -38,5 +38,8 @@
 
         /// <inheritdoc />
         public IReadOnlyCollection<Export> StackExports { get; set;  }
+
+        /// <inheritdoc />
+        public bool AddDefaultTag { get; set; }
     }
 }

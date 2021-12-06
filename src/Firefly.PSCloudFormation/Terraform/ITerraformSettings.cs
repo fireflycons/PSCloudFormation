@@ -82,5 +82,13 @@
         /// The stack exports.
         /// </value>
         IReadOnlyCollection<Export> StackExports { get; }
+
+        /// <summary>
+        /// Gets a value indicating whether to add the <c>terraform:stack_name</c> default tag to all resources.
+        /// </summary>
+        /// <value>
+        ///   <c>true</c> if [add default tag]; otherwise, <c>false</c>.
+        /// </value>
+        bool AddDefaultTag { get; }
     }
 }
