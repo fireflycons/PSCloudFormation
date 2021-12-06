@@ -3,10 +3,11 @@
     using System.Diagnostics;
 
     /// <summary>
-    /// Represents a mapping between an imported AWS resource and a Terraform resource
+    /// Represents a summary mapping between an imported AWS resource and a Terraform resource.
+    /// Maps the resource types, logical name and physical ID.
     /// </summary>
     [DebuggerDisplay("{Address}: {PhysicalId}")]
-    internal class ImportedResource
+    internal class ResourceMapping
     {
         /// <summary>
         /// Gets or sets the Terraform resource address.
@@ -25,7 +26,8 @@
         public string AwsAddress => $"{this.LogicalId} ({this.AwsType})";
 
         /// <summary>
-        /// Gets or sets the physical identifier.
+        /// Gets or sets the physical identifier, as in the identifier given to the resource by a CloudFormation deployment
+        /// which is also the 'id' attribute of the resource within terraform state.
         /// </summary>
         /// <value>
         /// The physical identifier.
@@ -33,7 +35,7 @@
         public string PhysicalId { get; set; }
 
         /// <summary>
-        /// Gets or sets the logical identifier.
+        /// Gets or sets the logical identifier, as in the name of the resource in either CloudFormation or HCL.
         /// </summary>
         /// <value>
         /// The logical identifier.

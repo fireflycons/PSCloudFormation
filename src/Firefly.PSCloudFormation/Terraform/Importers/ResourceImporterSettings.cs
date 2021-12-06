@@ -18,10 +18,10 @@
         public ILogger Logger { get; set; }
 
         /// <inheritdoc />
-        public ImportedResource Resource { get; set; }
+        public ResourceMapping Resource { get; set; }
 
         /// <inheritdoc />
-        public IReadOnlyCollection<ImportedResource> ResourcesToImport { get; set; }
+        public IReadOnlyCollection<ResourceMapping> ResourcesToImport { get; set; }
 
         /// <inheritdoc />
         public IList<string> Warnings { get; set; }

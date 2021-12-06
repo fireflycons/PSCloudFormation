@@ -4,7 +4,6 @@
 
     using Firefly.CloudFormation;
     using Firefly.PSCloudFormation.Terraform.Hcl;
-    using Firefly.PSCloudFormation.Utils;
 
     /// <summary>
     /// Settings data passed to resource importers
@@ -28,12 +27,12 @@
         ILogger Logger { get; }
 
         /// <summary>
-        /// Gets the resource being imported.
+        /// Gets the summary info of the resource being imported.
         /// </summary>
         /// <value>
         /// The resource.
         /// </value>
-        ImportedResource Resource { get; }
+        ResourceMapping Resource { get; }
 
         /// <summary>
         /// Gets the list of resources to import.
@@ -41,7 +40,7 @@
         /// <value>
         /// The resources to import.
         /// </value>
-        IReadOnlyCollection<ImportedResource> ResourcesToImport { get; }
+        IReadOnlyCollection<ResourceMapping> ResourcesToImport { get; }
 
         /// <summary>
         /// Gets the warning list.

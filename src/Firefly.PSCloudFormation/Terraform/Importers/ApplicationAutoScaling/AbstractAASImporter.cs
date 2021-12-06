@@ -1,8 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Text;
-
-namespace Firefly.PSCloudFormation.Terraform.Importers.ApplicationAutoScaling
+﻿namespace Firefly.PSCloudFormation.Terraform.Importers.ApplicationAutoScaling
 {
     using Firefly.PSCloudFormation.Terraform.Hcl;
 
@@ -24,7 +20,7 @@ namespace Firefly.PSCloudFormation.Terraform.Importers.ApplicationAutoScaling
         /// <param name="resource">The resource.</param>
         /// <returns>The AAS target identifier.</returns>
         // ReSharper disable once InconsistentNaming
-        protected string GetAASTarget(ImportedResource resource)
+        protected string GetAASTarget(ResourceMapping resource)
         {
             // Manipulate the physical ID to get in the correct format
             var parts = resource.PhysicalId.Split('|');

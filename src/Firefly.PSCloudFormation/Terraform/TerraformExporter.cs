@@ -8,17 +8,14 @@
     using System.Text;
 
     using Firefly.CloudFormation;
-    using Firefly.CloudFormationParser.Intrinsics.Functions;
     using Firefly.CloudFormationParser.TemplateObjects;
     using Firefly.EmbeddedResourceLoader;
-    using Firefly.PSCloudFormation.Terraform.DependencyResolver;
     using Firefly.PSCloudFormation.Terraform.Hcl;
     using Firefly.PSCloudFormation.Terraform.HclSerializer;
     using Firefly.PSCloudFormation.Terraform.Importers;
     using Firefly.PSCloudFormation.Terraform.State;
 
     using Newtonsoft.Json;
-    using Newtonsoft.Json.Linq;
 
     internal partial class TerraformExporter : AutoResourceLoader
     {
@@ -190,9 +187,9 @@
         /// </summary>
         /// <param name="resourcesToImport">The resources to import.</param>
         /// <returns>List of resources that were imported.</returns>
-        private List<ImportedResource> ImportResources(List<ImportedResource> resourcesToImport)
+        private List<ResourceMapping> ImportResources(List<ResourceMapping> resourcesToImport)
         {
-            List<ImportedResource> importedResources = new List<ImportedResource>();
+            List<ResourceMapping> importedResources = new List<ResourceMapping>();
             var totalResources = resourcesToImport.Count;
 
             this.logger.LogInformation(
@@ -343,68 +340,6 @@
         }
 
         /// <summary>
-        /// Performs reference replacements within a policy string in the state. 
-        /// </summary>
-        /// <param name="node">The deserialized policy document from the resource's property (inline_policy etc)</param>
-        /// <param name="id">The identifier.</param>
-        /// <param name="replacement">The replacement.</param>
-        /// <param name="replacementMade">if set to <c>true</c> [replacement made].</param>
-        private static void ReplacePolicyReference(
-            JToken node,
-            IReferencedItem id,
-            JConstructor replacement,
-            ref bool replacementMade)
-        {
-            switch (node.Type)
-            {
-                case JTokenType.Object:
-
-                    foreach (var child in node.Children<JProperty>())
-                    {
-                        if (child.Value is JValue jv && jv.Value is string s
-                                                     && (s == id.ScalarIdentity || id.ArnRegex.IsMatch(s)))
-                        {
-                            // Smuggle in an encoded type:constructor_parameter for a "Reference" derivative
-                            // See Scalar constructor.
-                            jv.Value = replacement.Name;
-                            replacementMade = true;
-                        }
-                        else
-                        {
-                            ReplacePolicyReference(child.Value, id, replacement, ref replacementMade);
-                        }
-                    }
-
-                    // do something?
-                    break;
-
-                case JTokenType.Array:
-
-                    foreach (var child in node.Children())
-                    {
-                        ReplacePolicyReference(child, id, replacement, ref replacementMade);
-                    }
-
-                    break;
-
-                case JTokenType.String:
-
-                    var jv1 = (JValue)node;
-                    var s1 = (string)jv1.Value;
-
-                    if (s1 == id.ScalarIdentity || id.ArnRegex.IsMatch(s1))
-                    {
-                        // Smuggle in an encoded type:constructor_parameter for a "Reference" derivative
-                        // See Scalar constructor.
-                        ((JValue)node).Value = replacement.Name;
-                        replacementMade = true;
-                    }
-
-                    break;
-            }
-        }
-
-        /// <summary>
         /// Processes the input variables.
         /// </summary>
         /// <returns>A list of <see cref="InputVariable"/></returns>
@@ -439,11 +374,11 @@
         /// Processes the AWS resources, mapping them to equivalent Terraform resources.
         /// </summary>
         /// <param name="initialHcl">The initial HCL.</param>
-        /// <returns>A list of <see cref="ImportedResource"/> for successfully mapped AWS resources.</returns>
-        private List<ImportedResource> ProcessResources(StringBuilder initialHcl)
+        /// <returns>A list of <see cref="ResourceMapping"/> for successfully mapped AWS resources.</returns>
+        private List<ResourceMapping> ProcessResources(StringBuilder initialHcl)
         {
-            var resourceMap = JsonConvert.DeserializeObject<List<ResourceMapping>>(resourceMapJson);
-            var resourcesToImport = new List<ImportedResource>();
+            var resourceMap = JsonConvert.DeserializeObject<List<ResourceTypeMapping>>(resourceMapJson);
+            var resourcesToImport = new List<ResourceMapping>();
             this.logger.LogInformation("Processing stack resources and mapping to terraform resource types...");
 
             foreach (var resource in this.settings.Resources)
@@ -477,7 +412,7 @@
                     initialHcl.AppendLine($"resource \"{mapping.Terraform}\" \"{resource.LogicalResourceId}\" {{}}")
                         .AppendLine();
                     resourcesToImport.Add(
-                        new ImportedResource
+                        new ResourceMapping
                             {
                                 PhysicalId = resource.PhysicalResourceId,
                                 LogicalId = resource.LogicalResourceId,
@@ -491,10 +426,11 @@
         }
 
         /// <summary>
-        /// Maps an AWS resource type to equivalent Terraform resource
+        /// Maps an AWS resource type to equivalent Terraform resource.
+        /// This is backed by the embedded resource <c>terraform-resource-map.json</c>
         /// </summary>
         [DebuggerDisplay("{Aws} -> {Terraform}")]
-        private class ResourceMapping
+        private class ResourceTypeMapping
         {
             /// <summary>
             /// Gets or sets the AWS type name.

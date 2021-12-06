@@ -8,7 +8,7 @@
     internal enum DependencyType
     {
         /// <summary>
-        /// Dependency is a <see cref="ImportedResource"/>
+        /// Dependency is another resource - <see cref="ResourceMapping"/>
         /// </summary>
         Resource,
 

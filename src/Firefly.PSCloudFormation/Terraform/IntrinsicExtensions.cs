@@ -36,7 +36,7 @@
         /// <param name="resource">Resource referenced by the intrinsic.</param>
         /// <returns>A <see cref="Reference"/> or <c>null</c> if a reference cannot be created.</returns>
         /// <exception cref="System.ArgumentNullException">self cannot be null</exception>
-        public static Reference Render(this IIntrinsic self, ITemplate template, ImportedResource resource)
+        public static Reference Render(this IIntrinsic self, ITemplate template, ResourceMapping resource)
         {
             if (self == null)
             {
@@ -58,7 +58,7 @@
         public static Reference Render(
             this IIntrinsic self,
             ITemplate template,
-            ImportedResource resource,
+            ResourceMapping resource,
             int index)
         {
             if (self == null)
@@ -103,7 +103,7 @@
         private static Reference Render(
             FindInMapIntrinsic findInMapIntrinsic,
             ITemplate template,
-            ImportedResource resource,
+            ResourceMapping resource,
             int index)
         {
             var sb = new StringBuilder();
@@ -142,14 +142,14 @@
         private static Reference Render(
             GetAZsIntrinsic getAZsIntrinsic,
             ITemplate template,
-            ImportedResource resource,
+            ResourceMapping resource,
             int index)
         {
             // This is only going to work against the provider's region
             return new DataSourceReference("aws_availability_zones", "available", $"names[{index}]");
         }
 
-        private static Reference Render(RefIntrinsic refIntrinsic, ITemplate template, ImportedResource resource, int index)
+        private static Reference Render(RefIntrinsic refIntrinsic, ITemplate template, ResourceMapping resource, int index)
         {
             switch (refIntrinsic.Reference)
             {
@@ -188,7 +188,7 @@
             }
         }
 
-        private static Reference Render(SelectIntrinsic selectIntrinsic, ITemplate template, ImportedResource resource)
+        private static Reference Render(SelectIntrinsic selectIntrinsic, ITemplate template, ResourceMapping resource)
         {
             if (selectIntrinsic.Items.Count == 1 && selectIntrinsic.Items[0] is IIntrinsic intrinsic)
             {
@@ -211,7 +211,7 @@
             return null;
         }
 
-        public static Reference Render(GetAttIntrinsic getAttIntrinsic, ITemplate template, ImportedResource resource)
+        public static Reference Render(GetAttIntrinsic getAttIntrinsic, ITemplate template, ResourceMapping resource)
         {
             string attributeName;
 

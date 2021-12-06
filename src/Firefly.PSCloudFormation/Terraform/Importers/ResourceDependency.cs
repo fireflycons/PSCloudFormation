@@ -14,7 +14,7 @@
         /// <param name="resource">The resource.</param>
         /// <param name="referringTemplateObject">The parsed AWS template object relating to the resource being imported.</param>
         /// <param name="referencedTemplateObject">The parsed AWS template object relating to the referenced resource.</param>
-        public ResourceDependency(ImportedResource resource, IResource referringTemplateObject, IResource referencedTemplateObject)
+        public ResourceDependency(ResourceMapping resource, IResource referringTemplateObject, IResource referencedTemplateObject)
         {
             this.DependencyType = DependencyType.Resource;
             this.Resource = resource;
@@ -49,12 +49,12 @@
         public string PropertyPropertyEvaluation { get; }
 
         /// <summary>
-        /// Gets the resource.
+        /// Gets the summary info of the resource.
         /// </summary>
         /// <value>
         /// The resource.
         /// </value>
-        public ImportedResource Resource { get; }
+        public ResourceMapping Resource { get; }
 
         /// <summary>
         /// Gets the template object of the resource being referenced.

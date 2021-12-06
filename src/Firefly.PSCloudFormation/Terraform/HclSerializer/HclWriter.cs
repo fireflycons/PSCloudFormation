@@ -102,7 +102,7 @@
         /// <returns>Count of validation warnings.</returns>
         public int Serialize(
             StateFile stateFile,
-            IReadOnlyCollection<ImportedResource> importedResources,
+            IReadOnlyCollection<ResourceMapping> importedResources,
             IReadOnlyCollection<InputVariable> parameters)
         {
             this.WriteMain(importedResources, parameters, stateFile);
@@ -181,7 +181,7 @@
         private void ResolveResourceDependencies(
             StateFile stateFile,
             IReadOnlyCollection<InputVariable> parameters,
-            IEnumerable<ImportedResource> importedResources)
+            IEnumerable<ResourceMapping> importedResources)
         {
             this.logger.LogInformation("\nResolving dependencies between resources...");
 
@@ -199,7 +199,7 @@
         /// <param name="importedResources">The imported resources.</param>
         /// <returns>List of output values to emit.</returns>
         private IEnumerable<OutputValue> ResolveOutputDependencies(
-            IReadOnlyCollection<ImportedResource> importedResources)
+            IReadOnlyCollection<ResourceMapping> importedResources)
         {
             var outputValues = new List<OutputValue>();
 
@@ -251,7 +251,7 @@
         /// <param name="parameters">The parameters.</param>
         /// <param name="stateFile">The state file.</param>
         private void WriteMain(
-            IReadOnlyCollection<ImportedResource> importedResources,
+            IReadOnlyCollection<ResourceMapping> importedResources,
             IReadOnlyCollection<InputVariable> parameters,
             StateFile stateFile)
         {
