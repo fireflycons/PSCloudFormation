@@ -9,6 +9,11 @@
 
     using Newtonsoft.Json.Linq;
 
+    /// <content>
+    /// This part provides a visitor that finds the attribute targeted by a <c>!GetAtt</c>
+    /// and gets the value of that attribute from the state file data which will be used for
+    /// value comparisons when generating a <see cref="StateModification"/>.
+    /// </content>
     internal partial class ResourceDependencyResolver
     {
         /// <summary>
@@ -22,6 +27,7 @@
             /// <param name="attributeName">Name of the resource attribute to search for.</param>
             public TerraformAttributeGetterContext(string attributeName)
             {
+                // Attribute in TF resource may have the same name as CF, but more likely a snake case version.
                 this.AttributeNames = new[] { attributeName.CamelCaseToSnakeCase(), attributeName };
             }
 
@@ -87,6 +93,7 @@
 
                 if (!context.AttributeNames.Contains(json.Name))
                 {
+                    // No match
                     return;
                 }
 
