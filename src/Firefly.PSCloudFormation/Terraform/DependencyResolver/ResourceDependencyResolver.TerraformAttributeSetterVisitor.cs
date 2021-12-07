@@ -7,6 +7,7 @@
     using Amazon.S3.Model;
 
     using Firefly.CloudFormationParser;
+    using Firefly.CloudFormationParser.Intrinsics;
     using Firefly.CloudFormationParser.Intrinsics.Abstractions;
     using Firefly.CloudFormationParser.Intrinsics.Functions;
     using Firefly.PSCloudFormation.Terraform.HclSerializer;
@@ -415,6 +416,48 @@
                             // Add interpolation modification.
                             context.Modifications.Add(
                                 new StateModification(jsonStringValue, context.Index, context.ContainingProperty, expression));
+                            break;
+                        }
+
+                    case JoinIntrinsic joinIntrinsic:
+                        {
+                            // Build up an interpolated string as the replacement
+                            var segments = new List<string>();
+                            var intrinsicIndex = 0;
+
+                            foreach (var item in joinIntrinsic.Items)
+                            {
+                                switch (item)
+                                {
+                                    case string s:
+
+                                        segments.Add(s);
+                                        break;
+
+                                    case IIntrinsic intrinsic:
+
+                                        var nestedIntrinsic = intrinsicInfo.NestedIntrinsics[intrinsicIndex++];
+
+                                        // Try to render to an HCL expression
+                                        var reference = nestedIntrinsic.Intrinsic.Render(
+                                            context.Template,
+                                            nestedIntrinsic.TargetResource);
+
+                                        if (reference == null)
+                                        {
+                                            // TODO: Should probably throw here
+                                            continue;
+                                        }
+
+                                        // We got one, so add rendered HCL expression to join list
+                                        segments.Add($"${{{reference.ReferenceExpression}}}");
+                                        break;
+                                }
+                            }
+
+                            // Add interpolation modification.
+                            context.Modifications.Add(
+                                new StateModification(jsonStringValue, context.Index, context.ContainingProperty, string.Join(joinIntrinsic.Separator, segments)));
                             break;
                         }
                 }

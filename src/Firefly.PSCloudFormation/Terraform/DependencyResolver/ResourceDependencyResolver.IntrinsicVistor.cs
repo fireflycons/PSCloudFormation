@@ -65,7 +65,7 @@
                 ReferenceType referenceType,
                 ResourceMapping resourceMapping,
                 object evaluation,
-                IReadOnlyCollection<IntrinsicInfo> nestedIntrinsics = null)
+                IList<IntrinsicInfo> nestedIntrinsics = null)
             {
                 this.TargetResource = resourceMapping;
                 this.Intrinsic = intrinsic;
@@ -115,7 +115,7 @@
             /// <value>
             /// The list of nested intrinsic.
             /// </value>
-            public IReadOnlyCollection<IntrinsicInfo> NestedIntrinsics { get; }
+            public IList<IntrinsicInfo> NestedIntrinsics { get; }
 
             /// <summary>
             /// Gets a value indicating whether this instance is scalar.
@@ -208,12 +208,13 @@
             public List<IntrinsicInfo> ReferenceLocations { get; } = new List<IntrinsicInfo>();
 
             /// <summary>
-            /// Called when an intrinsic is located in the resource properties
+            /// Called when an intrinsic is located in the resource properties.
+            /// Builds a description of the intrinsic needed to generate <see cref="StateModification"/> data.
             /// </summary>
             /// <param name="templateObject">The template object being walked (i.e. IResource)</param>
             /// <param name="path">Current path within properties.</param>
             /// <param name="intrinsic">Intrinsic to inspect.</param>
-            /// <inheritdoc />
+            /// <returns><c>true</c> if visit should continue within this intrinsic; else <c>false</c></returns>
             public override bool VisitIntrinsic(ITemplateObject templateObject, PropertyPath path, IIntrinsic intrinsic)
             {
                 var recurseIntrinsic = true;
@@ -257,66 +258,126 @@
                         }
 
                     case SubIntrinsic subIntrinsic:
-
-                        evaluation = intrinsic.Evaluate(templateObject.Template);
-                        referenceType = ReferenceType.DirectReference;
-
-                        foreach (var nestedIntrinsic in subIntrinsic.ImplicitReferences)
                         {
-                            Tuple<ReferenceType, ResourceMapping, object> tuple = NullTuple;
+                            evaluation = intrinsic.Evaluate(templateObject.Template);
+                            referenceType = ReferenceType.DirectReference;
 
-                            switch (nestedIntrinsic)
+                            foreach (var nestedIntrinsic in subIntrinsic.ImplicitReferences)
                             {
-                                case RefIntrinsic refIntrinsic:
+                                Tuple<ReferenceType, ResourceMapping, object> tuple = NullTuple;
 
-                                    tuple = this.VisitRef(refIntrinsic);
-                                    break;
+                                switch (nestedIntrinsic)
+                                {
+                                    case RefIntrinsic refIntrinsic:
 
-                                case GetAttIntrinsic getAttIntrinsic:
+                                        tuple = this.VisitRef(refIntrinsic);
+                                        break;
 
-                                    tuple = this.VisitGetAtt(getAttIntrinsic, templateObject);
-                                    break;
+                                    case GetAttIntrinsic getAttIntrinsic:
+
+                                        tuple = this.VisitGetAtt(getAttIntrinsic, templateObject);
+                                        break;
+                                }
+
+                                if (!tuple.Equals(NullTuple))
+                                {
+                                    nestedIntrinsics.Add(
+                                        new IntrinsicInfo(
+                                            path,
+                                            (IIntrinsic)nestedIntrinsic,
+                                            tuple.Item1,
+                                            tuple.Item2,
+                                            tuple.Item3));
+                                }
                             }
 
-                            if (!tuple.Equals(NullTuple))
+                            foreach (var kvp in subIntrinsic.Substitutions)
                             {
-                                nestedIntrinsics.Add(new IntrinsicInfo(path, (IIntrinsic)nestedIntrinsic, tuple.Item1, tuple.Item2, tuple.Item3));
-                            }
-                        }
+                                Tuple<ReferenceType, ResourceMapping, object> tuple = NullTuple;
 
-                        foreach (var kvp in subIntrinsic.Substitutions)
-                        {
-                            Tuple<ReferenceType, ResourceMapping, object> tuple = NullTuple;
+                                switch (kvp.Value)
+                                {
+                                    case RefIntrinsic refIntrinsic:
 
-                            switch (kvp.Value)
-                            {
-                                case RefIntrinsic refIntrinsic:
+                                        tuple = this.VisitRef(refIntrinsic);
+                                        break;
 
-                                    tuple = this.VisitRef(refIntrinsic);
-                                    break;
+                                    case GetAttIntrinsic getAttIntrinsic:
 
-                                case GetAttIntrinsic getAttIntrinsic:
+                                        tuple = this.VisitGetAtt(getAttIntrinsic, templateObject);
+                                        break;
 
-                                    tuple = this.VisitGetAtt(getAttIntrinsic, templateObject);
-                                    break;
+                                    case FindInMapIntrinsic findInMapIntrinsic:
 
-                                case FindInMapIntrinsic findInMapIntrinsic:
+                                        tuple = new Tuple<ReferenceType, ResourceMapping, object>(
+                                            ReferenceType.DirectReference,
+                                            null,
+                                            findInMapIntrinsic.Evaluate(templateObject.Template));
+                                        break;
+                                }
 
-                                    tuple = new Tuple<ReferenceType, ResourceMapping, object>(
-                                        ReferenceType.DirectReference,
-                                        null,
-                                        findInMapIntrinsic.Evaluate(templateObject.Template));
-                                    break;
-                            }
-
-                            if (!tuple.Equals(NullTuple))
-                            {
-                                nestedIntrinsics.Add(new IntrinsicInfo(path, (IIntrinsic)kvp.Value, tuple.Item1, tuple.Item2, tuple.Item3, kvp.Key));
+                                if (!tuple.Equals(NullTuple))
+                                {
+                                    nestedIntrinsics.Add(
+                                        new IntrinsicInfo(
+                                            path,
+                                            (IIntrinsic)kvp.Value,
+                                            tuple.Item1,
+                                            tuple.Item2,
+                                            tuple.Item3,
+                                            kvp.Key));
+                                }
                             }
                         }
 
                         recurseIntrinsic = false;
                         break;
+
+                    case JoinIntrinsic joinIntrinsic:
+                        {
+                            evaluation = intrinsic.Evaluate(templateObject.Template);
+                            referenceType = ReferenceType.DirectReference;
+
+                            foreach (var nestedIntrinsic in joinIntrinsic.Items.Where(i => i is IIntrinsic).Cast<IIntrinsic>())
+                            {
+                                Tuple<ReferenceType, ResourceMapping, object> tuple = NullTuple;
+
+                                switch (nestedIntrinsic)
+                                {
+                                    case RefIntrinsic refIntrinsic:
+
+                                        tuple = this.VisitRef(refIntrinsic);
+                                        break;
+
+                                    case GetAttIntrinsic getAttIntrinsic:
+
+                                        tuple = this.VisitGetAtt(getAttIntrinsic, templateObject);
+                                        break;
+
+                                    case FindInMapIntrinsic findInMapIntrinsic:
+
+                                        tuple = new Tuple<ReferenceType, ResourceMapping, object>(
+                                            ReferenceType.DirectReference,
+                                            null,
+                                            findInMapIntrinsic.Evaluate(templateObject.Template));
+                                        break;
+                                }
+
+                                if (!tuple.Equals(NullTuple))
+                                {
+                                    nestedIntrinsics.Add(
+                                        new IntrinsicInfo(
+                                            path,
+                                            nestedIntrinsic,
+                                            tuple.Item1,
+                                            tuple.Item2,
+                                            tuple.Item3));
+                                }
+                            }
+
+                            recurseIntrinsic = false;
+                            break;
+                        }
 
                     default:
 
