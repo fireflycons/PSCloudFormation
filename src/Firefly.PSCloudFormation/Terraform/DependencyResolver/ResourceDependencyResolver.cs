@@ -58,29 +58,36 @@
             var dependencyContext = new TerraformAttributeSetterContext(
                 intrinsicVisitor.ReferenceLocations,
                 this.template,
-                false);
+                terraformStateFileResource);
+
             terraformStateFileResource.StateFileResourceInstance.Attributes.Accept(
                 new TerraformAttributeSetterVisitor(),
                 dependencyContext);
 
             // For each found modification, update attribute value with JSON encoded reference expression.
-            foreach (var mod in dependencyContext.Modifications.Where(m => m.NewReference != null))
+            foreach (var mod in dependencyContext.Modifications.Where(
+                m => (m.Type == StateModificationType.DirectReference && m.Reference != null)
+                     || (m.Type == StateModificationType.Interpolated && m.Interpolation != null)))
             {
+                var newValue = mod.Type == StateModificationType.DirectReference
+                                   ? (JToken)mod.Reference.ToJConstructor()
+                                   : mod.Interpolation;
+
                 if (mod.ContainingProperty == null)
                 {
                     // Normal resource attribute
-                    var token =
-                        terraformStateFileResource.StateFileResourceInstance.Attributes.SelectToken(mod.Json.Path);
+                    var token = terraformStateFileResource.StateFileResourceInstance.Attributes.SelectToken(
+                        mod.ValueToReplace.Path);
                     switch (token.Parent)
                     {
                         case JProperty jp:
 
-                            jp.Value = mod.NewReference.ToJConstructor();
+                            jp.Value = newValue;
                             break;
 
                         case JArray ja:
 
-                            ja[mod.Index] = mod.NewReference.ToJConstructor();
+                            ja[mod.Index] = newValue;
                             break;
                     }
                 }
@@ -95,18 +102,18 @@
                         "Unknown",
                         out JContainer document);
 
-                    var token = document.SelectToken(mod.Json.Path);
+                    var token = document.SelectToken(mod.ValueToReplace.Path);
 
                     switch (token.Parent)
                     {
                         case JProperty jp:
 
-                            jp.Value = mod.NewReference.ToJConstructor();
+                            jp.Value = newValue;
                             break;
 
                         case JArray ja:
 
-                            ja[mod.Index] = mod.NewReference.ToJConstructor();
+                            ja[mod.Index] = newValue;
                             break;
                     }
 
