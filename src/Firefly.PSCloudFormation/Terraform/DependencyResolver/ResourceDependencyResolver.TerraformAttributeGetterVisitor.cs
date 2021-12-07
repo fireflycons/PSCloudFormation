@@ -83,7 +83,7 @@
         private class TerraformAttributeGetterVisitor : JsonVisitor<TerraformAttributeGetterContext>
         {
             /// <inheritdoc />
-            protected override void Visit(JProperty json, TerraformAttributeGetterContext context)
+            protected override void Visit(JProperty property, TerraformAttributeGetterContext context)
             {
                 if (context.Value != null)
                 {
@@ -91,23 +91,23 @@
                     return;
                 }
 
-                if (!context.AttributeNames.Contains(json.Name))
+                if (!context.AttributeNames.Contains(property.Name))
                 {
                     // No match
                     return;
                 }
 
-                if (json.Value is JArray)
+                if (property.Value is JArray)
                 {
-                    context.Value = json.Value;
+                    context.Value = property.Value;
                 }
 
-                if (!(json.Value is JValue jv))
+                if (!(property.Value is JValue jv))
                 {
                     return;
                 }
 
-                context.AttributeReference = json;
+                context.AttributeReference = property;
 
                 switch (jv.Type)
                 {
