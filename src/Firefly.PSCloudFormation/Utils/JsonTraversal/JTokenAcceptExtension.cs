@@ -10,8 +10,12 @@ namespace Firefly.PSCloudFormation.Utils.JsonTraversal
         /// <summary>
         /// Performs dispatch for the current token using the visitor's DoAccept method.
         /// </summary>
+        /// <typeparam name="T">Type of object being visited</typeparam>
+        /// <typeparam name="TVisitor">The type of the visitor.</typeparam>
+        /// <param name="self">The self.</param>
+        /// <param name="visitor">The visitor.</param>
         /// <returns>This JToken</returns>
-        public static T Accept<T, TVisitor>(this T self, TVisitor visitor) 
+        public static T Accept<T, TVisitor>(this T self, TVisitor visitor)
             where T : JToken where TVisitor : IJsonVisitor<NullJsonVisitorContext>
         {
             visitor.DoAccept(self, new NullJsonVisitorContext());
@@ -19,10 +23,15 @@ namespace Firefly.PSCloudFormation.Utils.JsonTraversal
         }
 
         /// <summary>
-        /// Performs dispatch for the current token using the visitor's DoAccept method.
+        /// Accepts the specified visitor.
         /// </summary>
+        /// <typeparam name="T">Type of object being visited</typeparam>
+        /// <typeparam name="TContext">The type of the context.</typeparam>
+        /// <param name="self">The self.</param>
+        /// <param name="visitor">The visitor.</param>
+        /// <param name="context">The context.</param>
         /// <returns>This JToken</returns>
-        public static T Accept<T, TContext>(this T self, IJsonVisitor<TContext> visitor, TContext context) 
+        public static T Accept<T, TContext>(this T self, IJsonVisitor<TContext> visitor, TContext context)
             where T : JToken where TContext : IJsonVisitorContext<TContext>
         {
             visitor.DoAccept(self, context);
