@@ -2,11 +2,13 @@
 {
     using System;
     using System.Collections.Generic;
+    using System.Diagnostics.CodeAnalysis;
     using System.Linq;
     using System.Text;
 
     using Firefly.CloudFormationParser;
     using Firefly.CloudFormationParser.Intrinsics;
+    using Firefly.CloudFormationParser.Intrinsics.Abstractions;
     using Firefly.CloudFormationParser.Intrinsics.Functions;
     using Firefly.PSCloudFormation.Terraform.Hcl;
     using Firefly.PSCloudFormation.Terraform.HclSerializer.Traits;
@@ -16,9 +18,14 @@
     /// <summary>
     /// Extension methods for CloudFormation intrinsics in <see href="https://fireflycons.github.io/Firefly.CloudFormationParser/api/Firefly.CloudFormationParser.Intrinsics.Functions.html">Firefly.CloudFormationParser</see>.
     /// </summary>
+    [SuppressMessage("StyleCop.CSharp.DocumentationRules", "SA1650:ElementDocumentationMustBeSpelledCorrectly", Justification = "Reviewed. Suppression is OK here.")]
+    // ReSharper disable once UnusedMember.Global
     internal static class IntrinsicExtensions
     {
-        private static readonly Dictionary<string, Reference> PseudoParmeterToDataBlock =
+        /// <summary>
+        /// Maps supported pseudo-parameters by name to <see cref="DataSourceReference"/>.
+        /// </summary>
+        private static readonly Dictionary<string, Reference> PseudoParameterToDataBlock =
             new Dictionary<string, Reference>
                 {
                     { "AWS::Region", new DataSourceReference("aws_region", "current", "name") },
@@ -26,7 +33,6 @@
                     { "AWS::Partition", new DataSourceReference("aws_partition", "partition", "partition") },
                     { "AWS::URLSuffix", new DataSourceReference("aws_partition", "url_suffix", "dns_suffix") }
                 };
-
 
         /// <summary>
         /// Renders this intrinsic to a <see cref="Reference"/> that can be embedded into the in-memory state file.
@@ -55,41 +61,63 @@
         /// <param name="index">The index to add as an indexer on the generated reference.</param>
         /// <returns>A <see cref="Reference"/> or <c>null</c> if a reference cannot be created.</returns>
         /// <exception cref="System.ArgumentNullException">self cannot be null</exception>
-        public static Reference Render(
-            this IIntrinsic self,
-            ITemplate template,
-            ResourceMapping resource,
-            int index)
+        public static Reference Render(this IIntrinsic self, ITemplate template, ResourceMapping resource, int index)
         {
             if (self == null)
             {
                 throw new ArgumentNullException(nameof(self));
             }
 
+            Reference reference;
+
             switch (self)
             {
                 case FindInMapIntrinsic findInMapIntrinsic:
 
-                    return Render(findInMapIntrinsic, template, resource, index);
+                    reference = Render(findInMapIntrinsic, template, resource, index);
+                    break;
 
                 case GetAZsIntrinsic getAZsIntrinsic:
 
-                    return Render(getAZsIntrinsic, template, resource, index);
+                    reference = Render(getAZsIntrinsic, index);
+                    break;
 
                 case RefIntrinsic refIntrinsic:
 
-                    return Render(refIntrinsic, template, resource, index);
+                    reference = Render(refIntrinsic, template, resource, index);
+                    break;
 
                 case SelectIntrinsic selectIntrinsic:
 
-                    return Render(selectIntrinsic, template, resource);
+                    reference = Render(selectIntrinsic, template, resource);
+                    break;
 
                 case GetAttIntrinsic getAttIntrinsic:
 
-                    return Render(getAttIntrinsic, template, resource);
+                    reference = Render(getAttIntrinsic, template, resource);
+                    break;
+
+                case JoinIntrinsic joinIntrinsic:
+
+                    reference = Render(joinIntrinsic, template, resource);
+                    break;
+
+                case SubIntrinsic subIntrinsic:
+
+                    reference = Render(subIntrinsic, template, resource);
+                    break;
+
+                default:
+
+                    throw new InvalidOperationException($"No renderer for '{self.TagName}'.");
             }
 
-            return null;
+            if (reference != null)
+            {
+                return reference;
+            }
+
+            throw new InvalidOperationException($"Failed rendering '{self.TagName}'.");
         }
 
         /// <summary>
@@ -111,7 +139,11 @@
             mapParts.Push("local");
             mapParts.Push("mappings");
 
-            foreach (var property in new[] { findInMapIntrinsic.MapName, findInMapIntrinsic.TopLevelKey, findInMapIntrinsic.SecondLevelKey })
+            foreach (var property in new[]
+                                         {
+                                             findInMapIntrinsic.MapName, findInMapIntrinsic.TopLevelKey,
+                                             findInMapIntrinsic.SecondLevelKey
+                                         })
             {
                 switch (property)
                 {
@@ -139,25 +171,46 @@
             return new MapReference(sb.ToString());
         }
 
+        /// <summary>
+        /// Renders the specified GetAZs intrinsic to a data source reference
+        /// </summary>
+        /// <param name="getAZsIntrinsic">The GetAZs intrinsic.</param>
+        /// <param name="index">The index.</param>
+        /// <returns>A <see cref="DataSourceReference"/> to <c>aws_availability_zones</c></returns>
         private static Reference Render(
             GetAZsIntrinsic getAZsIntrinsic,
-            ITemplate template,
-            ResourceMapping resource,
             int index)
         {
             // This is only going to work against the provider's region
             return new DataSourceReference("aws_availability_zones", "available", $"names[{index}]");
         }
 
-        private static Reference Render(RefIntrinsic refIntrinsic, ITemplate template, ResourceMapping resource, int index)
+        /// <summary>
+        /// Renders the specified reference intrinsic.
+        /// </summary>
+        /// <param name="refIntrinsic">The reference intrinsic.</param>
+        /// <param name="template">The template.</param>
+        /// <param name="resource">The resource.</param>
+        /// <param name="index">The index.</param>
+        /// <returns>A <see cref="Reference"/> derivative according to what is being referenced.</returns>
+        /// <exception cref="System.InvalidOperationException">
+        /// Pseudo parameter \"{pseudo}\" cannot be referenced by terraform.
+        /// or
+        /// Reference \"{refIntrinsic.Reference}\" cannot be resolved.
+        /// </exception>
+        private static Reference Render(
+            RefIntrinsic refIntrinsic,
+            ITemplate template,
+            ResourceMapping resource,
+            int index)
         {
             switch (refIntrinsic.Reference)
             {
                 case string pseudo when pseudo.StartsWith("AWS::"):
 
-                    if (PseudoParmeterToDataBlock.ContainsKey(pseudo))
+                    if (PseudoParameterToDataBlock.ContainsKey(pseudo))
                     {
-                        return PseudoParmeterToDataBlock[pseudo];
+                        return PseudoParameterToDataBlock[pseudo];
                     }
 
                     throw new InvalidOperationException(
@@ -188,30 +241,31 @@
             }
         }
 
+        /// <summary>
+        /// Renders the specified select intrinsic.
+        /// </summary>
+        /// <param name="selectIntrinsic">The select intrinsic.</param>
+        /// <param name="template">The template.</param>
+        /// <param name="resource">The resource.</param>
+        /// <returns>A <see cref="Reference"/> derivative according to what is being selected, with selection indexer.</returns>
         private static Reference Render(SelectIntrinsic selectIntrinsic, ITemplate template, ResourceMapping resource)
         {
             if (selectIntrinsic.Items.Count == 1 && selectIntrinsic.Items[0] is IIntrinsic intrinsic)
             {
-                switch (intrinsic)
-                {
-                    case RefIntrinsic refIntrinsic:
-
-                        return Render(refIntrinsic, template, resource, selectIntrinsic.Index);
-
-                    case GetAZsIntrinsic azsIntrinsic:
-
-                        return Render(azsIntrinsic, template, resource, selectIntrinsic.Index);
-
-                    case FindInMapIntrinsic findInMapIntrinsic:
-
-                        return Render(findInMapIntrinsic, template, resource, selectIntrinsic.Index);
-                }
+                return intrinsic.Render(template, resource, selectIntrinsic.Index);
             }
 
             return null;
         }
 
-        public static Reference Render(GetAttIntrinsic getAttIntrinsic, ITemplate template, ResourceMapping resource)
+        /// <summary>
+        /// Renders the specified GetAtt intrinsic.
+        /// </summary>
+        /// <param name="getAttIntrinsic">The GetAtt intrinsic.</param>
+        /// <param name="template">The template.</param>
+        /// <param name="resource">The resource.</param>
+        /// <returns>An <see cref="IndirectReference"/> to an attribute on another resource.</returns>
+        private static Reference Render(GetAttIntrinsic getAttIntrinsic, ITemplate template, ResourceMapping resource)
         {
             string attributeName;
 
@@ -242,6 +296,95 @@
             }
 
             return null;
+        }
+
+        /// <summary>
+        /// Renders the specified join intrinsic.
+        /// </summary>
+        /// <param name="joinIntrinsic">The join intrinsic.</param>
+        /// <param name="template">The template.</param>
+        /// <param name="resource">The resource.</param>
+        /// <returns>A <see cref="FunctionReference"/> to an HCL join() expression.</returns>
+        private static Reference Render(JoinIntrinsic joinIntrinsic, ITemplate template, ResourceMapping resource)
+        {
+            // Build up a join() function reference
+            var joinArguments = new List<object> { joinIntrinsic.Separator };
+            var joinList = new List<object>();
+
+            foreach (var item in joinIntrinsic.Items)
+            {
+                switch (item)
+                {
+                    case IIntrinsic nestedIntrinsic:
+
+                        joinList.Add(nestedIntrinsic.Render(template, resource).ToJConstructor());
+                        break;
+
+                    default:
+
+                        // join() is a string function - all args are therefore string
+                        joinList.Add(item.ToString());
+                        break;
+                }
+            }
+
+            joinArguments.Add(joinList);
+
+            return new FunctionReference("join", joinArguments);
+        }
+
+        /// <summary>
+        /// Renders the specified sub intrinsic.
+        /// </summary>
+        /// <param name="subIntrinsic">The sub intrinsic.</param>
+        /// <param name="template">The template.</param>
+        /// <param name="resource">The resource.</param>
+        /// <returns>A <see cref="InterpolationReference"/> for the interpolated string to insert.</returns>
+        private static Reference Render(SubIntrinsic subIntrinsic, ITemplate template, ResourceMapping resource)
+        {
+            // Build up an interpolated string as the replacement
+            // Start with the !Sub intrinsic expression.
+            var expression = subIntrinsic.Expression;
+
+            var replacements = new Dictionary<string, string>();
+
+            // Go through any intrinsics associated with this !Sub
+            foreach (var nestedIntrinsic in subIntrinsic.ImplicitReferences.Cast<IReferenceIntrinsic>())
+            {
+                // Try to render to an HCL expression
+                var reference = nestedIntrinsic.Render(template, resource);
+
+                if (reference == null)
+                {
+                    return null;
+                }
+
+                replacements.Add(nestedIntrinsic.ReferencedObject(template), reference.ReferenceExpression);
+            }
+
+            foreach (var substitution in subIntrinsic.Substitutions)
+            {
+                string replacement;
+
+                if (substitution.Value is IIntrinsic intrinsic)
+                {
+                    replacement = intrinsic.Render(template, resource).ReferenceExpression;
+                }
+                else
+                {
+                    replacement = substitution.Value.ToString();
+                }
+
+                replacements.Add(substitution.Key, replacement);
+            }
+
+            foreach (var replacement in replacements)
+            {
+                expression = expression.Replace($"${{{replacement.Key}}}", $"${{{replacement.Value}}}");
+            }
+
+            // Add interpolation modification.
+            return new InterpolationReference(expression);
         }
     }
 }

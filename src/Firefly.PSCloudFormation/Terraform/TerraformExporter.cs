@@ -123,7 +123,7 @@
                 // Copy of the state file that we will insert references to inputs, other resources etc. before serialization to HCL.
                 var stateFile = JsonConvert.DeserializeObject<StateFile>(File.ReadAllText(StateFileName));
 
-                warningCount += new HclWriter(this.settings, this.logger).Serialize(
+                warningCount += new HclWriter(this.settings, this.logger, this.warnings).Serialize(
                     stateFile,
                     importedResources,
                     parameters);
@@ -132,12 +132,14 @@
             }
             catch (TerraformRunnerException e)
             {
+                // Errors already reported by output of terraform
                 terraformExecutionErrorCount += e.Errors;
                 warningCount += e.Warnings;
                 throw;
             }
-            catch (HclSerializerException)
+            catch (HclSerializerException e)
             {
+                this.errors.Add(e.Message);
                 throw;
             }
             catch (Exception e)
@@ -273,7 +275,7 @@
 
             foreach (var error in this.errors)
             {
-                this.logger.LogError(error);
+                this.logger.LogError(error.StartsWith("Error:", StringComparison.OrdinalIgnoreCase) ? error : $"ERROR: {error}");
             }
 
             foreach (var warning in this.warnings)

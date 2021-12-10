@@ -1,6 +1,5 @@
 ﻿namespace Firefly.PSCloudFormation.Terraform.DependencyResolver
 {
-    using System.Collections;
     using System.Collections.Generic;
     using System.Linq;
 
@@ -54,14 +53,6 @@
             /// Reference to the located attribute if found, else <c>null</c>.
             /// </value>
             public JProperty AttributeReference { get; set; }
-
-            /// <summary>
-            /// Gets a value indicating whether the attribute value is scalar.
-            /// </summary>
-            /// <value>
-            ///   <c>true</c> if this instance is scalar; otherwise, <c>false</c>.
-            /// </value>
-            public bool IsScalar => this.Value == null || this.Value is string || !(this.Value is IEnumerable);
 
             /// <inheritdoc />
             public TerraformAttributeGetterContext Next(int index)

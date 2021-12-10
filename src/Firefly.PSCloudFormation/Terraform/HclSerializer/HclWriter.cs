@@ -5,7 +5,6 @@
     using System.Linq;
     using System.Reflection;
     using System.Text;
-    using System.Threading;
 
     using Firefly.CloudFormation;
     using Firefly.CloudFormationParser.Intrinsics.Functions;
@@ -58,6 +57,11 @@
         private readonly ITerraformSettings settings;
 
         /// <summary>
+        /// The warning list
+        /// </summary>
+        private readonly IList<string> warnings;
+
+        /// <summary>
         /// Initializes static members of the <see cref="HclWriter"/> class.
         /// </summary>
         static HclWriter()
@@ -71,8 +75,10 @@
         /// </summary>
         /// <param name="settings">The settings.</param>
         /// <param name="logger">The logger.</param>
-        public HclWriter(ITerraformSettings settings, ILogger logger)
+        /// <param name="warnings"></param>
+        public HclWriter(ITerraformSettings settings, ILogger logger, IList<string> warnings)
         {
+            this.warnings = warnings;
             this.logger = logger;
             this.settings = settings;
         }
@@ -185,7 +191,7 @@
         {
             this.logger.LogInformation("\nResolving dependencies between resources...");
 
-            var resolver = new ResourceDependencyResolver(this.settings.Resources, stateFile.Resources, parameters);
+            var resolver = new ResourceDependencyResolver(this.settings.Resources, stateFile.Resources, parameters, this.warnings);
 
             foreach (var tfr in importedResources)
             {

@@ -1,21 +1,24 @@
 ﻿namespace Firefly.PSCloudFormation.Terraform.DependencyResolver
 {
     using System;
-    using System.Collections;
     using System.Collections.Generic;
     using System.Diagnostics;
     using System.Linq;
 
-    using Firefly.CloudFormationParser.GraphObjects;
+    using Firefly.CloudFormationParser;
     using Firefly.CloudFormationParser.Intrinsics;
     using Firefly.CloudFormationParser.Intrinsics.Functions;
-    using Firefly.CloudFormationParser.TemplateObjects;
+    using Firefly.CloudFormationParser.TemplateObjects.Traversal;
     using Firefly.CloudFormationParser.Utils;
     using Firefly.PSCloudFormation.Terraform.Hcl;
     using Firefly.PSCloudFormation.Terraform.HclSerializer.Traits;
     using Firefly.PSCloudFormation.Terraform.State;
     using Firefly.PSCloudFormation.Utils.JsonTraversal;
 
+    /// <content>
+    /// This part handles a visit to the parsed CloudFormation resource, gathering intrinsic functions
+    /// that need to be expressed in HCL as functions or references.
+    /// </content>
     internal partial class ResourceDependencyResolver
     {
         /// <summary>
@@ -29,61 +32,19 @@
             /// </summary>
             /// <param name="propertyPath">The property path.</param>
             /// <param name="intrinsic">The intrinsic.</param>
-            /// <param name="referenceType">Type of reference</param>
             /// <param name="resourceMapping">Summary info of the resource targeted by this intrinsic.</param>
             /// <param name="evaluation">The evaluation.</param>
-            /// <param name="substitutionName">substitution key where this object represents a key value pair in a <c>!Sub</c>.</param>
             public IntrinsicInfo(
                 PropertyPath propertyPath,
                 IIntrinsic intrinsic,
-                ReferenceType referenceType,
                 ResourceMapping resourceMapping,
-                object evaluation,
-                string substitutionName)
+                object evaluation)
             {
                 this.TargetResource = resourceMapping;
                 this.Intrinsic = intrinsic;
                 this.PropertyPath = propertyPath.Clone();
                 this.Evaluation = evaluation;
-                this.ReferenceType = referenceType;
-                this.IsScalar = evaluation is string || !(evaluation is IEnumerable);
-                this.SubstitutionName = substitutionName;
             }
-
-            /// <summary>
-            /// Initializes a new instance of the <see cref="IntrinsicInfo"/> class.
-            /// </summary>
-            /// <param name="propertyPath">The property path.</param>
-            /// <param name="intrinsic">The intrinsic.</param>
-            /// <param name="referenceType">Type of reference</param>
-            /// <param name="resourceMapping">Summary info of the resource targeted by this intrinsic.</param>
-            /// <param name="evaluation">The evaluation.</param>
-            /// <param name="nestedIntrinsics">For <c>!Sub</c> or <c>!Join</c>, a list of intrinsic nested within.</param>
-            public IntrinsicInfo(
-                PropertyPath propertyPath,
-                IIntrinsic intrinsic,
-                ReferenceType referenceType,
-                ResourceMapping resourceMapping,
-                object evaluation,
-                IList<IntrinsicInfo> nestedIntrinsics = null)
-            {
-                this.TargetResource = resourceMapping;
-                this.Intrinsic = intrinsic;
-                this.PropertyPath = propertyPath.Clone();
-                this.Evaluation = evaluation;
-                this.ReferenceType = referenceType;
-                this.IsScalar = evaluation is string || !(evaluation is IEnumerable);
-                this.NestedIntrinsics = nestedIntrinsics;
-            }
-
-            /// <summary>
-            /// Gets the substitution key where this object represents
-            /// a key value pair in a !Sub.
-            /// </summary>
-            /// <value>
-            /// The name of the substitution.
-            /// </value>
-            public string SubstitutionName { get; }
 
             /// <summary>
             /// Gets the evaluation.
@@ -94,14 +55,6 @@
             public object Evaluation { get; }
 
             /// <summary>
-            /// Gets the summary info of the resource targeted by this intrinsic.
-            /// </summary>
-            /// <value>
-            /// The targeted resource. Will be <c>null</c> when reference is not to a resource.
-            /// </value>
-            public ResourceMapping TargetResource { get; }
-
-            /// <summary>
             /// Gets the intrinsic.
             /// </summary>
             /// <value>
@@ -110,36 +63,13 @@
             public IIntrinsic Intrinsic { get; }
 
             /// <summary>
-            /// Gets the list of nested intrinsic for <c>!Sub</c> or <c>!Join</c>.
+            /// Gets the list of nested intrinsic
             /// </summary>
             /// <value>
             /// The list of nested intrinsic.
             /// </value>
-            public IList<IntrinsicInfo> NestedIntrinsics { get; }
-
-            /// <summary>
-            /// Gets a value indicating whether this instance is scalar.
-            /// </summary>
-            /// <value>
-            ///   <c>true</c> if this instance is scalar; otherwise, <c>false</c>.
-            /// </value>
-            public bool IsScalar { get; }
-            
-            /// <summary>
-            /// Gets a value indicating whether this intrinsic is within an inline policy document.
-            /// </summary>
-            /// <value>
-            ///   <c>true</c> if this instance is an inline policy; otherwise, <c>false</c>.
-            /// </value>
-            public bool IsInlinePolicy => this.PropertyPath.Contains("PolicyDocument");
-
-            /// <summary>
-            /// Gets a value indicating whether this intrinsic is within an assume role policy.
-            /// </summary>
-            /// <value>
-            ///   <c>true</c> if this instance is assume role policy; otherwise, <c>false</c>.
-            /// </value>
-            public bool IsAssumeRolePolicy => this.PropertyPath.Contains("AssumeRolePolicyDocument");
+            // ReSharper disable once CollectionNeverQueried.Local - Really only here for use when debugging to see what was read.
+            public IList<IntrinsicInfo> NestedIntrinsics { get; } = new List<IntrinsicInfo>();
 
             /// <summary>
             /// Gets the property path.
@@ -150,53 +80,106 @@
             public PropertyPath PropertyPath { get; }
 
             /// <summary>
-            /// Gets the type of the reference.
+            /// Gets the summary info of the resource targeted by this intrinsic.
             /// </summary>
             /// <value>
-            /// The type of the reference.
+            /// The targeted resource. Will be <c>null</c> when reference is not to a resource.
             /// </value>
-            public ReferenceType ReferenceType { get; }
+            public ResourceMapping TargetResource { get; }
         }
 
         /// <summary>
-        /// Visits the properties opf a CloudFormation resource extracting intrinsics
+        /// Visits the properties of a CloudFormation resource extracting intrinsic functions
         /// we need for dependency resolution
         /// </summary>
-        /// <seealso cref="Firefly.CloudFormationParser.TemplateObjects.TemplateObjectVisitor" />
-        private class IntrinsicVisitor : TemplateObjectVisitor
+        /// <seealso cref="TemplateObjectVisitor{TContext}" />
+        private class IntrinsicVisitor : TemplateObjectVisitor<IntrinsicVisitorContext>
         {
-            private static readonly Tuple<ReferenceType, ResourceMapping, object> NullTuple =
-                new Tuple<ReferenceType, ResourceMapping, object>(ReferenceType.DependsOn, null, null);
-
-            /// <summary>
-            /// All CloudFormation resources read from stack
-            /// </summary>
-            private readonly IReadOnlyCollection<CloudFormationResource> cloudFormationResources;
-
-            /// <summary>
-            /// All current CloudFormation parameters with values expressed as terraform input variables.
-            /// </summary>
-            private readonly IReadOnlyCollection<InputVariable> inputs;
-
-            /// <summary>
-            /// All terraform resources read from state file
-            /// </summary>
-            private readonly IReadOnlyCollection<StateFileResourceDeclaration> terraformResources;
-
             /// <summary>
             /// Initializes a new instance of the <see cref="IntrinsicVisitor"/> class.
             /// </summary>
-            /// <param name="cloudFormationResources">The cloud formation resources.</param>
-            /// <param name="terraformResources">The terraform resources.</param>
-            /// <param name="inputs">The inputs.</param>
-            public IntrinsicVisitor(
+            /// <param name="template">The parsed CloudFormation template.</param>
+            public IntrinsicVisitor(ITemplate template)
+                : base(template)
+            {
+            }
+
+            /// <summary>
+            /// Visits the specified intrinsic and dispatches to visit handler for each distinct subclass of <see cref="T:Firefly.CloudFormationParser.Intrinsics.IIntrinsic" />.
+            /// </summary>
+            /// <param name="intrinsic">The intrinsic.</param>
+            /// <param name="context">The context.</param>
+            protected override void Visit(IIntrinsic intrinsic, IntrinsicVisitorContext context)
+            {
+                context.EnterIntrinsic(intrinsic, this.Path);
+                base.Visit(intrinsic, context);
+                context.ExitIntrinsic();
+            }
+        }
+
+        /// <summary>
+        /// Context object used when visiting a CloudFormation resource
+        /// </summary>
+        private class IntrinsicVisitorContext : ITemplateObjectVisitorContext<IntrinsicVisitorContext>
+        {
+            /// <summary>
+            /// Reference to the current cloud formation resource being visited.
+            /// </summary>
+            private readonly CloudFormationResource currentCloudFormationResource;
+
+            /// <summary>
+            /// Stack associated with <see cref="currentIntrinsicInfo"/>
+            /// </summary>
+            private readonly Stack<IntrinsicInfo> intrinsicInfos = new Stack<IntrinsicInfo>();
+
+            /// <summary>
+            /// Reference to parsed CLoudFormation template.
+            /// </summary>
+            private readonly ITemplate template;
+
+            /// <summary>
+            /// Reference to the exporter's warnings collection so warnings can be added to it.
+            /// </summary>
+            private readonly IList<string> warnings;
+
+            /// <summary>
+            /// The intrinsic whose properties are currently being examined
+            /// </summary>
+            private IntrinsicInfo currentIntrinsicInfo;
+
+            /// <summary>
+            /// Stores any <see cref="DependencyResolutionWarning"/> that may be thrown from inside a recursion of an intrinsic.
+            /// When the recursion ends, this indicates not to store information about the parent intrinsic and to warn the user
+            /// that a reference cannot be generated. 
+            /// </summary>
+            private DependencyResolutionWarning lastWarning;
+
+            /// <summary>
+            /// Path within CloudFormation resource of the parent intrinsic of a set of nested intrinsic.
+            /// </summary>
+            private PropertyPath parentIntrinsicPath;
+
+            /// <summary>
+            /// Initializes a new instance of the <see cref="IntrinsicVisitorContext"/> class.
+            /// </summary>
+            /// <param name="cloudFormationResources">All parsed CloudFormation resources.</param>
+            /// <param name="terraformResources">All imported terraform resources.</param>
+            /// <param name="inputs">All generated input variables.</param>
+            /// <param name="resource">The CLoudFormation resource being visited.</param>
+            /// <param name="warnings">The warnings collection.</param>
+            public IntrinsicVisitorContext(
                 IReadOnlyCollection<CloudFormationResource> cloudFormationResources,
                 IReadOnlyCollection<StateFileResourceDeclaration> terraformResources,
-                IReadOnlyCollection<InputVariable> inputs)
+                IReadOnlyCollection<InputVariable> inputs,
+                CloudFormationResource resource,
+                IList<string> warnings)
             {
-                this.cloudFormationResources = cloudFormationResources;
-                this.terraformResources = terraformResources;
-                this.inputs = inputs;
+                this.currentCloudFormationResource = resource;
+                this.warnings = warnings;
+                this.CloudFormationResources = cloudFormationResources;
+                this.TerraformResources = terraformResources;
+                this.Inputs = inputs;
+                this.template = cloudFormationResources.First().TemplateResource.Template;
             }
 
             /// <summary>
@@ -208,266 +191,183 @@
             public List<IntrinsicInfo> ReferenceLocations { get; } = new List<IntrinsicInfo>();
 
             /// <summary>
-            /// Called when an intrinsic is located in the resource properties.
-            /// Builds a description of the intrinsic needed to generate <see cref="StateModification"/> data.
+            /// Gets all CloudFormation resources read from stack
             /// </summary>
-            /// <param name="templateObject">The template object being walked (i.e. IResource)</param>
-            /// <param name="path">Current path within properties.</param>
-            /// <param name="intrinsic">Intrinsic to inspect.</param>
-            /// <returns><c>true</c> if visit should continue within this intrinsic; else <c>false</c></returns>
-            public override bool VisitIntrinsic(ITemplateObject templateObject, PropertyPath path, IIntrinsic intrinsic)
+            private IReadOnlyCollection<CloudFormationResource> CloudFormationResources { get; }
+
+            /// <summary>
+            /// Gets all current CloudFormation parameters with values expressed as terraform input variables.
+            /// </summary>
+            private IReadOnlyCollection<InputVariable> Inputs { get; }
+
+            /// <summary>
+            /// Gets all terraform resources read from state file
+            /// </summary>
+            private IReadOnlyCollection<StateFileResourceDeclaration> TerraformResources { get; }
+
+            /// <summary>
+            /// Begin processing an intrinsic.
+            /// </summary>
+            /// <param name="intrinsic">The intrinsic.</param>
+            /// <param name="currentPath">The current path.</param>
+            public void EnterIntrinsic(IIntrinsic intrinsic, PropertyPath currentPath)
             {
-                var recurseIntrinsic = true;
-                object evaluation;
-                var nestedIntrinsics = new List<IntrinsicInfo>();
-                ReferenceType referenceType;
-                ResourceMapping targetResourceSummary = null;
-
-                switch (intrinsic)
+                if (this.lastWarning != null || intrinsic is IfIntrinsic)
                 {
-                    case IfIntrinsic _:
+                    // Follow the branch as evaluated by prevailing conditions and pretend it doesn't exist.
+                    // TODO: Probably ought to process both sides and generate conditional logic.
+                    return;
+                }
 
-                        // Not parsing through conditions at this time
-                        // We just take the branch that was selected when the CF was applied.
-                        return true;
+                var clonedPath = currentPath.Clone();
 
-                    case RefIntrinsic refIntrinsic:
-                        {
-                            var tuple = this.VisitRef(refIntrinsic);
+                try
+                {
+                    if (this.parentIntrinsicPath == null)
+                    {
+                        // This is a "top level" intrinsic associated directly with a resource attribute.
+                        this.intrinsicInfos.Push(this.currentIntrinsicInfo);
+                        this.parentIntrinsicPath = clonedPath;
+                        this.currentIntrinsicInfo = this.GetIntrinsicInfo(intrinsic, currentPath);
+                    }
+                    else
+                    {
+                        var intrinsicInfo = this.GetIntrinsicInfo(intrinsic, currentPath);
+                        this.currentIntrinsicInfo.NestedIntrinsics.Add(intrinsicInfo);
 
-                            if (tuple.Equals(NullTuple))
-                            {
-                                return false;
-                            }
+                        // We have descended the graph to member intrinsic
+                        this.intrinsicInfos.Push(this.currentIntrinsicInfo);
+                        this.currentIntrinsicInfo = intrinsicInfo;
+                    }
+                }
+                catch (DependencyResolutionWarning w)
+                {
+                    this.lastWarning = w;
+                }
+            }
 
-                            (referenceType, targetResourceSummary, evaluation) = tuple;
-                            break;
-                        }
+            /// <summary>
+            /// End processing an intrinsic.
+            /// </summary>
+            public void ExitIntrinsic()
+            {
+                var lastIntrinsicInfo = this.currentIntrinsicInfo;
 
-                    case GetAttIntrinsic getAttIntrinsic:
-                        {
-                            var tuple = this.VisitGetAtt(getAttIntrinsic, templateObject);
+                this.currentIntrinsicInfo = this.intrinsicInfos.Pop();
 
-                            if (tuple.Equals(NullTuple))
-                            {
-                                return false;
-                            }
+                if (this.currentIntrinsicInfo != null)
+                {
+                    return;
+                }
 
-                            (referenceType, targetResourceSummary, evaluation) = tuple;
-                            break;
-                        }
+                // Recursion has returned to the "top level" intrinsic, so store it.
+                if (this.lastWarning == null)
+                {
+                    this.ReferenceLocations.Add(lastIntrinsicInfo);
+                }
+                else
+                {
+                    // Process the warning
+                    this.warnings.Add(this.lastWarning.Message);
+                    this.lastWarning = null;
+                }
 
-                    case SubIntrinsic subIntrinsic:
-                        {
-                            evaluation = intrinsic.Evaluate(templateObject.Template);
-                            referenceType = ReferenceType.DirectReference;
+                this.parentIntrinsicPath = null;
+            }
 
-                            foreach (var nestedIntrinsic in subIntrinsic.ImplicitReferences)
-                            {
-                                Tuple<ReferenceType, ResourceMapping, object> tuple = NullTuple;
+            /// <summary>
+            /// Gets the next context for an item in a list.
+            /// </summary>
+            /// <param name="index">Index in current list</param>
+            /// <returns>
+            /// Current or new context.
+            /// </returns>
+            public IntrinsicVisitorContext Next(int index)
+            {
+                return this;
+            }
 
-                                switch (nestedIntrinsic)
-                                {
-                                    case RefIntrinsic refIntrinsic:
+            /// <summary>
+            /// Gets the next context for an entry in a dictionary
+            /// </summary>
+            /// <param name="name">Name of property.</param>
+            /// <returns>
+            /// Current or new context.
+            /// </returns>
+            public IntrinsicVisitorContext Next(string name)
+            {
+                return this;
+            }
 
-                                        tuple = this.VisitRef(refIntrinsic);
-                                        break;
+            /// <summary>
+            /// Gets the related information required to create <see cref="Reference"/> objects from the specified intrinsic.
+            /// </summary>
+            /// <param name="intrinsic">The intrinsic.</param>
+            /// <param name="currentPath">Location within CloudFormation resource of this intrinsic</param>
+            /// <returns>An <see cref="IntrinsicInfo"/> object.</returns>
+            /// <exception cref="Amazon.CloudFormation.Model.InvalidOperationException">Can't currently describe {intrinsic.TagName}</exception>
+            private IntrinsicInfo GetIntrinsicInfo(IIntrinsic intrinsic, PropertyPath currentPath)
+            {
+                switch (intrinsic.Type)
+                {
+                    case IntrinsicType.Ref:
 
-                                    case GetAttIntrinsic getAttIntrinsic:
+                        return this.ProcessRef((RefIntrinsic)intrinsic, currentPath);
 
-                                        tuple = this.VisitGetAtt(getAttIntrinsic, templateObject);
-                                        break;
-                                }
+                    case IntrinsicType.GetAtt:
 
-                                if (!tuple.Equals(NullTuple))
-                                {
-                                    nestedIntrinsics.Add(
-                                        new IntrinsicInfo(
-                                            path,
-                                            (IIntrinsic)nestedIntrinsic,
-                                            tuple.Item1,
-                                            tuple.Item2,
-                                            tuple.Item3));
-                                }
-                            }
+                        return this.ProcessGetAtt((GetAttIntrinsic)intrinsic, currentPath);
 
-                            foreach (var kvp in subIntrinsic.Substitutions)
-                            {
-                                Tuple<ReferenceType, ResourceMapping, object> tuple = NullTuple;
+                    case IntrinsicType.FindInMap:
+                    case IntrinsicType.Join:
+                    case IntrinsicType.Select:
+                    case IntrinsicType.Sub:
 
-                                switch (kvp.Value)
-                                {
-                                    case RefIntrinsic refIntrinsic:
-
-                                        tuple = this.VisitRef(refIntrinsic);
-                                        break;
-
-                                    case GetAttIntrinsic getAttIntrinsic:
-
-                                        tuple = this.VisitGetAtt(getAttIntrinsic, templateObject);
-                                        break;
-
-                                    case FindInMapIntrinsic findInMapIntrinsic:
-
-                                        tuple = new Tuple<ReferenceType, ResourceMapping, object>(
-                                            ReferenceType.DirectReference,
-                                            null,
-                                            findInMapIntrinsic.Evaluate(templateObject.Template));
-                                        break;
-                                }
-
-                                if (!tuple.Equals(NullTuple))
-                                {
-                                    nestedIntrinsics.Add(
-                                        new IntrinsicInfo(
-                                            path,
-                                            (IIntrinsic)kvp.Value,
-                                            tuple.Item1,
-                                            tuple.Item2,
-                                            tuple.Item3,
-                                            kvp.Key));
-                                }
-                            }
-                        }
-
-                        recurseIntrinsic = false;
-                        break;
-
-                    case JoinIntrinsic joinIntrinsic:
-                        {
-                            evaluation = intrinsic.Evaluate(templateObject.Template);
-                            referenceType = ReferenceType.DirectReference;
-
-                            foreach (var nestedIntrinsic in joinIntrinsic.Items.Where(i => i is IIntrinsic).Cast<IIntrinsic>())
-                            {
-                                Tuple<ReferenceType, ResourceMapping, object> tuple = NullTuple;
-
-                                switch (nestedIntrinsic)
-                                {
-                                    case RefIntrinsic refIntrinsic:
-
-                                        tuple = this.VisitRef(refIntrinsic);
-                                        break;
-
-                                    case GetAttIntrinsic getAttIntrinsic:
-
-                                        tuple = this.VisitGetAtt(getAttIntrinsic, templateObject);
-                                        break;
-
-                                    case FindInMapIntrinsic findInMapIntrinsic:
-
-                                        tuple = new Tuple<ReferenceType, ResourceMapping, object>(
-                                            ReferenceType.DirectReference,
-                                            null,
-                                            findInMapIntrinsic.Evaluate(templateObject.Template));
-                                        break;
-                                }
-
-                                if (!tuple.Equals(NullTuple))
-                                {
-                                    nestedIntrinsics.Add(
-                                        new IntrinsicInfo(
-                                            path,
-                                            nestedIntrinsic,
-                                            tuple.Item1,
-                                            tuple.Item2,
-                                            tuple.Item3));
-                                }
-                            }
-
-                            recurseIntrinsic = false;
-                            break;
-                        }
+                        return new IntrinsicInfo(
+                            currentPath.Clone(),
+                            intrinsic,
+                            null,
+                            intrinsic.Evaluate(this.template));
 
                     default:
 
-                        evaluation = intrinsic.Evaluate(templateObject.Template);
-                        referenceType = ReferenceType.DirectReference;
-                        break;
+                        throw new UnreferenceableIntrinsicWarning(
+                            intrinsic,
+                            this.currentCloudFormationResource,
+                            currentPath);
                 }
-
-                this.ReferenceLocations.Add(
-                    new IntrinsicInfo(path, intrinsic, referenceType, targetResourceSummary, evaluation, nestedIntrinsics));
-
-                return recurseIntrinsic;
             }
 
-            private Tuple<ReferenceType, ResourceMapping, object> VisitRef(
-                RefIntrinsic refIntrinsic)
-            {
-                ReferenceType referenceType;
-                object evaluation;
-                var target = refIntrinsic.Reference;
-
-                var param = this.inputs.FirstOrDefault(i => i.Name == target);
-
-                if (param != null)
-                {
-                    evaluation = param.IsScalar ? (object)param.ScalarIdentity : param.ListIdentity;
-                    referenceType = ReferenceType.ParameterReference;
-                    return new Tuple<ReferenceType, ResourceMapping, object>(referenceType, null, evaluation);
-                }
-
-                if (target.StartsWith("AWS::"))
-                {
-                    // An unsupported AWS pseudo parameter like AWS::StackName etc.
-                    return NullTuple;
-                }
-
-                var cloudFormationResource =
-                    this.cloudFormationResources
-                        .Where(r => TerraformExporter.IgnoredResources.All(ir => ir != r.ResourceType))
-                        .FirstOrDefault(r => r.LogicalResourceId == target);
-
-                if (cloudFormationResource == null)
-                {
-                    // If not found, then reference is to a resource that couldn't be imported eg. a custom resource
-                    // or a known unsupported type.
-                    return NullTuple;
-                }
-
-                referenceType = ReferenceType.DirectReference;
-
-
-                var targetResourceSummary = new ResourceMapping
-                                                {
-                                                    AwsType = cloudFormationResource.ResourceType,
-                                                    LogicalId = cloudFormationResource.LogicalResourceId,
-                                                    PhysicalId = cloudFormationResource.PhysicalResourceId,
-                                                    TerraformType = this.terraformResources.First(
-                                                        tr => tr.Name == cloudFormationResource
-                                                                  .LogicalResourceId).Type
-                                                };
-
-                evaluation = cloudFormationResource.PhysicalResourceId;
-
-                return new Tuple<ReferenceType, ResourceMapping, object>(referenceType, targetResourceSummary, evaluation);
-            }
-
-            private Tuple<ReferenceType, ResourceMapping, object> VisitGetAtt(
-                GetAttIntrinsic getAttIntrinsic,
-                ITemplateObject templateObject)
+            /// <summary>
+            /// Creates an <see cref="IntrinsicInfo"/> for a GetAtt intrinsic.
+            /// </summary>
+            /// <param name="getAttIntrinsic">The GetAtt intrinsic.</param>
+            /// <param name="currentPath">The current path.</param>
+            /// <returns>An <see cref="IntrinsicInfo"/></returns>
+            private IntrinsicInfo ProcessGetAtt(GetAttIntrinsic getAttIntrinsic, PropertyPath currentPath)
             {
                 object evaluation;
 
                 // Logical name of the resource being referenced by this !GetAtt
                 var (referencedResourceName, attribute) =
-                    (Tuple<string, string>)getAttIntrinsic.Evaluate(templateObject.Template);
+                    (Tuple<string, string>)getAttIntrinsic.Evaluate(this.template);
 
                 // State file instance of the resource being referenced by this !GetAtt
-                var referencedResouce = this.terraformResources
-                    .FirstOrDefault(r => r.Name == referencedResourceName)?.Instances.First();
+                var referencedResouce = this.TerraformResources.FirstOrDefault(r => r.Name == referencedResourceName)
+                    ?.Instances.First();
 
                 if (referencedResouce == null)
                 {
                     // If not found, then reference is to a resource that couldn't be imported eg. a custom resource.
-                    return NullTuple;
+                    throw new UnsupportedResourceWarning(
+                        getAttIntrinsic,
+                        this.currentCloudFormationResource,
+                        currentPath);
                 }
 
                 // CloudFormation instance of the resource being referenced by this !GetAtt
                 var cloudFormationResource =
-                    this.cloudFormationResources.First(
-                        r => r.LogicalResourceId == getAttIntrinsic.LogicalId);
+                    this.CloudFormationResources.First(r => r.LogicalResourceId == getAttIntrinsic.LogicalId);
 
                 // Summary of the resource to which this !GetAtt refers to
                 var targetResourceSummary = new ResourceMapping
@@ -475,20 +375,18 @@
                                                     AwsType = cloudFormationResource.ResourceType,
                                                     LogicalId = cloudFormationResource.LogicalResourceId,
                                                     PhysicalId = cloudFormationResource.PhysicalResourceId,
-                                                    TerraformType = this.terraformResources.First(
+                                                    TerraformType = this.TerraformResources.First(
                                                         tr => tr.Name == cloudFormationResource.LogicalResourceId).Type
                                                 };
 
                 // Now attempt to match up the CloudFormation resource attribute name with the corresponding terraform one
                 // and get the current value from state.
-                //
                 // First, look up the attribute map
                 var traits = ResourceTraitsCollection.Get(referencedResouce.Parent.Type);
 
                 if (traits.AttributeMap.ContainsKey(attribute))
                 {
                     evaluation = traits.AttributeMap[attribute];
-                    
                 }
                 else
                 {
@@ -497,7 +395,60 @@
                     evaluation = context.Value;
                 }
 
-                return new Tuple<ReferenceType, ResourceMapping, object>(ReferenceType.AttributeReference, targetResourceSummary, evaluation);
+                return new IntrinsicInfo(currentPath.Clone(), getAttIntrinsic, targetResourceSummary, evaluation);
+            }
+
+            /// <summary>
+            /// Creates an <see cref="IntrinsicInfo"/> for a Ref intrinsic.
+            /// </summary>
+            /// <param name="refIntrinsic">The reference intrinsic.</param>
+            /// <param name="currentPath">The current path.</param>
+            /// <returns>An <see cref="IntrinsicInfo"/></returns>
+            private IntrinsicInfo ProcessRef(RefIntrinsic refIntrinsic, PropertyPath currentPath)
+            {
+                object evaluation;
+                var target = refIntrinsic.Reference;
+
+                var param = this.Inputs.FirstOrDefault(i => i.Name == target);
+
+                if (param != null)
+                {
+                    evaluation = param.IsScalar ? (object)param.ScalarIdentity : param.ListIdentity;
+                    return new IntrinsicInfo(currentPath.Clone(), refIntrinsic, null, evaluation);
+                }
+
+                if (target.StartsWith("AWS::"))
+                {
+                    // An unsupported AWS pseudo parameter like AWS::StackName etc.
+                    throw new UnsupportedPseudoParameterWarning(
+                        refIntrinsic,
+                        this.currentCloudFormationResource,
+                        currentPath);
+                }
+
+                var cloudFormationResource = this.CloudFormationResources
+                    .Where(r => TerraformExporter.IgnoredResources.All(ir => ir != r.ResourceType))
+                    .FirstOrDefault(r => r.LogicalResourceId == target);
+
+                if (cloudFormationResource == null)
+                {
+                    // If not found, then reference is to a resource that couldn't be imported eg. a custom resource
+                    // or a known unsupported type.
+                    throw new UnsupportedResourceWarning(refIntrinsic, this.currentCloudFormationResource, currentPath);
+                }
+
+                var targetResourceSummary = new ResourceMapping
+                                                {
+                                                    AwsType = cloudFormationResource.ResourceType,
+                                                    LogicalId = cloudFormationResource.LogicalResourceId,
+                                                    PhysicalId = cloudFormationResource.PhysicalResourceId,
+                                                    TerraformType = this.TerraformResources.First(
+                                                        tr => tr.Name == cloudFormationResource.LogicalResourceId).Type
+                                                };
+
+                evaluation = cloudFormationResource.PhysicalResourceId;
+
+                return new IntrinsicInfo(currentPath.Clone(), refIntrinsic, targetResourceSummary, evaluation);
             }
         }
     }

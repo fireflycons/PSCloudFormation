@@ -1,19 +1,19 @@
 ﻿namespace Firefly.PSCloudFormation.Terraform.State
 {
     using System;
+    using System.Linq;
     using System.Reflection;
-    using System.Text.RegularExpressions;
+
+    using Firefly.PSCloudFormation.Terraform.HclSerializer;
 
     using Newtonsoft.Json.Linq;
+    using Newtonsoft.Json.Serialization;
 
     internal abstract class Reference
     {
-        private const string JConstructorName = "Reference";
+        protected const string JConstructorName = "Reference";
 
         private static readonly Assembly ExecutingAssembly = Assembly.GetExecutingAssembly();
-
-        //private static readonly Regex constructorNameRegex = new Regex(@"^(?<type>[\w\.]+):(?<address>[^\d][\w].*\.[^\d][\w]*)(:(?<index>\d+))?");
-        private static readonly Regex constructorNameRegex = new Regex(@"^(?<type>[\w\.]+):(?<address>[^\d][\w\[\]]*(\.[^\d][\w\[\]]*)*)(:(?<index>\d+))?");
 
         public Reference(string objectAddress, int index)
         : this(objectAddress)
@@ -32,7 +32,12 @@
 
         public abstract string ReferenceExpression { get; }
 
-        public JConstructor ToJConstructor()
+        public static implicit operator JConstructor(Reference reference)
+        {
+            return reference.ToJConstructor();
+        }
+
+        public virtual JConstructor ToJConstructor()
         {
             return this.Index == -1
                        ? new JConstructor(JConstructorName, this.GetType().FullName, this.ObjectAddress)
@@ -48,16 +53,34 @@
 
             var type = ExecutingAssembly.GetType(constructor[0].Value<string>());
             var objectAddress = constructor[1].Value<string>();
-            var index = -1;
 
-            if (constructor.Count > 2)
+            if (constructor.Count < 2)
             {
-                index = constructor[2].Value<int>();
+                throw new InvalidOperationException("Invalid JConstructor found for Reference type. Too few arguments.");
             }
 
-            return index == -1
-                       ? (Reference)Activator.CreateInstance(type, objectAddress)
-                       : (Reference)Activator.CreateInstance(type, objectAddress, index);
+            if (constructor.Count == 2)
+            {
+                return (Reference)Activator.CreateInstance(type, objectAddress);
+            }
+
+            switch (constructor[2].Type)
+            {
+                case JTokenType.Integer:
+
+                    return (Reference)Activator.CreateInstance(type, objectAddress, constructor[2].Value<int>());
+
+                case JTokenType.Array:
+
+                    return (Reference)Activator.CreateInstance(
+                        type,
+                        objectAddress,
+                        constructor[2].Values<object>().ToList());
+
+                default:
+
+                    throw new InvalidOperationException($"Invalid JConstructor found for Reference type. Unexpected JToken '{constructor[2].Type}' found for argument #2.");
+            }
         }
 
         /// <summary>

@@ -4,12 +4,8 @@
     using System.Collections.Generic;
     using System.Linq;
 
-    using Amazon.S3.Model;
-
     using Firefly.CloudFormationParser;
     using Firefly.CloudFormationParser.Intrinsics;
-    using Firefly.CloudFormationParser.Intrinsics.Abstractions;
-    using Firefly.CloudFormationParser.Intrinsics.Functions;
     using Firefly.PSCloudFormation.Terraform.HclSerializer;
     using Firefly.PSCloudFormation.Terraform.HclSerializer.Traits;
     using Firefly.PSCloudFormation.Terraform.State;
@@ -25,24 +21,6 @@
     /// </content>
     internal partial class ResourceDependencyResolver
     {
-        /// <summary>
-        /// Type of modification to be made
-        /// </summary>
-        private enum StateModificationType
-        {
-            /// <summary>
-            /// Modification to state attribute will be a direct reference expression to a resource or input variable.
-            /// The <see cref="Reference"/> object is JSON encoded as a JConstructor.
-            /// </summary>
-            DirectReference,
-
-            /// <summary>
-            /// Modification to state attribute will be a replacement of the original string
-            /// property value with an interpolated string.
-            /// </summary>
-            Interpolated
-        }
-
         // Walk resource attributes looking for specific value and replace with reference
 
         /// <summary>
@@ -56,26 +34,15 @@
             /// <param name="valueToReplace">The value to replace.</param>
             /// <param name="index">The index.</param>
             /// <param name="containingProperty">The containing property if this modification is within nested JSON, e.g. a policy document.</param>
-            /// <param name="interpolation">The interpolation.</param>
-            public StateModification(JValue valueToReplace, int index, JProperty containingProperty, string interpolation)
-                : this(valueToReplace, index, containingProperty)
-            {
-                this.Interpolation = new JValue(interpolation);
-                this.Type = StateModificationType.Interpolated;
-            }
-
-            /// <summary>
-            /// Initializes a new instance of the <see cref="StateModification"/> class.
-            /// </summary>
-            /// <param name="valueToReplace">The value to replace.</param>
-            /// <param name="index">The index.</param>
-            /// <param name="containingProperty">The containing property if this modification is within nested JSON, e.g. a policy document.</param>
             /// <param name="reference">The reference.</param>
-            public StateModification(JValue valueToReplace, int index, JProperty containingProperty, Reference reference)
+            public StateModification(
+                JValue valueToReplace,
+                int index,
+                JProperty containingProperty,
+                Reference reference)
                 : this(valueToReplace, index, containingProperty)
             {
                 this.Reference = reference;
-                this.Type = StateModificationType.DirectReference;
             }
 
             /// <summary>
@@ -92,23 +59,6 @@
             }
 
             /// <summary>
-            /// Gets the type of modification to do to the original value.
-            /// </summary>
-            /// <value>
-            /// The type.
-            /// </value>
-            public StateModificationType Type { get; }
-
-            /// <summary>
-            /// Gets the index into the array where the value resides
-            /// where the value being replaced is a member of a JArray.
-            /// </summary>
-            /// <value>
-            /// The index.
-            /// </value>
-            public int Index { get;  }
-
-            /// <summary>
             /// Gets the containing property if this modification is within nested JSON, e.g. a policy document.
             /// </summary>
             /// <value>
@@ -117,12 +67,13 @@
             public JProperty ContainingProperty { get; }
 
             /// <summary>
-            /// Gets the specific JValue that will be replaced with a reference or interpolation.
+            /// Gets the index into the array where the value resides
+            /// where the value being replaced is a member of a JArray.
             /// </summary>
             /// <value>
-            /// The value to replace.
+            /// The index.
             /// </value>
-            public JValue ValueToReplace { get; }
+            public int Index { get; }
 
             /// <summary>
             /// Gets a <see cref="Reference"/> to set on the target property.
@@ -135,13 +86,12 @@
             public Reference Reference { get; }
 
             /// <summary>
-            /// Gets a string interpolation to set on the target property, as a result of a !Sub or !Join.
-            /// This is simply set as a replacement JValue. 
+            /// Gets the specific JValue that will be replaced with a reference or interpolation.
             /// </summary>
             /// <value>
-            /// The interpolation.
+            /// The value to replace.
             /// </value>
-            public JValue Interpolation { get; }
+            public JValue ValueToReplace { get; }
         }
 
         /// <summary>
@@ -165,22 +115,6 @@
                 this.Resource = resource;
                 this.ResourceTraits = ResourceTraitsCollection.Get(resource.Type);
             }
-            
-            /// <summary>
-            /// Gets the resource being visited.
-            /// </summary>
-            /// <value>
-            /// The resource.
-            /// </value>
-            public StateFileResourceDeclaration Resource { get; }
-
-            /// <summary>
-            /// Gets the resource traits for the resource being visited.
-            /// </summary>
-            /// <value>
-            /// The resource traits.
-            /// </value>
-            public IResourceTraits ResourceTraits { get; }
 
             /// <summary>
             /// Gets the containing property if this modification is within nested JSON, e.g. a policy document.
@@ -214,6 +148,22 @@
             /// The modifications.
             /// </value>
             public List<StateModification> Modifications { get; } = new List<StateModification>();
+
+            /// <summary>
+            /// Gets the resource being visited.
+            /// </summary>
+            /// <value>
+            /// The resource.
+            /// </value>
+            public StateFileResourceDeclaration Resource { get; }
+
+            /// <summary>
+            /// Gets the resource traits for the resource being visited.
+            /// </summary>
+            /// <value>
+            /// The resource traits.
+            /// </value>
+            public IResourceTraits ResourceTraits { get; }
 
             /// <summary>
             /// Gets a reference to the parsed CloudFormation template.
@@ -300,7 +250,7 @@
             /// <param name="context">The visitor context.</param>
             protected override void VisitString(JValue jsonStringValue, TerraformAttributeSetterContext context)
             {
-                if (context.ResourceTraits.ComputedAttributes.Any(a => a.IsLike(this.GetParentPropertyKey(jsonStringValue))))
+                if (context.ResourceTraits.ComputedAttributes.Any(a => a.IsLike(GetParentPropertyKey(jsonStringValue))))
                 {
                     // Don't adjust computed attributes
                     return;
@@ -308,7 +258,12 @@
 
                 var stringValue = jsonStringValue.Value<string>();
 
-                if (StateFileSerializer.TryGetJson(stringValue, false, context.Resource.Name, context.Resource.Type, out var document))
+                if (StateFileSerializer.TryGetJson(
+                    stringValue,
+                    false,
+                    context.Resource.Name,
+                    context.Resource.Type,
+                    out var document))
                 {
                     try
                     {
@@ -333,133 +288,24 @@
                     return;
                 }
 
-                switch (intrinsicInfo.Intrinsic)
+                var intrinsic = intrinsicInfo.Intrinsic;
+
+                switch (intrinsic.Type)
                 {
-                    case RefIntrinsic refIntrinsic:
-
-                        context.Modifications.Add(
-                            new StateModification(jsonStringValue, context.Index, context.ContainingProperty, refIntrinsic.Render(context.Template, intrinsicInfo.TargetResource)));
-
-                        break;
-
-                    case SelectIntrinsic selectIntrinsic:
-
-                        context.Modifications.Add(
-                            new StateModification(
-                                jsonStringValue,
-                                context.Index,
-                                context.ContainingProperty,
-                                selectIntrinsic.Render(context.Template, intrinsicInfo.TargetResource)));
-                        break;
-
-                    case FindInMapIntrinsic findInMapIntrinsic:
+                    case IntrinsicType.Ref:
+                    case IntrinsicType.Select:
+                    case IntrinsicType.FindInMap:
+                    case IntrinsicType.GetAtt:
+                    case IntrinsicType.Join:
+                    case IntrinsicType.Sub:
 
                         context.Modifications.Add(
                             new StateModification(
                                 jsonStringValue,
                                 context.Index,
                                 context.ContainingProperty,
-                                findInMapIntrinsic.Render(context.Template, intrinsicInfo.TargetResource)));
+                                intrinsic.Render(context.Template, intrinsicInfo.TargetResource)));
                         break;
-
-                    case GetAttIntrinsic getAttIntrinsic:
-
-                        context.Modifications.Add(
-                            new StateModification(
-                                jsonStringValue,
-                                context.Index,
-                                context.ContainingProperty,
-                                getAttIntrinsic.Render(context.Template, intrinsicInfo.TargetResource)));
-                        break;
-
-                    case SubIntrinsic subIntrinsic:
-
-                        {
-                            // Build up an interpolated string as the replacement
-                            // Start with the !Sub intrinsic expression.
-                            var expression = subIntrinsic.Expression;
-
-                            // Go through any intrinsics associated with this !Sub
-                            foreach (var nestedIntrinsic in intrinsicInfo.NestedIntrinsics)
-                            {
-                                // Try to render to an HCL expression
-                                var reference = nestedIntrinsic.Intrinsic.Render(
-                                    context.Template,
-                                    nestedIntrinsic.TargetResource);
-
-                                if (reference == null)
-                                {
-                                    continue;
-                                }
-
-                                // We got one, so do a string replace in the !Sub expression, 
-                                // replacing the placeholder with the rendered HCL expression.
-                                string key = null;
-
-                                if (nestedIntrinsic.SubstitutionName != null)
-                                {
-                                    key = nestedIntrinsic.SubstitutionName;
-                                }
-                                else if (nestedIntrinsic.Intrinsic is IReferenceIntrinsic referenceIntrinsic)
-                                {
-                                    key = referenceIntrinsic.ReferencedObject(context.Template);
-                                }
-
-                                if (key != null)
-                                {
-                                    expression = expression.Replace(
-                                        $"${{{key}}}",
-                                        $"${{{reference.ReferenceExpression}}}");
-                                }
-                            }
-
-                            // Add interpolation modification.
-                            context.Modifications.Add(
-                                new StateModification(jsonStringValue, context.Index, context.ContainingProperty, expression));
-                            break;
-                        }
-
-                    case JoinIntrinsic joinIntrinsic:
-                        {
-                            // Build up an interpolated string as the replacement
-                            var segments = new List<string>();
-                            var intrinsicIndex = 0;
-
-                            foreach (var item in joinIntrinsic.Items)
-                            {
-                                switch (item)
-                                {
-                                    case string s:
-
-                                        segments.Add(s);
-                                        break;
-
-                                    case IIntrinsic intrinsic:
-
-                                        var nestedIntrinsic = intrinsicInfo.NestedIntrinsics[intrinsicIndex++];
-
-                                        // Try to render to an HCL expression
-                                        var reference = nestedIntrinsic.Intrinsic.Render(
-                                            context.Template,
-                                            nestedIntrinsic.TargetResource);
-
-                                        if (reference == null)
-                                        {
-                                            // TODO: Should probably throw here
-                                            continue;
-                                        }
-
-                                        // We got one, so add rendered HCL expression to join list
-                                        segments.Add($"${{{reference.ReferenceExpression}}}");
-                                        break;
-                                }
-                            }
-
-                            // Add interpolation modification.
-                            context.Modifications.Add(
-                                new StateModification(jsonStringValue, context.Index, context.ContainingProperty, string.Join(joinIntrinsic.Separator, segments)));
-                            break;
-                        }
                 }
             }
 
@@ -468,8 +314,13 @@
             /// </summary>
             /// <param name="token">The JToken where the modification will be applied.</param>
             /// <returns>Name of the containing property.</returns>
-            private string GetParentPropertyKey(JToken token)
+            private static string GetParentPropertyKey(JToken token)
             {
+                if (token == null)
+                {
+                    throw new ArgumentNullException(nameof(token));
+                }
+
                 var tok = token;
 
                 while (tok.Type != JTokenType.Property)

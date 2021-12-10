@@ -91,13 +91,13 @@
                     {
                         output?.Invoke(msg);
                         this.logger.LogInformation(msg);
-                        errors += msg.Contains("Error:") ? 1 : 0;
+                        warnings += msg.Contains("Warning:") ? 1 : 0;
                     },
                 msg =>
                     {
                         output?.Invoke(msg);
                         this.logger.LogError(msg);
-                        warnings += msg.Contains("Warning:") ? 1 : 0;
+                        errors += msg.Contains("Error:") ? 1 : 0;
                     });
 
             if (exitCode != 0 && throwOnError)

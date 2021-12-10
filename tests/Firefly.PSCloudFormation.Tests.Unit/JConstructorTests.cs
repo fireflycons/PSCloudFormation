@@ -1,5 +1,7 @@
 ﻿namespace Firefly.PSCloudFormation.Tests.Unit
 {
+    using System.Collections.Generic;
+
     using Firefly.PSCloudFormation.Terraform.State;
 
     using FluentAssertions;
@@ -99,6 +101,29 @@
 
             var property = (JProperty)jtoken.SelectToken("Property")?.Parent;
             property.Value = reference.ToJConstructor();
+            var token1 = JObject.Parse(jtoken.ToString(Formatting.None));
+
+            var con = (JConstructor)token1.SelectToken("Property");
+            var outReference = Reference.FromJConstructor(con);
+
+            outReference.ReferenceExpression.Should().Be(reference.ReferenceExpression);
+        }
+
+        [Fact]
+        public void FunctionReferenceCanBeEncodedAndDecoded()
+        {
+            var reference = new FunctionReference(
+                "join",
+                new object[]
+                    {
+                        "-", new List<object> { "a", new InputVariableReference("my_variable").ToJConstructor(), "b" }
+                    });
+
+            var jtoken = JObject.Parse(json);
+
+            var property = (JProperty)jtoken.SelectToken("Property")?.Parent;
+            property.Value = reference.ToJConstructor();
+            var json1 = jtoken.ToString();
             var token1 = JObject.Parse(jtoken.ToString(Formatting.None));
 
             var con = (JConstructor)token1.SelectToken("Property");

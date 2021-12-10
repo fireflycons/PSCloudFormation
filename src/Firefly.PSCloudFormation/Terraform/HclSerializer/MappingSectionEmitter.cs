@@ -1,12 +1,14 @@
 ﻿namespace Firefly.PSCloudFormation.Terraform.HclSerializer
 {
     using System.Collections.Generic;
+    using System.Globalization;
     using System.IO;
     using System.Linq;
 
-    using Firefly.CloudFormationParser.Intrinsics;
+    using Firefly.CloudFormationParser;
     using Firefly.CloudFormationParser.TemplateObjects;
-    using Firefly.CloudFormationParser.Utils;
+    using Firefly.CloudFormationParser.TemplateObjects.Traversal;
+    using Firefly.CloudFormationParser.TemplateObjects.Traversal.AcceptExtensions;
 
     /// <summary>
     /// Generates an HCL locals block from the content of the CloudFormation Mappings section
@@ -45,18 +47,18 @@
             }
 
             this.output.WriteLine("locals {");
-            this.output.WriteLine("  mappings = {");
-            this.mappings.Accept(new MappingEmitterVisitor(this.output));
-            this.output.WriteLine("  }");
+            this.output.Write("  mappings = ");
+            this.mappings.Accept(
+                new MappingEmitterVisitor(this.mappings.Template),
+                new MappingEmitterContext(this.output));
             this.output.WriteLine("}");
             this.output.WriteLine();
         }
 
         /// <summary>
-        /// Visitor class to emit the mappings
+        /// Context object for mapping emitter
         /// </summary>
-        /// <seealso cref="Firefly.CloudFormationParser.TemplateObjects.ITemplateObjectVisitor" />
-        private class MappingEmitterVisitor : TemplateObjectVisitor
+        private class MappingEmitterContext : ITemplateObjectVisitorContext<MappingEmitterContext>
         {
             /// <summary>
             /// Stack of previous indentations
@@ -69,145 +71,245 @@
             private readonly TextWriter output;
 
             /// <summary>
-            /// The indentation
+            /// Stack of state transitions
             /// </summary>
-            private int indent = 4;
+            private readonly Stack<State> states = new Stack<State>();
 
             /// <summary>
-            /// Initializes a new instance of the <see cref="MappingEmitterVisitor"/> class.
+            /// The current indentation level.
+            /// </summary>
+            private int indent = 2;
+
+            /// <summary>
+            /// Initializes a new instance of the <see cref="MappingEmitterContext"/> class.
             /// </summary>
             /// <param name="output">The output stream.</param>
-            public MappingEmitterVisitor(TextWriter output)
+            public MappingEmitterContext(TextWriter output)
             {
                 this.output = output;
             }
 
             /// <summary>
-            /// Called at the end of the enumeration of a list.
+            /// State of the emitter
             /// </summary>
-            /// <typeparam name="T">Type of item in list. Should be string or object.</typeparam>
-            /// <param name="templateObject">The template object being visited</param>
-            /// <param name="path">The current path in the property walk.</param>
-            /// <param name="item">The list being visited.</param>
-            public override void AfterVisitList<T>(ITemplateObject templateObject, PropertyPath path, IList<T> item)
+            public enum State
             {
-                this.indent = this.indents.Pop();
-                this.WriteIndent();
-                this.output.WriteLine("]");
+                /// <summary>
+                /// Emitting a map - no consideration for values
+                /// </summary>
+                Map,
+
+                /// <summary>
+                /// Emitting a list - values require indentation and comma suffix
+                /// </summary>
+                List
             }
 
             /// <summary>
-            /// Called at the end of the enumeration of a on object (dictionary( item ).
+            /// Gets the current state.
             /// </summary>
-            /// <typeparam name="T">Type of item in list. Should be string or object.</typeparam>
-            /// <param name="templateObject">The template object.</param>
-            /// <param name="path">The path.</param>
-            /// <param name="item">The dictionary item being visited.</param>
-            public override void AfterVisitObject<T>(
-                ITemplateObject templateObject,
-                PropertyPath path,
-                IDictionary<T, object> item)
-            {
-                this.indent = this.indents.Pop();
-                this.WriteIndent();
-                this.output.WriteLine("}");
-            }
+            /// <value>
+            /// The the current state.
+            /// </value>
+            public State CurrentState { get; private set; } = State.Map;
 
             /// <summary>
-            /// Called when a list is about to be visited (before list traversal).
+            /// Enters a list.
             /// </summary>
-            /// <typeparam name="T">Type of item in list. Should be string or object.</typeparam>
-            /// <param name="templateObject">The template object being visited</param>
-            /// <param name="path">The current path in the property walk.</param>
-            /// <param name="item">The list being visited.</param>
-            public override void BeforeVisitList<T>(ITemplateObject templateObject, PropertyPath path, IList<T> item)
+            public void EnterList()
             {
-                this.output.WriteLine($"{FormatKey(path.Peek())} = [");
+                this.states.Push(this.CurrentState);
+                this.CurrentState = State.List;
+                this.WriteLine("[");
                 this.IncreaseIndent();
             }
 
             /// <summary>
-            /// Called when an object (dictionary) is about to be visited.
+            /// Enters a map.
             /// </summary>
-            /// <typeparam name="T">Type of item in list. Should be string or object.</typeparam>
-            /// <param name="templateObject">The template object being visited</param>
-            /// <param name="path">The current path in the property walk.</param>
-            /// <param name="item">The dictionary being visited.</param>
-            public override void BeforeVisitObject<T>(
-                ITemplateObject templateObject,
-                PropertyPath path,
-                IDictionary<T, object> item)
+            public void EnterMap()
             {
-                this.WriteIndent();
-                this.output.WriteLine($"{FormatKey(path.Peek())} = {{");
-
+                this.states.Push(this.CurrentState);
+                this.CurrentState = State.Map;
+                this.WriteLine("{");
                 this.IncreaseIndent();
             }
 
             /// <summary>
-            /// Called when a scalar list item is being visited.
+            /// Exits a list.
             /// </summary>
-            /// <param name="templateObject">The template object being visited</param>
-            /// <param name="path">The current path in the property walk.</param>
-            /// <param name="item">The list item being visited.</param>
-            public override void VisitListItem(ITemplateObject templateObject, PropertyPath path, object item)
+            public void ExitList()
             {
-                switch (item)
-                {
-                    case string _:
-
-                        this.WriteIndent();
-                        this.output.WriteLine($"\"{item}\",");
-                        break;
-
-                    case int _:
-                    case double _:
-
-                        this.WriteIndent();
-                        this.output.WriteLine($"{item},");
-                        break;
-
-                    case bool _:
-
-                        this.WriteIndent();
-                        this.output.WriteLine($"{item.ToString().ToLowerInvariant()},");
-                        break;
-                }
+                this.CurrentState = this.states.Pop();
+                this.DecreaseIndent();
+                this.WriteIndent();
+                this.WriteLine("]");
             }
 
             /// <summary>
-            /// Called when a dictionary item is visited.
+            /// Exits a map.
             /// </summary>
-            /// <typeparam name="T">Type of item in list. Should be string or object.</typeparam>
-            /// <param name="templateObject">The template object.</param>
-            /// <param name="path">The path.</param>
-            /// <param name="item">The dictionary item being visited.</param>
-            public override void VisitProperty<T>(
-                ITemplateObject templateObject,
-                PropertyPath path,
-                KeyValuePair<T, object> item)
+            public void ExitMap()
             {
-                switch (item.Value)
-                {
-                    case string _:
+                this.CurrentState = this.states.Pop();
+                this.DecreaseIndent();
+                this.WriteIndent();
+                this.WriteLine("}");
+            }
 
-                        this.WriteIndent();
-                        this.output.WriteLine($"{FormatKey(path.Peek())} = \"{item.Value}\"");
-                        break;
+            /// <summary>
+            /// Gets the next context for an item in a list.
+            /// </summary>
+            /// <param name="index">Index in current list</param>
+            /// <returns>
+            /// Current or new context.
+            /// </returns>
+            public MappingEmitterContext Next(int index) => this;
 
-                    case int _:
-                    case double _:
+            /// <summary>
+            /// Gets the next context for an entry in a dictionary
+            /// </summary>
+            /// <param name="name">Name of property.</param>
+            /// <returns>
+            /// Current or new context.
+            /// </returns>
+            public MappingEmitterContext Next(string name) => this;
 
-                        this.WriteIndent();
-                        this.output.WriteLine($"{FormatKey(path.Peek())} = {item.Value}");
-                        break;
+            /// <summary>
+            /// Writes the specified text to the output stream.
+            /// </summary>
+            /// <param name="text">The text.</param>
+            public void Write(string text)
+            {
+                this.output.Write(text);
+            }
 
-                    case bool _:
+            /// <summary>
+            /// Writes whitespace to current indentation level.
+            /// </summary>
+            public void WriteIndent()
+            {
+                this.output.Write(new string(' ', this.indent));
+            }
 
-                        this.WriteIndent();
-                        this.output.WriteLine($"{FormatKey(path.Peek())} = {item.Value.ToString().ToLowerInvariant()}");
-                        break;
-                }
+            /// <summary>
+            /// Writes a line with line break to the output stream.
+            /// </summary>
+            /// <param name="text">The text.</param>
+            public void WriteLine(string text)
+            {
+                this.output.WriteLine(text);
+            }
+
+            /// <summary>
+            /// Decreases the indent.
+            /// </summary>
+            private void DecreaseIndent()
+            {
+                this.indent = this.indents.Pop();
+            }
+
+            /// <summary>
+            /// Increases the indent.
+            /// </summary>
+            private void IncreaseIndent()
+            {
+                this.indents.Push(this.indent);
+                this.indent += 2;
+            }
+        }
+
+        /// <summary>
+        /// Visits the CloudFormation template's mappings section emitting HCL
+        /// </summary>
+        private class MappingEmitterVisitor : TemplateObjectVisitor<MappingEmitterContext>
+        {
+            /// <summary>
+            /// Initializes a new instance of the <see cref="MappingEmitterVisitor"/> class.
+            /// </summary>
+            /// <param name="template">The parsed CloudFormation template.</param>
+            public MappingEmitterVisitor(ITemplate template)
+                : base(template)
+            {
+            }
+
+            /// <summary>
+            /// Visits the specified dictionary.
+            /// </summary>
+            /// <typeparam name="TKey">The type of the key. This should be either string or object(string).</typeparam>
+            /// <param name="dict">The dictionary.</param>
+            /// <param name="context">The context.</param>
+            protected override void Visit<TKey>(IDictionary<TKey, object> dict, MappingEmitterContext context)
+            {
+                context.EnterMap();
+                base.Visit(dict, context);
+                context.ExitMap();
+            }
+
+            /// <summary>
+            /// Visits the specified list.
+            /// </summary>
+            /// <typeparam name="TItem">The type of the list item. This should be dictionary, list, intrinsic or any acceptable value type for CloudFormation.</typeparam>
+            /// <param name="list">The list.</param>
+            /// <param name="context">The context.</param>
+            protected override void Visit<TItem>(IList<TItem> list, MappingEmitterContext context)
+            {
+                context.EnterList();
+                base.Visit(list, context);
+                context.ExitList();
+            }
+
+            /// <summary>
+            /// Visits the specified property, i.e. <see cref="T:System.Collections.Generic.KeyValuePair`2" /> of a dictionary object.
+            /// </summary>
+            /// <typeparam name="TKey">The type of the key. This should be either string or object(string).</typeparam>
+            /// <param name="property">The property.</param>
+            /// <param name="context">The context.</param>
+            protected override void Visit<TKey>(KeyValuePair<TKey, object> property, MappingEmitterContext context)
+            {
+                context.WriteIndent();
+                context.Write($"{FormatKey(property.Key.ToString())} = ");
+                base.Visit(property, context);
+            }
+
+            /// <summary>
+            /// Visits the specified string value.
+            /// </summary>
+            /// <param name="stringValue">The string value.</param>
+            /// <param name="context">The context.</param>
+            protected override void Visit(string stringValue, MappingEmitterContext context)
+            {
+                this.WriteValue($"\"{stringValue}\"", context);
+            }
+
+            /// <summary>
+            /// Visits the specified integer value.
+            /// </summary>
+            /// <param name="integerValue">The integer value.</param>
+            /// <param name="context">The context.</param>
+            protected override void Visit(int integerValue, MappingEmitterContext context)
+            {
+                this.WriteValue(integerValue.ToString(), context);
+            }
+
+            /// <summary>
+            /// Visits the specified double value.
+            /// </summary>
+            /// <param name="doubleValue">The double value.</param>
+            /// <param name="context">The context.</param>
+            protected override void Visit(double doubleValue, MappingEmitterContext context)
+            {
+                this.WriteValue(doubleValue.ToString(CultureInfo.InvariantCulture), context);
+            }
+
+            /// <summary>
+            /// Visits the specified boolean value.
+            /// </summary>
+            /// <param name="booleanValue">if set to <c>true</c> [boolean value].</param>
+            /// <param name="context">The context.</param>
+            protected override void Visit(bool booleanValue, MappingEmitterContext context)
+            {
+                this.WriteValue(booleanValue.ToString().ToLowerInvariant(), context);
             }
 
             /// <summary>
@@ -221,20 +323,20 @@
             }
 
             /// <summary>
-            /// Increases the indent.
+            /// Writes a pre-formatted value. How this is written depends on whether the current state is Map or List
             /// </summary>
-            private void IncreaseIndent()
+            /// <param name="value">The value.</param>
+            /// <param name="context">The context.</param>
+            private void WriteValue(string value, MappingEmitterContext context)
             {
-                this.indents.Push(this.indent);
-                this.indent += 2;
-            }
+                var isList = context.CurrentState == MappingEmitterContext.State.List;
 
-            /// <summary>
-            /// Writes the indent.
-            /// </summary>
-            private void WriteIndent()
-            {
-                this.output.Write(new string(' ', this.indent));
+                if (isList)
+                {
+                    context.WriteIndent();
+                }
+
+                context.WriteLine($"{value}{(isList ? "," : string.Empty)}");
             }
         }
     }

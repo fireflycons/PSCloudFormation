@@ -65,7 +65,7 @@
 
         private static string FormatBaseMessage(string commandTail, int exitCode)
         {
-            return $"The invocation '{commandTail}' failed with code {exitCode}";
+            return $"The invocation 'terraform {commandTail}' failed with code {exitCode}";
         }
     }
 } 
