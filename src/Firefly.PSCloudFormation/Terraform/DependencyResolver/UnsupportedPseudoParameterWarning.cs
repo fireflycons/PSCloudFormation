@@ -68,6 +68,6 @@
         /// Gets a message that describes the current exception.
         /// </summary>
         public override string Message =>
-            $"Resource '{this.ContainingResource.LogicalResourceId}' ({this.ContainingResource.ResourceType}): Unable to create reference for unsupported pseudo parameter '{((RefIntrinsic)this.Intrinsic).Reference}' at {this.Location.Path}. HCL will contain current attribute value.";
+            $"Resource {this.AwsResourceName}: Unable to create reference for unsupported pseudo parameter \"{((RefIntrinsic)this.Intrinsic).Reference}\" at property \"{this.Location.Path}\". HCL will contain current attribute value.";
     }
 }

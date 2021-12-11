@@ -67,12 +67,12 @@
         }
 
         /// <summary>
-        /// Gets the AWS property path to the intrinsic being warned about.
+        /// Gets the resource that contains the errant intrinsic.
         /// </summary>
         /// <value>
-        /// The location.
+        /// The containing resource.
         /// </value>
-        public PropertyPath Location { get; }
+        public CloudFormationResource ContainingResource { get; }
 
         /// <summary>
         /// Gets the intrinsic being warned about.
@@ -83,17 +83,20 @@
         public IIntrinsic Intrinsic { get; }
 
         /// <summary>
-        /// Gets the resource that contains the errant intrinsic.
+        /// Gets the AWS property path to the intrinsic being warned about.
         /// </summary>
         /// <value>
-        /// The containing resource.
+        /// The location.
         /// </value>
-        public CloudFormationResource ContainingResource { get; }
+        public PropertyPath Location { get; }
 
         /// <summary>
-        /// Gets a message that describes the current exception.
+        /// Gets the name of the AWS resource formatted for exception message.
         /// </summary>
-        public override string Message =>
-            $"Resource '{this.ContainingResource.LogicalResourceId}' ({this.ContainingResource.ResourceType}): Unable to create reference for '{this.Intrinsic.TagName}' at {this.Location.Path}. HCL will contain current attribute value.";
+        /// <value>
+        /// The name of the AWS resource.
+        /// </value>
+        protected string AwsResourceName =>
+            $"\"{this.ContainingResource.LogicalResourceId}\" ({this.ContainingResource.ResourceType})";
     }
 }

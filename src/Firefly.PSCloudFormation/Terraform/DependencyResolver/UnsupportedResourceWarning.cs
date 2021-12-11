@@ -68,6 +68,6 @@
         /// Gets a message that describes the current exception.
         /// </summary>
         public override string Message =>
-            $"Resource '{this.ContainingResource.LogicalResourceId}' ({this.ContainingResource.ResourceType}): Unable to create reference to a resource not supported by Terraform at {this.Location.Path}. HCL will contain current attribute value.";
+            $"Resource {this.AwsResourceName}: Unable to create reference to a resource that could not be imported at property \"{this.Location.Path}\". HCL will contain current attribute value.";
     }
 }
