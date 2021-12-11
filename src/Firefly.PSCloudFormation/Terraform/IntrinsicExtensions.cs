@@ -72,6 +72,16 @@
 
             switch (self)
             {
+                case Base64Intrinsic base64Intrinsic:
+
+                    reference = Render(base64Intrinsic, template, resource);
+                    break;
+
+                case CidrIntrinsic cidrIntrinsic:
+
+                    reference = Render(cidrIntrinsic, template, resource, index);
+                    break;
+
                 case FindInMapIntrinsic findInMapIntrinsic:
 
                     reference = Render(findInMapIntrinsic, template, resource, index);
@@ -102,6 +112,11 @@
                     reference = Render(joinIntrinsic, template, resource);
                     break;
 
+                case SplitIntrinsic splitIntrinsic:
+
+                    reference = Render(splitIntrinsic, template, resource);
+                    break;
+
                 case SubIntrinsic subIntrinsic:
 
                     reference = Render(subIntrinsic, template, resource);
@@ -118,6 +133,59 @@
             }
 
             throw new InvalidOperationException($"Failed rendering '{self.TagName}'.");
+        }
+
+        /// <summary>
+        /// Renders the specified base64 intrinsic to a <c>base64encode</c> function call.
+        /// </summary>
+        /// <param name="base64Intrinsic">The base64 intrinsic.</param>
+        /// <param name="template">The template.</param>
+        /// <param name="resource">The resource.</param>
+        /// <returns>A <see cref="FunctionReference"/> to an HCL base64encode() expression.</returns>
+        private static Reference Render(Base64Intrinsic base64Intrinsic, ITemplate template, ResourceMapping resource)
+        {
+            object argument;
+
+            if (base64Intrinsic.ValueToEncode is IIntrinsic intrinsic)
+            {
+                argument = intrinsic.Render(template, resource).ToJConstructor();
+            }
+            else
+            {
+                argument = base64Intrinsic.ValueToEncode.ToString();
+            }
+
+            return new FunctionReference("base64encode", new[] { argument });
+        }
+
+        /// <summary>
+        /// Renders the specified <c>!Cidr</c> intrinsic to a <c>cidrsubnets</c> reference, optionally with indexer.
+        /// </summary>
+        /// <param name="cidrIntrinsic">The cidr intrinsic.</param>
+        /// <param name="template">The template.</param>
+        /// <param name="resource">The resource.</param>
+        /// <param name="index">The index.</param>
+        /// <returns>A <see cref="FunctionReference"/></returns>
+        private static Reference Render(
+            CidrIntrinsic cidrIntrinsic,
+            ITemplate template,
+            ResourceMapping resource,
+            int index)
+        {
+            var arguments = new List<object>
+                                {
+                                    RenderObject(cidrIntrinsic.IpBlock, template, resource)
+                                };
+
+            // ReSharper disable once ForCanBeConvertedToForeach
+            // ReSharper disable once LoopCanBeConvertedToQuery
+            for (var i = 0; i < cidrIntrinsic.Count; ++i)
+            {
+                // CidrBits is currently int. May need to be intrinsic
+                arguments.Add(cidrIntrinsic.CidrBits);
+            }
+
+            return new FunctionReference("cidrsubnets", arguments, index);
         }
 
         /// <summary>
@@ -334,6 +402,33 @@
         }
 
         /// <summary>
+        /// Renders the specified split intrinsic.
+        /// </summary>
+        /// <param name="splitIntrinsic">The split intrinsic.</param>
+        /// <param name="template">The template.</param>
+        /// <param name="resource">The resource.</param>
+        /// <returns></returns>
+        private static Reference Render(SplitIntrinsic splitIntrinsic, ITemplate template, ResourceMapping resource)
+        {
+            var splitArguments = new List<object> { splitIntrinsic.Delimiter };
+
+            switch (splitIntrinsic.Source)
+            {
+                case IIntrinsic intrinsic:
+
+                    splitArguments.Add(intrinsic.Render(template, resource).ToJConstructor());
+                    break;
+
+                default:
+
+                    splitArguments.Add(splitIntrinsic.Source.ToString());
+                    break;
+            }
+
+            return new FunctionReference("split", splitArguments);
+        }
+
+        /// <summary>
         /// Renders the specified sub intrinsic.
         /// </summary>
         /// <param name="subIntrinsic">The sub intrinsic.</param>
@@ -385,6 +480,23 @@
 
             // Add interpolation modification.
             return new InterpolationReference(expression);
+        }
+
+        /// <summary>
+        /// Renders the object.
+        /// </summary>
+        /// <param name="value">The value.</param>
+        /// <param name="template">The template.</param>
+        /// <param name="resource">The resource.</param>
+        /// <returns></returns>
+        private static object RenderObject(object value, ITemplate template, ResourceMapping resource)
+        {
+            if (value is IIntrinsic intrinsic)
+            {
+                return intrinsic.Render(template, resource);
+            }
+
+            return value.ToString();
         }
     }
 }

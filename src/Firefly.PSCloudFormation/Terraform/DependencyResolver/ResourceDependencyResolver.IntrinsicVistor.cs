@@ -4,6 +4,7 @@
     using System.Collections.Generic;
     using System.Diagnostics;
     using System.Linq;
+    using System.Security.Authentication.ExtendedProtection;
 
     using Firefly.CloudFormationParser;
     using Firefly.CloudFormationParser.Intrinsics;
@@ -25,8 +26,14 @@
         /// Object to store intrinsic functions extracted by visiting the CloudFormation resource object
         /// </summary>
         [DebuggerDisplay("{PropertyPath.Path}: {Intrinsic}")]
-        private class IntrinsicInfo
+        internal class IntrinsicInfo
         {
+            protected IIntrinsic intrinsic;
+
+            protected object evaluation;
+
+            protected ResourceMapping targetResource;
+
             /// <summary>
             /// Initializes a new instance of the <see cref="IntrinsicInfo"/> class.
             /// </summary>
@@ -40,10 +47,10 @@
                 ResourceMapping resourceMapping,
                 object evaluation)
             {
-                this.TargetResource = resourceMapping;
-                this.Intrinsic = intrinsic;
+                this.targetResource = resourceMapping;
+                this.intrinsic = intrinsic;
                 this.PropertyPath = propertyPath.Clone();
-                this.Evaluation = evaluation;
+                this.evaluation = evaluation;
             }
 
             /// <summary>
@@ -52,7 +59,7 @@
             /// <value>
             /// The evaluation.
             /// </value>
-            public object Evaluation { get; }
+            public virtual object Evaluation => this.evaluation;
 
             /// <summary>
             /// Gets the intrinsic.
@@ -60,7 +67,7 @@
             /// <value>
             /// The intrinsic.
             /// </value>
-            public IIntrinsic Intrinsic { get; }
+            public virtual IIntrinsic Intrinsic => this.intrinsic;
 
             /// <summary>
             /// Gets the list of nested intrinsic
@@ -85,7 +92,34 @@
             /// <value>
             /// The targeted resource. Will be <c>null</c> when reference is not to a resource.
             /// </value>
-            public ResourceMapping TargetResource { get; }
+            public virtual ResourceMapping TargetResource => this.targetResource;
+        }
+
+        public class IfIntrinsicInfo : IntrinsicInfo
+        {
+            /// <summary>
+            /// Initializes a new instance of the <see cref="IfIntrinsicInfo"/> class.
+            /// </summary>
+            /// <param name="propertyPath">The property path.</param>
+            /// <param name="intrinsic">The intrinsic.</param>
+            /// <param name="resourceMapping">Summary info of the resource targeted by this intrinsic.</param>
+            /// <param name="evaluation">The evaluation.</param>
+            public IfIntrinsicInfo(
+                PropertyPath propertyPath,
+                IIntrinsic intrinsic,
+                ResourceMapping resourceMapping,
+                object evaluation)
+                : base(propertyPath, intrinsic, resourceMapping, evaluation)
+            {
+            }
+
+            /// <inheritdoc />
+            public override object Evaluation =>
+                this.NestedIntrinsics.Any() ? this.NestedIntrinsics.First().Evaluation : this.evaluation;
+
+            public override IIntrinsic Intrinsic => this.NestedIntrinsics.Any() ? this.NestedIntrinsics.First().Intrinsic : this.intrinsic;
+
+            public override ResourceMapping TargetResource => this.NestedIntrinsics.Any() ? this.NestedIntrinsics.First().TargetResource : this.targetResource;
         }
 
         /// <summary>
@@ -212,10 +246,10 @@
             /// <param name="currentPath">The current path.</param>
             public void EnterIntrinsic(IIntrinsic intrinsic, PropertyPath currentPath)
             {
-                if (this.lastWarning != null || intrinsic is IfIntrinsic)
+                if (this.lastWarning != null)
                 {
-                    // Follow the branch as evaluated by prevailing conditions and pretend it doesn't exist.
-                    // TODO: Probably ought to process both sides and generate conditional logic.
+                    // Something that can't be resolved has been found,
+                    // so don't process any more here.
                     return;
                 }
 
@@ -232,11 +266,11 @@
                     }
                     else
                     {
+                        // We have descended the graph to member intrinsic
+                        this.intrinsicInfos.Push(this.currentIntrinsicInfo);
                         var intrinsicInfo = this.GetIntrinsicInfo(intrinsic, currentPath);
                         this.currentIntrinsicInfo.NestedIntrinsics.Add(intrinsicInfo);
 
-                        // We have descended the graph to member intrinsic
-                        this.intrinsicInfos.Push(this.currentIntrinsicInfo);
                         this.currentIntrinsicInfo = intrinsicInfo;
                     }
                 }
@@ -310,6 +344,10 @@
             {
                 switch (intrinsic.Type)
                 {
+                    case IntrinsicType.If:
+
+                        return new IfIntrinsicInfo(currentPath, intrinsic, null, intrinsic.Evaluate(this.template));
+
                     case IntrinsicType.Ref:
 
                         return this.ProcessRef((RefIntrinsic)intrinsic, currentPath);
@@ -318,13 +356,16 @@
 
                         return this.ProcessGetAtt((GetAttIntrinsic)intrinsic, currentPath);
 
+                    case IntrinsicType.Base64:
+                    case IntrinsicType.Cidr:
                     case IntrinsicType.FindInMap:
                     case IntrinsicType.Join:
                     case IntrinsicType.Select:
+                    case IntrinsicType.Split:
                     case IntrinsicType.Sub:
 
                         return new IntrinsicInfo(
-                            currentPath.Clone(),
+                            currentPath,
                             intrinsic,
                             null,
                             intrinsic.Evaluate(this.template));

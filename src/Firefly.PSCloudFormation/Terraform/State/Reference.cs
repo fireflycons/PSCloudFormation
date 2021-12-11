@@ -64,23 +64,35 @@
                 return (Reference)Activator.CreateInstance(type, objectAddress);
             }
 
-            switch (constructor[2].Type)
+            if (constructor.Count == 3)
             {
-                case JTokenType.Integer:
+                switch (constructor[2].Type)
+                {
+                    case JTokenType.Integer:
 
-                    return (Reference)Activator.CreateInstance(type, objectAddress, constructor[2].Value<int>());
+                        return (Reference)Activator.CreateInstance(type, objectAddress, constructor[2].Value<int>());
 
-                case JTokenType.Array:
+                    case JTokenType.Array:
 
-                    return (Reference)Activator.CreateInstance(
-                        type,
-                        objectAddress,
-                        constructor[2].Values<object>().ToList());
+                        // A function reference
+                        return (Reference)Activator.CreateInstance(
+                            type,
+                            objectAddress,
+                            constructor[2].Values<object>().ToList());
 
-                default:
+                    default:
 
-                    throw new InvalidOperationException($"Invalid JConstructor found for Reference type. Unexpected JToken '{constructor[2].Type}' found for argument #2.");
+                        throw new InvalidOperationException(
+                            $"Invalid JConstructor found for Reference type. Unexpected JToken '{constructor[2].Type}' found for argument #2.");
+                }
             }
+
+            // 4 parameters is a function reference with an indexer
+            return (Reference)Activator.CreateInstance(
+                type,
+                objectAddress,
+                constructor[2].Values<object>().ToList(),
+                constructor[3].Value<int>());
         }
 
         /// <summary>

@@ -131,5 +131,26 @@
 
             outReference.ReferenceExpression.Should().Be(reference.ReferenceExpression);
         }
+
+        [Fact]
+        public void FunctionReferenceWithIndexCanBeEncodedAndDecoded()
+        {
+            var reference = new FunctionReference(
+                "cidrsubnets",
+                new List<object> { "10.0.0.0/20", 8, 8, 8 },
+                1);
+
+            var jtoken = JObject.Parse(json);
+
+            var property = (JProperty)jtoken.SelectToken("Property")?.Parent;
+            property.Value = reference.ToJConstructor();
+            var json1 = jtoken.ToString();
+            var token1 = JObject.Parse(jtoken.ToString(Formatting.None));
+
+            var con = (JConstructor)token1.SelectToken("Property");
+            var outReference = Reference.FromJConstructor(con);
+
+            outReference.ReferenceExpression.Should().Be(reference.ReferenceExpression);
+        }
     }
 }

@@ -35,10 +35,33 @@
         /// </para>
         /// </remarks>
         public FunctionReference(string functionName, IEnumerable<object> functionArguments)
-            : base(functionName)
+        : this(functionName, functionArguments, -1)
+        {
+        }
+
+        /// <summary>
+        /// Initializes a new instance of the <see cref="FunctionReference"/> class.
+        /// </summary>
+        /// <param name="functionName">Name of the function.</param>
+        /// <param name="functionArguments">The function arguments.</param>
+        /// <param name="index">Indexer to apply to function call if >= 0</param>
+        /// <remarks>
+        /// <para>
+        /// The arguments should be arranged as the per the terraform function's arguments, e.g.
+        /// join function has two arguments, a separator and a list of things to join.
+        /// Thus, <paramref name="functionArguments"/> should be an enumerable of two items,
+        /// the first being string, and the second being a list of objects.
+        /// </para>
+        /// <para>
+        /// Where a function argument is another <see cref="Reference"/>, call <see cref="Reference.ToJConstructor"/>
+        /// on it first and add the JConstructor object to the argument list.
+        /// </para>
+        /// </remarks>
+        public FunctionReference(string functionName, IEnumerable<object> functionArguments, int index)
+            : base(functionName, index)
         {
             this.functionArguments = functionArguments.ToList();
-            this.ReferenceExpression = $"{functionName}({ProcessArguments(this.functionArguments)})";
+            this.ReferenceExpression = $"{functionName}({ProcessArguments(this.functionArguments)}){(this.Index >= 0 ? $"[{this.Index}]" : string.Empty )}";
         }
 
         /// <summary>
@@ -74,11 +97,18 @@
         /// <inheritdoc />
         public override JConstructor ToJConstructor()
         {
-            return new JConstructor(
-                JConstructorName,
-                this.GetType().FullName,
-                this.FunctionName,
-                JArray.FromObject(this.functionArguments));
+            return this.Index < 0
+                       ? new JConstructor(
+                           JConstructorName,
+                           this.GetType().FullName,
+                           this.FunctionName,
+                           JArray.FromObject(this.functionArguments))
+                       : new JConstructor(
+                           JConstructorName,
+                           this.GetType().FullName,
+                           this.FunctionName,
+                           JArray.FromObject(this.functionArguments),
+                           this.Index);
         }
 
         /// <summary>
