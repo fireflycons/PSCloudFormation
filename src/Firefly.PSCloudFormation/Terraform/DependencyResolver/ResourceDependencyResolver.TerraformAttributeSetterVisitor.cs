@@ -226,19 +226,68 @@
         /// </summary>
         private class TerraformAttributeSetterVisitor : JValueVisitor<TerraformAttributeSetterContext>
         {
-            protected override void VisitBoolean(JValue json, TerraformAttributeSetterContext context)
+            /// <summary>
+            /// Visits a boolean value in the JSON object graph.
+            /// Look to see if this matches the evaluation of any CloudFormation intrinsic
+            /// and generate a <see cref="StateModification"/> where a match is found.
+            /// </summary>
+            /// <param name="jsonValue">A JValue of type boolean.</param>
+            /// <param name="context">The visitor context.</param>
+            protected override void VisitBoolean(JValue jsonValue, TerraformAttributeSetterContext context)
             {
-                base.VisitBoolean(json, context);
+                if (context.ResourceTraits.ComputedAttributes.Any(a => a.IsLike(GetParentPropertyKey(jsonValue))))
+                {
+                    // Don't adjust computed attributes
+                    return;
+                }
+
+                var boolValue = jsonValue.Value<bool>();
+
+                var intrinsicInfo = context.IntrinsicInfos.FirstOrDefault(i => i.Evaluation is bool b1 && b1 == boolValue);
+
+                if (intrinsicInfo == null)
+                {
+                    // No intrinsic evaluation matches this JValue
+                    return;
+                }
+
+                CreateModification(jsonValue, context, intrinsicInfo);
             }
 
-            protected override void VisitFloat(JValue json, TerraformAttributeSetterContext context)
+            /// <summary>
+            /// Visits a float/double value in the JSON object graph.
+            /// Look to see if this matches the evaluation of any CloudFormation intrinsic
+            /// and generate a <see cref="StateModification"/> where a match is found.
+            /// </summary>
+            /// <param name="jsonValue">A JValue of type float.</param>
+            /// <param name="context">The visitor context.</param>
+            protected override void VisitFloat(JValue jsonValue, TerraformAttributeSetterContext context)
             {
-                base.VisitFloat(json, context);
+                if (context.ResourceTraits.ComputedAttributes.Any(a => a.IsLike(GetParentPropertyKey(jsonValue))))
+                {
+                    // Don't adjust computed attributes
+                    return;
+                }
+
+                CreateNumericModification(jsonValue, context, jsonValue.Value<double>());
             }
 
-            protected override void VisitInteger(JValue json, TerraformAttributeSetterContext context)
+            /// <summary>
+            /// Visits an integer value in the JSON object graph.
+            /// Look to see if this matches the evaluation of any CloudFormation intrinsic
+            /// and generate a <see cref="StateModification"/> where a match is found.
+            /// </summary>
+            /// <param name="jsonValue">A JValue of type integer.</param>
+            /// <param name="context">The visitor context.</param>
+            protected override void VisitInteger(JValue jsonValue, TerraformAttributeSetterContext context)
             {
-                base.VisitInteger(json, context);
+                if (context.ResourceTraits.ComputedAttributes.Any(a => a.IsLike(GetParentPropertyKey(jsonValue))))
+                {
+                    // Don't adjust computed attributes
+                    return;
+                }
+
+                CreateNumericModification(jsonValue, context, jsonValue.Value<double>());
             }
 
             /// <summary>
@@ -246,17 +295,17 @@
             /// Look to see if this matches the evaluation of any CloudFormation intrinsic
             /// and generate a <see cref="StateModification"/> where a match is found.
             /// </summary>
-            /// <param name="jsonStringValue">A JValue of type string.</param>
+            /// <param name="jsonValue">A JValue of type string.</param>
             /// <param name="context">The visitor context.</param>
-            protected override void VisitString(JValue jsonStringValue, TerraformAttributeSetterContext context)
+            protected override void VisitString(JValue jsonValue, TerraformAttributeSetterContext context)
             {
-                if (context.ResourceTraits.ComputedAttributes.Any(a => a.IsLike(GetParentPropertyKey(jsonStringValue))))
+                if (context.ResourceTraits.ComputedAttributes.Any(a => a.IsLike(GetParentPropertyKey(jsonValue))))
                 {
                     // Don't adjust computed attributes
                     return;
                 }
 
-                var stringValue = jsonStringValue.Value<string>();
+                var stringValue = jsonValue.Value<string>();
 
                 if (StateFileSerializer.TryGetJson(
                     stringValue,
@@ -267,7 +316,7 @@
                 {
                     try
                     {
-                        context.EnterNestedJson((JProperty)jsonStringValue.Parent);
+                        context.EnterNestedJson((JProperty)jsonValue.Parent);
 
                         // Build a new visitor to visit the nested JSON document
                         document.Accept(new TerraformAttributeSetterVisitor(), context);
@@ -288,10 +337,27 @@
                     return;
                 }
 
+                CreateModification(jsonValue, context, intrinsicInfo);
+            }
+
+            /// <summary>
+            /// Creates a modification record.
+            /// </summary>
+            /// <param name="jsonValue">The JSON value that will be replaced.</param>
+            /// <param name="context">The context.</param>
+            /// <param name="intrinsicInfo">The intrinsic information.</param>
+            private static void CreateModification(
+                JValue jsonValue,
+                TerraformAttributeSetterContext context,
+                IntrinsicInfo intrinsicInfo)
+            {
                 var intrinsic = intrinsicInfo.Intrinsic;
 
                 switch (intrinsic.Type)
                 {
+                    case IntrinsicType.Base64:
+                    case IntrinsicType.Cidr:
+                    case IntrinsicType.Split:
                     case IntrinsicType.Ref:
                     case IntrinsicType.Select:
                     case IntrinsicType.FindInMap:
@@ -301,12 +367,35 @@
 
                         context.Modifications.Add(
                             new StateModification(
-                                jsonStringValue,
+                                jsonValue,
                                 context.Index,
                                 context.ContainingProperty,
                                 intrinsic.Render(context.Template, intrinsicInfo.TargetResource)));
                         break;
                 }
+            }
+
+            /// <summary>
+            /// Creates a modification records for numeric types.
+            /// </summary>
+            /// <param name="jsonValue">The JSON value that will be replaced.</param>
+            /// <param name="context">The context.</param>
+            /// <param name="doubleVal">The double value.</param>
+            private static void CreateNumericModification(
+                JValue jsonValue,
+                TerraformAttributeSetterContext context,
+                double doubleVal)
+            {
+                var intrinsicInfo = context.IntrinsicInfos.FirstOrDefault(
+                    i => double.TryParse(i.Evaluation.ToString(), out var d) && Math.Abs(d - doubleVal) < 0.001);
+
+                if (intrinsicInfo == null)
+                {
+                    // No intrinsic evaluation matches this JValue
+                    return;
+                }
+
+                CreateModification(jsonValue, context, intrinsicInfo);
             }
 
             /// <summary>
