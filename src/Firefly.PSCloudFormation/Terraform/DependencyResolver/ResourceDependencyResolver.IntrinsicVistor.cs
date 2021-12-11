@@ -95,6 +95,11 @@
             public virtual ResourceMapping TargetResource => this.targetResource;
         }
 
+        /// <summary>
+        /// Special case for !If. We don't process it directly, instead handing off to the first function in the
+        /// branch selected by prevailing conditions.
+        /// </summary>
+        /// <seealso cref="Firefly.PSCloudFormation.Terraform.DependencyResolver.ResourceDependencyResolver.IntrinsicInfo" />
         public class IfIntrinsicInfo : IntrinsicInfo
         {
             /// <summary>
@@ -117,8 +122,10 @@
             public override object Evaluation =>
                 this.NestedIntrinsics.Any() ? this.NestedIntrinsics.First().Evaluation : this.evaluation;
 
+            /// <inheritdoc />
             public override IIntrinsic Intrinsic => this.NestedIntrinsics.Any() ? this.NestedIntrinsics.First().Intrinsic : this.intrinsic;
 
+            /// <inheritdoc />
             public override ResourceMapping TargetResource => this.NestedIntrinsics.Any() ? this.NestedIntrinsics.First().TargetResource : this.targetResource;
         }
 
