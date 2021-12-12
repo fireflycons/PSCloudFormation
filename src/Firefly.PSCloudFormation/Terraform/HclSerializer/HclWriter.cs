@@ -29,24 +29,6 @@
         public const string VarsFile = "terraform.tfvars";
 
         /// <summary>
-        /// The terraform block
-        /// </summary>
-        [EmbeddedResource("terraform-block.hcl")]
-        // ReSharper disable once StyleCop.SA1600 - Loaded by auto-resource
-#pragma warning disable 649
-        private static string terraformBlock;
-#pragma warning restore 649
-
-        /// <summary>
-        /// The terraform block
-        /// </summary>
-        [EmbeddedResource("terraform-block-with-tag.hcl")]
-        // ReSharper disable once StyleCop.SA1600 - Loaded by auto-resource
-#pragma warning disable 649
-        private static string terraformBlockWithTag;
-#pragma warning restore 649
-
-        /// <summary>
         /// The logger
         /// </summary>
         private readonly ILogger logger;
@@ -62,41 +44,16 @@
         private readonly IList<string> warnings;
 
         /// <summary>
-        /// Initializes static members of the <see cref="HclWriter"/> class.
-        /// </summary>
-        static HclWriter()
-        {
-            // Must load manually, as the embedded members are accessed by a static method.
-            ResourceLoader.LoadResources(MethodBase.GetCurrentMethod().DeclaringType);
-        }
-
-        /// <summary>
         /// Initializes a new instance of the <see cref="HclWriter"/> class.
         /// </summary>
         /// <param name="settings">The settings.</param>
         /// <param name="logger">The logger.</param>
-        /// <param name="warnings"></param>
+        /// <param name="warnings">Warning list</param>
         public HclWriter(ITerraformSettings settings, ILogger logger, IList<string> warnings)
         {
             this.warnings = warnings;
             this.logger = logger;
             this.settings = settings;
-        }
-
-        /// <summary>
-        /// Gets the terraform block.
-        /// </summary>
-        /// <param name="region">The region.</param>
-        /// <param name="stackName">Name of the stack. If <c>null</c>, a <c>default_tags</c> block is not included with the provider declaration.</param>
-        /// <returns>Terraform block as HCL string</returns>
-        public static string GetTerraformBlock(string region, string stackName)
-        {
-            if (stackName != null)
-            {
-                return terraformBlockWithTag.Replace("AWS::Region", region).Replace("AWS::StackName", stackName);
-            }
-
-            return terraformBlock.Replace("AWS::Region", region);
         }
 
         /// <summary>
@@ -285,10 +242,13 @@
         /// <param name="writer">The <see cref="TextWriter"/> to write to.</param>
         private void WriteProviders(TextWriter writer)
         {
+            var builder = new ConfigurationBlockBuilder().WithRegion(this.settings.AwsRegion)
+                .WithDefaultTag(this.settings.AddDefaultTag ? this.settings.StackName : null)
+                .WithZipper(this.settings.Template.Resources.Any(
+                    r => r.Type == "AWS::Lambda::Function" && r.GetResourcePropertyValue("Code.ZipFile") != null));
+            
             writer.Write(
-                this.settings.AddDefaultTag
-                    ? GetTerraformBlock(this.settings.AwsRegion, this.settings.StackName)
-                    : GetTerraformBlock(this.settings.AwsRegion, null));
+                builder.Build());
         }
 
         /// <summary>

@@ -90,10 +90,12 @@
 
             this.logger.LogInformation("\nInitializing inputs and resources...");
 
-            initialHcl.AppendLine(
-                HclWriter.GetTerraformBlock(
-                    this.settings.AwsRegion,
-                    this.settings.AddDefaultTag ? this.settings.StackName : null));
+            var builder = new ConfigurationBlockBuilder().WithRegion(this.settings.AwsRegion)
+                .WithDefaultTag(this.settings.AddDefaultTag ? this.settings.StackName : null)
+                .WithZipper(this.settings.Template.Resources.Any(
+                    r => r.Type == "AWS::Lambda::Function" && r.GetResourcePropertyValue("Code.ZipFile") != null));
+
+            initialHcl.AppendLine(builder.Build());
 
             var parameters = this.ProcessInputVariables();
 
@@ -306,8 +308,6 @@
         /// </summary>
         private void GenerateWarnings()
         {
-            var zipFileDetected = false;
-
             // Scan for AWS::Cloudformation::Init metadata and warn about it.
             foreach (var templateResource in this.settings.Template.Resources.Where(
                 r => r.Metadata != null && r.Metadata.Keys.Contains("AWS::CloudFormation::Init")))
@@ -331,7 +331,6 @@
             {
                 this.warnings.Add(
                     $"Resource \"{templateResource.Name}\" contains embedded function code (ZipFile) which is not imported.");
-                zipFileDetected = true;
             }
 
             // Scan for bucket polices and warn
