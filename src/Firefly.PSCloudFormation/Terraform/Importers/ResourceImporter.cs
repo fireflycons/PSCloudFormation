@@ -2,9 +2,7 @@
 {
     using System;
     using System.Collections.Generic;
-    using System.Collections.ObjectModel;
     using System.Linq;
-    using System.Management.Automation.Host;
 
     using Firefly.CloudFormationParser;
     using Firefly.CloudFormationParser.GraphObjects;
@@ -14,13 +12,10 @@
     using Firefly.PSCloudFormation.Terraform.Importers.Cognito;
     using Firefly.PSCloudFormation.Terraform.Importers.ECS;
     using Firefly.PSCloudFormation.Terraform.Importers.ElasticLoadBalancingV2;
-    using Firefly.PSCloudFormation.Terraform.Importers.IAM;
     using Firefly.PSCloudFormation.Terraform.Importers.Lambda;
     using Firefly.PSCloudFormation.Terraform.Importers.RDS;
     using Firefly.PSCloudFormation.Terraform.Importers.Route53;
     using Firefly.PSCloudFormation.Terraform.Importers.VPC;
-
-    using ICSharpCode.SharpZipLib.Tar;
 
     using QuikGraph;
 
@@ -39,11 +34,11 @@
                                                                                          typeof(
                                                                                              LambdaPermissionImporter)
                                                                                      },
-                                                                                     //{
-                                                                                     //    "aws_iam_policy",
-                                                                                     //    typeof(
-                                                                                     //        IAMManagedPolicyImporter)
-                                                                                     //},
+                                                                                     {
+                                                                                         "aws_lambda_function",
+                                                                                         typeof(
+                                                                                             LambdaFunctionImporter)
+                                                                                     },
                                                                                      {
                                                                                          "aws_route53_record",
                                                                                          typeof(Route53RecordImporter)
