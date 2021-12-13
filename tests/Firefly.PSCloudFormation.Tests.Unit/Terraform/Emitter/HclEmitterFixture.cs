@@ -36,7 +36,7 @@
             try
             {
                 Directory.SetCurrentDirectory(this.tempDirectory);
-                new TerraformRunner(this.dummyCredentials, new NullLogger()).Run("init", true, s => { });
+                new TerraformRunner(this.dummyCredentials, new NullLogger()).Run("init", true, true, s => { });
             }
             finally
             {
@@ -56,6 +56,7 @@
                 return new TerraformRunner(this.dummyCredentials, logger).Run(
                     "validate",
                     false,
+                    true,
                     s => { },
                     "-no-color");
             }

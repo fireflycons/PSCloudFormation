@@ -1,5 +1,6 @@
 ﻿namespace Firefly.PSCloudFormation.Terraform.HclSerializer
 {
+    using System;
     using System.Collections.Generic;
     using System.IO;
     using System.Linq;
@@ -23,6 +24,17 @@
     /// </summary>
     internal class HclWriter
     {
+        private static readonly Dictionary<string, string> PlanActions = new Dictionary<string, string>
+                                                                             {
+                                                                                 { "create", "will be created." },
+                                                                                 { "destroy", "will be DESTROYED!" },
+                                                                                 {
+                                                                                     "update",
+                                                                                     "will be updated in-place."
+                                                                                 },
+                                                                                 { "replace", "will be REPLACED!" }
+                                                                             };
+
         /// <summary>
         /// Name of the main script file
         /// </summary>
@@ -48,14 +60,19 @@
         /// </summary>
         private readonly IList<string> warnings;
 
+        // The error list
+        private readonly IList<string> errors;
+
         /// <summary>
         /// Initializes a new instance of the <see cref="HclWriter"/> class.
         /// </summary>
         /// <param name="settings">The settings.</param>
         /// <param name="logger">The logger.</param>
         /// <param name="warnings">Warning list</param>
-        public HclWriter(ITerraformSettings settings, ILogger logger, IList<string> warnings)
+        /// <param name="errors">Error list</param>
+        public HclWriter(ITerraformSettings settings, ILogger logger, IList<string> warnings, IList<string> errors)
         {
+            this.errors = errors;
             this.warnings = warnings;
             this.logger = logger;
             this.settings = settings;
@@ -289,11 +306,111 @@
             var validationOutput = new List<string>();
 
             this.logger.LogInformation("Formatting output...");
-            this.settings.Runner.Run("fmt", true, msg => validationOutput.Add(msg));
+            this.settings.Runner.Run("fmt", true, true, msg => validationOutput.Add(msg));
             this.logger.LogInformation("Validating output...");
-            this.settings.Runner.Run("validate", true, msg => validationOutput.Add(msg));
+            this.settings.Runner.Run("validate", true, true, msg => validationOutput.Add(msg));
+            this.Plan();
 
+            // Don't bother trying to parse out warnings form text output. They're already displayed so just count.
             return validationOutput.Count(line => line.Contains("Warning:"));
+        }
+
+        /// <summary>
+        /// Runs <c>terraform plan</c> to get a list of changes that the user should be warned about
+        /// </summary>
+        private void Plan()
+        {
+            var destructiveChanges = 0;
+            var totalChanges = 0;
+
+            this.logger.LogInformation("Planning...");
+            var success = this.settings.Runner.Run(
+                "plan",
+                false,
+                false,
+                msg => LogChange(JObject.Parse(msg)),
+                "-json");
+
+            if (destructiveChanges > 0)
+            {
+                this.warnings.Add("One or more resources will be REPLACED or DESTROYED with the current configuration!");
+            }
+
+            if (totalChanges == 0)
+            {
+                this.logger.LogInformation("No changes were detected by 'terraform plan', however the configuration should still be tested against a non-prod stack.");
+            }
+
+            void LogChange(JObject planOutput)
+            {
+                var type = SafeGetToken("type");
+
+                if (type == null)
+                {
+                    return;
+                }
+
+                switch (type)
+                {
+                    case "planned_change":
+
+                        var addr = SafeGetToken("$.change.resource.addr");
+                        var action = SafeGetToken("$.change.action");
+
+                        ++totalChanges;
+
+                        if (addr == null || action == null)
+                        {
+                            break;
+                        }
+
+                        switch (action)
+                        {
+                            case "replace":
+                            case "destroy":
+
+                                var warn = $"Resource \"{addr}\" {PlanActions[action]}";
+                                this.logger.LogWarning(warn);
+                                this.warnings.Add(warn);
+                                ++destructiveChanges;
+                                break;
+
+                            default:
+
+                                this.logger.LogInformation($"Resource \"{addr}\" {PlanActions[action]}");
+                                break;
+                        }
+
+                        break;
+
+                    case "diagnostic":
+
+                        var severity = SafeGetToken("$.diagnostic.severity");
+                        var summary = SafeGetToken("$.diagnostic.summary");
+                        var detail = SafeGetToken("$.diagnostic.detail").Replace("\n", string.Empty);
+                        var msg = $"{summary}: {detail}";
+
+                        if (severity == "error")
+                        {
+                            this.logger.LogError("ERROR: " + msg);
+                            this.errors.Add(msg);
+                        }
+                        else
+                        {
+                            this.logger.LogWarning(msg);
+                            this.warnings.Add(msg);
+                        }
+
+                        break;
+                }
+
+                string SafeGetToken(string jsonPath)
+                {
+                    var tok = planOutput.SelectToken(jsonPath);
+
+                    return tok == null ? string.Empty : tok.Value<string>();
+                }
+            }
         }
 
         /// <summary>

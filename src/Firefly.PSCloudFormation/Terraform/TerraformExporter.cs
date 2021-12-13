@@ -115,7 +115,7 @@
             {
                 this.InitializeWorkspace(initialHcl.ToString());
 
-                //var importedResources = resourcesToImport.Where(r => r.AwsType != "AWS::SecretsManager::SecretTargetAttachment").ToList();
+                //var importedResources = resourcesToImport.Where(r => r.AwsType != "AWS::SecretsManager::SecretTargetAttachment" && !UnsupportedResources.Contains(r.AwsType)).ToList();
                 var importedResources = this.ImportResources(resourcesToImport);
 
                 // TODO: Analyze state file for null properties that have defaults. Replace these defaults and write back out.
@@ -123,12 +123,12 @@
                 // Copy of the state file that we will insert references to inputs, other resources etc. before serialization to HCL.
                 var stateFile = JsonConvert.DeserializeObject<StateFile>(File.ReadAllText(StateFileName));
 
-                warningCount += new HclWriter(this.settings, this.logger, this.warnings).Serialize(
+                warningCount += new HclWriter(this.settings, this.logger, this.warnings, this.errors).Serialize(
                     stateFile,
                     importedResources,
                     parameters);
 
-                this.logger.LogInformation($"Export of stack \"{this.settings.StackName}\" to terraform complete!");
+                this.logger.LogInformation($"\nExport of stack \"{this.settings.StackName}\" to terraform complete!");
             }
             catch (TerraformRunnerException e)
             {
@@ -181,7 +181,7 @@
             // Write out initial HCL with empty resource declarations, so that terraform import has something to work with
             File.WriteAllText(HclWriter.MainScriptFile, initialHcl, new UTF8Encoding(false));
 
-            this.settings.Runner.Run("init", true, null);
+            this.settings.Runner.Run("init", true, true, null);
         }
 
         /// <summary>
@@ -232,6 +232,7 @@
                 var success = this.settings.Runner.Run(
                     "import",
                     false,
+                    true,
                     msg => cmdOutput.Add(msg),
                     "-no-color",
                     resource.Address,

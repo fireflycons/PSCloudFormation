@@ -63,18 +63,8 @@
             throw new FileNotFoundException("Cannot find terraform executable");
         }
 
-        /// <summary>
-        /// Runs ad-hoc Terraform commands.
-        /// </summary>
-        /// <param name="command">The command (e.g. plan, import etc).</param>
-        /// <param name="throwOnError">if <c>true</c> throw an exception if terraform exits with non-zero status.</param>
-        /// <param name="output">Action to collect output from the command. Can be <c>null</c></param>
-        /// <param name="arguments">The arguments.</param>
-        /// <returns>
-        /// If exceptions are disabled by <paramref name="throwOnError" /> then <c>false</c> is returned when terraform exits with non-zero status.
-        /// </returns>
-        /// <exception cref="System.InvalidOperationException">terraform exited with code {process.ExitCode}</exception>
-        public bool Run(string command, bool throwOnError, Action<string> output, params string[] arguments)
+        /// <inheritdoc />
+        public bool Run(string command, bool throwOnError, bool echo, Action<string> output, params string[] arguments)
         {
             var errors = 0;
             var warnings = 0;
@@ -89,13 +79,23 @@
                 msg =>
                     {
                         output?.Invoke(msg);
-                        this.logger.LogInformation(msg);
+
+                        if (echo)
+                        {
+                            this.logger.LogInformation(msg);
+                        }
+
                         warnings += msg.Contains("Warning:") ? 1 : 0;
                     },
                 msg =>
                     {
                         output?.Invoke(msg);
-                        this.logger.LogError(msg);
+
+                        if (echo)
+                        {
+                            this.logger.LogError(msg);
+                        }
+
                         errors += msg.Contains("Error:") ? 1 : 0;
                     });
 
