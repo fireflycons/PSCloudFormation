@@ -1,6 +1,5 @@
 ﻿namespace Firefly.PSCloudFormation.Terraform.HclSerializer
 {
-    using System;
     using System.Linq;
 
     using Firefly.PSCloudFormation.Terraform.HclSerializer.Events;
@@ -73,7 +72,7 @@
 
                 isJson = true;
             }
-            catch (Exception e)
+            catch
             {
                 // Deliberately swallow. String is not valid JSON
             }

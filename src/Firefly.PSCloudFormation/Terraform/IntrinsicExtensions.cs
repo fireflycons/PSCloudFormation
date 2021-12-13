@@ -358,12 +358,9 @@
                                 ? traits.AttributeMap[attributeName]
                                 : attributeName.CamelCaseToSnakeCase();
 
-            if (template.Resources.Any(r => r.Name == resource.LogicalId))
-            {
-                return new IndirectReference($"{resource.Address}.{attributeName}");
-            }
-
-            return null;
+            return template.Resources.Any(r => r.Name == resource.LogicalId)
+                       ? new IndirectReference($"{resource.Address}.{attributeName}")
+                       : null;
         }
 
         /// <summary>
@@ -473,10 +470,9 @@
                 replacements.Add(substitution.Key, replacement);
             }
 
-            foreach (var replacement in replacements)
-            {
-                expression = expression.Replace($"${{{replacement.Key}}}", $"${{{replacement.Value}}}");
-            }
+            expression = replacements.Aggregate(
+                expression,
+                (current, replacement) => current.Replace($"${{{replacement.Key}}}", $"${{{replacement.Value}}}"));
 
             // Add interpolation modification.
             return new InterpolationReference(expression);

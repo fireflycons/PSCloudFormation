@@ -5,8 +5,6 @@
     using System.IO;
     using System.Linq;
 
-    using Amazon.S3.Model.Internal.MarshallTransformations;
-
     /// <summary>
     /// Object that describes a lambda dependency
     /// </summary>

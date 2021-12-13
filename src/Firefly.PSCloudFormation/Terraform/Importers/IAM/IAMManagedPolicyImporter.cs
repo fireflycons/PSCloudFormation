@@ -4,6 +4,7 @@
     /// <see href="https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/iam_policy#import" />
     /// </summary>
     /// <seealso cref="Firefly.PSCloudFormation.Terraform.Importers.ResourceImporter" />
+    // ReSharper disable once InconsistentNaming
     internal class IAMManagedPolicyImporter : ResourceImporter
     {
         /// <summary>

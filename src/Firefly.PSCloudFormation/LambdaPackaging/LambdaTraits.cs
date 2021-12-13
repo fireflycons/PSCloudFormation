@@ -28,7 +28,7 @@
         /// Create a traits class from the lambda runtime identifier.
         /// </summary>
         /// <param name="runtime">The runtime.</param>
-        /// <returns></returns>
+        /// <returns>A <see cref="LambdaTraits"/> for the specified runtime.</returns>
         /// <exception cref="System.InvalidOperationException">Unsupported lambda runtime '{runtime}'. Only script types allowed here.</exception>
         public static LambdaTraits FromRuntime(string runtime)
         {

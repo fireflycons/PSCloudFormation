@@ -88,12 +88,7 @@
 
                 case IEnumerable enumerable:
 
-                    doubles = new List<double>();
-
-                    foreach (var val in enumerable)
-                    {
-                        doubles.Add(double.Parse(val.ToString()));
-                    }
+                    doubles = (from object val in enumerable select double.Parse(val.ToString())).ToList();
 
                     break;
 

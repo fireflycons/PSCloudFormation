@@ -26,7 +26,7 @@
         protected override string ReferencedAwsResource => string.Empty;
 
         /// <inheritdoc />
-        protected override string ReferencingPropertyPath { get; }
+        protected override string ReferencingPropertyPath => string.Empty;
 
         /// <inheritdoc />
         public override string GetImportId()

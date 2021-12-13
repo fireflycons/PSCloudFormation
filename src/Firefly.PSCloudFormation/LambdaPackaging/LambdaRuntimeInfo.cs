@@ -4,7 +4,6 @@
     using System.Diagnostics;
     using System.Text.RegularExpressions;
 
-    using Firefly.CloudFormation.Parsers;
     using Firefly.CloudFormationParser;
 
     /// <summary>

@@ -1,9 +1,5 @@
 ﻿namespace Firefly.PSCloudFormation.Terraform.Importers.ApiGateway
 {
-    using System.Linq;
-
-    using Firefly.CloudFormationParser;
-
     /// <summary>
     /// Serves to determine the REST-API-ID that is required to import several other resources.
     /// </summary>

@@ -28,14 +28,6 @@
         string AwsRegion { get; }
 
         /// <summary>
-        /// Gets the physical resources as reported by the stack.
-        /// </summary>
-        /// <value>
-        /// The physical resources.
-        /// </value>
-        IReadOnlyCollection<StackResource> PhysicalResources { get; }
-
-        /// <summary>
         /// Gets the resources.
         /// </summary>
         /// <value>

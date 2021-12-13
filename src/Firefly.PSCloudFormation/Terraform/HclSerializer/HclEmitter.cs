@@ -171,15 +171,6 @@
         private string CurrentPath => string.Join(".", this.path.Where(p => p != null).Reverse());
 
         /// <summary>
-        /// Gets a value indicating whether the current attribute is a top level attribute.
-        /// Used in determining whether to emit a block or a mapping when a mapping key is encountered.
-        /// </summary>
-        /// <value>
-        ///   <c>true</c> if the current attribute is a top level attribute; otherwise, <c>false</c>.
-        /// </value>
-        private bool IsTopLevelAttribute => this.path.Count == 1;
-
-        /// <summary>
         /// Emits the next event.
         /// Events are queued until an entire resource is collected, the that resource is written out.
         /// </summary>
@@ -316,14 +307,15 @@
                     continue;
                 }
 
-                if (lastEvent is SequenceStart && evt is Scalar)
+                switch (lastEvent)
                 {
-                    return AttributeContent.Sequence;
-                }
+                    case SequenceStart _ when evt is Scalar:
 
-                if (lastEvent is MappingStart)
-                {
-                    return AttributeContent.Mapping;
+                        return AttributeContent.Sequence;
+
+                    case MappingStart _:
+
+                        return AttributeContent.Mapping;
                 }
 
                 if (!(this.isJson || this.resourceTraits.IsNonBlockAttribute(key)))
@@ -391,7 +383,7 @@
         /// <param name="event">The event.</param>
         private void EmitJsonEnd(HclEvent @event)
         {
-            var p = GetTypedEvent<JsonEnd>(@event);
+            GetTypedEvent<JsonEnd>(@event);
 
             this.isJson = false;
             this.indent = this.indents.Pop();
@@ -415,7 +407,7 @@
         /// <param name="event">The event.</param>
         private void EmitJsonStart(HclEvent @event)
         {
-            var p = GetTypedEvent<JsonStart>(@event);
+            GetTypedEvent<JsonStart>(@event);
 
             this.isJson = true;
             this.states.Push(this.state);
@@ -431,8 +423,7 @@
         /// <param name="event">The event.</param>
         private void EmitMappingEnd(HclEvent @event)
         {
-            var m = GetTypedEvent<MappingEnd>(@event);
-            var previousState = this.state;
+            GetTypedEvent<MappingEnd>(@event);
 
             if (this.state != EmitterState.Resource)
             {
@@ -452,21 +443,23 @@
 
             var mappingStart = this.events.Peek() as MappingStart;
 
-            if (this.state == EmitterState.BlockList && mappingStart != null)
+            switch (this.state)
             {
-                // Next element in a block list
-                this.WriteIndent();
-                this.indent = this.indents.Pop();
-                this.EmitMappingKey(new MappingKey(this.currentBlockKey, true));
-                this.IncreaseIndent();
+                case EmitterState.BlockList when mappingStart != null:
 
-                return;
-            }
+                    // Next element in a block list
+                    this.WriteIndent();
+                    this.indent = this.indents.Pop();
+                    this.EmitMappingKey(new MappingKey(this.currentBlockKey, true));
+                    this.IncreaseIndent();
 
-            if (this.state == EmitterState.Sequence && mappingStart != null)
-            {
-                this.Write(',');
-                this.WriteIndent();
+                    return;
+
+                case EmitterState.Sequence when mappingStart != null:
+
+                    this.Write(',');
+                    this.WriteIndent();
+                    break;
             }
         }
 
@@ -478,18 +471,13 @@
         {
             var key = GetTypedEvent<MappingKey>(@event);
             var lastKey = this.currentKey;
-            AttributeContent analysis;
             this.currentKey = key.Value;
 
             // Don't push path for repeating block key
-            if (key.IsBlockKey)
-            {
-                analysis = AttributeContent.BlockList;
-            }
-            else
+            if (!key.IsBlockKey)
             {
                 this.path.Push(this.currentKey);
-                analysis = this.AnalyzeAttribute(key);
+                var analysis = this.AnalyzeAttribute(key);
 
                 if (!this.resourceTraits.ShouldEmitAttribute(this.CurrentPath, analysis))
                 {
@@ -531,39 +519,13 @@
             }
         }
 
-        private EmitterState NextState(AttributeContent analysis)
-        {
-            switch (analysis)
-            {
-                case AttributeContent.Mapping:
-
-                    return EmitterState.Mapping;
-
-                case AttributeContent.Sequence:
-
-                    return EmitterState.Sequence;
-
-                case AttributeContent.BlockObject:
-
-                    return EmitterState.BlockObject;
-
-                case AttributeContent.BlockList:
-
-                    return EmitterState.BlockList;
-
-                default:
-
-                    return EmitterState.Resource;
-            }
-        }
-
         /// <summary>
         /// Emits a mapping start.
         /// </summary>
         /// <param name="event">A <see cref="MappingStart"/> event.</param>
         private void EmitMappingStart(HclEvent @event)
         {
-            var m = GetTypedEvent<MappingStart>(@event);
+            GetTypedEvent<MappingStart>(@event);
 
             this.states.Push(this.state);
             this.state = EmitterState.Mapping;
@@ -683,7 +645,7 @@
                 // The Unicode standard classifies the characters \u000A (LF), \u000C (FF), and \u000D (CR) as control characters
                 // Emit as here doc
                 this.Write("<<-EOT");
-                foreach (var line in value.Split(new[] { '\r', '\n' }))
+                foreach (var line in value.Split('\r', '\n'))
                 {
                     this.WriteIndent();
                     this.Write(line);
@@ -744,7 +706,7 @@
         /// <param name="event">The event.</param>
         private void EmitSequenceEnd(HclEvent @event)
         {
-            var se = GetTypedEvent<SequenceEnd>(@event);
+            GetTypedEvent<SequenceEnd>(@event);
 
             this.state = this.states.Pop();
 
@@ -782,7 +744,7 @@
         /// <param name="event">The event.</param>
         private void EmitSequenceStart(HclEvent @event)
         {
-            var ss = GetTypedEvent<SequenceStart>(@event);
+            GetTypedEvent<SequenceStart>(@event);
 
             if (this.events.Peek() is SequenceEnd)
             {

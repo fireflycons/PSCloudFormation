@@ -19,9 +19,6 @@
         public string AwsRegion { get; set; }
 
         /// <inheritdoc />
-        public IReadOnlyCollection<StackResource> PhysicalResources { get; set; }
-
-        /// <inheritdoc />
         public IReadOnlyCollection<CloudFormationResource> Resources { get; set;  }
 
         /// <inheritdoc />

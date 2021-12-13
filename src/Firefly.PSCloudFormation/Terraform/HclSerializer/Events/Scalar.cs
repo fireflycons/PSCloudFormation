@@ -22,42 +22,46 @@
         {
             this.IsQuoted = isQuoted;
 
-            if (value == null)
+            switch (value)
             {
-                return;
-            }
-
-            if (value is string s && s.StartsWith(typeof(Reference).Namespace))
-            {
-                // Re-hydrate a smuggled in "Reference" type.
-                var split = s.Split(':');
-                var type = Assembly.GetCallingAssembly().GetType(split[0]);
-                var reference = (Reference)Activator.CreateInstance(type, split[1]);
-                this.Value = reference.ReferenceExpression;
-                this.IsQuoted = false;
-                return;
-            }
-
-            if (value is bool)
-            {
-                this.Value = value.ToString().ToLowerInvariant();
-                this.IsQuoted = false;
-            }
-            else
-            {
-                this.Value = value.ToString();
-
-                if (string.IsNullOrWhiteSpace(this.Value))
-                {
+                case null:
                     return;
-                }
 
-                this.IsJsonDocument = StateFileSerializer.TryGetJson(this.Value, false, "Unknown", "Unknown", out var document);
+                case string s when s.StartsWith(typeof(Reference).Namespace):
+                    {
+                        // Re-hydrate a smuggled in "Reference" type.
+                        var split = s.Split(':');
+                        var type = Assembly.GetCallingAssembly().GetType(split[0]);
+                        var reference = (Reference)Activator.CreateInstance(type, split[1]);
+                        this.Value = reference.ReferenceExpression;
+                        this.IsQuoted = false;
+                        return;
+                    }
 
-                if (this.IsJsonDocument)
-                {
-                    this.JsonDocumentType = document.Type;
-                }
+                case bool _:
+                
+                    this.Value = value.ToString().ToLowerInvariant();
+                    this.IsQuoted = false;
+                    break;
+
+                default:
+                    {
+                        this.Value = value.ToString();
+
+                        if (string.IsNullOrWhiteSpace(this.Value))
+                        {
+                            return;
+                        }
+
+                        this.IsJsonDocument = StateFileSerializer.TryGetJson(this.Value, false, "Unknown", "Unknown", out var document);
+
+                        if (this.IsJsonDocument)
+                        {
+                            this.JsonDocumentType = document.Type;
+                        }
+
+                        break;
+                    }
             }
         }
 

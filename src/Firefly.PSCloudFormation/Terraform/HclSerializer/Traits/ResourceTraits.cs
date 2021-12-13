@@ -41,21 +41,6 @@
         [YamlMember(Alias = "Resource")]
         public string ResourceType { get; set; }
 
-        /// <summary>
-        /// Gets traits class for current resource type.
-        /// </summary>
-        /// <param name="resourceType">Type of the resource being serialized.</param>
-        /// <returns>Resource specific <see cref="ResourceTraits"/></returns>
-        public static ResourceTraits GetTraits(string resourceType)
-        {
-            switch (resourceType)
-            {
-                default:
-
-                    return new ResourceTraits();
-            }
-        }
-
         /// <inheritdoc />
         public Scalar ApplyDefaultValue(string currentPath, Scalar scalar)
         {

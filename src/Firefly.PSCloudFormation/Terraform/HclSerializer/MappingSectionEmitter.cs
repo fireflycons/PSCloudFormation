@@ -279,7 +279,7 @@
             /// <param name="context">The context.</param>
             protected override void Visit(string stringValue, MappingEmitterContext context)
             {
-                this.WriteValue($"\"{stringValue}\"", context);
+                WriteValue($"\"{stringValue}\"", context);
             }
 
             /// <summary>
@@ -289,7 +289,7 @@
             /// <param name="context">The context.</param>
             protected override void Visit(int integerValue, MappingEmitterContext context)
             {
-                this.WriteValue(integerValue.ToString(), context);
+                WriteValue(integerValue.ToString(), context);
             }
 
             /// <summary>
@@ -299,7 +299,7 @@
             /// <param name="context">The context.</param>
             protected override void Visit(double doubleValue, MappingEmitterContext context)
             {
-                this.WriteValue(doubleValue.ToString(CultureInfo.InvariantCulture), context);
+                WriteValue(doubleValue.ToString(CultureInfo.InvariantCulture), context);
             }
 
             /// <summary>
@@ -309,7 +309,7 @@
             /// <param name="context">The context.</param>
             protected override void Visit(bool booleanValue, MappingEmitterContext context)
             {
-                this.WriteValue(booleanValue.ToString().ToLowerInvariant(), context);
+                WriteValue(booleanValue.ToString().ToLowerInvariant(), context);
             }
 
             /// <summary>
@@ -327,7 +327,7 @@
             /// </summary>
             /// <param name="value">The value.</param>
             /// <param name="context">The context.</param>
-            private void WriteValue(string value, MappingEmitterContext context)
+            private static void WriteValue(string value, MappingEmitterContext context)
             {
                 var isList = context.CurrentState == MappingEmitterContext.State.List;
 

@@ -4,7 +4,6 @@
 
     using Firefly.CloudFormation;
     using Firefly.PSCloudFormation.Terraform.Hcl;
-    using Firefly.PSCloudFormation.Utils;
 
     /// <summary>
     /// Settings data passed to resource importers

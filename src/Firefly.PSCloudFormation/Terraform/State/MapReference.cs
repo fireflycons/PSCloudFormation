@@ -1,8 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Text;
-
-namespace Firefly.PSCloudFormation.Terraform.State
+﻿namespace Firefly.PSCloudFormation.Terraform.State
 {
     internal class MapReference : Reference
     {

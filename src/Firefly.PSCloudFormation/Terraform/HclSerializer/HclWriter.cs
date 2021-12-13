@@ -9,6 +9,7 @@
     using Firefly.CloudFormationParser;
     using Firefly.CloudFormationParser.Intrinsics;
     using Firefly.CloudFormationParser.Intrinsics.Functions;
+    using Firefly.CloudFormationParser.TemplateObjects;
     using Firefly.PSCloudFormation.LambdaPackaging;
     using Firefly.PSCloudFormation.Terraform.DependencyResolver;
     using Firefly.PSCloudFormation.Terraform.Hcl;
@@ -85,7 +86,7 @@
         /// <param name="mapping">The mapping.</param>
         /// <param name="codeDefinition">The code definition.</param>
         private static void ResolveLambdaS3Code(
-            IResource cloudFormationResource,
+            ITemplateObject cloudFormationResource,
             JObject attributes,
             ResourceMapping mapping,
             IDictionary<string, object> codeDefinition)
@@ -131,7 +132,7 @@
         private static void ResolveLambdaZipCode(
             TextWriter writer,
             string runtime,
-            IResource cloudFormationResource,
+            ITemplateObject cloudFormationResource,
             JObject attributes,
             ResourceMapping mapping)
         {
@@ -247,8 +248,8 @@
             }
 
             // Emit an aws_availability_zones block for any GetAZs
-            writer.WriteLine($"data \"aws_availability_zones\" \"available\" {{");
-            writer.WriteLine($"  state = \"available\"");
+            writer.WriteLine("data \"aws_availability_zones\" \"available\" {");
+            writer.WriteLine("  state = \"available\"");
             writer.WriteLine("}");
             writer.WriteLine();
         }
@@ -288,9 +289,9 @@
             var validationOutput = new List<string>();
 
             this.logger.LogInformation("Formatting output...");
-            this.settings.Runner.Run("fmt", true, (msg) => validationOutput.Add(msg));
+            this.settings.Runner.Run("fmt", true, msg => validationOutput.Add(msg));
             this.logger.LogInformation("Validating output...");
-            this.settings.Runner.Run("validate", true, (msg) => validationOutput.Add(msg));
+            this.settings.Runner.Run("validate", true, msg => validationOutput.Add(msg));
 
             return validationOutput.Count(line => line.Contains("Warning:"));
         }

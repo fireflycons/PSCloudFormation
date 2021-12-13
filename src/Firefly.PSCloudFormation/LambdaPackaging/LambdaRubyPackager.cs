@@ -1,7 +1,6 @@
 ﻿namespace Firefly.PSCloudFormation.LambdaPackaging
 {
     using System.IO;
-    using System.Text.RegularExpressions;
 
     using Firefly.CloudFormation;
     using Firefly.PSCloudFormation.Utils;

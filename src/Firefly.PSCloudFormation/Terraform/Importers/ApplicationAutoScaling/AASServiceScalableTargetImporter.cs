@@ -1,7 +1,5 @@
 ﻿namespace Firefly.PSCloudFormation.Terraform.Importers.ApplicationAutoScaling
 {
-    using System.Linq;
-
     /// <summary>
     /// <see href="https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/appautoscaling_target#import" />
     /// </summary>

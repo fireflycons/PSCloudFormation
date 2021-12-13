@@ -3,6 +3,10 @@
     using System;
     using System.Runtime.Serialization;
 
+    /// <summary>
+    /// Exception type thrown for most errors that happen during serialization and generation og HCL. May wrap additional exceptions.
+    /// </summary>
+    /// <seealso cref="System.Exception" />
     [Serializable]
     public class HclSerializerException : Exception
     {

@@ -2,6 +2,8 @@
 {
     using Firefly.PSCloudFormation.Terraform.Hcl;
 
+    // ReSharper disable once StyleCop.SA1600
+    // ReSharper disable once InconsistentNaming
     internal abstract class AbstractAASImporter : ResourceImporter
     {
         /// <summary>

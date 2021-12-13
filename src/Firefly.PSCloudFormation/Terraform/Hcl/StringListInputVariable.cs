@@ -86,12 +86,7 @@
 
                 case IEnumerable enumerable:
 
-                    strings = new List<string>();
-
-                    foreach (var val in enumerable)
-                    {
-                        strings.Add(val.ToString().Trim());
-                    }
+                    strings = (from object val in enumerable select val.ToString().Trim()).ToList();
 
                     break;
 

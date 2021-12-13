@@ -148,17 +148,6 @@
 
             this.AwsResource =
                 this.TerraformSettings.Template.Resources.First(r => r.Name == this.ImportSettings.Resource.LogicalId);
-
-            // ReSharper disable once VirtualMemberCallInConstructor - ReferencedAwsResource is initialized pre-construction with =>
-            var dependencies = string.IsNullOrEmpty(this.ReferencedAwsResource)
-                                   ? new List<TaggedEdge<IVertex, EdgeDetail>>()
-                                   : this.TerraformSettings.Template.DependencyGraph.Edges.Where(
-                                           e => e.Target.TemplateObject.Name == this.ImportSettings.Resource.LogicalId
-                                                && e.Source.TemplateObject is IResource && e.Tag != null
-                                                && e.Tag.ReferenceType == ReferenceType.DirectReference).Where(
-                                           d => ((IResource)d.Source.TemplateObject).Type == this.ReferencedAwsResource)
-                                       .ToList();
-
         }
 
         /// <summary>

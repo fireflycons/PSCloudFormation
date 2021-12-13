@@ -2,6 +2,7 @@
 {
     using System;
     using System.Collections.Generic;
+    using System.Globalization;
     using System.Linq;
 
     using Newtonsoft.Json.Linq;
@@ -162,7 +163,7 @@
 
                     case double d:
 
-                        formattedArgs.Add(d.ToString());
+                        formattedArgs.Add(d.ToString(CultureInfo.InvariantCulture));
                         break;
 
                     case bool b:

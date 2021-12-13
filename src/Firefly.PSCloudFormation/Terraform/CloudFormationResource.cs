@@ -1,8 +1,6 @@
 ﻿namespace Firefly.PSCloudFormation.Terraform
 {
-    using System;
     using System.Collections.Generic;
-    using System.Text.RegularExpressions;
 
     using Amazon.CloudFormation.Model;
 
@@ -14,10 +12,6 @@
     /// </summary>
     internal class CloudFormationResource : IReferencedItem
     {
-        private readonly object sync = new object();
-
-        private Regex arnRegex = null;
-
         /// <summary>
         /// Initializes a new instance of the <see cref="CloudFormationResource"/> class.
         /// </summary>
@@ -37,38 +31,6 @@
 
         /// <inheritdoc />
         public bool IsScalar => true;
-
-        /// <inheritdoc />
-        public Regex ArnRegex
-        {
-            get
-            {
-                if (this.arnRegex == null)
-                {
-                    lock (this.sync)
-                    {
-                        if (this.arnRegex != null)
-                        {
-                            return this.arnRegex;
-                        }
-
-                        var resourceGroup = this.ResourceType.Split(new[] { "::" }, StringSplitOptions.None)[1]
-                            .ToLowerInvariant();
-                        this.arnRegex = new Regex($@"arn:\w+:{resourceGroup}.*?{this.PhysicalResourceId}");
-                    }
-                }
-
-                return this.arnRegex;
-            }
-        }
-
-        /// <summary>
-        /// Gets the explicit dependencies.
-        /// </summary>
-        /// <value>
-        /// The explicit dependencies.
-        /// </value>
-        public IEnumerable<string> ExplicitDependencies => this.TemplateResource.ExplicitDependencies;
 
         /// <summary>
         /// Gets the logical resource identifier.

@@ -17,7 +17,7 @@
 
     using Newtonsoft.Json;
 
-    internal partial class TerraformExporter : AutoResourceLoader
+    internal class TerraformExporter : AutoResourceLoader
     {
         /// <summary>
         /// These resources have no direct terraform representation.
@@ -191,7 +191,7 @@
         /// <returns>List of resources that were imported.</returns>
         private List<ResourceMapping> ImportResources(List<ResourceMapping> resourcesToImport)
         {
-            List<ResourceMapping> importedResources = new List<ResourceMapping>();
+            var importedResources = new List<ResourceMapping>();
             var totalResources = resourcesToImport.Count;
 
             this.logger.LogInformation(

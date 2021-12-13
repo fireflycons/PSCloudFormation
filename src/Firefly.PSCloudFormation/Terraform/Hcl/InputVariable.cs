@@ -3,10 +3,8 @@
     using System;
     using System.Collections.Generic;
     using System.Text;
-    using System.Text.RegularExpressions;
 
     using Firefly.CloudFormationParser;
-    using Firefly.PSCloudFormation.Utils;
 
     /// <summary>
     /// Represents a Terraform HCL parameter (input variable)
@@ -30,11 +28,6 @@
             };
 
         /// <summary>
-        /// A regex that won't match anything. ARNs aren't part of the equation for parameters.
-        /// </summary>
-        private static readonly Regex WillNotMatchRegex = new Regex(@"[z]{50}");
-
-        /// <summary>
         /// Initializes a new instance of the <see cref="InputVariable"/> class.
         /// </summary>
         /// <param name="stackParameter">The stack parameter.</param>
@@ -51,9 +44,6 @@
         /// The address.
         /// </value>
         public virtual string Address => $"var.{this.Name}";
-
-        /// <inheritdoc />
-        public Regex ArnRegex => WillNotMatchRegex;
 
         /// <summary>
         /// Gets the current value of the parameter as returned by the stack
@@ -251,24 +241,6 @@
         public virtual string GenerateTfVar()
         {
             return string.Empty;
-        }
-
-        public int IndexOf(string value)
-        {
-            if (this.IsScalar)
-            {
-                return -1;
-            }
-
-            foreach (var (item, ind) in this.ListIdentity.WithIndex())
-            {
-                if (item == value)
-                {
-                    return ind;
-                }
-            }
-
-            return -1;
         }
 
         /// <summary>

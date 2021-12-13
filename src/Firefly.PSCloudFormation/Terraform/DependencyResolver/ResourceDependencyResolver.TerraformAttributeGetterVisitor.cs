@@ -46,14 +46,6 @@
             /// </value>
             public object Value { get; set; }
 
-            /// <summary>
-            /// Gets or sets the attribute reference.
-            /// </summary>
-            /// <value>
-            /// Reference to the located attribute if found, else <c>null</c>.
-            /// </value>
-            public JProperty AttributeReference { get; set; }
-
             /// <inheritdoc />
             public TerraformAttributeGetterContext Next(int index)
             {
@@ -97,8 +89,6 @@
                 {
                     return;
                 }
-
-                context.AttributeReference = property;
 
                 switch (jv.Type)
                 {

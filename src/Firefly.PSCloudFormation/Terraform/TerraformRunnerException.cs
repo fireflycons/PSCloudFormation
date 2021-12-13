@@ -5,6 +5,10 @@
 
     using Firefly.PSCloudFormation.Terraform.HclSerializer;
 
+    /// <summary>
+    /// Exception raised if an invocation of the terraform executable has non-zero exit code.
+    /// </summary>
+    /// <seealso cref="System.Exception" />
     public class TerraformRunnerException : Exception
     {
         /// <summary>
@@ -51,17 +55,17 @@
         /// <summary>
         /// Gets the number of errors recorded.
         /// </summary>
-        public int Errors { get; } = 0;
+        public int Errors { get; }
 
         /// <summary>
         /// Gets the number of warnings recorded.
         /// </summary>
-        public int Warnings { get; } = 0;
+        public int Warnings { get; }
 
         /// <summary>
         /// Gets the exit code of the terraform process.
         /// </summary>
-        public int ExitCode { get; } = 0;
+        public int ExitCode { get; }
 
         private static string FormatBaseMessage(string commandTail, int exitCode)
         {

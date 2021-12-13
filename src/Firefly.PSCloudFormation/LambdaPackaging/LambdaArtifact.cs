@@ -11,8 +11,6 @@
     using Firefly.CloudFormationParser;
     using Firefly.PSCloudFormation.Utils;
 
-    using Newtonsoft.Json;
-
     /// <summary>
     /// Given a resource, decide if it is a lambda and if so, what sort.
     /// </summary>

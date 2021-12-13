@@ -1,7 +1,5 @@
 ﻿namespace Firefly.PSCloudFormation.Terraform.State
 {
-    using System;
-
     internal class IndirectReference : Reference
     {
         /// <summary>
