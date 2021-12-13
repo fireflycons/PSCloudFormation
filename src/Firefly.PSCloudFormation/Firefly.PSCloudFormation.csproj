@@ -17,15 +17,11 @@
   <ItemGroup>
     <None Remove="Resources\ChangesetFormatter.xslt" />
     <None Remove="Resources\ResourceTraits.yaml" />
-    <None Remove="Resources\terraform-block-with-tag.hcl" />
-    <None Remove="Resources\terraform-block.hcl" />
     <None Remove="Resources\terraform-resource-map.json" />
   </ItemGroup>
   <ItemGroup>
     <EmbeddedResource Include="Resources\ChangesetFormatter.xslt" />
     <EmbeddedResource Include="Resources\ResourceTraits.yaml" />
-    <EmbeddedResource Include="Resources\terraform-block-with-tag.hcl" />
-    <EmbeddedResource Include="Resources\terraform-block.hcl" />
     <EmbeddedResource Include="Resources\terraform-resource-map.json" />
   </ItemGroup>
   <ItemGroup>

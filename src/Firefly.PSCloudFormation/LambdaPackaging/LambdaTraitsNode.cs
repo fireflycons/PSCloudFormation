@@ -11,7 +11,7 @@
         /// <inheritdoc />
         public override Regex HandlerRegex =>
             new Regex(
-                @"^\s*exports\.(?<handler>[\$\w]\w*)\s*=\s*(async\s+)?function\s*\(\s*[\$\w]\w*\s*(,\s*[\$\w]\w*\s*){0,2}\)",
+                @"^\s*(module\.)?exports\.(?<handler>[\$\w]\w*)\s*=\s*(((async\s+)?function\s*\(\s*[\$\w]\w*\s*(,\s*[\$\w]\w*\s*){0,2}\))|(\(\s*[\$\w]\w*\s*(,\s*[\$\w]\w*\s*){0,2}\)\s*=\>))",
                 RegexOptions.Multiline);
 
         /// <inheritdoc />

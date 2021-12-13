@@ -3,15 +3,19 @@
     using System.Collections.Generic;
     using System.IO;
     using System.Linq;
-    using System.Reflection;
     using System.Text;
 
     using Firefly.CloudFormation;
+    using Firefly.CloudFormationParser;
+    using Firefly.CloudFormationParser.Intrinsics;
     using Firefly.CloudFormationParser.Intrinsics.Functions;
-    using Firefly.EmbeddedResourceLoader;
+    using Firefly.PSCloudFormation.LambdaPackaging;
     using Firefly.PSCloudFormation.Terraform.DependencyResolver;
     using Firefly.PSCloudFormation.Terraform.Hcl;
+    using Firefly.PSCloudFormation.Terraform.Importers.Lambda;
     using Firefly.PSCloudFormation.Terraform.State;
+
+    using Newtonsoft.Json.Linq;
 
     /// <summary>
     /// Controls the complete serialization process of the state file to HCL.
@@ -71,6 +75,162 @@
             this.WriteMain(importedResources, parameters, stateFile);
             this.WriteTfVars(parameters);
             return this.FormatAndValidateOutput();
+        }
+
+        /// <summary>
+        /// Resolves lambda s3 code location.
+        /// </summary>
+        /// <param name="cloudFormationResource">The cloud formation resource.</param>
+        /// <param name="attributes">The attributes.</param>
+        /// <param name="mapping">The mapping.</param>
+        /// <param name="codeDefinition">The code definition.</param>
+        private static void ResolveLambdaS3Code(
+            IResource cloudFormationResource,
+            JObject attributes,
+            ResourceMapping mapping,
+            IDictionary<string, object> codeDefinition)
+        {
+            // Must contain S3Key and S3Bucket, and optionally S3ObjectVersion
+            if (!(codeDefinition.ContainsKey("S3Bucket") && codeDefinition.ContainsKey("S3Key")))
+            {
+                return;
+            }
+
+            UpdatePropertyValue(
+                "s3_bucket",
+                cloudFormationResource.Template,
+                attributes,
+                mapping,
+                codeDefinition["S3Bucket"]);
+            UpdatePropertyValue(
+                "s3_key",
+                cloudFormationResource.Template,
+                attributes,
+                mapping,
+                codeDefinition["S3Key"]);
+
+            if (codeDefinition.ContainsKey("S3ObjectVersion"))
+            {
+                UpdatePropertyValue(
+                    "s3_object_version",
+                    cloudFormationResource.Template,
+                    attributes,
+                    mapping,
+                    codeDefinition["S3ObjectVersion"]);
+            }
+        }
+
+        /// <summary>
+        /// Resolves the lambda ZipFile code.
+        /// </summary>
+        /// <param name="writer">The writer.</param>
+        /// <param name="runtime">The runtime.</param>
+        /// <param name="cloudFormationResource">The cloud formation resource.</param>
+        /// <param name="attributes">The attributes.</param>
+        /// <param name="mapping">The mapping.</param>
+        private static void ResolveLambdaZipCode(
+            TextWriter writer,
+            string runtime,
+            IResource cloudFormationResource,
+            JObject attributes,
+            ResourceMapping mapping)
+        {
+            var traits = LambdaTraits.FromRuntime(runtime);
+
+            var dirName = Path.Combine("lambda", cloudFormationResource.Name);
+            var fileName = Path.Combine(dirName, $"index{traits.ScriptFileExtension}");
+            var zipName = Path.Combine(dirName, $"{cloudFormationResource.Name}_deployment_package.zip");
+
+            // Create zipper resource
+            var zipperResource = $"{cloudFormationResource.Name}_deployment_package";
+
+            var sb = new StringBuilder();
+
+            sb.AppendLine($"resource \"zipper_file\" \"{zipperResource}\" {{")
+                .AppendLine($"  source = \"{fileName.Replace("\\", "/")}\"")
+                .AppendLine($"  output_path = \"{zipName.Replace("\\", "/")}\"").AppendLine("}");
+
+            writer.WriteLine(sb.ToString());
+
+            // Fix up state file.
+            // Find handler function
+            var script = File.ReadAllText(fileName);
+            var m = traits.HandlerRegex.Match(script);
+
+            if (m.Success)
+            {
+                UpdatePropertyValue(
+                    "handler",
+                    cloudFormationResource.Template,
+                    attributes,
+                    mapping,
+                    $"index.{m.Groups["handler"].Value}");
+            }
+
+            UpdatePropertyValue(
+                "filename",
+                cloudFormationResource.Template,
+                attributes,
+                mapping,
+                new IndirectReference($"zipper_file.{zipperResource}.output_path"));
+            UpdatePropertyValue(
+                "source_code_hash",
+                cloudFormationResource.Template,
+                attributes,
+                mapping,
+                new IndirectReference($"zipper_file.{zipperResource}.output_sha"));
+        }
+
+        /// <summary>
+        /// Updates a property value in the in-memory state file..
+        /// </summary>
+        /// <param name="key">The key.</param>
+        /// <param name="template">The template.</param>
+        /// <param name="attributes">The attributes.</param>
+        /// <param name="resourceMapping">The resource mapping.</param>
+        /// <param name="newValue">The new value.</param>
+        private static void UpdatePropertyValue(
+            string key,
+            ITemplate template,
+            JObject attributes,
+            ResourceMapping resourceMapping,
+            object newValue)
+        {
+            JToken newJToken;
+
+            switch (newValue)
+            {
+                case IIntrinsic intrinsic:
+
+                    newJToken = intrinsic.Render(template, resourceMapping).ToJConstructor();
+                    break;
+
+                case Reference reference:
+
+                    newJToken = reference.ToJConstructor();
+                    break;
+
+                case JToken tok:
+
+                    newJToken = tok;
+                    break;
+
+                default:
+
+                    newJToken = new JValue(newValue.ToString());
+                    break;
+            }
+
+            var oldValue = attributes.SelectToken(key);
+
+            if (oldValue != null)
+            {
+                // ReSharper disable once PossibleNullReferenceException - It should be found as all attributes should be in state file
+                ((JProperty)oldValue.Parent).Value = newJToken;
+                return;
+            }
+
+            attributes.Add(key, newJToken);
         }
 
         /// <summary>
@@ -136,23 +296,69 @@
         }
 
         /// <summary>
-        /// Resolves dependencies between resources updating the in-memory copy of the state file with variable and resource references.
+        /// Resolves lambda code.
+        /// For embedded (ZipFile) scripts, creates zipper resources for the files extracted by <see cref="LambdaFunctionImporter"/>.
+        /// For S3 and container lambdas, sets the appropriate properties
         /// </summary>
+        /// <param name="writer">The writer.</param>
         /// <param name="stateFile">The state file.</param>
-        /// <param name="parameters">The parameters.</param>
         /// <param name="importedResources">The imported resources.</param>
-        private void ResolveResourceDependencies(
+        private void ResolveLambdaCode(
+            TextWriter writer,
             StateFile stateFile,
-            IReadOnlyCollection<InputVariable> parameters,
-            IEnumerable<ResourceMapping> importedResources)
+            IReadOnlyCollection<ResourceMapping> importedResources)
         {
-            this.logger.LogInformation("\nResolving dependencies between resources...");
-
-            var resolver = new ResourceDependencyResolver(this.settings.Resources, stateFile.Resources, parameters, this.warnings);
-
-            foreach (var tfr in importedResources)
+            foreach (var cloudFormationResource in this.settings.Template.Resources.Where(
+                r => r.Type == "AWS::Lambda::Function" && r.GetResourcePropertyValue("Code") != null))
             {
-                resolver.ResolveDependencies(stateFile.Resources.First(r => r.Name == tfr.LogicalId));
+                var mapping = importedResources.FirstOrDefault(ir => ir.LogicalId == cloudFormationResource.Name);
+
+                if (mapping == null)
+                {
+                    continue;
+                }
+
+                var terraformResource = stateFile.Resources.FirstOrDefault(
+                    rd => rd.Name == mapping.LogicalId && rd.Type == mapping.TerraformType);
+
+                if (terraformResource == null)
+                {
+                    continue;
+                }
+
+                // Fix up state file.
+                // ReSharper disable once AssignNullToNotNullAttribute - already asserted that this has a value in foreach statement.
+                var lambdaCode =
+                    ((Dictionary<object, object>)cloudFormationResource.GetResourcePropertyValue("Code")).ToDictionary(
+                        kv => kv.Key.ToString(),
+                        kv => kv.Value);
+                var attributes = terraformResource.Instances.First().Attributes;
+
+                if (lambdaCode.ContainsKey("ZipFile"))
+                {
+                    var runtimeObject = cloudFormationResource.GetResourcePropertyValue("Runtime");
+
+                    if (runtimeObject == null)
+                    {
+                        // No runtime specified
+                        continue;
+                    }
+
+                    ResolveLambdaZipCode(writer, runtimeObject.ToString(), cloudFormationResource, attributes, mapping);
+                }
+                else if (lambdaCode.ContainsKey("ImageUri"))
+                {
+                    UpdatePropertyValue(
+                        "image_uri",
+                        cloudFormationResource.Template,
+                        attributes,
+                        mapping,
+                        lambdaCode["ImageUri"]);
+                }
+                else
+                {
+                    ResolveLambdaS3Code(cloudFormationResource, attributes, mapping, lambdaCode);
+                }
             }
         }
 
@@ -198,6 +404,31 @@
         }
 
         /// <summary>
+        /// Resolves dependencies between resources updating the in-memory copy of the state file with variable and resource references.
+        /// </summary>
+        /// <param name="stateFile">The state file.</param>
+        /// <param name="parameters">The parameters.</param>
+        /// <param name="importedResources">The imported resources.</param>
+        private void ResolveResourceDependencies(
+            StateFile stateFile,
+            IReadOnlyCollection<InputVariable> parameters,
+            IEnumerable<ResourceMapping> importedResources)
+        {
+            this.logger.LogInformation("\nResolving dependencies between resources...");
+
+            var resolver = new ResourceDependencyResolver(
+                this.settings.Resources,
+                stateFile.Resources,
+                parameters,
+                this.warnings);
+
+            foreach (var tfr in importedResources)
+            {
+                resolver.ResolveDependencies(stateFile.Resources.First(r => r.Name == tfr.LogicalId));
+            }
+        }
+
+        /// <summary>
         /// Writes the locals section of <c>main.tf</c>
         /// </summary>
         /// <param name="writer">The <see cref="TextWriter"/> to write to.</param>
@@ -219,7 +450,6 @@
             StateFile stateFile)
         {
             this.logger.LogInformation($"Writing {MainScriptFile}");
-            this.ResolveResourceDependencies(stateFile, parameters, importedResources);
 
             // Write main.tf
             using (var stream = new FileStream(
@@ -231,6 +461,8 @@
                 this.WriteProviders(writer);
                 WriteInputsAndDataBlocks(writer, parameters);
                 this.WriteLocalsAndMappings(writer);
+                this.ResolveLambdaCode(writer, stateFile, importedResources);
+                this.ResolveResourceDependencies(stateFile, parameters, importedResources);
                 WriteResources(writer, stateFile);
                 WriteOutputs(writer, this.ResolveOutputDependencies(importedResources));
             }
@@ -243,12 +475,11 @@
         private void WriteProviders(TextWriter writer)
         {
             var builder = new ConfigurationBlockBuilder().WithRegion(this.settings.AwsRegion)
-                .WithDefaultTag(this.settings.AddDefaultTag ? this.settings.StackName : null)
-                .WithZipper(this.settings.Template.Resources.Any(
-                    r => r.Type == "AWS::Lambda::Function" && r.GetResourcePropertyValue("Code.ZipFile") != null));
-            
-            writer.Write(
-                builder.Build());
+                .WithDefaultTag(this.settings.AddDefaultTag ? this.settings.StackName : null).WithZipper(
+                    this.settings.Template.Resources.Any(
+                        r => r.Type == "AWS::Lambda::Function" && r.GetResourcePropertyValue("Code.ZipFile") != null));
+
+            writer.Write(builder.Build());
         }
 
         /// <summary>

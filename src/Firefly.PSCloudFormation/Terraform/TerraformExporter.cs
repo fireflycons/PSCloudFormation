@@ -118,8 +118,6 @@
                 //var importedResources = resourcesToImport.Where(r => r.AwsType != "AWS::SecretsManager::SecretTargetAttachment").ToList();
                 var importedResources = this.ImportResources(resourcesToImport);
 
-                // TODO: Fix up lambda S3 sources.
-                // TODO: Extract inline lambda code to files. Add "ArthurHlt/Zipper" provider as source for the file.
                 // TODO: Analyze state file for null properties that have defaults. Replace these defaults and write back out.
 
                 // Copy of the state file that we will insert references to inputs, other resources etc. before serialization to HCL.
@@ -292,14 +290,6 @@
                 this.logger.LogInformation("https://trackit.io/trackit-whitepapers/cloudformation-to-terraform-conversion/");
             }
 
-            if (this.settings.Template.Resources.Any(
-                r => r.Type == "AWS::Lambda::Function" && r.GetResourcePropertyValue("Code.ZipFile") != null))
-            {
-                this.logger.LogInformation(
-                    "\nLambdas with template-embedded code were detected. Manage these by extracting code to a file,");
-                this.logger.LogInformation("and using the \"filename\" argument of the lambda resource to reference it.");
-            }
-
             this.logger.LogInformation($"\n       Errors: {totalErrors}, Warnings: {warningCount + this.warnings.Count}\n");
         }
 
@@ -330,7 +320,7 @@
                 r => r.Type == "AWS::Lambda::Function" && r.GetResourcePropertyValue("Code.ZipFile") != null))
             {
                 this.warnings.Add(
-                    $"Resource \"{templateResource.Name}\" contains embedded function code (ZipFile) which is not imported.");
+                    $"Resource \"{templateResource.Name}\" contains embedded function code (ZipFile) which may not be the latest version.");
             }
 
             // Scan for bucket polices and warn

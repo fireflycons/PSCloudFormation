@@ -4,6 +4,8 @@
     using System.Linq;
     using System.Text;
 
+    using Firefly.PSCloudFormation.LambdaPackaging;
+
     /// <summary>
     /// Imports a lambda function, extracting any inline function code to directory <c>lambda</c>.
     /// </summary>
@@ -45,6 +47,7 @@
 
             if (zipFile == null)
             {
+                // No embedded script
                 return;
             }
 
@@ -52,33 +55,15 @@
 
             if (runtimeObject == null)
             {
+                // No runtime specified
                 return;
             }
 
-            var runtime = runtimeObject.ToString();
-                 
-            string extension;
-
-            if (runtime.StartsWith("python"))
-            {
-                extension = ".py";
-            }
-            else if (runtime.StartsWith("nodejs"))
-            {
-                extension = ".js";
-            }
-            else if (runtime.StartsWith("ruby"))
-            {
-                extension = ".rb";
-            }
-            else
-            {
-                return;
-            }
+            var traits = LambdaTraits.FromRuntime(runtimeObject.ToString());
 
             var dirName = Path.Combine("lambda", this.ImportSettings.Resource.LogicalId);
             Directory.CreateDirectory(dirName);
-            var fileName = Path.Combine(dirName, $"index{extension}");
+            var fileName = Path.Combine(dirName, $"index{traits.ScriptFileExtension}");
 
             this.ImportSettings.Logger.LogInformation($"Extracting inline function code to {fileName}");
 

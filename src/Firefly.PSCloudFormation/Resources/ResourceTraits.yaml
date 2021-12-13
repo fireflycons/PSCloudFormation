@@ -82,6 +82,8 @@
       ComputedAttributes:
         - '*_domain_name'
         - '*_zone_id'
+      RequiredAttributes:
+        - regional_certificate_arn
     - Resource: aws_api_gateway_resource
       ComputedAttributes:
         - path
@@ -268,6 +270,9 @@
       ComputedAttributes:
         - source_code_size
         - version
+    - Resource: aws_lambda_permission
+      RequiredAttributes:
+        - source_arn
 
 - Group: RDS
   Resources:
@@ -286,8 +291,8 @@
       ComputedAttributes:
         - fqdn
       ConflictingArguments:
-        - - alias
-          - ttl
+        - - ttl
+          - alias
       RequiredAttributes:
         - alias.#.evaluate_target_health
 
