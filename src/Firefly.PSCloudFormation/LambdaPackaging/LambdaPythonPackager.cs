@@ -30,6 +30,9 @@
         {
         }
 
+        /// <inheritdoc />
+        protected override LambdaTraits Traits => new LambdaTraitsPython();
+
         /// <summary>
         /// Gets the virtual env include directory.
         /// </summary>
@@ -53,24 +56,6 @@
         /// The bin directory.
         /// </value>
         protected abstract string BinDir { get; }
-
-        /// <summary>
-        /// Gets the  regex to detect lambda handler.
-        /// </summary>
-        /// <value>
-        /// The handler regex.
-        /// </value>
-        protected override Regex HandlerRegex { get; } = new Regex(
-            @"^\s*def\s+(?<handler>[^\d\W]\w*)\s*\(\s*[^\d\W]\w*\s*(:\s*\w+\s*)?,\s*[^\d\W]\w*\s*(:\s*\w+\s*)?(,\s*(([^\d\W]\w*\s*=\s*\w*)|(\**\w+))\s*)*\)\s*(\-\>\s*\w+\s*)?:",
-            RegexOptions.Multiline);
-
-        /// <summary>
-        /// Gets the file extension of script files for the given lambda.
-        /// </summary>
-        /// <value>
-        /// The script file extension.
-        /// </value>
-        protected override string ScriptFileExtension { get; } = ".py";
 
         /// <summary>
         /// Releases unmanaged and - optionally - managed resources.

@@ -24,15 +24,8 @@
         {
         }
 
-        /// <summary>
-        /// Gets the  regex to detect lambda handler.
-        /// </summary>
-        /// <value>
-        /// The handler regex.
-        /// </value>
-        protected override Regex HandlerRegex { get; } = new Regex(
-            @"^\s*def\s+(?<handler>[^\d\W]\w*)\s*\(\s*[^\d\W]\w*:\s*,\s*[^\d\W]\w*:\s*\)\s*",
-            RegexOptions.Multiline);
+        /// <inheritdoc />
+        protected override LambdaTraits Traits => new LambdaTraitsRuby();
 
         /// <summary>
         /// Gets the name of the module directory.
@@ -44,13 +37,5 @@
             $"vendor/bundle/ruby/{this.LambdaArtifact.RuntimeInfo.RuntimeVersion}.0/cache".Replace(
                 '/',
                 Path.DirectorySeparatorChar);
-
-        /// <summary>
-        /// Gets the file extension of script files for the given lambda.
-        /// </summary>
-        /// <value>
-        /// The script file extension.
-        /// </value>
-        protected override string ScriptFileExtension { get; } = ".rb";
     }
 }
