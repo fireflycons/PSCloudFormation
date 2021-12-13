@@ -26,10 +26,7 @@
 
         public HclEmitterFixture()
         {
-            this.terraformBlock = ((string)ResourceLoader.GetStringResource(
-                                          ResourceLoader.GetResourceStream(
-                                              "terraform-block.hcl",
-                                              typeof(StateFileSerializer).Assembly))).Replace("AWS::Region", "eu-west-1");
+            this.terraformBlock = new ConfigurationBlockBuilder().WithRegion("eu-west-1").Build();
 
             this.mainDotTf = Path.Combine(this.tempDirectory, "main.tf");
             File.WriteAllText(this.mainDotTf, this.terraformBlock);
