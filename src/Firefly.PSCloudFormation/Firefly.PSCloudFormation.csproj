@@ -43,7 +43,7 @@
     <ProjectReference Include="..\..\..\Firefly.CloudFormation\src\Firefly.CloudFormation\Firefly.CloudFormation.csproj" />
   </ItemGroup>
   <ItemGroup Condition="!$(SolutionName.EndsWith ('debug'))">
-    <PackageReference Include="Firefly.CloudFormation" Version="2.0.0" />
+    <PackageReference Include="Firefly.CloudFormation" Version="2.1.0" />
   </ItemGroup>
   <ItemGroup>
     <None Update="debug.ps1">
