@@ -165,7 +165,7 @@
             /// <summary>
             /// Reference to the current cloud formation resource being visited.
             /// </summary>
-            private readonly CloudFormationResource currentCloudFormationResource;
+            private readonly IResource currentCloudFormationResource;
 
             /// <summary>
             /// Stack associated with <see cref="currentIntrinsicInfo"/>
@@ -211,7 +211,7 @@
                 IReadOnlyCollection<CloudFormationResource> cloudFormationResources,
                 IReadOnlyCollection<StateFileResourceDeclaration> terraformResources,
                 IReadOnlyCollection<InputVariable> inputs,
-                CloudFormationResource resource,
+                IResource resource,
                 IList<string> warnings)
             {
                 this.currentCloudFormationResource = resource;

@@ -3,6 +3,7 @@
     using System;
     using System.Runtime.Serialization;
 
+    using Firefly.CloudFormationParser;
     using Firefly.CloudFormationParser.Intrinsics;
     using Firefly.CloudFormationParser.Utils;
 
@@ -21,7 +22,7 @@
         /// <param name="location">The the AWS property path to the intrinsic being warned about.</param>
         protected DependencyResolutionWarning(
             IIntrinsic intrinsic,
-            CloudFormationResource containingResource,
+            IResource containingResource,
             PropertyPath location)
             : base(string.Empty)
         {
@@ -72,7 +73,7 @@
         /// <value>
         /// The containing resource.
         /// </value>
-        public CloudFormationResource ContainingResource { get; }
+        public IResource ContainingResource { get; }
 
         /// <summary>
         /// Gets the intrinsic being warned about.
@@ -97,6 +98,6 @@
         /// The name of the AWS resource.
         /// </value>
         protected string AwsResourceName =>
-            $"\"{this.ContainingResource.LogicalResourceId}\" ({this.ContainingResource.ResourceType})";
+            $"\"{this.ContainingResource.Name}\" ({this.ContainingResource.Type})";
     }
 }

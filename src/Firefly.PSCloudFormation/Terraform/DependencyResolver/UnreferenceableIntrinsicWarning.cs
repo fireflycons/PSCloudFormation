@@ -3,6 +3,7 @@
     using System;
     using System.Runtime.Serialization;
 
+    using Firefly.CloudFormationParser;
     using Firefly.CloudFormationParser.Intrinsics;
     using Firefly.CloudFormationParser.Utils;
 
@@ -22,7 +23,7 @@
         /// <param name="location">The the AWS property path to the intrinsic being warned about.</param>
         public UnreferenceableIntrinsicWarning(
             IIntrinsic intrinsic,
-            CloudFormationResource containingResource,
+            IResource containingResource,
             PropertyPath location)
             : base(intrinsic, containingResource, location)
         {

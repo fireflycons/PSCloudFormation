@@ -77,25 +77,38 @@
         {
             try
             {
+                var referenceLocations = new List<IntrinsicInfo>();
+
                 // Get CF resource for the current state file resource entry
                 this.currentCloudFormationResource =
                     this.cloudFormationResources.First(r => r.LogicalResourceId == terraformStateFileResource.Name);
 
-                // Visit the CF resource gathering all intrinsics that might imply reference to another resource or input
-                var intrinsicVisitorContext = new IntrinsicVisitorContext(
-                    this.cloudFormationResources,
-                    this.terraformResources,
-                    this.inputs,
-                    this.currentCloudFormationResource,
-                    this.warnings);
+                // Find related resources that may be merged into this one
+                var relatedResources = this.template.DependencyGraph.Edges.Where(
+                    e => e.Source.Name == this.currentCloudFormationResource.LogicalResourceId && e.Target.TemplateObject is IResource res && TerraformExporter.MergedResources.Contains(res.Type))
+                    .Select(e => (IResource)e.Target.TemplateObject);
 
-                var intrinsicVisitor =
-                    new IntrinsicVisitor(this.currentCloudFormationResource.TemplateResource.Template);
-                this.currentCloudFormationResource.TemplateResource.Accept(intrinsicVisitor, intrinsicVisitorContext);
+                foreach (var cloudFormationResource in new[] { this.currentCloudFormationResource.TemplateResource }
+                    .Concat(relatedResources))
+                {
+                    // Visit the CF resource gathering all intrinsics that might imply reference to another resource or input
+                    var intrinsicVisitorContext = new IntrinsicVisitorContext(
+                        this.cloudFormationResources,
+                        this.terraformResources,
+                        this.inputs,
+                        cloudFormationResource,
+                        this.warnings);
+
+                    var intrinsicVisitor =
+                        new IntrinsicVisitor(this.template);
+                    cloudFormationResource.Accept(intrinsicVisitor, intrinsicVisitorContext);
+
+                    referenceLocations.AddRange(intrinsicVisitorContext.ReferenceLocations);
+                }
 
                 // Visit the terraform resource finding value matches between resource attributes and intrinsic evaluations, recording what needs to be modified
                 var dependencyContext = new TerraformAttributeSetterContext(
-                    intrinsicVisitorContext.ReferenceLocations,
+                    referenceLocations,
                     this.template,
                     terraformStateFileResource);
 
