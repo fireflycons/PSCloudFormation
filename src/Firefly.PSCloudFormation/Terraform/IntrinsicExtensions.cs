@@ -489,7 +489,7 @@
         {
             if (value is IIntrinsic intrinsic)
             {
-                return intrinsic.Render(template, resource);
+                return intrinsic.Render(template, resource).ToJConstructor();
             }
 
             return value.ToString();

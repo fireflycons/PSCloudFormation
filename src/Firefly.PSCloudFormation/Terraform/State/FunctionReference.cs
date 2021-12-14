@@ -186,6 +186,12 @@
                         formattedArgs.Add($"[{ProcessArguments(ja.Values<object>().ToList())}]");
                         break;
 
+                    case Reference reference:
+
+                        formattedArgs.Add(reference.ReferenceExpression);
+                        break;
+
+
                     default:
 
                         throw new InvalidOperationException($"Unexpected type.{item.GetType().FullName}");
