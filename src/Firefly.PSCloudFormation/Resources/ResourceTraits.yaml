@@ -179,10 +179,14 @@
         DefaultVersionNumber: default_version
     - Resource: aws_eip
       ComputedAttributes:
+        - allocation_id
         - association_id
         - domain
         - private_*
         - public_*
+        - network_interface
+        - instance
+        - network_border_group
       AttributeMap:
         AllocationId: id
     - Resource: aws_nat_gateway
@@ -271,6 +275,8 @@
         - source_code_size
         - version
     - Resource: aws_lambda_permission
+      ComputedAttributes:
+        - statement_id
       RequiredAttributes:
         - source_arn
 
@@ -305,6 +311,8 @@
         - region
         - private_dns
         - device_name
+        - hosted_zone_id
+        - request_payer
       DefaultValues:
         acl: private
         force_destroy: false
@@ -340,6 +348,9 @@
 
 - Group: VPC
   Resources:
+    - Resource: aws_nat_gateway
+      ComputedAttributes:
+        - connectivity_type
     - Resource: aws_security_group
       NonBlockTypeAttributes:
         - ingress
@@ -359,8 +370,8 @@
         - origin
         - state
     - Resource: aws_route_table
-      RequiredAttributes:
-        - route.#.*
+      ComputedAttributes:
+        - route  # Exclude this, else it will duplicate at least one of the aws_route entries
     - Resource: aws_subnet
       ConflictingArguments:
         - - availability_zone
