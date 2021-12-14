@@ -15,6 +15,8 @@
     using Firefly.PSCloudFormation.Terraform.State;
     using Firefly.PSCloudFormation.Utils.JsonTraversal;
 
+    using Newtonsoft.Json.Linq;
+
     /// <content>
     /// This part handles a visit to the parsed CloudFormation resource, gathering intrinsic functions
     /// that need to be expressed in HCL as functions or references.
@@ -386,9 +388,9 @@
             }
 
             /// <summary>
-            /// Creates an <see cref="IntrinsicInfo"/> for a GetAtt intrinsic.
+            /// Creates an <see cref="IntrinsicInfo"/> for a !GetAtt intrinsic.
             /// </summary>
-            /// <param name="getAttIntrinsic">The GetAtt intrinsic.</param>
+            /// <param name="getAttIntrinsic">The !GetAtt intrinsic.</param>
             /// <param name="currentPath">The current path.</param>
             /// <returns>An <see cref="IntrinsicInfo"/></returns>
             private IntrinsicInfo ProcessGetAtt(GetAttIntrinsic getAttIntrinsic, PropertyPath currentPath)
@@ -400,10 +402,10 @@
                     (Tuple<string, string>)getAttIntrinsic.Evaluate(this.template);
 
                 // State file instance of the resource being referenced by this !GetAtt
-                var referencedResouce = this.TerraformResources.FirstOrDefault(r => r.Name == referencedResourceName)
+                var referencedResource = this.TerraformResources.FirstOrDefault(r => r.Name == referencedResourceName)
                     ?.Instances.First();
 
-                if (referencedResouce == null)
+                if (referencedResource == null)
                 {
                     // If not found, then reference is to a resource that couldn't be imported eg. a custom resource.
                     throw new UnsupportedResourceWarning(
@@ -429,16 +431,46 @@
                 // Now attempt to match up the CloudFormation resource attribute name with the corresponding terraform one
                 // and get the current value from state.
                 // First, look up the attribute map
-                var traits = ResourceTraitsCollection.Get(referencedResouce.Parent.Type);
+                var traits = ResourceTraitsCollection.Get(referencedResource.Parent.Type);
 
                 if (traits.AttributeMap.ContainsKey(attribute))
                 {
-                    evaluation = traits.AttributeMap[attribute];
+                    var token = referencedResource.Attributes[traits.AttributeMap[attribute]];
+
+                    if (token is JValue jv)
+                    {
+                        switch (jv.Type)
+                        {
+                            case JTokenType.String:
+
+                                evaluation = jv.Value<string>();
+                                break;
+
+                            case JTokenType.Integer:
+                            case JTokenType.Float:
+
+                                evaluation = jv.Value<double>();
+                                break;
+
+                            case JTokenType.Boolean:
+
+                                evaluation = jv.Value<bool>();
+                                break;
+
+                            default:
+
+                                throw new InvalidOperationException($"Unexpected JValue type: {jv.Type} while processing {getAttIntrinsic}");
+                        }
+                    }
+                    else
+                    {
+                        throw new InvalidOperationException($"Unexpected JToken type: {token.Type} while processing {getAttIntrinsic}");
+                    }
                 }
                 else
                 {
                     var context = new TerraformAttributeGetterContext(attribute);
-                    referencedResouce.Attributes.Accept(new TerraformAttributeGetterVisitor(), context);
+                    referencedResource.Attributes.Accept(new TerraformAttributeGetterVisitor(), context);
                     evaluation = context.Value;
                 }
 
