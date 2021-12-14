@@ -2,19 +2,19 @@
 
 PSCloudFormation supports extracting changeset detail to a file, the pipeline, and potentially viewing in a browser. It also suppports nested changeset creation (new as of re:Invent 2020).
 
-* [Cmdlets for Changeset Creation](#Cmdlets-for-Changeset-Creation)
-* [Working with Changesets](#Working-with-Changesets)
-    * [Nested Changests](#Nested-Changeset)
-    * [Pipeline Output](#Pipeline-Output)
-    * [Exporting Change Detail to File](#Exporting-Change-Detail-to-File)
-    * [Viewing in a Browser](#Viewing-in-a-Browser)
-* [Caveats](#Caveats)
-    * [Browser View](#Browser-View)
-    * [Nested Changeset Creation](#Nested-Changeset-Creation)
+* [Cmdlets for Changeset Creation](#cmdlets-for-changeset-creation)
+* [Working with Changesets](#working-with-changesets)
+    * [Nested Changests](#nested-changesets)
+    * [Pipeline Output](#pipeline-output)
+    * [Exporting Change Detail to File](#exporting-change-detail-to-file)
+    * [Viewing in a Browser](#viewing-in-a-browser)
+* [Caveats](#caveats)
+    * [Browser View](#browser-view)
+    * [Nested Changeset Creation](#nested-changeset-creation)
 
 ## Cmdlets for Changeset Creation
 
-* [New-PSCFNChangeset](xref:Update-PSCFNChangeset) - Use this to create a cchangeset only for review.
+* [New-PSCFNChangeset](xref:New-PSCFNChangeset) - Use this to create a cchangeset only for review.
 * [Update-PSCFNStack](xref:Update-PSCFNStack) - A changeset is automatically created and presented fo review unless the `-Force` switch is present, in which case it is executed immediately.
 
 ## Working with Changesets
@@ -33,20 +33,20 @@ When a changeset is created, it is presented to the console for review. This con
 
 ### Nested Changesets
 
-If the switch `-IncludeNestedStacks` is passed to either [New-PSCFNChangeset](xref:Update-PSCFNChangeset) or [Update-PSCFNStack](xref:Update-PSCFNStack), and the given stack contains `AWS::CloudFomation::Stack` resources, changesets will be computed for these stacks also. Changes for all the stacks in the nest will be displayed.
+If the switch `-IncludeNestedStacks` is passed to either [New-PSCFNChangeset](xref:New-PSCFNChangeset) or [Update-PSCFNStack](xref:Update-PSCFNStack), and the given stack contains `AWS::CloudFomation::Stack` resources, changesets will be computed for these stacks also. Changes for all the stacks in the nest will be displayed.
 
-Please be aware of the [caveat](#Nested-Changeset-Creation) below!
+Please be aware of the [caveat](#nested-changeset-creation) below!
 
 ### Pipeline Output
 
-The [New-PSCFNChangeset](xref:Update-PSCFNChangeset) cmdlet will output raw JSON to the pipeline if neither `-ChangesetDetail` not `-ShowInBrowser` arguments are present. The changest may be further processed by piping this output through `ConvertFrom-Json` to get a PowerShell object representation of the changeset detail.
+The [New-PSCFNChangeset](xref:New-PSCFNChangeset) cmdlet will output raw JSON to the pipeline if neither `-ChangesetDetail` nor `-ShowInBrowser` arguments are present. The changest may be further processed by piping this output through `ConvertFrom-Json` to get a PowerShell object representation of the changeset detail.
 
 The JSON object is the same as that which you can see in the `JSON Changes` tab of the CloudFormation Console, with the small exception that the property names in the JSON begin with an uppercase letter.
 
 
 ### Exporting Change Detail to File
 
-If a file path is given to the `-ChangesetDetail` parameter of [New-PSCFNChangeset](xref:Update-PSCFNChangeset) or [Update-PSCFNStack](xref:Update-PSCFNStack), then the JSON Changes document is written to this file.
+If a file path is given to the `-ChangesetDetail` parameter of [New-PSCFNChangeset](xref:New-PSCFNChangeset) or [Update-PSCFNStack](xref:Update-PSCFNStack), then the JSON Changes document is written to this file.
 
 ### Viewing in a Browser
 
@@ -58,7 +58,7 @@ Where possible, detailed changeset information may be viewed in a browser. PSClo
 
 When a GUI is detected, [Update-PSCFNStack](xref:Update-PSCFNStack) provides an additional option `View in Browser` when it asks whether to apply the generated changeset. When `-Force` parameter is set, this is skipped.
 
-[New-PSCFNChangeset](xref:Update-PSCFNChangeset) will perform the above by addition of `-ShowInBrowser` switch argument.
+[New-PSCFNChangeset](xref:New-PSCFNChangeset) will perform the above by addition of `-ShowInBrowser` switch argument.
 
 The HTML document contains a formatted view of each change along with the detail provided in the `JSON Changes` view in the CloudFormation console. An SVG graph of relationships between modified resouces is also provided, which can be manipulated using the mouse. This has the following key
 

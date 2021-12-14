@@ -1,0 +1,36 @@
+# Demonstrates the following
+# - How a serverless resource is expanded to all implied resources
+# - How inline lambda code is exported to Terraform
+# - Dependency resolution within IAM policies
+AWSTemplateFormatVersion: '2010-09-09'
+Transform: AWS::Serverless-2016-10-31
+Description: Serverless Lambda example
+
+Resources:
+
+  S3Bucket:
+    Type: AWS::S3::Bucket
+
+  LambdaFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      Description: Just prints to CloudWatch log
+      InlineCode: |
+        def handler(event, context):
+          print('Executed lambda')
+      Handler: index.handler
+      Runtime: python3.7
+      Events:
+        SheduledEvent:
+          Type: Schedule
+          Properties:
+            Enabled: true
+            Schedule: rate(1 hour)
+      Policies:
+      - Statement:
+        - Effect: Allow
+          Action:
+          - s3:ListBucket
+          Resource: !GetAtt
+            - S3Bucket
+            - Arn
