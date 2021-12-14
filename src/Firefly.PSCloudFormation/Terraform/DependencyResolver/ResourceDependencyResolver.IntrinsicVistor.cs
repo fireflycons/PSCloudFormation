@@ -268,6 +268,15 @@
                     if (this.parentIntrinsicPath == null)
                     {
                         // This is a "top level" intrinsic associated directly with a resource attribute.
+                        if (this.currentCloudFormationResource.Type == "AWS::Lambda::Permission"
+                            && currentPath.Path == "FunctionName" && intrinsic is RefIntrinsic)
+                        {
+                            // !! NASTY KLUDGE ALERT !!
+                            // AWS treats this property as a !Ref which is lambda function's name, but terraform actually wants the ARN here.
+                            // If I find more cases like this, then I'll put something into resource traits
+                            intrinsic = new GetAttIntrinsic(intrinsic.GetReferencedObjects(this.template).First(), "Arn");
+                        }
+
                         this.intrinsicInfos.Push(this.currentIntrinsicInfo);
                         this.parentIntrinsicPath = clonedPath;
                         this.currentIntrinsicInfo = this.GetIntrinsicInfo(intrinsic, currentPath);
