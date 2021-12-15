@@ -1,4 +1,4 @@
-$windows = (-not (Get-Variable -Name IsWindows -ErrorAction Ignore)) -or $IsWindows
+$windows = [System.Runtime.InteropServices.RuntimeInformation]::IsOSPlatform([System.Runtime.InteropServices.OSPlatform]::Windows)
 
 if ($windows)
 {

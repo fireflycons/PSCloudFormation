@@ -4,7 +4,9 @@ param
     [switch]$ImportDependenciesOnly
 )
 
-if ((-not (Get-Variable -Name IsWindows -ErrorAction Ignore)) -or $IsWindows)
+$windows = [System.Runtime.InteropServices.RuntimeInformation]::IsOSPlatform([System.Runtime.InteropServices.OSPlatform]::Windows)
+
+if (-not $windows)
 {
     Write-Host "Skipping - Not Windows build agent."
     exit 0
