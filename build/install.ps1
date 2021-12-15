@@ -1,9 +1,9 @@
-Write-Host "Installing modules..."
-
 $windows = (-not (Get-Variable -Name IsWindows -ErrorAction Ignore)) -or $IsWindows
 
 if ($windows)
 {
+    Write-Host "Installing modules..."
+
     $prog = $ProgressPreference
     $ProgressPreference = 'SilentlyContinue'
 

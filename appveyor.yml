@@ -67,19 +67,16 @@ build:
 
 build_script:
   - dotnet build
-  - ps: Get-ChildItem -Path (Join-Path $env:APPVEYOR_BUILD_FOLDER PSCloudFormation)
 
 test_script:
-  #- ps: 'Write-Host "tests"'
-  - ps: ./build/run-tests.ps1
+  - ps: 'Write-Host "tests"'
+  #- ps: ./build/run-tests.ps1
 
-for:
-- matrix:
-    only:
-      - image: Visual Studio 2019
-  after_test:
-    - ps: . ./build/build.ps1 -Task BuildAppVeyor
-  deploy_script:
-    - ps: . ./build/publish-docs.ps1
-    - ps: . ./build/build.ps1 -Task Deploy -ImportDependenciesOnly
+after_test:
+  - ps: Get-ChildItem -Path (Join-Path $env:APPVEYOR_BUILD_FOLDER PSCloudFormation)
+  - ps: . ./build/build.ps1 -Task BuildAppVeyor
+
+deploy_script:
+  - ps: . ./build/publish-docs.ps1
+  - ps: . ./build/build.ps1 -Task Deploy -ImportDependenciesOnly
 

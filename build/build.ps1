@@ -4,6 +4,12 @@ param
     [switch]$ImportDependenciesOnly
 )
 
+if ((-not (Get-Variable -Name IsWindows -ErrorAction Ignore)) -or $IsWindows)
+{
+    Write-Host "Skipping - Not Windows build agent."
+    exit 0
+}
+
 $currentLocation = Get-Location
 try
 {
