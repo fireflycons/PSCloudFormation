@@ -178,6 +178,7 @@
     <EmbeddedResource Include="Resources\Terraform\VPC\security_group.json" />
   </ItemGroup>
 
+<!--
   <ItemGroup>
     <PackageReference Include="Firefly.EmbeddedResourceLoader" Version="0.1.6" />
     <PackageReference Include="FluentAssertions" Version="5.10.3" />
@@ -189,13 +190,14 @@
     <PackageReference Include="Xunit.SkippableFact" Version="1.4.13" />
     <PackageReference Include="Appveyor.TestLogger" Version="2.0.0" />
   </ItemGroup>
-
-  <ItemGroup>
-    <ProjectReference Include="..\..\src\Firefly.PSCloudFormation\Firefly.PSCloudFormation.csproj" />
-  </ItemGroup>
+-->
 
   <ItemGroup>
     <Folder Include="Resources\DeepNestedStack\js\" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\Firefly.PSCloudFormation.Tests.Common\Firefly.PSCloudFormation.Tests.Common.csproj" />
   </ItemGroup>
 
 </Project>

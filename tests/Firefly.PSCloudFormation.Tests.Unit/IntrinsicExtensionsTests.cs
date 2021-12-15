@@ -1,4 +1,4 @@
-﻿namespace Firefly.PSCloudFormation.Tests.Integration.Terraform
+﻿namespace Firefly.PSCloudFormation.Tests.Unit
 {
     using System.Collections.Generic;
 

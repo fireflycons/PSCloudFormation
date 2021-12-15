@@ -1,4 +1,4 @@
-﻿namespace Firefly.PSCloudFormation.Tests.Integration.Utils
+﻿namespace Firefly.PSCloudFormation.Tests.Common.Utils
 {
     using System.Collections.Generic;
 
@@ -18,7 +18,7 @@
 
         public static readonly string RegionName = Region.SystemName;
 
-        internal static Mock<IPSCloudFormationContext> GetContextMock(TestLogger logger)
+        public static Mock<IPSCloudFormationContext> GetContextMock(TestLogger logger)
         {
             var mockContext = new Mock<IPSCloudFormationContext>();
 
@@ -68,7 +68,7 @@
             return mock;
         }
 
-        internal static Mock<IPSAwsClientFactory> GetClientFactoryMock()
+        public static Mock<IPSAwsClientFactory> GetClientFactoryMock()
         {
             var mock = new Mock<IPSAwsClientFactory>();
 

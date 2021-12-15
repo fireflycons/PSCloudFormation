@@ -12,7 +12,7 @@
 
     using Firefly.EmbeddedResourceLoader;
     using Firefly.EmbeddedResourceLoader.Materialization;
-    using Firefly.PSCloudFormation.Tests.Integration.Utils;
+    using Firefly.PSCloudFormation.Tests.Common.Utils;
     using Firefly.PSCloudFormation.Utils;
 
     using FluentAssertions;
@@ -28,7 +28,7 @@
     /// </summary>
     /// <seealso cref="Firefly.EmbeddedResourceLoader.AutoResourceLoader" />
     /// <seealso cref="System.IDisposable" />
-    [Collection("Packager")]
+    [Collection("Sequential")]
     // ReSharper disable once InconsistentNaming
     public class Lambda_Packager : AutoResourceLoader, IDisposable
     {

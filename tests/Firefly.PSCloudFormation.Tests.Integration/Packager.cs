@@ -13,7 +13,7 @@
 
     using Firefly.EmbeddedResourceLoader;
     using Firefly.EmbeddedResourceLoader.Materialization;
-    using Firefly.PSCloudFormation.Tests.Integration.Utils;
+    using Firefly.PSCloudFormation.Tests.Common.Utils;
     using Firefly.PSCloudFormation.Utils;
 
     using FluentAssertions;
@@ -23,7 +23,7 @@
     using Xunit;
     using Xunit.Abstractions;
 
-    [Collection("Packager")]
+    [Collection("Sequential")]
     public class Packager : AutoResourceLoader, IDisposable
     {
         private readonly IPathResolver pathResolver = new TestPathResolver();

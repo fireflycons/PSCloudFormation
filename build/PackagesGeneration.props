@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Project>
+  <PropertyGroup>
+    <!-- Package generation control -->
+    <Generate_PSCloudFormation>false</Generate_PSCloudFormation>
+  </PropertyGroup>
+</Project>

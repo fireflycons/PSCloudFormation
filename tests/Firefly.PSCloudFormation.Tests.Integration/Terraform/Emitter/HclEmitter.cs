@@ -9,7 +9,7 @@
     using Firefly.PSCloudFormation.Terraform.HclSerializer;
     using Firefly.PSCloudFormation.Terraform.HclSerializer.Events;
     using Firefly.PSCloudFormation.Terraform.State;
-    using Firefly.PSCloudFormation.Tests.Integration.Utils;
+    using Firefly.PSCloudFormation.Tests.Common.Utils;
 
     using FluentAssertions;
 
@@ -20,6 +20,7 @@
 
     using he = Firefly.PSCloudFormation.Terraform.HclSerializer.HclEmitter;
 
+    [Collection("Sequential")]
     public class HclEmitter : IClassFixture<HclEmitterFixture>
     {
         private static readonly Assembly ThisAssembly = Assembly.GetCallingAssembly();

@@ -13,7 +13,7 @@
     using Firefly.EmbeddedResourceLoader;
     using Firefly.EmbeddedResourceLoader.Materialization;
     using Firefly.PSCloudFormation.LambdaPackaging;
-    using Firefly.PSCloudFormation.Tests.Integration.Utils;
+    using Firefly.PSCloudFormation.Tests.Common.Utils;
     using Firefly.PSCloudFormation.Utils;
 
     using FluentAssertions;
@@ -23,6 +23,7 @@
     using Xunit;
     using Xunit.Abstractions;
 
+    [Collection("Sequential")]
     public class LambdaArtifactTests : AutoResourceLoader, IDisposable
     {
         /// <summary>

@@ -16,6 +16,7 @@ namespace Firefly.PSCloudFormation.Tests.Integration
     /// <summary>
     /// Tests provisioning of dynamic parameters
     /// </summary>
+    [Collection("Sequential")]
     public class ParameterBuilder : IClassFixture<ParameterBuilderFixture>
     {
         private readonly ParameterBuilderFixture fixture;

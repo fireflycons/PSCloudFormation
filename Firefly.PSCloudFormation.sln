@@ -18,6 +18,10 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = ".SolutionItems", ".Solution
 		RELEASENOTES.md = RELEASENOTES.md
 	EndProjectSection
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Firefly.PSCloudFormation.Tests.Unit", "tests\Firefly.PSCloudFormation.Tests.Unit\Firefly.PSCloudFormation.Tests.Unit.csproj", "{21026A53-9FBB-422A-BA9F-19FB32E6F48A}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Firefly.PSCloudFormation.Tests.Common", "tests\Firefly.PSCloudFormation.Tests.Common\Firefly.PSCloudFormation.Tests.Common.csproj", "{23E3AEE3-CC29-4331-A6CC-711530F8258D}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -32,6 +36,14 @@ Global
 		{1879E4C9-DEE6-464C-8F9D-69862B56970C}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{1879E4C9-DEE6-464C-8F9D-69862B56970C}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{1879E4C9-DEE6-464C-8F9D-69862B56970C}.Release|Any CPU.Build.0 = Release|Any CPU
+		{21026A53-9FBB-422A-BA9F-19FB32E6F48A}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{21026A53-9FBB-422A-BA9F-19FB32E6F48A}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{21026A53-9FBB-422A-BA9F-19FB32E6F48A}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{21026A53-9FBB-422A-BA9F-19FB32E6F48A}.Release|Any CPU.Build.0 = Release|Any CPU
+		{23E3AEE3-CC29-4331-A6CC-711530F8258D}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{23E3AEE3-CC29-4331-A6CC-711530F8258D}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{23E3AEE3-CC29-4331-A6CC-711530F8258D}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{23E3AEE3-CC29-4331-A6CC-711530F8258D}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
@@ -39,6 +51,8 @@ Global
 	GlobalSection(NestedProjects) = preSolution
 		{0917C04B-10F7-4B1C-B8BF-F416CE6A5AB5} = {EC139014-3A7A-49A4-AD31-5EE40614AC31}
 		{1879E4C9-DEE6-464C-8F9D-69862B56970C} = {B06A1710-3551-40E2-8671-8D3B61BBBDA7}
+		{21026A53-9FBB-422A-BA9F-19FB32E6F48A} = {B06A1710-3551-40E2-8671-8D3B61BBBDA7}
+		{23E3AEE3-CC29-4331-A6CC-711530F8258D} = {B06A1710-3551-40E2-8671-8D3B61BBBDA7}
 	EndGlobalSection
 	GlobalSection(ExtensibilityGlobals) = postSolution
 		SolutionGuid = {2AAF64AF-6042-45B8-8701-D3B0FA1BB5A0}

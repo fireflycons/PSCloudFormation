@@ -1,10 +1,10 @@
-﻿namespace Firefly.PSCloudFormation.Tests.Integration
+﻿namespace Firefly.PSCloudFormation.Tests.Unit
 {
     using System.Linq;
     using System.Runtime.CompilerServices;
     using System.Threading.Tasks;
 
-    using Firefly.PSCloudFormation.Tests.Integration.Utils;
+    using Firefly.PSCloudFormation.Tests.Common.Utils;
     using Firefly.PSCloudFormation.Utils;
 
     using FluentAssertions;

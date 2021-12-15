@@ -9,7 +9,7 @@
     using Firefly.EmbeddedResourceLoader.Materialization;
     using Firefly.PSCloudFormation.Terraform;
     using Firefly.PSCloudFormation.Terraform.HclSerializer;
-    using Firefly.PSCloudFormation.Tests.Integration.Utils;
+    using Firefly.PSCloudFormation.Tests.Common.Utils;
 
     public class HclEmitterFixture : IDisposable
     {

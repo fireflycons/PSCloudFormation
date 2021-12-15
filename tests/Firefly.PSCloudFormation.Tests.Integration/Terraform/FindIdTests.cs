@@ -13,10 +13,13 @@
 
     using Xunit;
 
+    [Collection("Sequential")]
     public class FindIdTests : AutoResourceLoader
     {
+#pragma warning disable 649
         [EmbeddedResource("FindId_Attributes.json")]
         private static JObject resourceAttributes;
+#pragma warning restore 649
 
         [Fact]
         public void WhenInputParameterIsListAndOneElementMatchesThenElementIsFound()

@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Project>
+  <Import Project="./DeployBuild.props" />
+  <Import Project="./PackagesGeneration.props" />
+
+  <!-- Build variables -->
+  <PropertyGroup>
+    <UsePSCloudFormationNuget>false</UsePSCloudFormationNuget>
+    <UsePSCloudFormationNuget Condition="$(DeployBuild) AND !$(Generate_PSCloudFormation)">true</UsePSCloudFormationNuget>
+  </PropertyGroup>
+</Project>

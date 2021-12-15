@@ -13,6 +13,7 @@
     using Xunit;
     using Xunit.Abstractions;
 
+    [Collection("Sequential")]
     public class ChangeGraph : AutoResourceLoader
     {
         private readonly ITestOutputHelper output;

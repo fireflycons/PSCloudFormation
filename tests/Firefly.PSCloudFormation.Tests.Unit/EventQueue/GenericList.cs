@@ -1,4 +1,4 @@
-﻿namespace Firefly.PSCloudFormation.Tests.Integration.DequeTests
+﻿namespace Firefly.PSCloudFormation.Tests.Unit.EventQueue
 {
     using System;
     using System.Collections.Generic;
