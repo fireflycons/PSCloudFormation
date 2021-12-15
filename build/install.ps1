@@ -1,3 +1,26 @@
+Write-Host "Installing modules..."
+
+$prog = $ProgressPreference
+$ProgressPreference = 'SilentlyContinue'
+
+try
+{
+    @(
+        'psake'
+        'BuildHelpers'
+        'PSDeploy'
+        'platyps'
+    ) |
+    ForEach-Object {
+        Write-Host "-" $_
+        Install-Module $_ -Scope CurrentUser -Force | Out-Null
+    }
+}
+finally
+{
+    $ProgressPreference = $prog
+}
+
 Write-Host "Installing Terraform"
 
 if ((-not (Get-Variable -Name IsWindows -ErrorAction Ignore)) -or $IsWindows)

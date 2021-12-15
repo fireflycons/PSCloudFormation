@@ -129,7 +129,7 @@ Task UpdateManifest -Depends Build {
 
         if (-not $Module)
         {
-            Throw "Could not find module '$Name'"
+            Throw "Could not find module '$($params.Name)'"
         }
 
         $cmdlets = $Module.ExportedCommands.Keys
@@ -143,7 +143,7 @@ Task UpdateManifest -Depends Build {
     Update-MetaData -Path $env:BHPSModuleManifest -PropertyName CmdletsToExport -Value @( $cmdlets )
 
     # Bump the module version if we didn't already
-    Update-Metadata -Path $env:BHPSModuleManifest -PropertyName ModuleVersion -Value (Get-Content -Raw (Join-Path $PSScriptRoot "module.ver")).Trim() -ErrorAction stop
+    Update-Metadata -Path $env:BHPSModuleManifest -PropertyName ModuleVersion -Value $env:PSCFN_ModuleVersion -ErrorAction stop
 
     # Set file list
     $excludeList = Invoke-Command -NoNewScope {

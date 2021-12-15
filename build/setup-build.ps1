@@ -90,6 +90,7 @@ if ($env:APPVEYOR_REPO_TAG -eq "true")
 
         Update-AllPackagesGeneration
         $env:PSCFN_BuildVersion = $version
+        $env:PSCFN_ModuleVersion = ([Version]$version).ToString()
         $env:PSCFN_ReleaseName = $env:APPVEYOR_REPO_TAG_NAME
     }
     # Partial release
