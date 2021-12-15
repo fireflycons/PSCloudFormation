@@ -111,25 +111,28 @@ Task UpdateManifest -Depends Build {
     try
     {
         $params = @{
-            Force = $True
-            Passthru = $True
             Name = $env:BHPSModuleManifest
+        }
+
+        if (-not (Test-Path -Path $env:BHPSModuleManifest))
+        {
+            throw "Could not find module '$env:BHPSModuleManifest'"
         }
 
         # Create a runspace, add script to run
         $PowerShell = [Powershell]::Create()
         [void]$PowerShell.AddScript({
-            Param ($Force, $Passthru, $Name)
-            $module = Import-Module -Name $Name -PassThru:$Passthru -Force:$Force
-            $module | Where-Object {$_.Path -notin $module.Scripts}
+            Param ($Name)
+            Import-Module -Name $Name -PassThru -Force
+            #$module = Import-Module -Name $Name -PassThru -Force
+            #$module | Where-Object {$_.Path -notin $module.Scripts}
         }).AddParameters($Params)
 
-        #Consider moving this to a runspace or job to keep session clean
         $Module = $PowerShell.Invoke()
 
         if (-not $Module)
         {
-            Throw "Could not find module '$($params.Name)'"
+            Throw "Could not load module '$($params.Name)'"
         }
 
         $cmdlets = $Module.ExportedCommands.Keys
