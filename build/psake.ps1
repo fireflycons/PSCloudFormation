@@ -122,11 +122,22 @@ Task UpdateManifest -Depends Build {
         # Create a runspace, add script to run
         $PowerShell = [Powershell]::Create()
         [void]$PowerShell.AddScript({
-            Param ($Name)
-            Import-Module -Name $Name -PassThru -Force
+            Param
+            (
+                $Name
+            )
+            try
+            {
+                Import-Module -Name $Name -PassThru -Force
+            }
+            catch
+            {
+                [Console]::WriteLine($_.Exception.Message)
+                $null
+            }
             #$module = Import-Module -Name $Name -PassThru -Force
             #$module | Where-Object {$_.Path -notin $module.Scripts}
-        }).AddParameters($Params)
+        }).AddParameters($params)
 
         $Module = $PowerShell.Invoke()
 
