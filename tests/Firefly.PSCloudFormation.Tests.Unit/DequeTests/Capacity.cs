@@ -15,7 +15,7 @@
         {
             var sequence = new int[] { 1, 2, 3 };
 
-            var deque = new Deque<int>(sequence);
+            var deque = new EmitterEventQueue<int>(sequence);
             deque.Capacity.Should().Be(3);
 
             deque.Capacity = 7;
@@ -29,7 +29,7 @@
             var sequence = new int[] { 1, 2, 3 };
             var expected = new[] { 2, 3, 4 };
 
-            var deque = new Deque<int>(sequence);
+            var deque = new EmitterEventQueue<int>(sequence);
             deque.Capacity.Should().Be(3);
 
             var action = new Action(() => { deque.Capacity = 2; });
@@ -40,7 +40,7 @@
         [Fact]
         public void Set_ToItself_DoesNothing()
         {
-            var deque = new Deque<int>(13);
+            var deque = new EmitterEventQueue<int>(13);
             deque.Capacity.Should().Be(13);
             deque.Capacity = 13;
             deque.Capacity.Should().Be(13);
@@ -52,7 +52,7 @@
             var sequence = new int[] { 1, 2, 3 };
             var expected = new[] { 2, 3, 4 };
 
-            var deque = new Deque<int>(sequence);
+            var deque = new EmitterEventQueue<int>(sequence);
             deque.RemoveFromFront();
             deque.AddToBack(4);
             deque.Capacity.Should().Be(3);
@@ -64,7 +64,7 @@
         [Fact]
         public void SetLarger_UsesSpecifiedCapacity()
         {
-            var deque = new Deque<int>(1);
+            var deque = new EmitterEventQueue<int>(1);
             deque.Capacity.Should().Be(1);
             deque.Capacity = 17;
             deque.Capacity.Should().Be(17);
@@ -73,7 +73,7 @@
         [Fact]
         public void SetSmaller_UsesSpecifiedCapacity()
         {
-            var deque = new Deque<int>(13);
+            var deque = new EmitterEventQueue<int>(13);
             deque.Capacity.Should().Be(13);
             deque.Capacity = 7;
             deque.Capacity.Should().Be(7);
@@ -84,23 +84,11 @@
         [InlineData(-1)]
         public void SetToLessThan1_ThrowsException(int capacity)
         {
-            var deque = new Deque<int>();
+            var deque = new EmitterEventQueue<int>();
 
             var action = new Action(() => { deque.Capacity = capacity; });
 
             action.Should().Throw<ArgumentException>();
-        }
-
-        [Fact]
-        public void AddToFrontAndBack_ReturnsExpectedSequence()
-        {
-            var deque = new Deque<int>(10);
-            var expected = new int[] { 1, 2 };
-
-            deque.AddToFront(1);
-            deque.AddToBack(2);
-
-            deque.Should().BeEquivalentTo(expected);
         }
     }
 }

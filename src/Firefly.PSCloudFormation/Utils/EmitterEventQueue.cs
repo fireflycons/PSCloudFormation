@@ -7,13 +7,12 @@
     using System.Linq;
 
     /// <summary>
-    /// A double-ended queue (queue), which provides O(1) indexed access, O(1) removals from the front and back, amortized O(1) insertions to the front and back, and O(N) insertions and removals anywhere else (with the operations getting slower as the index approaches the middle).
-    /// Borrowed with thanks from <see href="https://github.com/StephenClearyArchive/Deque" />, and modified to be more netcore and with a couple of new methods.
+    /// Borrowed with thanks from <see href="https://github.com/StephenClearyArchive/Deque" />, and modified to be more netcore and provide queue manipulations required by the Terraform HCL emitter.
     /// </summary>
     /// <typeparam name="T">The type of elements contained in the queue.</typeparam>
     [DebuggerDisplay("Count = {Count}, Capacity = {Capacity}")]
-    [DebuggerTypeProxy(typeof(Deque<>.DebugView))]
-    internal sealed class Deque<T> : IList<T>, IList
+    [DebuggerTypeProxy(typeof(EmitterEventQueue<>.DebugView))]
+    internal sealed class EmitterEventQueue<T> : IList<T>, IList
     {
         /// <summary>
         /// The default capacity.
@@ -31,10 +30,10 @@
         private int offset;
 
         /// <summary>
-        /// Initializes a new instance of the <see cref="Deque&lt;T&gt;"/> class with the specified capacity.
+        /// Initializes a new instance of the <see cref="EmitterEventQueue{T}"/> class with the specified capacity.
         /// </summary>
         /// <param name="capacity">The initial capacity. Must be greater than <c>0</c>.</param>
-        public Deque(int capacity)
+        public EmitterEventQueue(int capacity)
         {
             if (capacity < 1)
             {
@@ -45,10 +44,10 @@
         }
 
         /// <summary>
-        /// Initializes a new instance of the <see cref="Deque&lt;T&gt;"/> class with the elements from the specified collection.
+        /// Initializes a new instance of the <see cref="EmitterEventQueue{T}"/> class with the elements from the specified collection.
         /// </summary>
         /// <param name="collection">The collection.</param>
-        public Deque(IEnumerable<T> collection)
+        public EmitterEventQueue(IEnumerable<T> collection)
         {
             var count = collection.Count();
 
@@ -64,9 +63,9 @@
         }
 
         /// <summary>
-        /// Initializes a new instance of the <see cref="Deque&lt;T&gt;"/> class.
+        /// Initializes a new instance of the <see cref="EmitterEventQueue{T}"/> class.
         /// </summary>
-        public Deque()
+        public EmitterEventQueue()
             : this(DefaultCapacity)
         {
         }
@@ -215,58 +214,22 @@
         }
 
         /// <summary>
-        /// Peeks the item the front of the queue.
+        /// Inserts a single element at the back of this queue.
         /// </summary>
-        /// <returns>Item at front of queue</returns>
-        public T PeekFront()
+        /// <param name="value">The element to insert.</param>
+        public void AddToBack(T value)
         {
-            CheckExistingIndexArgument(this.Count, 0, true);
-            return this.DoGetItem(0);
+            this.EnsureCapacityForOneElement();
+            this.DoAddToBack(value);
         }
 
         /// <summary>
-        /// Peeks the item the front of the queue.
+        /// Removes all items from this queue.
         /// </summary>
-        /// <returns>Item at front of queue</returns>
-        public T Peek()
+        public void Clear()
         {
-            return this.PeekFront();
-        }
-
-        /// <summary>
-        /// Peek items until a condition is met.
-        /// </summary>
-        /// <param name="untilFunc">The until function.</param>
-        /// <param name="emitLastItem">If <c>true</c> emit the item that ends the iteration.</param>
-        /// <returns>Enumerable of items peeked.</returns>
-        public IEnumerable<T> PeekUntil(Func<T, bool> untilFunc, bool emitLastItem)
-        {
-            for (var i = 0; i <= this.Count; ++i)
-            {
-                var item = this[i];
-
-                if (untilFunc(item))
-                {
-                    if (emitLastItem)
-                    {
-                        yield return item;
-                    }
-
-                    yield break;
-                }
-
-                yield return item;
-            }
-        }
-
-        /// <summary>
-        /// Peek items until a condition is met.
-        /// </summary>
-        /// <param name="untilFunc">The until function.</param>
-        /// <returns>Enumerable of items peeked.</returns>
-        public IEnumerable<T> PeekUntil(Func<T, bool> untilFunc)
-        {
-            return this.PeekUntil(untilFunc, false);
+            this.offset = 0;
+            this.Count = 0;
         }
 
         /// <summary>
@@ -295,22 +258,12 @@
         }
 
         /// <summary>
-        /// Consume items from front of queue until a condition is met.
+        /// Removes and returns the first element of this queue (standard queue interface)
         /// </summary>
-        /// <param name="untilFunc">The until function.</param>
-        public void ConsumeUntil(Func<T, bool> untilFunc)
+        /// <returns>Item at front of queue</returns>
+        public T Dequeue()
         {
-            this.ConsumeUntil(untilFunc, false);
-        }
-
-        /// <summary>
-        /// Inserts a single element at the back of this queue.
-        /// </summary>
-        /// <param name="value">The element to insert.</param>
-        public void AddToBack(T value)
-        {
-            this.EnsureCapacityForOneElement();
-            this.DoAddToBack(value);
+            return this.RemoveFromFront();
         }
 
         /// <summary>
@@ -320,25 +273,6 @@
         public void Enqueue(T value)
         {
             this.AddToBack(value);
-        }
-
-        /// <summary>
-        /// Inserts a single element at the front of this queue.
-        /// </summary>
-        /// <param name="value">The element to insert.</param>
-        public void AddToFront(T value)
-        {
-            this.EnsureCapacityForOneElement();
-            this.DoAddToFront(value);
-        }
-
-        /// <summary>
-        /// Removes all items from this queue.
-        /// </summary>
-        public void Clear()
-        {
-            this.offset = 0;
-            this.Count = 0;
         }
 
         /// <summary>
@@ -396,28 +330,48 @@
         }
 
         /// <summary>
-        /// Inserts a collection of elements into this queue.
+        /// Peeks the item the front of the queue.
         /// </summary>
-        /// <param name="index">The index at which the collection is inserted.</param>
-        /// <param name="collection">The collection of elements to insert.</param>
-        /// <exception cref="ArgumentOutOfRangeException"><paramref name="index"/> is not a valid index to an insertion point for the source.</exception>
-        public void InsertRange(int index, IEnumerable<T> collection)
+        /// <returns>Item at front of queue</returns>
+        public T Peek()
         {
-            var collectionCount = collection.Count();
-            CheckNewIndexArgument(this.Count, index);
+            return this.PeekFront();
+        }
 
-            // Overflow-safe check for "this.Count + collectionCount > this.Capacity"
-            if (collectionCount > this.Capacity - this.Count)
+        /// <summary>
+        /// Peeks the item the front of the queue.
+        /// </summary>
+        /// <returns>Item at front of queue</returns>
+        public T PeekFront()
+        {
+            CheckExistingIndexArgument(this.Count, 0, true);
+            return this.DoGetItem(0);
+        }
+
+        /// <summary>
+        /// Peek items until a condition is met.
+        /// </summary>
+        /// <param name="untilFunc">The until function.</param>
+        /// <param name="emitLastItem">If <c>true</c> emit the item that ends the iteration.</param>
+        /// <returns>Enumerable of items peeked.</returns>
+        public IEnumerable<T> PeekUntil(Func<T, bool> untilFunc, bool emitLastItem)
+        {
+            for (var i = 0; i <= this.Count; ++i)
             {
-                this.Capacity = checked(this.Count + collectionCount);
-            }
+                var item = this[i];
 
-            if (collectionCount == 0)
-            {
-                return;
-            }
+                if (untilFunc(item))
+                {
+                    if (emitLastItem)
+                    {
+                        yield return item;
+                    }
 
-            this.DoInsertRange(index, collection, collectionCount);
+                    yield break;
+                }
+
+                yield return item;
+            }
         }
 
         /// <summary>
@@ -459,21 +413,6 @@
         }
 
         /// <summary>
-        /// Removes and returns the last element of this queue.
-        /// </summary>
-        /// <returns>The former last element.</returns>
-        /// <exception cref="InvalidOperationException">The queue is empty.</exception>
-        public T RemoveFromBack()
-        {
-            if (this.IsEmpty)
-            {
-                throw new InvalidOperationException("The queue is empty.");
-            }
-
-            return this.DoRemoveFromBack();
-        }
-
-        /// <summary>
         /// Removes and returns the first element of this queue.
         /// </summary>
         /// <returns>The former first element.</returns>
@@ -486,34 +425,6 @@
             }
 
             return this.DoRemoveFromFront();
-        }
-
-        /// <summary>
-        /// Removes and returns the first element of this queue (standard queue interface)
-        /// </summary>
-        /// <returns>Item at front of queue</returns>
-        public T Dequeue()
-        {
-            return this.RemoveFromFront();
-        }
-
-        /// <summary>
-        /// Removes a range of elements from this queue.
-        /// </summary>
-        /// <param name="offset">The index into the queue at which the range begins.</param>
-        /// <param name="count">The number of elements to remove.</param>
-        /// <exception cref="ArgumentOutOfRangeException">Either <paramref name="offset"/> or <paramref name="count"/> is less than 0.</exception>
-        /// <exception cref="ArgumentException">The range [<paramref name="offset"/>, <paramref name="offset"/> + <paramref name="count"/>) is not within the range [0, <see cref="Count"/>).</exception>
-        public void RemoveRange(int offset, int count)
-        {
-            CheckRangeArguments(this.Count, offset, count);
-
-            if (count == 0)
-            {
-                return;
-            }
-
-            this.DoRemoveRange(offset, count);
         }
 
         /// <summary>
@@ -1067,9 +978,9 @@
         [DebuggerNonUserCode]
         private sealed class DebugView
         {
-            private readonly Deque<T> queue;
+            private readonly EmitterEventQueue<T> queue;
 
-            public DebugView(Deque<T> queue)
+            public DebugView(EmitterEventQueue<T> queue)
             {
                 this.queue = queue;
             }
