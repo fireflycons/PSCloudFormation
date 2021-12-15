@@ -93,7 +93,7 @@ function Invoke-Git
 $ErrorActionPreference = "Stop"
 
 # Only on Windows
-if (-not $IsWindows)
+if ((-not (Get-Variable -Name IsWindows -ErrorAction Ignore)) -or $IsWindows)
 {
     Write-Host "Documentation update ignored: Not Windows build agent."
     return

@@ -1,29 +1,35 @@
 Write-Host "Installing modules..."
 
-$prog = $ProgressPreference
-$ProgressPreference = 'SilentlyContinue'
+$windows = (-not (Get-Variable -Name IsWindows -ErrorAction Ignore)) -or $IsWindows
 
-try
+if ($windows)
 {
-    @(
-        'psake'
-        'BuildHelpers'
-        'PSDeploy'
-        'platyps'
-    ) |
-    ForEach-Object {
-        Write-Host "-" $_
-        Install-Module $_ -Scope CurrentUser -Force | Out-Null
+    $prog = $ProgressPreference
+    $ProgressPreference = 'SilentlyContinue'
+
+    try
+    {
+        # Modules for doc building and deployment
+        @(
+            'psake'
+            'BuildHelpers'
+            'PSDeploy'
+            'platyps'
+        ) |
+        ForEach-Object {
+            Write-Host "-" $_
+            Install-Module $_ -Scope CurrentUser -Force | Out-Null
+        }
     }
-}
-finally
-{
-    $ProgressPreference = $prog
+    finally
+    {
+        $ProgressPreference = $prog
+    }
 }
 
 Write-Host "Installing Terraform"
 
-if ((-not (Get-Variable -Name IsWindows -ErrorAction Ignore)) -or $IsWindows)
+if ($windows)
 {
     # Windows
     $cinst = Get-Command -Name cinst -ErrorAction SilentlyContinue
