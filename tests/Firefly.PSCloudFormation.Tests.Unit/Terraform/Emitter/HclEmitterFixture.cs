@@ -1,4 +1,4 @@
-﻿namespace Firefly.PSCloudFormation.Tests.Unit.Terraform.Emitter
+﻿namespace Firefly.PSCloudFormation.Tests.Integration.Terraform.Emitter
 {
     using System;
     using System.IO;
@@ -6,11 +6,10 @@
     using Amazon.Runtime;
 
     using Firefly.CloudFormation;
-    using Firefly.EmbeddedResourceLoader;
     using Firefly.EmbeddedResourceLoader.Materialization;
     using Firefly.PSCloudFormation.Terraform;
     using Firefly.PSCloudFormation.Terraform.HclSerializer;
-    using Firefly.PSCloudFormation.Tests.Unit.Utils;
+    using Firefly.PSCloudFormation.Tests.Integration.Utils;
 
     public class HclEmitterFixture : IDisposable
     {

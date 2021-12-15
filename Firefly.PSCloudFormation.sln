@@ -9,7 +9,7 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "src", "src", "{EC139014-3A7
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "tests", "tests", "{B06A1710-3551-40E2-8671-8D3B61BBBDA7}"
 EndProject
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Firefly.PSCloudFormation.Tests.Unit", "tests\Firefly.PSCloudFormation.Tests.Unit\Firefly.PSCloudFormation.Tests.Unit.csproj", "{1879E4C9-DEE6-464C-8F9D-69862B56970C}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Firefly.PSCloudFormation.Tests.Integration", "tests\Firefly.PSCloudFormation.Tests.Unit\Firefly.PSCloudFormation.Tests.Integration.csproj", "{1879E4C9-DEE6-464C-8F9D-69862B56970C}"
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = ".SolutionItems", ".SolutionItems", "{6157CC22-02BD-4999-9804-8BFD513BD1DF}"
 	ProjectSection(SolutionItems) = preProject

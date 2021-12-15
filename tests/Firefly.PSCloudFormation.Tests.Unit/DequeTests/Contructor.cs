@@ -1,9 +1,8 @@
-﻿namespace Firefly.PSCloudFormation.Tests.Unit.DequeTests
+﻿namespace Firefly.PSCloudFormation.Tests.Integration.DequeTests
 {
     using System;
 
     using Firefly.PSCloudFormation.Terraform.HclSerializer;
-    using Firefly.PSCloudFormation.Utils;
 
     using FluentAssertions;
 

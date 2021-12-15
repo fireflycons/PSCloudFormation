@@ -1,4 +1,4 @@
-﻿namespace Firefly.PSCloudFormation.Tests.Unit
+﻿namespace Firefly.PSCloudFormation.Tests.Integration
 {
     using System;
     using System.Collections.Generic;
@@ -12,7 +12,7 @@
 
     using Firefly.EmbeddedResourceLoader;
     using Firefly.EmbeddedResourceLoader.Materialization;
-    using Firefly.PSCloudFormation.Tests.Unit.Utils;
+    using Firefly.PSCloudFormation.Tests.Integration.Utils;
     using Firefly.PSCloudFormation.Utils;
 
     using FluentAssertions;

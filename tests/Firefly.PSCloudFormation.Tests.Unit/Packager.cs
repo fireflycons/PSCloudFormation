@@ -1,10 +1,8 @@
-﻿using System;
-using System.Collections.Generic;
-
-namespace Firefly.PSCloudFormation.Tests.Unit
+﻿namespace Firefly.PSCloudFormation.Tests.Integration
 {
     #pragma warning disable 649
-
+    using System;
+    using System.Collections.Generic;
     using System.IO;
     using System.Linq;
     using System.Text.RegularExpressions;
@@ -15,7 +13,7 @@ namespace Firefly.PSCloudFormation.Tests.Unit
 
     using Firefly.EmbeddedResourceLoader;
     using Firefly.EmbeddedResourceLoader.Materialization;
-    using Firefly.PSCloudFormation.Tests.Unit.Utils;
+    using Firefly.PSCloudFormation.Tests.Integration.Utils;
     using Firefly.PSCloudFormation.Utils;
 
     using FluentAssertions;

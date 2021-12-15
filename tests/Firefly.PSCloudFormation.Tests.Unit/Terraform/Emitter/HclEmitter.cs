@@ -1,4 +1,4 @@
-﻿namespace Firefly.PSCloudFormation.Tests.Unit.Terraform
+﻿namespace Firefly.PSCloudFormation.Tests.Integration.Terraform.Emitter
 {
     using System;
     using System.Collections.Generic;
@@ -9,8 +9,7 @@
     using Firefly.PSCloudFormation.Terraform.HclSerializer;
     using Firefly.PSCloudFormation.Terraform.HclSerializer.Events;
     using Firefly.PSCloudFormation.Terraform.State;
-    using Firefly.PSCloudFormation.Tests.Unit.Terraform.Emitter;
-    using Firefly.PSCloudFormation.Tests.Unit.Utils;
+    using Firefly.PSCloudFormation.Tests.Integration.Utils;
 
     using FluentAssertions;
 

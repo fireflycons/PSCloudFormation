@@ -1,4 +1,4 @@
-﻿namespace Firefly.PSCloudFormation.Tests.Unit.Terraform
+﻿namespace Firefly.PSCloudFormation.Tests.Integration.Terraform
 {
     using Firefly.CloudFormationParser;
     using Firefly.EmbeddedResourceLoader;

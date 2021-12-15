@@ -1,4 +1,4 @@
-﻿namespace Firefly.PSCloudFormation.Tests.Unit
+﻿namespace Firefly.PSCloudFormation.Tests.Integration
 {
     using System.Collections;
     using System.Collections.Generic;
@@ -8,7 +8,7 @@
 
     using Firefly.CloudFormation;
     using Firefly.PSCloudFormation.Commands;
-    using Firefly.PSCloudFormation.Tests.Unit.Utils;
+    using Firefly.PSCloudFormation.Tests.Integration.Utils;
 
     using FluentAssertions;
 

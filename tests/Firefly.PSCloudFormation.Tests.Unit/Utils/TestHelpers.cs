@@ -1,4 +1,4 @@
-﻿namespace Firefly.PSCloudFormation.Tests.Unit.Utils
+﻿namespace Firefly.PSCloudFormation.Tests.Integration.Utils
 {
     using System.Collections.Generic;
 
@@ -7,9 +7,6 @@
     using Amazon.S3.Model;
     using Amazon.SecurityToken;
     using Amazon.SecurityToken.Model;
-
-    using Firefly.CloudFormation;
-    using Firefly.CloudFormation.Utils;
 
     using Moq;
 

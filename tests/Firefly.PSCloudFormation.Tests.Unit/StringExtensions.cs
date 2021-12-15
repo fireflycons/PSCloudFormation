@@ -1,11 +1,10 @@
-﻿namespace Firefly.PSCloudFormation.Tests.Unit
+﻿namespace Firefly.PSCloudFormation.Tests.Integration
 {
     using Firefly.PSCloudFormation.Utils;
 
     using FluentAssertions;
 
     using Xunit;
-
 
     public class StringExtensions
     {

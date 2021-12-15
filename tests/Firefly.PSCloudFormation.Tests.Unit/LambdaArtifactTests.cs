@@ -1,7 +1,6 @@
-﻿namespace Firefly.PSCloudFormation.Tests.Unit
+﻿namespace Firefly.PSCloudFormation.Tests.Integration
 {
     #pragma warning disable 649
-
     using System;
     using System.Collections.Generic;
     using System.IO;
@@ -9,14 +8,12 @@
     using System.Runtime.InteropServices;
     using System.Threading.Tasks;
 
-    using Amazon.Auth.AccessControlPolicy;
-
     using Firefly.CloudFormation.Parsers;
     using Firefly.CloudFormationParser;
     using Firefly.EmbeddedResourceLoader;
     using Firefly.EmbeddedResourceLoader.Materialization;
     using Firefly.PSCloudFormation.LambdaPackaging;
-    using Firefly.PSCloudFormation.Tests.Unit.Utils;
+    using Firefly.PSCloudFormation.Tests.Integration.Utils;
     using Firefly.PSCloudFormation.Utils;
 
     using FluentAssertions;

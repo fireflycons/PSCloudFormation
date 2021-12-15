@@ -1,7 +1,5 @@
-﻿namespace Firefly.PSCloudFormation.Tests.Unit.Utils
+﻿namespace Firefly.PSCloudFormation.Tests.Integration.Utils
 {
-    using Firefly.CloudFormation.Utils;
-
     class TestTimestampGenerator : ITimestampGenerator
     {
         public string GenerateTimestamp()

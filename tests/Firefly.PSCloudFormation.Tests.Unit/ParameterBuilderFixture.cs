@@ -1,4 +1,4 @@
-﻿namespace Firefly.PSCloudFormation.Tests.Unit
+﻿namespace Firefly.PSCloudFormation.Tests.Integration
 {
     // ReSharper disable UnusedAutoPropertyAccessor.Local
     using System.Collections.Generic;

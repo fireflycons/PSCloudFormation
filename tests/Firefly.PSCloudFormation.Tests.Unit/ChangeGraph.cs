@@ -1,7 +1,6 @@
-﻿namespace Firefly.PSCloudFormation.Tests.Unit
+﻿namespace Firefly.PSCloudFormation.Tests.Integration
 {
     using System.Collections.Generic;
-    using System.IO;
     using System.Linq;
 
     using Firefly.EmbeddedResourceLoader;
