@@ -187,6 +187,7 @@
     <PackageReference Include="xunit.runner.visualstudio" Version="2.4.0" />
     <PackageReference Include="coverlet.collector" Version="1.2.0" />
     <PackageReference Include="Xunit.SkippableFact" Version="1.4.13" />
+    <PackageReference Include="Appveyor.TestLogger" Version="2.0.0" />
   </ItemGroup>
 
   <ItemGroup>
