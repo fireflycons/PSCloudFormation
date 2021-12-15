@@ -1,4 +1,5 @@
-# Dot-source vars describing environment
+Write-Host "Installing Terraform"
+
 if ((-not (Get-Variable -Name IsWindows -ErrorAction Ignore)) -or $IsWindows)
 {
     # Windows
