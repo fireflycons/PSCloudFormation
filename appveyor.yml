@@ -1,3 +1,5 @@
+version: '0.0.{build}'
+
 # Setup environment
 nuget:
   disable_publish_on_pr: true
@@ -48,6 +50,16 @@ image:
 
 install:
   - ps: ./build/install.ps1
+  - ps: ./build/setup-build.ps1
+
+dotnet_csproj:
+  patch: true
+  file: '**\*.csproj'
+  version: '$(Build_Assembly_Version)'
+  package_version: '$(Build_Version)'
+  assembly_version: '$(Build_Assembly_Version)'
+  file_version: '$(Build_Assembly_Version)'
+  informational_version: '$(Build_Version)'
 
 # Build
 build:
@@ -59,22 +71,14 @@ build_script:
 test_script:
   - ps: ./build/run-tests.ps1
 
-#before_build:
-#  - ps: ./build/pre-build.ps1
-#
-## Does the whole process
-#build_script:
-#  - ps: . ./build/build.ps1 -Task BuildAppVeyor
-#
-#for:
-#- matrix:
-#    only:
-#      - image: Visual Studio 2019
-#  deploy_script:
-#    - ps: . ./build/build.ps1 -Task Deploy -ImportDependenciesOnly
-#
-#
-#test: off
-#
-#on_success:
-#  - ps: ./build/publish-docs
+after_test:
+  - ps: . ./build/build.ps1 -Task BuildAppVeyor
+
+for:
+- matrix:
+    only:
+      - image: Visual Studio 2019
+  deploy_script:
+    - ps: . ./build/publish-docs.ps1
+    - ps: . ./build/build.ps1 -Task Deploy -ImportDependenciesOnly
+
