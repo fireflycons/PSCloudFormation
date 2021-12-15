@@ -2,7 +2,7 @@
 {
     using System;
 
-    using Firefly.PSCloudFormation.Utils;
+    using Firefly.PSCloudFormation.Terraform.HclSerializer;
 
     using FluentAssertions;
 

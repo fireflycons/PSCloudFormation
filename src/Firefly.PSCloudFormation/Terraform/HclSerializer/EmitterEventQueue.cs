@@ -1,4 +1,4 @@
-﻿namespace Firefly.PSCloudFormation.Utils
+﻿namespace Firefly.PSCloudFormation.Terraform.HclSerializer
 {
     using System;
     using System.Collections;

@@ -6,6 +6,7 @@
     using System.Linq;
     using System.Runtime.InteropServices;
 
+    using Firefly.PSCloudFormation.Terraform.HclSerializer;
     using Firefly.PSCloudFormation.Utils;
 
     using FluentAssertions;
