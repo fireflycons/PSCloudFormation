@@ -79,9 +79,9 @@ if ($env:APPVEYOR_REPO_TAG -eq "true")
     $tagParts = $env:APPVEYOR_REPO_TAG_NAME.split("/", 2)
 
     # Full release
-    if ($tagParts.Length -eq 1) # X.Y.Z
+    if ($tagParts.Length -eq 1) # X.Y.Z(.R)
     {
-        if (-not ($env:APPVEYOR_REPO_TAG_NAME -match '(?<ver>\d+\.\d+\.\d+)'))
+        if (-not ($env:APPVEYOR_REPO_TAG_NAME -match '(?<ver>\d+\.\d+\.\d+(\.\d+)?)'))
         {
             throw "Invalid tag version: $env:APPVEYOR_REPO_TAG_NAME"
         }
@@ -89,8 +89,8 @@ if ($env:APPVEYOR_REPO_TAG -eq "true")
         $version = $Matches.ver
 
         Update-AllPackagesGeneration
-        $env:Build_Version = $version
-        $env:Release_Name = $version
+        $env:PSCFN_BuildVersion = $version
+        $env:PSCFN_ReleaseName = $env:APPVEYOR_REPO_TAG_NAME
     }
     # Partial release
     else # Slug/X.Y.Z
@@ -101,10 +101,10 @@ if ($env:APPVEYOR_REPO_TAG -eq "true")
         $tagVersion = $tagParts[1]
 
         Update-PackagesGeneration $propertyName
-        $env:Build_Version = $tagVersion
+        $env:PSCFN_BuildVersion = $tagVersion
         $projectName = $propertyName -replace "Generate_", ""
         $projectName = $projectName -replace "_", "."
-        $env:Release_Name = "$projectName $tagVersion"
+        $env:PSCFN_ReleaseName = "$projectName $tagVersion"
     }
 
     $env:IsFullIntegrationBuild = $false # Run only tests on deploy builds (not coverage, etc.)
@@ -112,14 +112,14 @@ if ($env:APPVEYOR_REPO_TAG -eq "true")
 else
 {
     Update-AllPackagesGeneration
-    $env:Build_Version = "$($env:APPVEYOR_BUILD_VERSION)"
-    $env:Release_Name = $env:Build_Version
+    $env:PSCFN_BuildVersion = "$($env:APPVEYOR_BUILD_VERSION)"
+    $env:PSCFN_ReleaseName = $env:PSCFN_BuildVersion
 
     $env:IsFullIntegrationBuild = "$env:APPVEYOR_PULL_REQUEST_NUMBER" -eq "" -And $env:Configuration -eq "Release"
 }
 
-$env:Build_Assembly_Version = "$env:Build_Version" -replace "\-.*", ""
+$env:Build_Assembly_Version = "$env:PSCFN_BuildVersion" -replace "\-.*", ""
 
-"Building version: $env:Build_Version"
+"Building version: $env:PSCFN_BuildVersion"
 "Building assembly version: $env:Build_Assembly_Version"
 

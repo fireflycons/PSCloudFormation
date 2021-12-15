@@ -46,7 +46,7 @@ Task Init {
     [Reflection.Assembly]::LoadWithPartialName("System.Security") | Out-Null
     Set-Location $ProjectRoot
     "Build System Details:"
-    Get-ChildItem ENV: | Where-Object { $_.Name -like 'BH*' -or $_.Name -like 'AWS_TOOLS*' }
+    Get-ChildItem ENV: | Where-Object { $_.Name -like 'BH*' -or $_.Name -like 'AWS_TOOLS*' -or $_.Name -like 'PSCFN_*' }
     "`n"
 
     if ($script:IsWindows)
