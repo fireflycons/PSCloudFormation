@@ -20,7 +20,8 @@ if ((-not (Get-Variable -Name IsWindows -ErrorAction Ignore)) -or $IsWindows)
 else
 {
     # Linux
-    & ./install-terraform.sh
+    $installer = Get-Command (Join-Path $PSScriptRoot 'install-terraform.sh')
+    & $installer
 }
 
 exit $LASTEXITCODE

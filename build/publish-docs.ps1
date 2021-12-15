@@ -1,61 +1,189 @@
-$ErrorActionPreference = 'Stop'
+$script:git = Get-Command -Name Git
 
-if ($PSEdition -eq 'Core')
+function Invoke-Git
 {
-    Write-Host "Publish docs step not in scope in this environment"
-    return
-}
+    <#
+        .SYNOPSIS
+            Run git, handling quirky messages on stderr that aren't errors
 
-# Dot-source vars describing environment
-. (Join-Path $PSScriptRoot build-environment.ps1)
+        .PARAMETER OutputToPipeline
+            If set, write git output to the pipeline (for further processing), else to console
 
-# TODO - Only if master and repo_tag
-if (-not $isAppVeyor)
-{
-    Write-Host "Publish docs step not in scope in this environment"
-    return
-}
+        .PARAMETER SuppressWarnings
+            If set, hide any warning output that went to stderr
 
-if (-not ($canPublishDocs -and ($isReleasePublication -or $forceDocPush)))
-{
-    Write-Host "Cannot publish docs in forked repo or if not publishing a release"
-    return
-}
+        .PARAMETER Quiet
+            If set, do not emit any messages from git
 
-# Dot-source git helper
-. (Join-Path $PSScriptRoot Invoke-Git.ps1)
+        .PARAMETER GitArgs
+            All remaining arguments become command tail to get executable.
+    #>
+    param
+    (
+        [switch]$OutputToPipeline,
 
-Push-Location (Join-Path $env:APPVEYOR_BUILD_FOLDER "../fireflycons.github.io")
+        [switch]$SuppressWarnings,
 
-try
-{
-    # Stage any changes, suppressing line ending warnings (nearly all at least)
-    Invoke-Git -SuppressWarnings add --all
+        [switch]$Quiet,
 
-    # Check status
-    $stat = Invoke-Git -OutputToPipeline status --short
+        [Parameter(ValueFromRemainingArguments)]
+        [string[]]$GitArgs
+    )
 
-    if ($null -eq $stat)
+    $backupErrorActionPreference = $script:ErrorActionPreference
+    $script:ErrorActionPreference = "Continue"
+
+    try
     {
-        Write-Host "No overall changes to documentation detected - nothing to push."
-        return
-    }
+        Write-Host -ForegroundColor Cyan ("git " + ($GitArgs -join ' ').Replace($env:GITHUB_ACCESS_TOKEN, "*****")).Replace($env:GITHUB_EMAIL, "*****")
 
-    $stat |
-    ForEach-Object {
+        & $git $GitArgs 2>&1 |
+        ForEach-Object {
+            if ($_ -is [System.Management.Automation.ErrorRecord])
+            {
+                # Some git warnings still make it out as error records.
+                $msg = $(
+                    if (-not ([string]::IsNullOrEmpty($_.ErrorDetails.Message)))
+                    {
+                        $_.ErrorDetails.Message
+                    }
+                    else
+                    {
+                        $_.Exception.Message
+                    }
+                ).Trim()
+
+                if (-not $SuppressWarnings)
+                {
+                    Write-Host $msg
+                }
+            }
+            else
+            {
+                if (-not $Quiet)
+                {
+                    if (-not ([string]::IsNullOrWhitespace($_)))
+                    {
+                        if ($OutputToPipeline)
+                        {
+                            $_
+                        }
+                        else
+                        {
+                            Write-Host "* $_"
+                        }
+                    }
+                }
+            }
+        }
+
+        $exitcode = $LASTEXITCODE
+    }
+    finally
+    {
+        $script:ErrorActionPreference = $backupErrorActionPreference
+    }
+    if ($exitcode -ne 0)
+    {
+        throw "GIT finished with exit code $exitcode"
+    }
+}
+
+
+$ErrorActionPreference = "Stop"
+
+# Only on Windows
+if (-not $IsWindows)
+{
+    Write-Host "Documentation update ignored: Not Windows build agent."
+    return
+}
+
+# Only master Release
+if ($env:Configuration -ne "Release")
+{
+    Write-Host "Documentation update ignored: Not Release build."
+    return
+}
+
+if ($env:APPVEYOR_REPO_BRANCH -ne "master")
+{
+    Write-Host "Documentation update ignored: Not master branch."
+    return
+}
+
+if (-not [string]::IsNullOrEmpty($env:APPVEYOR_PULL_REQUEST_NUMBER))
+{
+    # Secure variables not set during PR, so we couldn't do this even if we wanted to.
+    Write-Host "Documentation update ignored: Pull request."
+    return
+}
+
+# Chocolatey DocFX
+cinst docfx --version $env:DocFXVersion -y  --limit-output |
+Foreach-Object {
+    if ($_ -inotlike 'Progress*Saving*')
+    {
         Write-Host $_
     }
-
-    # Commit
-    Invoke-Git commit -m "AppVeyor Build ${env:APPVEYOR_BUILD_NUMBER}"
-
-    # and push
-    Invoke-Git push
-
-    Write-Host
-    Write-Host "Documentation changes pushed."
 }
-finally
+
+Write-Host "Generating documentation site..."
+docfx ./docfx/docfx.json
+
+$githubAccount, $repoName = $env:APPVEYOR_REPO_NAME -split '/'
+$docUriPath = "$($githubAccount)/$($githubAccount).github.io.git"
+
+$SOURCE_DIR = $env:APPVEYOR_BUILD_FOLDER
+$TEMP_REPO_DIR = Join-Path ([IO.Path]::GetTempPath()) "$githubAccount.github.io"
+$DOC_SITE_DIR = Join-Path $TEMP_REPO_DIR $repoName
+
+if (Test-Path $TEMP_REPO_DIR)
 {
-    Pop-Location
+    Write-Host "Removing temporary documentation directory $TEMP_REPO_DIR..."
+    Remove-Item -recurse $TEMP_REPO_DIR
+}
+
+New-Item -Path $TEMP_REPO_DIR -ItemType Directory | Out-Null
+
+Write-Host "Cloning the documentation site."
+Invoke-Git clone -q "https://github.com/$docUriPath" $TEMP_REPO_DIR
+
+if (Test-Path -Path $DOC_SITE_DIR -PathType Container)
+{
+    Write-Host "Clearing local documentation directory..."
+    Set-Location $DOC_SITE_DIR
+    Invoke-Git -Quiet rm -r *
+}
+else
+{
+    Write-Host "Creating local documentation directory..."
+    New-Item -Path $DOC_SITE_DIR -ItemType Directory | Out-Null
+    Set-Location $DOC_SITE_DIR
+}
+
+
+Invoke-Git config core.autocrlf true
+Invoke-Git config core.eol lf
+
+Invoke-Git config --global user.email $env:GITHUB_EMAIL
+Invoke-Git config --global user.name  $env:APPVEYOR_REPO_COMMIT_AUTHOR
+
+Write-Host "Copying documentation into the local documentation directory..."
+Copy-Item -recurse $SOURCE_DIR/docfx/_site/* .
+
+Invoke-Git -Quiet -SuppressWarnings add --all
+
+Write-Host "Checking if there are changes in the documentation..."
+if (-not [string]::IsNullOrEmpty($(Invoke-Git -OutputToPipeline status --porcelain)))
+{
+    Write-Host "Pushing the new documentation to github.io..."
+    Invoke-Git commit -m "AppVeyor Build ${env:APPVEYOR_BUILD_NUMBER}"
+    Invoke-Git remote set-url origin "https://$($env:GITHUB_ACCESS_TOKEN)@github.com/$docUriPath"
+    Invoke-Git push -q origin
+    Write-Host "Documentation updated!"
+}
+else
+{
+    Write-Host "Documentation update ignored: No relevant changes in the documentation."
 }
