@@ -55,6 +55,7 @@
         [InlineData("aws_ecs_service.json")]
         public void ShouldSerializeResource(string stateFile)
         {
+            this.output.WriteLine($"Serialize {stateFile}");
             var state = JsonConvert.DeserializeObject<StateFile>(
                 (string)ResourceLoader.GetStringResource(ResourceLoader.GetResourceStream(stateFile, ThisAssembly)));
 
