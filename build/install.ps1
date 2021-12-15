@@ -1,18 +1,26 @@
 # Dot-source vars describing environment
-. (Join-Path $PSScriptRoot build-environment.ps1)
-
-$cinst = Get-Command -Name cinst -ErrorAction SilentlyContinue
-if (-not $cinst)
+if ((-not (Get-Variable -Name IsWindows -ErrorAction Ignore)) -or $IsWindows)
 {
-    Write-Host "Chocolatey not present on this platform. DocFX install skipped"
-    return
-}
-
-& $cinst docfx --yes --limit-output |
-Foreach-Object {
-    if ($_ -inotlike 'Progress*Saving*')
+    # Windows
+    $cinst = Get-Command -Name cinst -ErrorAction SilentlyContinue
+    if (-not $cinst)
     {
-        Write-Host $_
+        Write-Host "Chocolatey not present on this platform. Cannot continue"
+        exit 1
+    }
+
+    & $cinst terraform --yes --limit-output |
+    Foreach-Object {
+        if ($_ -inotlike 'Progress*Saving*')
+        {
+            Write-Host $_
+        }
     }
 }
+else
+{
+    # Linux
+    & ./install-terraform.sh
+}
+
 exit $LASTEXITCODE
