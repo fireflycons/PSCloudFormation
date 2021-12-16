@@ -132,62 +132,71 @@ Foreach-Object {
     }
 }
 
-Write-Host "Generating documentation site..."
-docfx (Join-Path $env:APPVEYOR_BUILD_FOLDER 'docfx/docfx.json')
+$currentLocation = Get-Location
 
-$githubAccount, $repoName = $env:APPVEYOR_REPO_NAME -split '/'
-$docUriPath = "$($githubAccount)/$($githubAccount).github.io.git"
-
-$SOURCE_DIR = $env:APPVEYOR_BUILD_FOLDER
-$TEMP_REPO_DIR = Join-Path ([IO.Path]::GetTempPath()) "$githubAccount.github.io"
-$DOC_SITE_DIR = Join-Path $TEMP_REPO_DIR $repoName
-
-if (Test-Path $TEMP_REPO_DIR)
+try
 {
-    Write-Host "Removing temporary documentation directory $TEMP_REPO_DIR..."
-    Remove-Item -recurse $TEMP_REPO_DIR
+    Write-Host "Generating documentation site..."
+    docfx (Join-Path $env:APPVEYOR_BUILD_FOLDER 'docfx/docfx.json')
+
+    $githubAccount, $repoName = $env:APPVEYOR_REPO_NAME -split '/'
+    $docUriPath = "$($githubAccount)/$($githubAccount).github.io.git"
+
+    $SOURCE_DIR = $env:APPVEYOR_BUILD_FOLDER
+    $TEMP_REPO_DIR = Join-Path ([IO.Path]::GetTempPath()) "$githubAccount.github.io"
+    $DOC_SITE_DIR = Join-Path $TEMP_REPO_DIR $repoName
+
+    if (Test-Path $TEMP_REPO_DIR)
+    {
+        Write-Host "Removing temporary documentation directory $TEMP_REPO_DIR..."
+        Remove-Item -recurse $TEMP_REPO_DIR
+    }
+
+    New-Item -Path $TEMP_REPO_DIR -ItemType Directory | Out-Null
+
+    Write-Host "Cloning the documentation site."
+    Invoke-Git clone -q "https://github.com/$docUriPath" $TEMP_REPO_DIR
+
+    if (Test-Path -Path $DOC_SITE_DIR -PathType Container)
+    {
+        Write-Host "Clearing local documentation directory..."
+        Set-Location $DOC_SITE_DIR
+        Invoke-Git -Quiet rm -r *
+    }
+    else
+    {
+        Write-Host "Creating local documentation directory..."
+        New-Item -Path $DOC_SITE_DIR -ItemType Directory | Out-Null
+        Set-Location $DOC_SITE_DIR
+    }
+
+
+    Invoke-Git config core.autocrlf true
+    Invoke-Git config core.eol lf
+
+    Invoke-Git config --global user.email $env:GITHUB_EMAIL
+    Invoke-Git config --global user.name  $env:APPVEYOR_REPO_COMMIT_AUTHOR
+
+    Write-Host "Copying documentation into the local documentation directory..."
+    Copy-Item -recurse $SOURCE_DIR/docfx/_site/* .
+
+    Invoke-Git -Quiet -SuppressWarnings add --all
+
+    Write-Host "Checking if there are changes in the documentation..."
+    if (-not [string]::IsNullOrEmpty($(Invoke-Git -OutputToPipeline status --porcelain)))
+    {
+        Write-Host "Pushing the new documentation to github.io..."
+        Invoke-Git commit -m "AppVeyor Build ${env:APPVEYOR_BUILD_NUMBER}"
+        Invoke-Git remote set-url origin "https://$($env:GITHUB_ACCESS_TOKEN)@github.com/$docUriPath"
+        Invoke-Git push -q origin
+        Write-Host "Documentation updated!"
+    }
+    else
+    {
+        Write-Host "Documentation update ignored: No relevant changes in the documentation."
+    }
 }
-
-New-Item -Path $TEMP_REPO_DIR -ItemType Directory | Out-Null
-
-Write-Host "Cloning the documentation site."
-Invoke-Git clone -q "https://github.com/$docUriPath" $TEMP_REPO_DIR
-
-if (Test-Path -Path $DOC_SITE_DIR -PathType Container)
+finally
 {
-    Write-Host "Clearing local documentation directory..."
-    Set-Location $DOC_SITE_DIR
-    Invoke-Git -Quiet rm -r *
-}
-else
-{
-    Write-Host "Creating local documentation directory..."
-    New-Item -Path $DOC_SITE_DIR -ItemType Directory | Out-Null
-    Set-Location $DOC_SITE_DIR
-}
-
-
-Invoke-Git config core.autocrlf true
-Invoke-Git config core.eol lf
-
-Invoke-Git config --global user.email $env:GITHUB_EMAIL
-Invoke-Git config --global user.name  $env:APPVEYOR_REPO_COMMIT_AUTHOR
-
-Write-Host "Copying documentation into the local documentation directory..."
-Copy-Item -recurse $SOURCE_DIR/docfx/_site/* .
-
-Invoke-Git -Quiet -SuppressWarnings add --all
-
-Write-Host "Checking if there are changes in the documentation..."
-if (-not [string]::IsNullOrEmpty($(Invoke-Git -OutputToPipeline status --porcelain)))
-{
-    Write-Host "Pushing the new documentation to github.io..."
-    Invoke-Git commit -m "AppVeyor Build ${env:APPVEYOR_BUILD_NUMBER}"
-    Invoke-Git remote set-url origin "https://$($env:GITHUB_ACCESS_TOKEN)@github.com/$docUriPath"
-    Invoke-Git push -q origin
-    Write-Host "Documentation updated!"
-}
-else
-{
-    Write-Host "Documentation update ignored: No relevant changes in the documentation."
+    Set-Location $currentLocation
 }
