@@ -124,7 +124,7 @@ if (-not [string]::IsNullOrEmpty($env:APPVEYOR_PULL_REQUEST_NUMBER))
 }
 
 # Chocolatey DocFX
-cinst docfx --version $env:DocFXVersion -y  --limit-output |
+cinst docfx  -y  --limit-output |
 Foreach-Object {
     if ($_ -inotlike 'Progress*Saving*')
     {
@@ -133,7 +133,7 @@ Foreach-Object {
 }
 
 Write-Host "Generating documentation site..."
-docfx ./docfx/docfx.json
+docfx (Join-Path $env:APPVEYOR_BUILD_FOLDER 'docfx/docfx.json')
 
 $githubAccount, $repoName = $env:APPVEYOR_REPO_NAME -split '/'
 $docUriPath = "$($githubAccount)/$($githubAccount).github.io.git"
