@@ -10,7 +10,7 @@ if ($windows)
 
     $modules = @{
         psake = '4.9.0'
-        BuildHelpers = '2.0.16'
+        BuildHelpers = $null
         PSDeploy = '1.0.5'
         platyps = '0.14.2'
         'AWS.Tools.CloudFormation' = '4.1.16.0'
@@ -24,8 +24,17 @@ if ($windows)
         ForEach-Object {
             $n = $_
             $v = $modules[$_]
-            Write-Host "-" $n $v
-            Install-Module $_ -RequiredVersion $v -Scope CurrentUser -Force -AllowClobber | Out-Null
+
+            if ($null -eq $v)
+            {
+                Write-Host "-" $n "latest"
+                Install-Module $_ -Scope CurrentUser -Force -AllowClobber | Out-Null
+            }
+            else
+            {
+                Write-Host "-" $n $v
+                Install-Module $_ -RequiredVersion $v -Scope CurrentUser -Force -AllowClobber | Out-Null
+            }
         }
     }
     finally
