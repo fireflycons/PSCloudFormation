@@ -1,11 +1,13 @@
-name: Terraform Export Bug
-description: Raise an issue with Export-PSCFNTerraform cmdlet
-title: '[TF Export:] '
+name: Bug Report
+description: Raise an issue with PSCloudFormation in general
+title: '[Bug:] '
 assignees:
   - fireflycons
 labels:
   - bug
 body:
+  - type: markdown
+    value: Please use separate `Terraform Export Bug` template to report issues with `Export-PSCFNTerraform`
   - type: input
     attributes:
       label: Operating System
@@ -31,7 +33,7 @@ body:
     attributes:
       label: Command Line
       description: What was the command line that produced the error?
-      placeholder: e.g. Export-PSCFNTerraForm -StackName a-stack -WorkspaceDirectory ~/my-test-workspace
+      placeholder: e.g. New-PSCFNStack -StackName a-stack -TemplateLocation template.yaml
     validations:
       required: true
   - type: textarea
@@ -41,10 +43,3 @@ body:
       placeholder: Paste full exception dump and loaded module list here.
     validations:
       required: true
-  - type: textarea
-    attributes:
-      label: CloudFormation
-      description: |
-        If possible, paste in the CloudFormation template that caused the issue.
-        Even better, create a reproduction with only the affected resource(s) that cause the error.
-      placeholder: Paste or drop CloudFormation
