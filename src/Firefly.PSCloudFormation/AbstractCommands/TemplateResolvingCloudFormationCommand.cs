@@ -13,6 +13,11 @@
     using Firefly.CloudFormation.Utils;
     using Firefly.CloudFormationParser;
 
+    /// <summary>
+    /// Base class for cmdlets that need to resolve a template location
+    /// </summary>
+    /// <seealso cref="Firefly.PSCloudFormation.AbstractCommands.BaseCloudFormationCommand" />
+    /// <seealso cref="System.Management.Automation.IDynamicParameters" />
     public abstract class TemplateResolvingCloudFormationCommand : BaseCloudFormationCommand, IDynamicParameters
     {
         /// <summary>
@@ -56,6 +61,12 @@
             }
         }
 
+        /// <summary>
+        /// Gets or sets the backing property for <c>-ForceS3</c> switch
+        /// </summary>
+        /// <value>
+        /// The force s3 flag.
+        /// </value>
         protected SwitchParameter ForceS3Flag { get; set; }
 
         /// <summary>

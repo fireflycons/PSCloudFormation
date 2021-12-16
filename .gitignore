@@ -370,3 +370,4 @@ docfx/templates/_exported_templates/default
 ReferenceAssemblies/
 
 ScratchPad/
+build/docs/
