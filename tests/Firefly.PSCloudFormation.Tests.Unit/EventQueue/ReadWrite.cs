@@ -14,8 +14,8 @@
         [Fact]
         public void GetItem_IndexTooLarge_ThrowsException()
         {
-            var deque = new EmitterEventQueue<int>(new[] { 1, 2, 3 });
-            var action = new Func<int>(() => deque[3]);
+            var equeue = new EmitterEventQueue<int>(new[] { 1, 2, 3 });
+            var action = new Func<int>(() => equeue[3]);
 
             action.Should().Throw<ArgumentException>();
         }
@@ -23,8 +23,8 @@
         [Fact]
         public void GetItem_NegativeIndex_ThrowsException()
         {
-            var deque = new EmitterEventQueue<int>(new[] { 1, 2, 3 });
-            var action = new Func<int>(() => deque[-1]);
+            var equeue = new EmitterEventQueue<int>(new[] { 1, 2, 3 });
+            var action = new Func<int>(() => equeue[-1]);
 
             action.Should().Throw<ArgumentException>();
         }
@@ -32,27 +32,27 @@
         [Fact]
         public void GetItem_ReadsElements()
         {
-            var deque = new EmitterEventQueue<int>(new[] { 1, 2, 3 });
+            var equeue = new EmitterEventQueue<int>(new[] { 1, 2, 3 });
 
-            deque[0].Should().Be(1);
-            deque[1].Should().Be(2);
-            deque[2].Should().Be(3);
+            equeue[0].Should().Be(1);
+            equeue[1].Should().Be(2);
+            equeue[2].Should().Be(3);
         }
 
         [Fact]
         public void GetItem_EmptyQueue_ThrowsException()
         {
-            var deque = new EmitterEventQueue<int>();
+            var equeue = new EmitterEventQueue<int>();
 
-            var action = new Func<int>(() => deque[0]);
+            var action = new Func<int>(() => equeue[0]);
             action.Should().Throw<ArgumentException>();
         }
 
         [Fact]
         public void SetItem_IndexTooLarge_ThrowsException()
         {
-            var deque = new EmitterEventQueue<int>(new[] { 1, 2, 3 });
-            var action = new Action(() => deque[3] = 13);
+            var equeue = new EmitterEventQueue<int>(new[] { 1, 2, 3 });
+            var action = new Action(() => equeue[3] = 13);
 
             action.Should().Throw<ArgumentException>();
         }
@@ -60,8 +60,8 @@
         [Fact]
         public void SetItem_NegativeIndex_ThrowsException()
         {
-            var deque = new EmitterEventQueue<int>(new[] { 1, 2, 3 });
-            var action = new Action(() => deque[-1] = 13);
+            var equeue = new EmitterEventQueue<int>(new[] { 1, 2, 3 });
+            var action = new Action(() => equeue[-1] = 13);
 
             action.Should().Throw<ArgumentException>();
         }
@@ -69,11 +69,11 @@
         [Fact]
         public void SetItem_WritesElements()
         {
-            var deque = new EmitterEventQueue<int>(new[] { 1, 2, 3 });
-            deque[0] = 7;
-            deque[1] = 11;
-            deque[2] = 13;
-            deque.Should().BeEquivalentTo(new[] { 7, 11, 13 });
+            var equeue = new EmitterEventQueue<int>(new[] { 1, 2, 3 });
+            equeue[0] = 7;
+            equeue[1] = 11;
+            equeue[2] = 13;
+            equeue.Should().BeEquivalentTo(new[] { 7, 11, 13 });
         }
 
         [Fact]
@@ -81,10 +81,10 @@
         {
             var sequence = new[] { 1, 2, 3 };
 
-            var deque = new EmitterEventQueue<int>(sequence);
+            var equeue = new EmitterEventQueue<int>(sequence);
 
-            deque.Peek().Should().Be(1);
-            deque.Should().BeEquivalentTo(sequence);
+            equeue.Peek().Should().Be(1);
+            equeue.Should().BeEquivalentTo(sequence);
         }
 
         [Fact]
@@ -92,10 +92,10 @@
         {
             var sequence = new[] { 1, 2, 3, 4, 5 };
             var expected = new[] { 1, 2, 3, 4 };
-            var deque = new EmitterEventQueue<int>(sequence);
+            var equeue = new EmitterEventQueue<int>(sequence);
 
-            deque.PeekUntil(i => i > 3, true).ToList().Should().BeEquivalentTo(expected);
-            deque.Should().BeEquivalentTo(sequence);
+            equeue.PeekUntil(i => i > 3, true).ToList().Should().BeEquivalentTo(expected);
+            equeue.Should().BeEquivalentTo(sequence);
         }
 
         [Fact]
@@ -103,11 +103,11 @@
         {
             var sequence = new[] { 1, 2, 3, 4, 5 };
             var expected = new[] { 5 };
-            var deque = new EmitterEventQueue<int>(sequence);
+            var equeue = new EmitterEventQueue<int>(sequence);
 
-            deque.ConsumeUntil(i => i > 3, true);
+            equeue.ConsumeUntil(i => i > 3, true);
 
-            deque.Should().BeEquivalentTo(expected);
+            equeue.Should().BeEquivalentTo(expected);
         }
     }
 }

@@ -27,10 +27,10 @@
         public void FromSequence_InitializesFromSequence()
         {
             var sequence = new int[] { 1, 2, 3 };
-            var deque = new EmitterEventQueue<int>(sequence);
+            var equeue = new EmitterEventQueue<int>(sequence);
 
-            deque.Capacity.Should().Be(3);
-            deque.Should().BeEquivalentTo(sequence).And.HaveCount(3);
+            equeue.Capacity.Should().Be(3);
+            equeue.Should().BeEquivalentTo(sequence).And.HaveCount(3);
         }
 
         [Fact]
@@ -44,8 +44,8 @@
         [Fact]
         public void WithoutExplicitCapacity_UsesDefaultCapacity()
         {
-            var deque = new EmitterEventQueue<int>();
-            deque.Capacity.Should().Be(DefaultCapacity);
+            var equeue = new EmitterEventQueue<int>();
+            equeue.Capacity.Should().Be(DefaultCapacity);
         }
     }
 }
