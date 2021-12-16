@@ -45,6 +45,11 @@ Task Init {
     $lines
     [Reflection.Assembly]::LoadWithPartialName("System.Security") | Out-Null
     Set-Location $ProjectRoot
+
+    # Update path to module manifest
+    #$modulePath = (Resolve-Path (Get-Content -Raw (Join-Path $env:BHProjectPath ModulePath.txt)).Trim()).Path
+    #New-Item -Path Env:\ -Name BHPSModuleManifest -Value (Get-ChildItem -Path $modulePath -Filter *.psd1 | Select-Object -ExpandProperty FullName) -Force | Out-Null
+
     "Build System Details:"
     Get-ChildItem ENV: | Where-Object { $_.Name -like 'BH*' -or $_.Name -like 'AWS_TOOLS*' -or $_.Name -like 'PSCFN_*' }
     "`n"
@@ -96,16 +101,7 @@ Task ListModules -Depends Init {
     Get-Module | Select-Object ModuleType, Version, Name | Out-Host
 }
 
-Task Build -Depends Init {
-    $lines
-
-    # Update path to module manifest
-    $modulePath = (Resolve-Path (Get-Content -Raw (Join-Path $env:BHProjectPath ModulePath.txt)).Trim()).Path
-    New-Item -Path Env:\ -Name BHPSModuleManifest -Value (Get-ChildItem -Path $modulePath -Filter *.psd1 | Select-Object -ExpandProperty FullName) -Force | Out-Null
-
-}
-
-Task UpdateManifest -Depends Build {
+Task UpdateManifest -Depends Init {
 
     # Load the module, read the exported commands, update the psd1 CmdletsToExport
     try
@@ -236,7 +232,7 @@ Task Deploy -Depends Init, CleanModule {
     }
 }
 
-Task BuildAppVeyor -Depends Build, UpdateManifest, GenerateMarkdown {}
+Task BuildAppVeyor -Depends Init, UpdateManifest, GenerateMarkdown {}
 
 Task GenerateMarkdown -requiredVariables DefaultLocale, CmdletDocsOutputDir {
     if (!(Get-Module platyPS -ListAvailable))

@@ -1,4 +1,6 @@
-$script:git = Get-Command -Name Git
+$ErrorActionPreference = 'Stop'
+
+$script:git = Get-Command -Name git
 
 function Invoke-Git
 {

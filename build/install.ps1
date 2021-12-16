@@ -1,3 +1,5 @@
+$ErrorActionPreference = 'Stop'
+
 $windows = [System.Runtime.InteropServices.RuntimeInformation]::IsOSPlatform([System.Runtime.InteropServices.OSPlatform]::Windows)
 
 if ($windows)
