@@ -103,7 +103,7 @@ if ($env:APPVEYOR_REPO_TAG -eq "true")
 
         Update-PackagesGeneration $propertyName
         $env:PSCFN_BuildVersion = $tagVersion
-        $projectName = $propertyName -replace "Generate_", ""
+        $projectName = $propertyName -replace "Generate_", [string]::Empty
         $projectName = $projectName -replace "_", "."
         $env:PSCFN_ReleaseName = "$projectName $tagVersion"
     }
@@ -113,16 +113,16 @@ if ($env:APPVEYOR_REPO_TAG -eq "true")
 else
 {
     Update-AllPackagesGeneration
-    
+
     $env:PSCFN_BuildVersion = "$($env:APPVEYOR_BUILD_VERSION)"
     $env:PSCFN_ReleaseName = $env:PSCFN_BuildVersion
-    $env:PSCFN_ModuleVersion = $env:PSCFN_BuildVersion
+    $env:PSCFN_ModuleVersion = $env:PSCFN_BuildVersion -replace "\-.*", [string]::Empty
 
-    $env:IsFullIntegrationBuild = "$env:APPVEYOR_PULL_REQUEST_NUMBER" -eq "" -And $env:Configuration -eq "Release"
+    $env:IsFullIntegrationBuild = "$env:APPVEYOR_PULL_REQUEST_NUMBER" -eq [string]::Empty -And $env:Configuration -eq "Release"
 }
 
-$env:Build_Assembly_Version = "$env:PSCFN_BuildVersion" -replace "\-.*", ""
+$env:PSCFN_Build_Assembly_Version = "$env:PSCFN_BuildVersion" -replace "\-.*", [string]::Empty
 
 "Building version: $env:PSCFN_BuildVersion"
-"Building assembly version: $env:Build_Assembly_Version"
+"Building assembly version: $env:PSCFN_Build_Assembly_Version"
 
