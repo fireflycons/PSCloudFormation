@@ -113,8 +113,10 @@ if ($env:APPVEYOR_REPO_TAG -eq "true")
 else
 {
     Update-AllPackagesGeneration
+    
     $env:PSCFN_BuildVersion = "$($env:APPVEYOR_BUILD_VERSION)"
     $env:PSCFN_ReleaseName = $env:PSCFN_BuildVersion
+    $env:PSCFN_ModuleVersion = $env:PSCFN_BuildVersion
 
     $env:IsFullIntegrationBuild = "$env:APPVEYOR_PULL_REQUEST_NUMBER" -eq "" -And $env:Configuration -eq "Release"
 }
