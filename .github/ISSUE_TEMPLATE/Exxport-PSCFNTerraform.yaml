@@ -11,7 +11,6 @@ body:
       label: Operating System
       description: What operating system are you using?
       placeholder: e.g. Windows 10/Ubuntu 18.04 etc.
-      value: operating system
     validations:
       required: true
   - type: input
@@ -19,7 +18,6 @@ body:
       label: PSCloudFormation
       description: What version of PSCloudFormation module are you using?
       placeholder: e.g. 4.1.16.0
-      value: module version
     validations:
       required: true
   - type: textarea
@@ -27,15 +25,13 @@ body:
       label: Command Line
       description: What was the command line that produced the error?
       placeholder: e.g. Export-PSCFNTerraForm -StackName a-stack -WorkspaceDirectory ~/my-test-workspace
-      value: command line
     validations:
       required: true
   - type: textarea
     attributes:
       label: Exception Details
       description: Run the above command line with -Debug switch
-      placeholder: Paste full exception dumpo here
-      value: exception
+      placeholder: Paste full exception dump here
     validations:
       required: true
   - type: textarea
@@ -45,4 +41,3 @@ body:
         If possible, paste in the CloudFormation template that caused the issue.
         Even better, create a reproduction with only the affected resource(s) that cause the error.
       placeholder: Paste or drop CloudFormation
-      value: cloudformation
