@@ -37,7 +37,7 @@ body:
   - type: textarea
     attributes:
       label: Exception Details
-      description: Run the above command line with -Debug switch
+      description: Run the above command line with `-Debug` switch
       placeholder: Paste full exception dump and loaded module list here.
     validations:
       required: true
@@ -46,5 +46,5 @@ body:
       label: CloudFormation
       description: |
         If possible, paste in the CloudFormation template that caused the issue.
-        Even better, create a reproduction with only the affected resource(s) that cause the error.
+        Even better, reproduce the error with a smaller template containing only relevant resources.
       placeholder: Paste or drop CloudFormation

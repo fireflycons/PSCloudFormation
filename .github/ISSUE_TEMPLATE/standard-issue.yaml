@@ -8,7 +8,7 @@ labels:
 body:
   - type: markdown
     attributes:
-      value: Please use separate `Terraform Export Bug` template to report issues with `Export-PSCFNTerraform`
+      value: Please use separate `Terraform Export Bug` template to report issues with `Export-PSCFNTerraform` by clicking **choose a different type** above.
   - type: input
     attributes:
       label: Operating System
@@ -40,7 +40,7 @@ body:
   - type: textarea
     attributes:
       label: Exception Details
-      description: Run the above command line with -Debug switch
+      description: Run the above command line with `-Debug` switch
       placeholder: Paste full exception dump and loaded module list here.
     validations:
       required: true
