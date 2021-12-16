@@ -1,5 +1,12 @@
 # Release Notes
 
+# 4.1.16.0
+
+* Enhancement - Use new [CloudFormation Parser](https://github.com/fireflycons/Firefly.CloudFormationParser)
+* Enhancement - Support AWS.Tools 4.1.16.0
+* Enhancement - Rewrite [Terraform Export](https://fireflycons.github.io/PSCloudFormation/articles/terraform-export.html) to be a lot smarter due to now being able to fully parse CloudFormation.
+* Fix - BucketName is a required property and must be set before making this call. [Issue link](https://github.com/fireflycons/PSCloudFormation/issues/123)
+
 # 4.1.6.21
 
 * Fix - Resizing vewport throws exception when running on a build agent.
