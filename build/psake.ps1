@@ -11,7 +11,7 @@ Properties {
 
     try
     {
-        $script:IsWindows = (-not (Get-Variable -Name IsWindows -ErrorAction Ignore)) -or $IsWindows
+        $script:IsWindows = [System.Runtime.InteropServices.RuntimeInformation]::IsOSPlatform([System.Runtime.InteropServices.OSPlatform]::Windows)
         $script:IsLinux = (Get-Variable -Name IsLinux -ErrorAction Ignore) -and $IsLinux
         $script:IsMacOS = (Get-Variable -Name IsMacOS -ErrorAction Ignore) -and $IsMacOS
         $script:IsCoreCLR = $PSVersionTable.ContainsKey('PSEdition') -and $PSVersionTable.PSEdition -eq 'Core'
@@ -20,7 +20,6 @@ Properties {
 
     $Timestamp = Get-date -uformat "%Y%m%d-%H%M%S"
     $PSVersion = $PSVersionTable.PSVersion.Major
-    $TestFile = "TestResults_PS$PSVersion`_$TimeStamp.xml"
     $lines = '----------------------------------------------------------------------'
 
     $Verbose = @{}
@@ -34,11 +33,6 @@ Properties {
     $ModuleName = "PSCloudFormation"
 
     $DocFxDirectory = (Resolve-Path (Join-Path $PSScriptRoot ../docfx)).Path
-    $DocFxConfig = Join-Path $DocFxDirectory docfx.json
-
-    $DocumentationBaseUrl = "https://firefly-cons.github.io/$ModuleName"
-    # Dot-source vars describing environment
-    . (Join-Path $PSScriptRoot build-environment.ps1)
 }
 
 Task Default -Depends BuildAppVeyor, Deploy
@@ -48,8 +42,13 @@ Task Init {
     $lines
     [Reflection.Assembly]::LoadWithPartialName("System.Security") | Out-Null
     Set-Location $ProjectRoot
+
+    # Update path to module manifest
+    #$modulePath = (Resolve-Path (Get-Content -Raw (Join-Path $env:BHProjectPath ModulePath.txt)).Trim()).Path
+    #New-Item -Path Env:\ -Name BHPSModuleManifest -Value (Get-ChildItem -Path $modulePath -Filter *.psd1 | Select-Object -ExpandProperty FullName) -Force | Out-Null
+
     "Build System Details:"
-    Get-ChildItem ENV: | Where-Object { $_.Name -like 'BH*' -or $_.Name -like 'AWS_TOOLS*' }
+    Get-ChildItem ENV: | Where-Object { $_.Name -like 'BH*' -or $_.Name -like 'AWS_TOOLS*' -or $_.Name -like 'PSCFN_*' }
     "`n"
 
     if ($script:IsWindows)
@@ -99,364 +98,45 @@ Task ListModules -Depends Init {
     Get-Module | Select-Object ModuleType, Version, Name | Out-Host
 }
 
-Task Build -Depends Init {
-    $lines
-
-    # Run Cake build on binary solution
-    try
-    {
-        $Script = Join-Path $PSScriptRoot 'build.cake'
-        $Target = 'Default'
-        $Configuration = 'Release'
-        $Verbosity = "Normal"
-        $ForceCoreClr = $false
-        $ScriptArgs = @()
-        $SkipToolPackageRestore = $false
-        $WhatIf = $false
-
-        Write-Host "Preparing to run build script..."
-
-        Write-Host "Checking operating system..."
-
-        if ($script:IsWindows)
-        {
-            Write-Host " - Windows"
-        }
-        elseif ($script:IsLinux)
-        {
-            Write-Host " - Linux"
-            $ForceCoreClr = $true
-        }
-        elseif ($script:IsMacOS)
-        {
-            Write-Host "- MacOS"
-            $ForceCoreClr = $true
-        }
-        else
-        {
-            Write-Host " - Unknown: Cannot continue!"
-            exit 1
-        }
-
-        if (!$PSScriptRoot)
-        {
-            $PSScriptRoot = Split-Path $MyInvocation.MyCommand.Path -Parent
-        }
-
-        $TOOLS_DIR = Join-Path $PSScriptRoot "tools"
-        $PACKAGES_CONFIG = Join-Path $TOOLS_DIR "packages.config"
-        $PACKAGES_CONFIG_MD5 = Join-Path $TOOLS_DIR "packages.config.md5sum"
-
-        # Should we use the new Roslyn?
-        $UseExperimental = [string]::Empty;
-        if ($Experimental.IsPresent)
-        {
-            Write-Verbose -Message "Using experimental version of Roslyn."
-            $UseExperimental = "-experimental"
-        }
-
-        # Is this a dry run?
-        $UseDryRun = [string]::Empty;
-        if ($WhatIf.IsPresent)
-        {
-            $UseDryRun = "-dryrun"
-        }
-
-        # Will we use dotnet to invoke Cake?
-        $DotNet = [string]::Empty
-        $DotNetExpression = [string]::Empty
-        if ($ForceCoreClr)
-        {
-            try
-            {
-                $DotNet = (Get-Command dotnet -ErrorAction Stop).Source
-                $DotNetExpression = "`"$DotNet`""
-            }
-            catch
-            {
-                throw "Unable to locate dotnet executable on this system!"
-            }
-        }
-
-        # Make sure tools folder exists
-        if ((Test-Path $PSScriptRoot) -and !(Test-Path $TOOLS_DIR))
-        {
-            Write-Verbose -Message "Creating tools directory..."
-            New-Item -Path $TOOLS_DIR -Type directory | out-null
-        }
-
-        # Make sure that packages.config exist.
-        if (!(Test-Path $PACKAGES_CONFIG))
-        {
-            Write-Verbose -Message "Downloading packages.config..."
-            try
-            {
-                (New-Object System.Net.WebClient).DownloadFile("http://cakebuild.net/download/bootstrapper/packages", $PACKAGES_CONFIG)
-            }
-            catch
-            {
-                Throw "Could not download packages.config."
-            }
-        }
-
-        if ($script:IsWindows -and -not $ForceCoreClr)
-        {
-            # Windows - Acquire Nuget and use to download Cake (.NET Framework)
-
-            $NUGET_EXE = Join-Path $TOOLS_DIR "nuget.exe"
-            $CAKE = Join-Path $TOOLS_DIR "Cake/Cake.exe"
-            $NUGET_URL = "https://dist.nuget.org/win-x86-commandline/latest/nuget.exe"
-
-            # Try find NuGet.exe in path if not exists
-            if (!(Test-Path $NUGET_EXE))
-            {
-                Write-Verbose -Message "Trying to find nuget.exe in PATH..."
-                $existingPaths = $Env:Path -Split ';' |
-                Where-Object {
-
-                    if ([string]::IsNullOrEmpty($_))
-                    {
-                        $false
-                    }
-
-                    try
-                    {
-                        # Some paths may throw Access Denied exceptions which write a message to STDERR, causing Bamboo to fail the build
-                        Test-Path $_ -PathType Container
-                    }
-                    catch
-                    {
-                        $false
-                    }
-                }
-
-                $NUGET_EXE_IN_PATH = Get-ChildItem -Path $existingPaths -Filter "nuget.exe" | Select-Object -First 1
-                if ($null -ne $NUGET_EXE_IN_PATH -and (Test-Path $NUGET_EXE_IN_PATH.FullName))
-                {
-                    Write-Verbose -Message "Found in PATH at $($NUGET_EXE_IN_PATH.FullName)."
-                    $NUGET_EXE = $NUGET_EXE_IN_PATH.FullName
-                }
-            }
-
-            # Try download NuGet.exe if not exists
-            if (!(Test-Path $NUGET_EXE))
-            {
-                Write-Verbose -Message "Downloading NuGet.exe..."
-                try
-                {
-                    (New-Object System.Net.WebClient).DownloadFile($NUGET_URL, $NUGET_EXE)
-                }
-                catch
-                {
-                    Throw "Could not download NuGet.exe."
-                }
-            }
-
-            # Save nuget.exe path to environment to be available to child processed
-            $ENV:NUGET_EXE = $NUGET_EXE
-
-            # Restore tools from NuGet?
-            if (-Not $SkipToolPackageRestore.IsPresent)
-            {
-                Push-Location
-                Set-Location $TOOLS_DIR
-
-                # Check for changes in packages.config and remove installed tools if true.
-                [string] $md5Hash = MD5HashFile($PACKAGES_CONFIG)
-                if ((!(Test-Path $PACKAGES_CONFIG_MD5)) -Or
-                    ($md5Hash -ne (Get-Content $PACKAGES_CONFIG_MD5 )))
-                {
-                    Write-Verbose -Message "Missing or changed package.config hash..."
-                    Remove-Item * -Recurse -Exclude packages.config, nuget.exe
-                }
-
-                Write-Verbose -Message "Restoring tools from NuGet..."
-                $NuGetOutput = Invoke-Expression "&`"$NUGET_EXE`" install -ExcludeVersion -OutputDirectory `"$TOOLS_DIR`""
-
-                if ($LASTEXITCODE -ne 0)
-                {
-                    Throw "An error occured while restoring NuGet tools."
-                }
-                else
-                {
-                    $md5Hash | Out-File $PACKAGES_CONFIG_MD5 -Encoding "ASCII"
-                }
-                Write-Verbose -Message ($NuGetOutput | out-string)
-                Pop-Location
-            }
-
-            # Make sure that Cake has been installed.
-            if (!(Test-Path $CAKE))
-            {
-                Throw "Could not find Cake.exe at $CAKE"
-            }
-        }
-        else
-        {
-            # Linux/CoreCLR
-            # Use dotnet restore to get Cake CoreCLR since we do not have NuGet.exe
-            # Now transform packages.config to a csproj file so that dotnet restore accepts it.
-
-            $xsl = @'
-<?xml version="1.0" encoding="UTF-8"?>
-<xsl:stylesheet version="1.0"
-    xmlns:xsl="http://www.w3.org/1999/XSL/Transform">
-    <xsl:template match="/">
-        <Project Sdk="Microsoft.NET.Sdk">
-            <PropertyGroup>
-                <TargetFramework>netstandard2.0</TargetFramework>
-            </PropertyGroup>
-            <ItemGroup>
-                <xsl:for-each select="packages/package">
-                    <PackageReference>
-                        <xsl:attribute name="Include">
-                            <xsl:choose>
-                                <xsl:when test="@id = 'Cake'">Cake.CoreCLR</xsl:when>
-                                <xsl:otherwise><xsl:value-of select="@id" /></xsl:otherwise>
-                            </xsl:choose>
-                        </xsl:attribute>
-                        <xsl:attribute name="Version">
-                            <xsl:value-of select="@version" />
-                        </xsl:attribute>
-                    </PackageReference>
-                </xsl:for-each>
-            </ItemGroup>
-        </Project>
-    </xsl:template>
-</xsl:stylesheet>
-'@
-            $cakeCsproj = Join-Path $PSScriptRoot "cake-package-$([Guid]::NewGuid()).csproj"
-            try
-            {
-                # XSLT transform packages.config to a .csproj file
-                $bytes = [System.Text.Encoding]::UTF8.GetBytes($xsl)
-                $stream = New-Object System.IO.MemoryStream (, $bytes)
-                $reader = [System.Xml.XmlReader]::Create($stream)
-
-                $xsltSettings = New-Object System.Xml.Xsl.XsltSettings;
-                $xmlUrlResolver = New-Object System.Xml.xmlUrlResolver;
-                $xsltSettings.EnableScript = 1;
-
-                $xslt = New-Object System.Xml.Xsl.XslCompiledTransform;
-                $xslt.Load($reader, $xsltSettings, $xmlUrlResolver);
-                $xslt.Transform($PACKAGES_CONFIG, $cakeCsproj);
-
-                # Run dotnet restore
-                & $DotNet restore --packages $TOOLS_DIR $cakeCsproj
-
-                # Now locate cake.dll
-                $CAKE = Get-ChildItem -Path $TOOLS_DIR -File -Filter Cake.dll -Recurse |
-                Select-Object -First 1 |
-                Select-Object -ExpandProperty FullName
-
-                if (-not $CAKE)
-                {
-                    throw "Could not find Cake.dll (Cake CoreCLR application)"
-                }
-            }
-            catch
-            {
-                $errorMessage = $_.Exception.Message
-                $failedItem = $_.Exception.ItemName
-                Write-Host  'Error'$errorMessage':'$failedItem':' $_.Exception;
-                exit 1
-            }
-            finally
-            {
-                $reader, $stream |
-                Where-Object {
-                    $null -ne $_
-                } |
-                Foreach-Object {
-                    $_.Dispose()
-                }
-
-                if (Test-Path -Path $cakeCsproj -PathType Leaf)
-                {
-                    Remove-Item $cakeCsproj
-                }
-            }
-        }
-
-        Invoke-Command -NoNewScope {
-            # Check for a prebuild script and include if present.
-            Get-ChildItem -Path $PSScriptRoot -Filter *.cake |
-            Where-Object {
-                $_.Name -ieq 'prebuild.cake'
-            } |
-            Select-Object -First 1 |
-            Select-Object -ExpandProperty FullName
-
-            $Script
-        } |
-        Foreach-Object {
-
-            $scriptToExecute = $_
-
-            if (-not ($scriptToExecute.Contains('/') -or $scriptToExecute.Contains('\') -or (Test-Path -Path $scriptToExecute -PathType Leaf)))
-            {
-                # Assume build script is in same folder as this file
-                $scriptToExecute = Join-Path $PSScriptRoot $scriptToExecute
-            }
-
-            Write-Host "`nExecuting $(Split-Path -Leaf $scriptToExecute) ..."
-
-            # First load any Cake modules speficied by #module
-            Invoke-Expression "& $DotNetExpression `"$CAKE`"  `"$scriptToExecute`" --bootstrap"
-
-            # Now execute script
-            Invoke-Expression "& $DotNetExpression `"$CAKE`" `"$scriptToExecute`" -target=`"$Target`" -configuration=`"$Configuration`" -verbosity=`"$Verbosity`" $ScriptArgs"
-
-            if ($LASTEXITCODE -ne 0)
-            {
-                throw "$(Split-Path -Leaf $scriptToExecute) - Execution failed."
-            }
-        }
-    }
-    catch
-    {
-        Write-Host "Exception Thrown: $($_.Exception.Message)"
-        Write-Host $_.ScriptStackTrace
-        throw
-    }
-    finally
-    {
-        Write-Host
-        Write-Host "Cake downloaded $([Math]::Round((Get-ChildItem (Join-Path $PSSCriptRoot tools) -File -Recurse | Measure-Object -Property Length -Sum).Sum / 1MB, 2)) MB of tools and addins"
-        Write-Host
-    }
-
-    # Update path to module manifest
-    $modulePath = (Resolve-Path (Get-Content -Raw (Join-Path $env:BHProjectPath ModulePath.txt)).Trim()).Path
-    New-Item -Path Env:\ -Name BHPSModuleManifest -Value (Get-ChildItem -Path $modulePath -Filter *.psd1 | Select-Object -ExpandProperty FullName) -Force | Out-Null
-
-}
-
-Task UpdateManifest -Depends Build {
+Task UpdateManifest -Depends Init {
 
     # Load the module, read the exported commands, update the psd1 CmdletsToExport
     try
     {
         $params = @{
-            Force = $True
-            Passthru = $True
             Name = $env:BHPSModuleManifest
+        }
+
+        if (-not (Test-Path -Path $env:BHPSModuleManifest))
+        {
+            throw "Could not find module '$env:BHPSModuleManifest'"
         }
 
         # Create a runspace, add script to run
         $PowerShell = [Powershell]::Create()
         [void]$PowerShell.AddScript({
-            Param ($Force, $Passthru, $Name)
-            $module = Import-Module -Name $Name -PassThru:$Passthru -Force:$Force
-            $module | Where-Object {$_.Path -notin $module.Scripts}
-        }).AddParameters($Params)
+            Param
+            (
+                $Name
+            )
+            try
+            {
+                Import-Module -Name $Name -PassThru -Force
+            }
+            catch
+            {
+                [Console]::WriteLine($_.Exception.Message)
+                $null
+            }
+            #$module = Import-Module -Name $Name -PassThru -Force
+            #$module | Where-Object {$_.Path -notin $module.Scripts}
+        }).AddParameters($params)
 
-        #Consider moving this to a runspace or job to keep session clean
         $Module = $PowerShell.Invoke()
 
-        if (-not $Module)
+        if ($PowerShell.HadErrors)
         {
-            Throw "Could not find module '$Name'"
+            throw $PowerShell.Streams.Error[0].Exception
         }
 
         $cmdlets = $Module.ExportedCommands.Keys
@@ -470,7 +150,7 @@ Task UpdateManifest -Depends Build {
     Update-MetaData -Path $env:BHPSModuleManifest -PropertyName CmdletsToExport -Value @( $cmdlets )
 
     # Bump the module version if we didn't already
-    Update-Metadata -Path $env:BHPSModuleManifest -PropertyName ModuleVersion -Value (Get-Content -Raw (Join-Path $PSScriptRoot "module.ver")).Trim() -ErrorAction stop
+    Update-Metadata -Path $env:BHPSModuleManifest -PropertyName ModuleVersion -Value $env:PSCFN_ModuleVersion -ErrorAction stop
 
     # Set file list
     $excludeList = Invoke-Command -NoNewScope {
@@ -549,7 +229,7 @@ Task Deploy -Depends Init, CleanModule {
     }
 }
 
-Task BuildAppVeyor -Depends Build, UpdateManifest, GenerateMarkdown, CompileDocfx, CopyDocumentationTo-github.io-clone {}
+Task BuildAppVeyor -Depends Init, UpdateManifest, GenerateMarkdown {}
 
 Task GenerateMarkdown -requiredVariables DefaultLocale, CmdletDocsOutputDir {
     if (!(Get-Module platyPS -ListAvailable))
@@ -667,91 +347,6 @@ Task GenerateMarkdown -requiredVariables DefaultLocale, CmdletDocsOutputDir {
     {
         Remove-Module $ModuleName
     }
-}
-
-Task CompileDocfx -requiredVariables DocFxDirectory, DocFxConfig -PreCondition { $script:IsWindows } {
-
-    $jsonConfig = Get-Content -Raw $DocFxConfig | ConvertFrom-Json
-    $script:docFxSite = Join-Path $DocFxDirectory $jsonConfig.build.dest
-
-    if (Test-Path -Path $script:docFxSite -PathType Container)
-    {
-        Remove-Item -Path $script:docFxSite -Recurse -Force
-    }
-
-    & docfx $DocFxConfig
-}
-
-Task CopyDocumentationTo-github.io-clone -Depends CompileDocfx -PreCondition { $script:IsWindows -and ($isReleasePublication -or $env:FORCE_DOC_PUSH) } {
-
-    $outputDir = $PSCmdlet.SessionState.Path.GetUnresolvedProviderPathFromPSPath([IO.Path]::Combine($env:APPVEYOR_BUILD_FOLDER, '..', 'fireflycons.github.io', $ModuleName))
-
-    Write-Host "Updating documentation in $outputDir"
-
-    if (Test-Path -Path $outputDir -PathType Container)
-    {
-        Remove-Item $outputDir -Recurse -Force
-    }
-
-    $src = $script:docFxSite
-    Write-Host "Copy-Item $src $outputDir -Recurse"
-
-    Copy-Item -Path $src -Destination $outputDir -Recurse
-}
-
-function MD5HashFile([string] $filePath)
-{
-    if ([string]::IsNullOrEmpty($filePath) -or !(Test-Path $filePath -PathType Leaf))
-    {
-        return $null
-    }
-
-    [System.IO.Stream] $file = $null;
-    [System.Security.Cryptography.MD5] $md5 = $null;
-    try
-    {
-        $md5 = [System.Security.Cryptography.MD5]::Create()
-        $file = [System.IO.File]::OpenRead($filePath)
-        return [System.BitConverter]::ToString($md5.ComputeHash($file))
-    }
-    finally
-    {
-        if ($null -ne $file)
-        {
-            $file.Dispose()
-        }
-    }
-}
-
-function Invoke-WithRetry
-{
-    param
-    (
-        [Parameter(Position = 0)]
-        [scriptblock]$Script,
-
-        [int]$Retries = 10
-    )
-
-    $count = 0
-    $ex = $null
-
-    while ($count++ -lt $Retries)
-    {
-        try
-        {
-            Invoke-Command -NoNewScope -ScriptBlock $Script
-            return
-        }
-        catch
-        {
-            $ex = $_.Exception
-            Write-Warning $ex.Message
-            Start-Sleep -Seconds 1
-        }
-    }
-
-    throw $ex
 }
 
 function Get-ExcludedFiles

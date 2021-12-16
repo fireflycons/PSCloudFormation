@@ -219,16 +219,7 @@
                                        AddDefaultTag = this.WithDefaultTag
                                    };
 
-                var exporter = new TerraformExporter(settings, this.Logger);
-
-                try
-                {
-                    exporter.Export();
-                }
-                catch (Exception e)
-                {
-                    throw;
-                }
+                new TerraformExporter(settings, this.Logger).Export();
             }
 
             return new CloudFormationResult();

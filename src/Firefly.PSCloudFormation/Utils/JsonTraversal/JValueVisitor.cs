@@ -5,7 +5,7 @@ namespace Firefly.PSCloudFormation.Utils.JsonTraversal
     /// <summary>
     /// Adds a range of extra visited methods for JValues such as Integer, Float, String, Boolean etc.
     /// 
-    /// Default implementation for all specific types routes back to <see cref="JsonVisitor{T}.Visit(JToken,TContext)"/>
+    /// Default implementation for all specific types routes back to <see cref="JsonVisitor{TContext}"/> 
     /// </summary>
     /// <typeparam name="TContext">Type of the context object associated with the visit</typeparam>
     internal abstract class JValueVisitor<TContext> : JsonVisitor<TContext>

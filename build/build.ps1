@@ -4,6 +4,16 @@ param
     [switch]$ImportDependenciesOnly
 )
 
+$ErrorActionPreference = 'Stop'
+
+$windows = [System.Runtime.InteropServices.RuntimeInformation]::IsOSPlatform([System.Runtime.InteropServices.OSPlatform]::Windows)
+
+if (-not $windows)
+{
+    Write-Host "Skipping - Not Windows build agent."
+    exit 0
+}
+
 $currentLocation = Get-Location
 try
 {
@@ -21,39 +31,19 @@ try
 
     Get-PackageProvider -Name NuGet -ForceBootstrap | Out-Null
 
-    if (-not (Get-Module -ListAvailable PSDepend))
-    {
-        Install-Module PSDepend -Repository PSGallery -Scope CurrentUser -Force
-    }
-
-    Import-Module PSDepend
-
-    $psDependTags = $(
-        if (Test-Path -Path variable:PSEdition)
-        {
-            $PSEdition
-        }
-        else
-        {
-            'Desktop'
-        }
-    )
-
-    if ($ImportDependenciesOnly)
-    {
-        Invoke-PSDepend -Path "$PSScriptRoot\build.requirements.psd1" -Import -Force -Tags $psDependTags
-    }
-    else
-    {
-        Invoke-PSDepend -Path "$PSScriptRoot\build.requirements.psd1" -Install -Import -Force -Tags $psDependTags
+    @(
+        'psake'
+        'BuildHelpers'
+        'PSDeploy'
+        'platyps'
+    ) |
+    ForEach-Object {
+        Import-Module $_
     }
 
     Push-Location $(git rev-parse --show-toplevel)
     Set-BuildEnvironment -ErrorAction SilentlyContinue
     Pop-Location
-
-    # Get location of AWS.Tools.Common.dll so build can reference it
-    New-Item -Path Env:\ -Name AWS_TOOLS_COMMON -Value ([AppDomain]::CurrentDomain.GetAssemblies() | Where-Object { $_.Location -like '*AWS.Tools.Common.dll'} | Select-Object -ExpandProperty Location) -Force | Out-Null
 
     Invoke-psake -buildFile $PSScriptRoot/psake.ps1 -taskList $Task -nologo
     exit ( [int]( -not $psake.build_success ) )

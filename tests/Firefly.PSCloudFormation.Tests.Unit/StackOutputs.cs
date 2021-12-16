@@ -8,7 +8,7 @@
 
     using Firefly.CloudFormation;
     using Firefly.PSCloudFormation.Commands;
-    using Firefly.PSCloudFormation.Tests.Unit.Utils;
+    using Firefly.PSCloudFormation.Tests.Common.Utils;
 
     using FluentAssertions;
 

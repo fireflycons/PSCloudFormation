@@ -32,7 +32,7 @@
         /// <summary>
         /// Queue of events to process
         /// </summary>
-        private readonly Deque<HclEvent> events = new Deque<HclEvent>(256);
+        private readonly EmitterEventQueue<HclEvent> events = new EmitterEventQueue<HclEvent>(256);
 
         /// <summary>
         /// Stack of indent levels

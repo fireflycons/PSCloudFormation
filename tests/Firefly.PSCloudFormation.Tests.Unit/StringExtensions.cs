@@ -6,7 +6,6 @@
 
     using Xunit;
 
-
     public class StringExtensions
     {
         [Theory]
