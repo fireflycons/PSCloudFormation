@@ -12,8 +12,8 @@ Demonstrates the following
 * CloudFormation `Mappings` are rendered as a `locals` block
 * Inputs and outputs, along with `Terraform.tfvars` file holding current input values as read from CloudFormation
 * Wide selection of intrinsics
-    * `!Ref` is converted to iput variable or resource reference expressions.
-    * `!FindInMap` is converted to a reference to the apprpriate value in `locals` block.
+    * `!Ref` is converted to input variable or resource reference expressions.
+    * `!FindInMap` is converted to a reference to the appropriate value in `locals` block.
     * `!Sub` is converted to an interpolated string with implied reference expressions.
     * `!Cidr` and `!Join` are converted to corresponding Terraform built-in functions.
     * `!GetAZs` is converted to a reference to the `aws_availability_zone` data source.

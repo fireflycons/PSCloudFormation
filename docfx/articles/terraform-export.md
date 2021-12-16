@@ -14,6 +14,12 @@ You are strongly advised to deploy a copy of a production stack elsewhere, expor
 
 To use this cmdlet, you must have the Terraform CLI installed and able to be found in the path. See the [Terraform downloads](https://www.terraform.io/downloads.html) page. If the CLI binary cannot be located, the cmdlet exits with an error.
 
+## Supported Terraform Versions
+
+As of December 2021, this has been tested with
+* Terraform v1.0.0 and v1.1.0, but should work with 0.12 and later when the HCL syntax was updated.
+* AWS Provider >= 3.63
+
 ## About
 
 Given a scenario where your organisation has dictated that all native CloudFormation stacks should be migrated to Terraform, this cmdlet goes some way to easing the pain of that operation. Currently [terraform import](https://www.terraform.io/docs/cli/import/index.html) does not generate [HCL](https://www.terraform.io/docs/language/index.html) code for imported resources, only state information leaving the user to work out and add in all the attributes for every imported resource.
