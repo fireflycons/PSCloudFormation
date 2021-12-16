@@ -58,7 +58,7 @@ This module provides the following stack modification cmdlets
 - `New-PSCFNChangeSet` - ([Documentation](https://fireflycons.github.io/PSCloudFormation/cmdlets/New-PSCFNChangeSet.html)) Create changeset only, for review.
 - `Get-PSCFNStackOutputs` ([Documentation](https://fireflycons.github.io/PSCloudFormation/cmdlets/Get-PSCFNStackOutputs.html)) Retrieves the outputs of a stack in various useful formats for use in creation of new stack templates that will use or import these values.
 - `New-PSCFNPackage` ([Documentation](https://fireflycons.github.io/PSCloudFormation/cmdlets/New-PSCFNPackage.html)) Packages local artifacts, like `aws cloudformation package`.
-
+- `Export-PSCFNTerraform` ([Documentation](https://fireflycons.github.io/PSCloudFormation/articles/terraform-export.html)) Exports a deployed CloudFormation stack to Terraform HCL.
 ### Template Support
 
 Oversize templates in your local file system (file size >= 51,200 bytes) are directly supported. They will be silently uploaded to an S3 bucket which is [created as necessary](https://fireflycons.github.io/PSCloudFormation/articles/s3-usage.html) prior to processing with a delete after 7 days lifecycle policy to prevent buildup of rubbish. The bucket is named `ps-templates-pscloudformation-region-accountid` where
