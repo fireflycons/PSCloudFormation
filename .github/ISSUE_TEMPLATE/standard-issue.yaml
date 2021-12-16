@@ -7,7 +7,8 @@ labels:
   - bug
 body:
   - type: markdown
-    value: Please use separate `Terraform Export Bug` template to report issues with `Export-PSCFNTerraform`
+    attributes:
+      value: Please use separate `Terraform Export Bug` template to report issues with `Export-PSCFNTerraform`
   - type: input
     attributes:
       label: Operating System
