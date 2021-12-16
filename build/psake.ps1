@@ -33,9 +33,6 @@ Properties {
     $ModuleName = "PSCloudFormation"
 
     $DocFxDirectory = (Resolve-Path (Join-Path $PSScriptRoot ../docfx)).Path
-
-    # Dot-source vars describing environment
-    . (Join-Path $PSScriptRoot build-environment.ps1)
 }
 
 Task Default -Depends BuildAppVeyor, Deploy
