@@ -1,12 +1,12 @@
 name: Terraform Export Bug
 description: Raise an issue with Export-PSCFNTerraform cmdlet
-title: 'TF Export: '
+title: '[TF Export:] '
 assignees:
   - fireflycons
 labels:
   - bug
 body:
-  - type: textarea
+  - type: input
     attributes:
       label: Operating System
       description: What operating system are you using?
@@ -14,7 +14,7 @@ body:
       value: operating system
     validations:
       required: true
-  - type: textarea
+  - type: input
     attributes:
       label: PSCloudFormation
       description: What version of PSCloudFormation module are you using?
