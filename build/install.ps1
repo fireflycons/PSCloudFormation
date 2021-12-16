@@ -4,21 +4,29 @@ if ($windows)
 {
     Write-Host "Installing modules..."
 
+
     $prog = $ProgressPreference
     $ProgressPreference = 'SilentlyContinue'
+
+    $modules = @{
+        psake = '4.9.0'
+        BuildHelpers = '2.0.16'
+        PSDeploy = '1.0.5'
+        platyps = '0.14.2'
+        'AWS.Tools.Common' = '4.1.16.0'
+        'AWS.Tools.CloudFormation' = '4.1.16.0'
+        'AWS.Tools.S3' = '4.1.16.0'
+    }
 
     try
     {
         # Modules for doc building and deployment
-        @(
-            'psake'
-            'BuildHelpers'
-            'PSDeploy'
-            'platyps'
-        ) |
+        $modules.Keys |
         ForEach-Object {
-            Write-Host "-" $_
-            Install-Module $_ -Scope CurrentUser -Force | Out-Null
+            $n = $_
+            $v = $modules[$_]
+            Write-Host "-" $n $v
+            Install-Module $_ -RequiredVersion $v -Scope CurrentUser -Force | Out-Null
         }
     }
     finally
