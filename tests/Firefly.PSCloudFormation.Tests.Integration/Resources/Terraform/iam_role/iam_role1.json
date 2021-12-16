@@ -1,0 +1,55 @@
+{
+    "version": 4,
+    "terraform_version": "1.0.9",
+    "serial": 1,
+    "lineage": "9b5b9a0e-a324-6f97-74a3-d5f717318c76",
+    "outputs": {},
+    "resources": [
+        {
+            "mode": "managed",
+            "type": "aws_iam_role",
+            "name": "test_role",
+            "provider": "provider[\"registry.terraform.io/hashicorp/aws\"]",
+            "instances": [
+                {
+                    "schema_version": 0,
+                    "attributes": {
+                        "arn": "arn:aws:iam::104552851521:role/terraform-20211119053946654300000001",
+                        "assume_role_policy": "{\"Version\":\"2012-10-17\",\"Statement\":[{\"Effect\":\"Allow\",\"Principal\":{\"Service\":\"ec2.amazonaws.com\"},\"Action\":\"sts:AssumeRole\"}]}",
+                        "create_date": "2021-11-19T05:39:47Z",
+                        "description": "",
+                        "force_detach_policies": false,
+                        "id": "terraform-20211119053946654300000001",
+                        "inline_policy": [
+                            {
+                                "name": "bar",
+                                "policy": "{\"Statement\":[{\"Action\":\"*\",\"Effect\":\"Allow\",\"Resource\":\"*\"}],\"Version\":\"2012-10-17\"}"
+                            },
+                            {
+                                "name": "root",
+                                "policy": "{\"Statement\":[{\"Action\":\"*\",\"Effect\":\"Allow\",\"Resource\":\"*\"}],\"Version\":\"2012-10-17\"}"
+                            },
+                            {
+                                "name": "foo",
+                                "policy": "{\"Statement\":[{\"Action\":\"*\",\"Effect\":\"Allow\",\"Resource\":\"*\"}],\"Version\":\"2012-10-17\"}"
+                            }
+                        ],
+                        "managed_policy_arns": [],
+                        "max_session_duration": 3600,
+                        "name": "terraform-20211119053946654300000001",
+                        "name_prefix": "terraform-",
+                        "path": "/",
+                        "permissions_boundary": null,
+                        "tags": null,
+                        "tags_all": {
+                            "tf:stackName": "test"
+                        },
+                        "unique_id": "AROARQV6V5BAZ2FPMGS2S"
+                    },
+                    "sensitive_attributes": [],
+                    "private": "bnVsbA=="
+                }
+            ]
+        }
+    ]
+}

@@ -14,6 +14,11 @@
         /// <summary>
         /// Stack is being updated. Assume parameters without defaults will use previous value.
         /// </summary>
-        Update
+        Update,
+
+        /// <summary>
+        /// Stack is being exported from CloudFormation to Terraform
+        /// </summary>
+        Export
     }
 }

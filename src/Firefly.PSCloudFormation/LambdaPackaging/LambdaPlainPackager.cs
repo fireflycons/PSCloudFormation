@@ -22,6 +22,10 @@
         {
         }
 
+
+        /// <inheritdoc />
+        protected override LambdaTraits Traits => new LambdaTraitsPlain();
+
         /// <summary>
         /// Prepares the package, accumulating any dependencies into a directory for zipping.
         /// </summary>

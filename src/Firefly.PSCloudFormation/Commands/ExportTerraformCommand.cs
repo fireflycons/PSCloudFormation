@@ -2,13 +2,20 @@
 {
     using System;
     using System.IO;
+    using System.Linq;
     using System.Management.Automation;
+    using System.Text.RegularExpressions;
     using System.Threading.Tasks;
 
-    using Firefly.CloudFormation;
+    using Amazon.CloudFormation;
+    using Amazon.CloudFormation.Model;
+    using Amazon.Runtime;
+
+    using Firefly.CloudFormation.Model;
+    using Firefly.CloudFormationParser.Serialization.Settings;
+    using Firefly.CloudFormationParser.TemplateObjects;
     using Firefly.PSCloudFormation.AbstractCommands;
     using Firefly.PSCloudFormation.Terraform;
-    using Firefly.PSCloudFormation.Utils;
 
     /// <summary>
     /// <para type="synopsis">
@@ -43,25 +50,22 @@
     /// </summary>
     /// <seealso cref="Firefly.PSCloudFormation.AbstractCommands.CloudFormationServiceCommand" />
     [Cmdlet(VerbsData.Export, "PSCFNTerraform")]
+
     // ReSharper disable once UnusedMember.Global - cmdlet interface
-    public class ExportTerraformCommand : CloudFormationServiceCommand
+    public class ExportTerraformCommand : TemplateResolvingCloudFormationCommand
     {
+        /// <summary>
+        /// The stack identifier regex
+        /// </summary>
+        private static readonly Regex StackIdRegex = new Regex(@"^arn:(?<partition>\w+):cloudformation:(?<region>[^:]+):(?<account>\d+):stack/(?<stack>[^/]+)");
+
         /// <summary>
         /// The workspace directory
         /// </summary>
         private string workspaceDirectory;
 
-        /// <summary>
-        /// Gets or sets the name of the stack.
-        /// <para type="description">
-        /// Specifies the name of an existing CloudFormation Stack to import to Terraform.
-        /// </para>
-        /// </summary>
-        /// <value>
-        /// The name of the stack.
-        /// </value>
-        [Parameter(Mandatory = true, Position = 0, ValueFromPipelineByPropertyName = true)]
-        public string StackName { get; set; }
+        /// <inheritdoc />
+        public override string Select { get; set; }
 
         /// <summary>
         /// Gets or sets the workspace directory.
@@ -73,6 +77,7 @@
         /// The workspace directory.
         /// </value>
         [Parameter(Mandatory = true, ValueFromPipelineByPropertyName = true)]
+        // ReSharper disable once UnusedMember.Global
         public string WorkspaceDirectory
         {
             get => this.workspaceDirectory;
@@ -81,39 +86,37 @@
             {
                 this.workspaceDirectory = value;
                 this.ResolvedWorkspaceDirectory = this.PathResolver.ResolvePath(value);
+
+                // Set this here.
+                // It needs to be set in order to read template from CFN
+                // but cant be set in constructor or XmlDoc2CmdletDoc crashes
+                this.UsePreviousTemplateFlag = true;
             }
         }
 
         /// <summary>
-        /// Gets or sets the force.
+        /// Gets or sets the with default tag.
         /// <para type="description">
-        /// If set, automatically overwrite any existing state file.
+        /// If this switch is present, then a <c>default_tags</c> block is added to the AWS provider declaration.
+        /// A default tag of <c>terraform:stack_name</c> with value being the name of the exported CloudFormation stack
+        /// is added to all resources, enabling you to create a resource group by tag name in the AWS console
+        /// of all resources in the new configuration that support tagging.
+        /// </para>
+        /// <para type="description">
+        /// This has the side effect of marking all imported resources as requiring an in-place change to apply the new tag.
         /// </para>
         /// </summary>
         /// <value>
-        /// The force.
+        /// The with default tag.
         /// </value>
-        [Parameter]
-        public SwitchParameter Force { get; set; }
+        [Parameter(ValueFromPipelineByPropertyName = true)]
+        public SwitchParameter WithDefaultTag { get; set; }
 
-        /// <summary>
-        /// Gets or sets the non interactive.
-        /// <para type="description">
-        /// If set, do not ask the user questions.
-        /// </para>
-        /// <para type="description">
-        /// Some resources such as lambda permissions cannot at this time directly be associated
-        /// with the resources they refer to. In these cases a dialog with the user is initiated
-        /// such that the user may select the appropriate resource e.g. lambda function to
-        /// associate the resource being imported with. This switch disables that user interaction
-        /// meaning that the resource will have to be resolved manually later.
-        /// </para>
-        /// </summary>
-        /// <value>
-        /// The non interactive.
-        /// </value>
-        [Parameter]
-        public SwitchParameter NonInteractive { get; set; }
+        /// <inheritdoc />
+        protected override StackOperation StackOperation => StackOperation.Export;
+
+        /// <inheritdoc />
+        protected override TemplateStage TemplateStage => TemplateStage.Original;
 
         /// <summary>
         /// Gets or sets the resolved workspace directory.
@@ -123,41 +126,9 @@
         /// </value>
         private string ResolvedWorkspaceDirectory { get; set; }
 
-        /// <summary>
-        /// Exports to terraform.
-        /// </summary>
-        /// <param name="context">The context.</param>
-        /// <param name="clientFactory">The client factory.</param>
-        /// <returns>Task to wait on</returns>
-        internal async Task<object> ExportTerraform(ICloudFormationContext context, IAwsClientFactory clientFactory)
+        /// <inheritdoc />
+        protected override async Task<object> OnProcessRecord()
         {
-            this.Logger.LogInformation($"\nReading stack {this.StackName} from AWS...");
-            var ops = new CloudFormationOperations(clientFactory, context);
-
-            var exporter = new TerraformExporter(
-                await ops.GetStackResources(this.StackName),
-                (await ops.GetTemplateSummary(this.StackName)).Parameters,
-                new TerrafomSettings
-                    {
-                        AwsRegion = this._RegionEndpoint.SystemName,
-                        Runner = new TerraformRunner(this._CurrentCredentials, this.Logger),
-                        WorkspaceDirectory = this.ResolvedWorkspaceDirectory,
-                        NonInteractive = this.NonInteractive
-                    },
-                this.Logger,
-                new PSUserInterface(this.Host.UI));
-
-            exporter.Export();
-
-            return null;
-        }
-
-        /// <summary>
-        /// Process pipeline record
-        /// </summary>
-        protected override void ProcessRecord()
-        {
-            base.ProcessRecord();
             var state = Path.Combine(this.ResolvedWorkspaceDirectory, "terraform.tfstate");
             var stateBackup = Path.Combine(this.ResolvedWorkspaceDirectory, "terraform.tfstate.backup");
 
@@ -170,38 +141,105 @@
                             "Existing terraform state will be deleted.",
                             ChoiceResponse.No,
                             "Delete the state",
-                            "Abort operation") == ChoiceResponse.Yes)
+                            "Abort operation") == ChoiceResponse.No)
                     {
-                        foreach (var file in new[] { state, stateBackup})
-                        {
-                            if (File.Exists(file))
-                            {
-                                File.Delete(file);
-                            }
-                        }
+                        return new CloudFormationResult();
                     }
-                    else
-                    {
-                        return;
-                    }
+                }
+
+                foreach (var file in new[] { state, stateBackup }.Where(File.Exists))
+                {
+                    File.Delete(file);
                 }
             }
 
             var context = this.CreateCloudFormationContext();
 
-            try
+            using (var client = CreateCloudFormationClient(context))
             {
-                var dummy = this.ExportTerraform(
-                        context,
-                        new PSAwsClientFactory(
-                            this.CreateClient(this._CurrentCredentials, this._RegionEndpoint),
-                            context))
-                    .Result;
+                // Get any parameter values supplied by user.
+                var userArgs = this.MyInvocation.BoundParameters.Where(bp => this.StackParameterNames.Contains(bp.Key))
+                    .ToDictionary(bp => bp.Key, bp => bp.Value);
+
+                // Determine various pseudo-parameter values from the stack description
+                var stack =
+                    (await client.DescribeStacksAsync(new DescribeStacksRequest { StackName = this.StackName })).Stacks
+                    .First();
+
+                var mc = StackIdRegex.Match(stack.StackId);
+
+                userArgs.Add("AWS::AccountId", mc.Groups["account"].Value);
+                userArgs.Add("AWS::Region", mc.Groups["region"].Value);
+                userArgs.Add("AWS::StackName", mc.Groups["stack"].Value);
+                userArgs.Add("AWS::StackId", stack.StackId);
+                userArgs.Add("AWS::Partition", mc.Groups["partition"].Value);
+                userArgs.Add("AWS::NotificationARNs", stack.NotificationARNs);
+
+                var builder = new DeserializerSettingsBuilder().WithCloudFormationStack(client, this.StackName)
+                    .WithExcludeConditionalResources(true)
+                    .WithParameterValues(userArgs);
+
+                // Get the template
+                var dssettings = builder.Build();
+
+                var template = await Template.Deserialize(dssettings);
+
+                // Get the physical resources
+                var resources =
+                    await client.DescribeStackResourcesAsync(
+                        new DescribeStackResourcesRequest { StackName = this.StackName });
+
+                // This should be equivalent to what we read from the template
+                var check = resources.StackResources.Select(r => r.LogicalResourceId).OrderBy(lr => lr)
+                    .SequenceEqual(template.Resources.Select(r => r.Name).OrderBy(lr => lr));
+
+                if (!check)
+                {
+                    throw new System.InvalidOperationException(
+                        "Number of parsed resources does not match number of actual physical resources.");
+                }
+
+                // Get all exports, for use where Fn::Import is found
+                var exports = (await client.ListExportsAsync(new ListExportsRequest())).Exports;
+
+                var cr = resources.StackResources.OrderBy(sr => sr.LogicalResourceId).Zip(
+                    template.Resources.OrderBy(tr => tr.Name),
+                    (sr, tr) => new CloudFormationResource(tr, sr)).ToList();
+
+                var settings = new TerraformSettings
+                                   {
+                                       AwsAccountId = mc.Groups["account"].Value,
+                                       AwsRegion = mc.Groups["region"].Value,
+                                       StackExports = exports,
+                                       Resources = cr,
+                                       Runner = new TerraformRunner(context.Credentials, this.Logger),
+                                       StackName = this.StackName,
+                                       Template = template,
+                                       WorkspaceDirectory = this.ResolvedWorkspaceDirectory,
+                                       AddDefaultTag = this.WithDefaultTag
+                                   };
+
+                new TerraformExporter(settings, this.Logger).Export();
             }
-            catch (Exception e)
+
+            return new CloudFormationResult();
+        }
+
+        /// <summary>
+        /// Creates the cloud formation client.
+        /// </summary>
+        /// <param name="context">The context.</param>
+        /// <returns>Cloud formation client</returns>
+        private static IAmazonCloudFormation CreateCloudFormationClient(IPSCloudFormationContext context)
+        {
+            var config = new AmazonCloudFormationConfig { RegionEndpoint = context.Region };
+
+            if (context.CloudFormationEndpointUrl != null)
             {
-                this.ThrowExecutionError(e.Message, this, e);
+                config.ServiceURL = context.CloudFormationEndpointUrl.AbsoluteUri;
             }
+
+            return new AmazonCloudFormationClient(context.Credentials ?? new AnonymousAWSCredentials(), config);
         }
     }
 }

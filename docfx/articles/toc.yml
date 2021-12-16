@@ -14,3 +14,26 @@
   href: changesets.md
 - name: Terraform Export
   href: terraform-export.md
+  items:
+    - name: Caveats
+      href: xref:tf-caveats
+    - name: Workflow
+      href: xref:tf-workflow
+    - name: Examples
+      items:
+        - name: VPC Stack
+          href: xref:tf-example-vpc-stack
+          items:
+            - name: CloudFormation
+              href: xref:tf-example-vpc-stack-cf
+            - name: Generated main.tf
+              href: xref:tf-example-vpc-stack-tf
+            - name: Generated terraform.tfvars
+              href: xref:tf-example-vpc-stack-tfvars
+        - name: Lambda Stack
+          href: xref:tf-example-lambda-stack
+          items:
+            - name: CloudFormation
+              href: xref:tf-example-lambda-stack-cf
+            - name: Generated main.tf
+              href: xref:tf-example-lambda-stack-tf

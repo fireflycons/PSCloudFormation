@@ -4,7 +4,7 @@
     using System.Diagnostics;
     using System.Text.RegularExpressions;
 
-    using Firefly.CloudFormation.Parsers;
+    using Firefly.CloudFormationParser;
 
     /// <summary>
     /// Object describing the runtime of a lambda
@@ -39,27 +39,27 @@
         /// <exception cref="PackagerException">
         /// Missing property OR unknown runtime
         /// </exception>
-        public LambdaRuntimeInfo(ITemplateResource lambdaResource)
+        public LambdaRuntimeInfo(IResource lambdaResource)
         {
-            this.Runtime = lambdaResource.GetResourcePropertyValue("Runtime");
+            this.Runtime = (string)lambdaResource.GetResourcePropertyValue("Runtime");
 
             if (this.Runtime == null)
             {
-                throw new PackagerException($"{lambdaResource.LogicalName}: Missing property 'Runtime'");
+                throw new PackagerException($"{lambdaResource.Name}: Missing property 'Runtime'");
             }
 
             var m = RuntimeVersionRegex.Match(this.Runtime);
 
             if (!m.Success)
             {
-                throw new PackagerException($"{lambdaResource.LogicalName}: Unknown runtime '{this.Runtime}'");
+                throw new PackagerException($"{lambdaResource.Name}: Unknown runtime '{this.Runtime}'");
             }
 
             var lang = m.Groups["lang"].Value;
 
             if (!RuntimeTypes.ContainsKey(lang))
             {
-                throw new PackagerException($"{lambdaResource.LogicalName}: Unknown runtime '{lang}'");
+                throw new PackagerException($"{lambdaResource.Name}: Unknown runtime '{lang}'");
             }
 
             this.RuntimeType = RuntimeTypes[lang];

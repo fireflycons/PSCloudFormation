@@ -8,6 +8,7 @@
 
     using Firefly.CloudFormation;
     using Firefly.CloudFormation.Parsers;
+    using Firefly.CloudFormationParser;
     using Firefly.PSCloudFormation.LambdaPackaging;
 
     /// <summary>
@@ -235,6 +236,14 @@
                 return null;
             }
 
+            // Can't be a file/path if it contains invalid chars
+            var invalidChars = Path.GetInvalidPathChars();
+
+            if (propertyValue.Any(c => invalidChars.Contains(c)))
+            {
+                return null;
+            }
+            
             string fullPath = null;
             var currentLocation = pathResolver.GetLocation();
 
@@ -313,14 +322,14 @@
             var templateModified = false;
 
             // Process nested stacks first
-            foreach (var nestedStack in resources.Where(r => r.ResourceType == CloudFormationStack))
+            foreach (var nestedStack in resources.Where(r => r.Type == CloudFormationStack))
             {
                 templateModified |= await this.ProcessNestedStack(nestedStack, templatePath, workingDirectory);
             }
 
             // Process remaining resources
             foreach (var resource in resources.Where(
-                r => r.ResourceType != CloudFormationStack && PackagedResources.ContainsKey(r.ResourceType)))
+                r => r.Type != null && r.Type != CloudFormationStack && PackagedResources.ContainsKey(r.Type)))
             {
                 templateModified |= await this.ProcessResource(resource, templatePath, workingDirectory);
             }
@@ -360,50 +369,43 @@
             var resources = parser.GetResources().ToList();
 
             // Any nested stacks return not null for ResolveFileSystemResource point to files and thus need packaging.
-            if (resources.Where(r => r.ResourceType == CloudFormationStack).Any(
+            if (resources.Where(r => r.Type == CloudFormationStack).Any(
                 nestedStackResource => ResolveFileSystemResource(
                                            this.pathResolver,
                                            templatePath,
-                                           nestedStackResource.GetResourcePropertyValue("TemplateURL")) != null))
+                                           (string)nestedStackResource.GetResourcePropertyValue("TemplateURL")) != null))
             {
                 return true;
             }
 
             // Process remaining resources
             foreach (var resource in resources.Where(
-                r => r.ResourceType != CloudFormationStack && PackagedResources.ContainsKey(r.ResourceType)))
+                r => r.Type != null && r.Type != CloudFormationStack && PackagedResources.ContainsKey(r.Type)))
             {
-                foreach (var propertyToCheck in PackagedResources[resource.ResourceType])
+                // ReSharper disable once AssignNullToNotNullAttribute - checked by Where() above
+                foreach (var propertyToCheck in PackagedResources[resource.Type])
                 {
-                    string resourceFile;
+                    var propertyValue = resource.GetResourcePropertyValue(propertyToCheck.PropertyPath);
 
-                    try
+                    switch (propertyValue)
                     {
-                        resourceFile = resource.GetResourcePropertyValue(propertyToCheck.PropertyPath);
-                    }
-                    catch (FormatException)
-                    {
-                        if (!propertyToCheck.Required)
-                        {
-                            // Property is missing, but CloudFormation does not require it.
-                            continue;
-                        }
+                        case null when propertyToCheck.Required:
 
-                        throw;
-                    }
+                            throw new FormatException(
+                                $"Missing required property {propertyToCheck.PropertyPath} on resource {resource.Name}");
 
-                    if (resourceFile == null)
-                    {
-                        // Property was not found, or was not a value type.
-                        continue;
-                    }
+                        case string resourceFile:
 
-                    var fsi = ResolveFileSystemResource(this.pathResolver, templatePath, resourceFile);
+                            // If not a string, it will be a Dictionary<object,object>, i.e. not a path resource to fix up.
+                            var fsi = ResolveFileSystemResource(this.pathResolver, templatePath, resourceFile);
 
-                    if (fsi != null)
-                    {
-                        // Found a file system reference, therefore packaging required.
-                        return true;
+                            if (fsi != null)
+                            {
+                                // Found a file system reference, therefore packaging required.
+                                return true;
+                            }
+
+                            break;
                     }
                 }
             }
@@ -420,14 +422,14 @@
         /// <returns><c>true</c> if the containing template should be modified (to point to S3); else <c>false</c></returns>
         /// <exception cref="FileNotFoundException">Nested stack resource '{nestedStackResource.LogicalName}': TemplateURL cannot refer to a directory.</exception>
         private async Task<bool> ProcessNestedStack(
-            ITemplateResource nestedStackResource,
+            IResource nestedStackResource,
             string templatePath,
             string workingDirectory)
         {
             var nestedTemplateLocation = ResolveFileSystemResource(
                 this.pathResolver,
                 templatePath,
-                nestedStackResource.GetResourcePropertyValue("TemplateURL"));
+                (string)nestedStackResource.GetResourcePropertyValue("TemplateURL"));
 
             switch (nestedTemplateLocation)
             {
@@ -469,7 +471,7 @@
 
                     // The path references a directory, which is illegal in this context.
                     throw new FileNotFoundException(
-                        $"Nested stack resource '{nestedStackResource.LogicalName}': TemplateURL cannot refer to a directory.");
+                        $"Nested stack resource '{nestedStackResource.Name}': TemplateURL cannot refer to a directory.");
             }
 
             return true;
@@ -485,13 +487,13 @@
         /// <exception cref="InvalidDataException">Unsupported derivative of FileSystemInfo</exception>
         /// <exception cref="MissingMethodException">Missing constructor for the replacement template artifact.</exception>
         private async Task<bool> ProcessResource(
-            ITemplateResource resource,
+            IResource resource,
             string templatePath,
             string workingDirectory)
         {
             var templateModified = false;
 
-            foreach (var propertyToCheck in PackagedResources[resource.ResourceType])
+            foreach (var propertyToCheck in PackagedResources[resource.Type])
             {
                 ResourceUploadSettings resourceToUpload;
 
@@ -523,7 +525,7 @@
 
                     try
                     {
-                        resourceFile = resource.GetResourcePropertyValue(propertyToCheck.PropertyPath);
+                        resourceFile = (string)resource.GetResourcePropertyValue(propertyToCheck.PropertyPath);
                     }
                     catch (FormatException)
                     {

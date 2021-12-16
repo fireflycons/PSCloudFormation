@@ -1,10 +1,24 @@
 ﻿namespace Firefly.PSCloudFormation.Terraform
 {
+    using System.Collections.Generic;
+
+    using Amazon.CloudFormation.Model;
+
+    using Firefly.CloudFormationParser;
+
     /// <summary>
     /// Settings for terraform exporter
     /// </summary>
     internal interface ITerraformSettings
     {
+        /// <summary>
+        /// Gets the AWS account identifier.
+        /// </summary>
+        /// <value>
+        /// The AWS account identifier.
+        /// </value>
+        string AwsAccountId { get; }
+
         /// <summary>
         /// Gets the AWS region.
         /// </summary>
@@ -14,12 +28,12 @@
         string AwsRegion { get; }
 
         /// <summary>
-        /// Gets the Terraform workspace directory where the generated code and state will be stored.
+        /// Gets the resources.
         /// </summary>
         /// <value>
-        /// The workspace directory.
+        /// The resources.
         /// </value>
-        string WorkspaceDirectory { get; }
+        IReadOnlyCollection<CloudFormationResource> Resources { get; }
 
         /// <summary>
         /// Gets the runner that drives the Terraform binary.
@@ -30,11 +44,43 @@
         ITerraformRunner Runner { get; }
 
         /// <summary>
-        /// Gets a value indicating whether [non interactive].
+        /// Gets the name of the stack being exported.
         /// </summary>
         /// <value>
-        ///   <c>true</c> if [non interactive]; otherwise, <c>false</c>.
+        /// The name of the stack.
         /// </value>
-        bool NonInteractive { get; }
+        string StackName { get; }
+
+        /// <summary>
+        /// Gets the template as parsed by CloudFormation Parser.
+        /// </summary>
+        /// <value>
+        /// The template.
+        /// </value>
+        ITemplate Template { get; }
+
+        /// <summary>
+        /// Gets the Terraform workspace directory where the generated code and state will be stored.
+        /// </summary>
+        /// <value>
+        /// The workspace directory.
+        /// </value>
+        string WorkspaceDirectory { get; }
+
+        /// <summary>
+        /// Gets the list of stack exports for use when evaluating <c>Fn::Import</c>
+        /// </summary>
+        /// <value>
+        /// The stack exports.
+        /// </value>
+        IReadOnlyCollection<Export> StackExports { get; }
+
+        /// <summary>
+        /// Gets a value indicating whether to add the <c>terraform:stack_name</c> default tag to all resources.
+        /// </summary>
+        /// <value>
+        ///   <c>true</c> if [add default tag]; otherwise, <c>false</c>.
+        /// </value>
+        bool AddDefaultTag { get; }
     }
 }

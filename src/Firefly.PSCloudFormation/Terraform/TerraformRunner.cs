@@ -1,7 +1,6 @@
 ﻿namespace Firefly.PSCloudFormation.Terraform
 {
     using System;
-    using System.Collections.Generic;
     using System.Diagnostics;
     using System.IO;
     using System.Linq;
@@ -10,11 +9,6 @@
     using Amazon.Runtime;
 
     using Firefly.CloudFormation;
-    using Firefly.PSCloudFormation.Terraform.Hcl;
-    using Firefly.PSCloudFormation.Terraform.PlanDeserialization;
-
-    using Newtonsoft.Json;
-
     using InvalidOperationException = Amazon.CloudFormation.Model.InvalidOperationException;
 
     /// <summary>
@@ -69,40 +63,12 @@
             throw new FileNotFoundException("Cannot find terraform executable");
         }
 
-        /// <summary>
-        /// Gets the resource definition by calling <c>terraform state show</c>.
-        /// </summary>
-        /// <param name="address">The address.</param>
-        /// <returns>
-        /// Resource definition in HCL
-        /// </returns>
-        public HclResource GetResourceDefinition(string address)
+        /// <inheritdoc />
+        public bool Run(string command, bool throwOnError, bool echo, Action<string> output, params string[] arguments)
         {
-            var definition = new HclResource(address);
+            var errors = 0;
+            var warnings = 0;
 
-            this.logger.LogInformation($"Getting resource definition for {address}");
-
-            this.RunProcess(
-                $"state show -no-color {address}",
-                msg => definition.Lines.Add(msg),
-                msg => this.logger.LogError(msg));
-
-            return definition;
-        }
-
-        /// <summary>
-        /// Runs ad-hoc Terraform commands.
-        /// </summary>
-        /// <param name="command">The command (e.g. plan, import etc).</param>
-        /// <param name="throwOnError">if <c>true</c> throw an exception if terraform exits with non-zero status.</param>
-        /// <param name="output">Action to collect output from the command. Can be <c>null</c></param>
-        /// <param name="arguments">The arguments.</param>
-        /// <returns>
-        /// If exceptions are disabled by <paramref name="throwOnError" /> then <c>false</c> is returned when terraform exits with non-zero status.
-        /// </returns>
-        /// <exception cref="System.InvalidOperationException">terraform exited with code {process.ExitCode}</exception>
-        public bool Run(string command, bool throwOnError, Action<string> output, params string[] arguments)
-        {
             var commandtail = $"{command} ";
             commandtail += arguments == null
                                ? string.Empty
@@ -113,49 +79,38 @@
                 msg =>
                     {
                         output?.Invoke(msg);
-                        this.logger.LogInformation(msg);
+
+                        if (echo)
+                        {
+                            this.logger.LogInformation(msg);
+                        }
+
+                        warnings += msg.Contains("Warning:") ? 1 : 0;
                     },
                 msg =>
                     {
                         output?.Invoke(msg);
-                        this.logger.LogError(msg);
+
+                        if (echo)
+                        {
+                            this.logger.LogError(msg);
+                        }
+
+                        errors += msg.Contains("Error:") ? 1 : 0;
                     });
 
             if (exitCode != 0 && throwOnError)
             {
-                throw new InvalidOperationException($"terraform exited with code {exitCode}");
+                throw new TerraformRunnerException(commandtail, exitCode, errors, warnings);
             }
 
             return exitCode == 0;
         }
 
-        /// <summary>
-        /// Runs <c>terraform plan</c> on the current script.
-        /// </summary>
-        /// <returns>
-        /// A <see cref="PlanErrorCollection" /> containing plan errors; else <c>null</c> if none.
-        /// </returns>
-        public PlanErrorCollection RunPlan()
+        /// <inheritdoc />
+        public string Evaluate(string expression)
         {
-            var output = new List<string>();
-
-            // Each line of the output is a discrete JSON object
-            var exitCode = this.RunProcess("plan -json", msg => output.Add(msg), msg => output.Add(msg));
-
-            if (exitCode == 0)
-            {
-                // No errors in plan
-                return null;
-            }
-
-            var errors = (from statement in output
-                          where statement.Contains("\"@level\":\"error\"")
-                          select JsonConvert.DeserializeObject<PlanError>(statement))
-                .ToList();
-
-            // Errors will be processed in reverse order so that adjusting the file content
-            // does not put the line numbers out of kilter.
-            return !errors.Any() ? null : new PlanErrorCollection(errors.OrderByDescending(e => e.LineNumber));
+            throw new NotImplementedException();
         }
 
         /// <summary>

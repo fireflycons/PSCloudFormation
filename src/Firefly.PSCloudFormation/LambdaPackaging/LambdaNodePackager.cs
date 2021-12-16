@@ -1,7 +1,5 @@
 ﻿namespace Firefly.PSCloudFormation.LambdaPackaging
 {
-    using System.Text.RegularExpressions;
-
     using Firefly.CloudFormation;
     using Firefly.PSCloudFormation.Utils;
 
@@ -12,15 +10,8 @@
     /// <seealso href="https://docs.aws.amazon.com/lambda/latest/dg/nodejs-package.html"/>
     internal class LambdaNodePackager : LambdaSiblingModulePackager
     {
-        /// <summary>
-        /// Gets the  regex to detect lambda handler.
-        /// </summary>
-        /// <value>
-        /// The handler regex.
-        /// </value>
-        protected override Regex HandlerRegex { get; } = new Regex(
-            @"^\s*exports\.(?<handler>[\$\w]\w*)\s*=\s*(async\s+)?function\s*\(\s*[\$\w]\w*\s*(,\s*[\$\w]\w*\s*){0,2}\)",
-            RegexOptions.Multiline);
+        /// <inheritdoc />
+        protected override LambdaTraits Traits => new LambdaTraitsNode();
 
         /// <summary>
         /// Initializes a new instance of the <see cref="LambdaNodePackager"/> class.
@@ -32,14 +23,6 @@
             : base(lambdaArtifact, s3, logger)
         {
         }
-
-        /// <summary>
-        /// Gets the file extension of script files for the given lambda.
-        /// </summary>
-        /// <value>
-        /// The script file extension.
-        /// </value>
-        protected override string ScriptFileExtension { get; } = ".js";
 
         /// <summary>
         /// Gets the name of the module directory (full relative path from handler script).

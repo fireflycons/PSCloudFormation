@@ -1,0 +1,70 @@
+{
+    "version": 4,
+    "terraform_version": "1.0.9",
+    "serial": 1,
+    "lineage": "9b5b9a0e-a324-6f97-74a3-d5f717318c76",
+    "outputs": {},
+    "resources": [
+        {
+            "mode": "managed",
+            "type": "aws_apigatewayv2_stage",
+            "name": "HttpApiApiGatewayDefaultStage",
+            "provider": "provider[\"registry.terraform.io/hashicorp/aws\"]",
+            "instances": [
+                {
+                    "schema_version": 0,
+                    "attributes": {
+                        "access_log_settings": [
+                            {
+                                "destination_arn": "arn:aws:logs:eu-west-1:104552851521:log-group:dead-mans-handle-AccessLogs-1J93SGLDV9BMR",
+                                "format": "$context.requestId"
+                            }
+                        ],
+                        "api_id": "ocx1g8j649",
+                        "arn": "arn:aws:apigateway:eu-west-1::/apis/ocx1g8j649/stages/$default",
+                        "auto_deploy": true,
+                        "client_certificate_id": "",
+                        "default_route_settings": [
+                            {
+                                "data_trace_enabled": false,
+                                "detailed_metrics_enabled": false,
+                                "logging_level": "",
+                                "throttling_burst_limit": 200,
+                                "throttling_rate_limit": 10000
+                            }
+                        ],
+                        "deployment_id": "i9vhhn",
+                        "description": "",
+                        "execution_arn": "arn:aws:execute-api:eu-west-1:104552851521:ocx1g8j649/$default",
+                        "id": "$default",
+                        "invoke_url": "https://ocx1g8j649.execute-api.eu-west-1.amazonaws.com/",
+                        "name": "$default",
+                        "route_settings": [
+                            {
+                                "data_trace_enabled": false,
+                                "detailed_metrics_enabled": false,
+                                "logging_level": "",
+                                "route_key": "GET /",
+                                "throttling_burst_limit": 600,
+                                "throttling_rate_limit": 10000
+                            }
+                        ],
+                        "stage_variables": {
+                            "StageVar": "Value"
+                        },
+                        "tags": {
+                            "Tag": "Value",
+                            "httpapi:createdBy": "SAM"
+                        },
+                        "tags_all": {
+                            "Tag": "Value",
+                            "httpapi:createdBy": "SAM"
+                        }
+                    },
+                    "sensitive_attributes": [],
+                    "private": "eyJzY2hlbWFfdmVyc2lvbiI6IjAifQ=="
+                }
+            ]
+        }
+    ]
+}

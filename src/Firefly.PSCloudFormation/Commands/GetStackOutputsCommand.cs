@@ -9,9 +9,9 @@
     using System.Threading.Tasks;
 
     using Firefly.CloudFormation;
-    using Firefly.CloudFormation.Model;
-    using Firefly.CloudFormation.Parsers;
     using Firefly.PSCloudFormation.AbstractCommands;
+
+    using YamlDotNet.Serialization;
 
     /// <summary>
     /// <para type="synopsis">Get the outputs of a stack in various formats</para>
@@ -88,23 +88,6 @@
         public SwitchParameter AsParameterBlock { get; set; }
 
         /// <summary>
-        /// Gets or sets the format for template outputs.
-        /// <para type="description">
-        /// Sets how output of parameters for CloudFormation template fragments should be formatted.
-        /// </para>
-        /// </summary>
-        /// <value>
-        /// The format.
-        /// </value>
-        [Parameter(
-            Mandatory = true,
-            ParameterSetName = ParameterBlockParameterSet,
-            ValueFromPipelineByPropertyName = true)]
-        [Parameter(ParameterSetName = ImportsParameterSet)]
-        [ValidateSet("JSON", "YAML")]
-        public string Format { get; set; }
-
-        /// <summary>
         /// Gets or sets the stack name.
         /// <para type="description">
         /// One or more stacks to process. One object is produced for each stack
@@ -120,76 +103,73 @@
         /// <param name="clientFactory">The client factory.</param>
         /// <param name="parameterSetName">Name of the parameter set in force</param>
         /// <returns>Object containing outputs in selected format.</returns>
-        internal async Task<object> GetStackOutputs(ICloudFormationContext context, IAwsClientFactory clientFactory, string parameterSetName)
+        internal async Task<object> GetStackOutputs(
+            ICloudFormationContext context,
+            IAwsClientFactory clientFactory,
+            string parameterSetName)
         {
             var ops = new CloudFormationOperations(clientFactory, context);
 
             var stackOutputs = (await ops.GetStackAsync(this.StackName)).Outputs;
 
-            switch (parameterSetName)
+            if (this.AsHashTable)
             {
-                case HashParameterSet:
+                return new Hashtable(stackOutputs.ToDictionary(o => o.OutputKey, o => o.OutputValue));
+            }
 
-                    return new Hashtable(stackOutputs.ToDictionary(o => o.OutputKey, o => o.OutputValue));
+            if (this.AsParameterBlock)
+            {
+                var parameters = new Dictionary<string, Dictionary<string, string>>();
 
-                case ParameterBlockParameterSet:
-
-                    var parameters = new Dictionary<string, Dictionary<string, string>>();
-
-                    foreach (var p in stackOutputs)
-                    {
-                        var parameterProps = new Dictionary<string, string>
+                foreach (var p in stackOutputs)
+                {
+                    var parameterProps = new Dictionary<string, string>
+                                             {
                                                  {
-                                                     {
-                                                         "Type",
-                                                         TemplateManager.GetParameterTypeFromStringValue(p.OutputValue)
-                                                     }
-                                                 };
+                                                     "Type",
+                                                     TemplateManager.GetParameterTypeFromStringValue(p.OutputValue)
+                                                 }
+                                             };
 
-                        if (!string.IsNullOrEmpty(p.Description))
-                        {
-                            parameterProps.Add("Description", p.Description);
-                        }
-
-                        parameters.Add(p.OutputKey, parameterProps);
+                    if (!string.IsNullOrEmpty(p.Description))
+                    {
+                        parameterProps.Add("Description", p.Description);
                     }
 
-                    return TemplateParser.SerializeObjectGraphToString(
-                        new Dictionary<string, Dictionary<string, Dictionary<string, string>>>
-                            {
-                                { "Parameters", parameters }
-                            },
-                        (SerializationFormat)Enum.Parse(typeof(SerializationFormat), this.Format, true));
+                    parameters.Add(p.OutputKey, parameterProps);
+                }
 
-                case ImportsParameterSet:
+                var block = new Dictionary<string, object> { { "Parameters", parameters } };
 
-                    var ti = new CultureInfo("en-US");
-                    var stackParam = string.Join(
-                        string.Empty,
-                        this.StackName.Split('-', '_').Select(s => ti.TextInfo.ToTitleCase(s)));
-
-                    return TemplateParser.SerializeObjectGraphToString(
-                        stackOutputs.Where(o => !string.IsNullOrEmpty(o.ExportName)).Select(
-                            p => new Dictionary<string, Dictionary<string, string>>
-                                     {
-                                         {
-                                             "Fn::ImportValue",
-                                             new Dictionary<string, string>
-                                                 {
-                                                     {
-                                                         "Fn::Sub",
-                                                         p.ExportName.Replace(this.StackName, $"${{{stackParam}}}Stack")
-                                                     }
-                                                 }
-                                         }
-                                     }).ToList(),
-                        (SerializationFormat)Enum.Parse(typeof(SerializationFormat), this.Format, true));
-
-                default:
-
-                    this.ThrowExecutionError($"Unsupported parameter set {this.ParameterSetName}", this, null);
-                    return null;
+                return new SerializerBuilder().Build().Serialize(block);
             }
+
+            if (this.AsCrossStackReferences)
+            {
+                var ti = new CultureInfo("en-US");
+                var stackParam = string.Join(
+                    string.Empty,
+                    this.StackName.Split('-', '_').Select(s => ti.TextInfo.ToTitleCase(s)));
+
+                return new SerializerBuilder().Build().Serialize(
+                    stackOutputs.Where(o => !string.IsNullOrEmpty(o.ExportName)).Select(
+                        p => new Dictionary<string, Dictionary<string, string>>
+                                 {
+                                     {
+                                         "Fn::ImportValue",
+                                         new Dictionary<string, string>
+                                             {
+                                                 {
+                                                     "Fn::Sub",
+                                                     p.ExportName.Replace(this.StackName, $"${{{stackParam}}}")
+                                                 }
+                                             }
+                                     }
+                                 }).ToList());
+            }
+
+            this.ThrowExecutionError($"Unsupported parameter set {this.ParameterSetName}", this, null);
+            return null;
         }
 
         /// <summary>

@@ -81,14 +81,24 @@ class TranslationRule
     [TranslationRule]::new('aws_route53_zone', 'aws_route53_hostedzone', $true)
     [TranslationRule]::new('aws_route53_record', 'aws_route53_recordset', $true)
     [TranslationRule]::new('aws_db_option_group', 'aws_rds_optiongroup', $true)
-    [TranslationRule]::new('aws_cloudwatch_log_group', 'aws_log_loggroup', $true)
-    [TranslationRule]::new('aws_cloudwatch_log_stream', 'aws_log_logstream', $true)
+    [TranslationRule]::new('aws_cloudwatch_log_group', 'aws_logs_loggroup', $true)
+    [TranslationRule]::new('aws_cloudwatch_log_stream', 'aws_logs_logstream', $true)
     [TranslationRule]::new('aws_redshift_cluster', 'aws_redshift_cluster', $true)
     [TranslationRule]::new('aws_autoscaling_group', 'aws_autoscaling_autoscalinggroup', $true)
     [TranslationRule]::new('aws_autoscaling_policy', 'aws_autoscaling_scalingpolicy', $true)
     [TranslationRule]::new('aws_autoscaling_schedule', 'aws_autoscaling_scheduledaction', $true)
     [TranslationRule]::new('aws_launch_configuration', 'aws_autoscaling_launchconfiguration', $true)
     [TranslationRule]::new('aws_security_group', 'aws_ec2_securitygroup', $true)
+    [TranslationRule]::new('aws_internet_gateway', 'aws_ec2_internetgateway', $true)
+    [TranslationRule]::new('aws_nat_gateway', 'aws_ec2_natgateway', $true)
+    [TranslationRule]::new('aws_flow_log', 'aws_ec2_flowlog', $true)
+    [TranslationRule]::new('aws_cloudwatch_log_group', 'aws_logs_loggroup', $true)
+    [TranslationRule]::new('aws_cloudwatch_metric_alarm', 'aws_cloudwatch_alarm', $true)
+    [TranslationRule]::new('aws_appautoscaling_target', 'aws_applicationautoscaling_scalabletarget', $true)
+    [TranslationRule]::new('aws_appautoscaling_policy', 'aws_applicationautoscaling_scalingpolicy', $true)
+    [TranslationRule]::new('aws_sns_topic_subscription', 'aws_sns_subscription', $true)
+    [TranslationRule]::new('aws_launch_template', 'aws_ec2_launchtemplate', $true)
+    [TranslationRule]::new('aws_network_acl', 'aws_ec2_networkacl', $true)
     [TranslationRule]::new('aws_rds_cluster', 'aws_rds_dbcluster', $false)
     [TranslationRule]::new('aws_redshift_', 'aws_redshift_cluster', $false)
     [TranslationRule]::new('aws_acm_', 'aws_certificatemanager_', $false)
@@ -104,6 +114,9 @@ class TranslationRule
     [TranslationRule]::new('aws_cloudwatch_log_', 'aws_logs_', $false)
     [TranslationRule]::new('aws_cloudwatch_event_', 'aws_events_', $false)
     [TranslationRule]::new('aws_schemas_', 'aws_eventschemas_', $false)
+    [TranslationRule]::new('aws_cognito_user_group', 'aws_cognito_userpoolgroup', $true)
+    [TranslationRule]::new('aws_cognito_identity_pool_roles_attachment', 'aws_cognito_identitypoolroleattachment', $true)
+    [TranslationRule]::new('aws_iam_policy', 'aws_iam_managedpolicy', $true)
 )
 try
 {
@@ -183,6 +196,7 @@ try
     $matched = [Linq.Enumerable]::ToList([Linq.Enumerable]::Join($tfResources, $awsResources, $keyDelegate, $keyDelegate, $resultDelegate))
     Write-Host "Writing C# resource..."
     $matched | ConvertTo-Json | Out-File -FilePath ../src/Firefly.PSCloudFormation/Resources/terraform-resource-map.json
+    Write-Host "Wrote $($matched.Count) mappings"
 }
 finally
 {

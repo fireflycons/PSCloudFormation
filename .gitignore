@@ -368,3 +368,6 @@ docfx/templates/_exported_templates/default
 
 # Reference assemblies
 ReferenceAssemblies/
+
+ScratchPad/
+build/docs/

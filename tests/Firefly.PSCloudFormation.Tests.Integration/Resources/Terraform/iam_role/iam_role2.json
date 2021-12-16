@@ -1,0 +1,45 @@
+{
+    "version": 4,
+    "terraform_version": "1.0.9",
+    "serial": 1,
+    "lineage": "9b5b9a0e-a324-6f97-74a3-d5f717318c76",
+    "outputs": {},
+    "resources": [
+        {
+            "mode": "managed",
+            "type": "aws_iam_role",
+            "name": "FlowLogRole",
+            "provider": "provider[\"registry.terraform.io/hashicorp/aws\"]",
+            "instances": [
+                {
+                    "schema_version": 0,
+                    "attributes": {
+                        "arn": "arn:aws:iam::104552851521:role/fc-basestack-Vpc-AGGQ9RLPLCGZ-FlowLogRole-1RLSS63H1V2UL",
+                        "assume_role_policy": "{\"Version\":\"2012-10-17\",\"Statement\":[{\"Effect\":\"Allow\",\"Principal\":{\"Service\":\"vpc-flow-logs.amazonaws.com\"},\"Action\":\"sts:AssumeRole\"}]}",
+                        "create_date": "2019-02-10T21:57:31Z",
+                        "description": "",
+                        "force_detach_policies": false,
+                        "id": "fc-basestack-Vpc-AGGQ9RLPLCGZ-FlowLogRole-1RLSS63H1V2UL",
+                        "inline_policy": [
+                            {
+                                "name": "FlowLogRolePolicy",
+                                "policy": "{\"Version\":\"2012-10-17\",\"Statement\":[{\"Action\":[\"logs:CreateLogGroup\",\"logs:CreateLogStream\",\"logs:PutLogEvents\",\"logs:DescribeLogGroups\",\"logs:DescribeLogStreams\"],\"Resource\":\"*\",\"Effect\":\"Allow\"}]}"
+                            }
+                        ],
+                        "managed_policy_arns": [],
+                        "max_session_duration": 3600,
+                        "name": "fc-basestack-Vpc-AGGQ9RLPLCGZ-FlowLogRole-1RLSS63H1V2UL",
+                        "name_prefix": "",
+                        "path": "/",
+                        "permissions_boundary": null,
+                        "tags": {},
+                        "tags_all": {},
+                        "unique_id": "AROAJWBWRGH3NF3TJIV4A"
+                    },
+                    "sensitive_attributes": [],
+                    "private": "eyJzY2hlbWFfdmVyc2lvbiI6IjAifQ=="
+                }
+            ]
+        }
+    ]
+}

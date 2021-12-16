@@ -1,4 +1,4 @@
-﻿<Project Sdk="Microsoft.NET.Sdk">
+<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
     <TargetFramework>netcoreapp3.1</TargetFramework>
@@ -7,172 +7,14 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <None Remove="Resources\DeepNestedStack\base-stack.json" />
-    <None Remove="Resources\DeepNestedStack\lambdacomplex\index.js" />
-    <None Remove="Resources\DeepNestedStack\lambdacomplex\other.js" />
-    <None Remove="Resources\DeepNestedStack\nested-1.json" />
-    <None Remove="Resources\DeepNestedStack\sub-nested-2.json" />
-    <None Remove="Resources\DependencyFile\lambda-dependencies.json" />
-    <None Remove="Resources\DependencyFile\lambda-dependencies.yaml" />
-    <None Remove="Resources\Graph\changeset.json" />
-    <None Remove="Resources\LambdaDependencies\NodeLambda1\Dependencies\mylibrary\libfile.js" />
-    <None Remove="Resources\LambdaDependencies\NodeLambda1\Lambda\my_lambda.js" />
-    <None Remove="Resources\LambdaDependencies\NodeLambda1\Lambda\other.js" />
-    <None Remove="Resources\LambdaDependencies\NodeLambda1\template-complex.yaml" />
-    <None Remove="Resources\LambdaDependencies\NodeLambda2\Dependencies\mylibrary\libfile.js" />
-    <None Remove="Resources\LambdaDependencies\NodeLambda2\Lambda\my_lambda.js" />
-    <None Remove="Resources\LambdaDependencies\NodeLambda2\Lambda\node_modules\local_lib\local_lib.js" />
-    <None Remove="Resources\LambdaDependencies\NodeLambda2\Lambda\other.js" />
-    <None Remove="Resources\LambdaDependencies\PythonLambdaLinux\Lambda\lambda-dependencies.yaml" />
-    <None Remove="Resources\LambdaDependencies\PythonLambdaLinux\Lambda\my_lambda.py" />
-    <None Remove="Resources\LambdaDependencies\PythonLambdaLinux\Lambda\other.py" />
-    <None Remove="Resources\LambdaDependencies\PythonLambdaLinux\template-complex.yaml" />
-    <None Remove="Resources\LambdaDependencies\PythonLambdaLinux\template.yaml" />
-    <None Remove="Resources\LambdaDependencies\PythonLambdaLinux\venv\bin\placeholder.txt" />
-    <None Remove="Resources\LambdaDependencies\PythonLambdaLinux\venv\Include\placeholder.txt" />
-    <None Remove="Resources\LambdaDependencies\PythonLambdaLinux\venv\lib\python3_6\site-packages\boto3\__init__.py" />
-    <None Remove="Resources\LambdaDependencies\PythonLambdaLinux\venv\lib\python3_6\site-packages\boto3_2_39_0_dist_info\METADATA" />
-    <None Remove="Resources\LambdaDependencies\PythonLambdaLinux\venv\lib\python3_6\site-packages\boto3_2_39_0_dist_info\RECORD" />
-    <None Remove="Resources\LambdaDependencies\PythonLambdaLinux\venv\lib\python3_6\site-packages\mylibrary_1_0_0_dist_info\METADATA.txt" />
-    <None Remove="Resources\LambdaDependencies\PythonLambdaLinux\venv\lib\python3_6\site-packages\mylibrary_1_0_0_dist_info\RECORD.txt" />
-    <None Remove="Resources\LambdaDependencies\PythonLambdaLinux\venv\lib\python3_6\site-packages\mylibrary\__init__.py" />
-    <None Remove="Resources\LambdaDependencies\PythonLambdaLinux\venv\lib\python3_6\site-packages\mylibrary\__pycache__\__init__.pyc" />
-    <None Remove="Resources\LambdaDependencies\PythonLambdaLinux\venv\lib\python3_6\site-packages\standalone_module.py" />
-    <None Remove="Resources\LambdaDependencies\PythonLambdaLinux\venv\lib\python3_6\site-packages\standalone_1_0_0_dist_info\RECORD.txt" />
-    <None Remove="Resources\LambdaDependencies\PythonLambda\Lambda\lambda-dependencies.yaml" />
-    <None Remove="Resources\LambdaDependencies\PythonLambda\Lambda\my_lambda.py" />
-    <None Remove="Resources\LambdaDependencies\PythonLambda\Lambda\other.py" />
-    <None Remove="Resources\LambdaDependencies\PythonLambda\template.yaml" />
-    <None Remove="Resources\LambdaDependencies\PythonLambda\venv\Include\placeholder.txt" />
-    <None Remove="Resources\LambdaDependencies\PythonLambda\venv\lib\site-packages\boto3\__init__.py" />
-    <None Remove="Resources\LambdaDependencies\PythonLambda\venv\lib\site-packages\boto3_2_39_0_dist_info\METADATA" />
-    <None Remove="Resources\LambdaDependencies\PythonLambda\venv\lib\site-packages\boto3_2_39_0_dist_info\RECORD" />
-    <None Remove="Resources\LambdaDependencies\PythonLambda\venv\lib\site-packages\mylibrary_1_0_0_dist_info\METADATA.txt" />
-    <None Remove="Resources\LambdaDependencies\PythonLambda\venv\lib\site-packages\mylibrary_1_0_0_dist_info\RECORD.txt" />
-    <None Remove="Resources\LambdaDependencies\PythonLambda\venv\lib\site-packages\mylibrary\__init__.py" />
-    <None Remove="Resources\LambdaDependencies\PythonLambda\venv\lib\site-packages\mylibrary\__pycache__\__init__.pyc" />
-    <None Remove="Resources\LambdaDependencies\PythonLambda\venv\lib\site-packages\standalone_1_0_0_dist_info\RECORD.txt" />
-    <None Remove="Resources\LambdaDependencies\PythonLambda\venv\lib\site-packages\standalone_module.py" />
-    <None Remove="Resources\LambdaDependencies\PythonLambda\venv\scripts\placeholder.txt" />
-    <None Remove="Resources\LambdaDependencies\NodeLambda1\Lambda\lambda-dependencies.yaml" />
-    <None Remove="Resources\LambdaDependencies\NodeLambda1\template.yaml" />
-    <None Remove="Resources\LambdaDependencies\RubyLambda1\Dependencies\mylibrary\libfile.rb" />
-    <None Remove="Resources\LambdaDependencies\RubyLambda1\Lambda\lambda-dependencies.yaml" />
-    <None Remove="Resources\LambdaDependencies\RubyLambda1\Lambda\my_lambda.rb" />
-    <None Remove="Resources\LambdaDependencies\RubyLambda1\Lambda\other.rb" />
-    <None Remove="Resources\LambdaDependencies\RubyLambda1\template.yaml" />
-    <None Remove="Resources\LambdaDependencies\NodeLambda2\Lambda\lambda-dependencies.yaml" />
-    <None Remove="Resources\LambdaDependencies\NodeLambda2\template.yaml" />
-    <None Remove="Resources\LambdaDependencies\RubyLambda2\Dependencies\mylibrary\libfile.rb" />
-    <None Remove="Resources\LambdaDependencies\RubyLambda2\Lambda\lambda-dependencies.yaml" />
-    <None Remove="Resources\LambdaDependencies\RubyLambda2\Lambda\my_lambda.rb" />
-    <None Remove="Resources\LambdaDependencies\RubyLambda2\Lambda\other.rb" />
-    <None Remove="Resources\LambdaDependencies\RubyLambda2\Lambda\vendor\bundle\ruby\_2_7_0\cache\local_lib\local_lib.rb" />
-    <None Remove="Resources\LambdaDependencies\RubyLambda2\template.yaml" />
-    <None Remove="Resources\LambdaHandler\inlineHandler.yaml" />
-    <None Remove="Resources\LambdaHandler\ruby_lambda.zip" />
-    <None Remove="Resources\LambdaHandler\zipped_lambda.yaml" />
-    <None Remove="Resources\no_package.yaml" />
-    <None Remove="Resources\ParameterTest.json" />
-    <None Remove="Resources\ParameterTest.yaml" />
-    <None Remove="Resources\progetDockerCloudFormation.yaml" />
-    <None Remove="Resources\Terraform\terraform.tfstate" />
-  </ItemGroup>
-
-  <ItemGroup>
-    <EmbeddedResource Include="Resources\Graph\changeset.json" />
-    <EmbeddedResource Include="Resources\LambdaDependencies\PythonLambdaLinux\venv\lib\python3_6\site-packages\boto3\__init__.py" />
-    <EmbeddedResource Include="Resources\LambdaDependencies\PythonLambdaLinux\venv\lib\python3_6\site-packages\boto3_2_39_0_dist_info\METADATA" />
-    <EmbeddedResource Include="Resources\LambdaDependencies\PythonLambdaLinux\venv\lib\python3_6\site-packages\boto3_2_39_0_dist_info\RECORD" />
-    <EmbeddedResource Include="Resources\LambdaDependencies\PythonLambdaLinux\venv\lib\python3_6\site-packages\mylibrary_1_0_0_dist_info\METADATA.txt" />
-    <EmbeddedResource Include="Resources\LambdaDependencies\PythonLambdaLinux\venv\lib\python3_6\site-packages\mylibrary_1_0_0_dist_info\RECORD.txt" />
-    <EmbeddedResource Include="Resources\LambdaDependencies\PythonLambdaLinux\venv\lib\python3_6\site-packages\standalone_1_0_0_dist_info\RECORD.txt" />
-    <EmbeddedResource Include="Resources\LambdaDependencies\PythonLambda\venv\lib\site-packages\boto3\__init__.py" />
-    <EmbeddedResource Include="Resources\LambdaDependencies\PythonLambda\venv\lib\site-packages\boto3_2_39_0_dist_info\METADATA" />
-    <EmbeddedResource Include="Resources\LambdaDependencies\PythonLambda\venv\lib\site-packages\boto3_2_39_0_dist_info\RECORD" />
-    <EmbeddedResource Include="Resources\LambdaDependencies\PythonLambda\venv\lib\site-packages\mylibrary_1_0_0_dist_info\METADATA.txt" />
-    <EmbeddedResource Include="Resources\LambdaDependencies\PythonLambda\venv\lib\site-packages\mylibrary_1_0_0_dist_info\RECORD.txt" />
-  </ItemGroup>
-
-  <ItemGroup>
-    <EmbeddedResource Include="Resources\DeepNestedStack\base-stack.json" />
-    <EmbeddedResource Include="Resources\DeepNestedStack\lambdacomplex\index.js" />
-    <EmbeddedResource Include="Resources\DeepNestedStack\lambdacomplex\other.js" />
-    <EmbeddedResource Include="Resources\DeepNestedStack\nested-1.json" />
-    <EmbeddedResource Include="Resources\DeepNestedStack\sub-nested-2.json" />
-    <EmbeddedResource Include="Resources\DependencyFile\lambda-dependencies.json" />
-    <EmbeddedResource Include="Resources\DependencyFile\lambda-dependencies.yaml" />
-    <EmbeddedResource Include="Resources\LambdaDependencies\NodeLambda1\template-complex.yaml" />
-    <EmbeddedResource Include="Resources\LambdaDependencies\NodeLambda2\Lambda\node_modules\local_lib\local_lib.js" />
-    <EmbeddedResource Include="Resources\LambdaDependencies\PythonLambdaLinux\Lambda\lambda-dependencies.yaml" />
-    <EmbeddedResource Include="Resources\LambdaDependencies\PythonLambdaLinux\Lambda\my_lambda.py" />
-    <EmbeddedResource Include="Resources\LambdaDependencies\PythonLambdaLinux\Lambda\other.py" />
-    <EmbeddedResource Include="Resources\LambdaDependencies\PythonLambdaLinux\template-complex.yaml" />
-    <EmbeddedResource Include="Resources\LambdaDependencies\PythonLambdaLinux\template.yaml" />
-    <EmbeddedResource Include="Resources\LambdaDependencies\PythonLambdaLinux\venv\bin\placeholder.txt" />
-    <EmbeddedResource Include="Resources\LambdaDependencies\PythonLambdaLinux\venv\Include\placeholder.txt" />
-    <EmbeddedResource Include="Resources\LambdaDependencies\PythonLambdaLinux\venv\lib\python3_6\site-packages\mylibrary\__init__.py" />
-    <EmbeddedResource Include="Resources\LambdaDependencies\PythonLambdaLinux\venv\lib\python3_6\site-packages\mylibrary\__pycache__\__init__.pyc" />
-    <EmbeddedResource Include="Resources\LambdaDependencies\PythonLambdaLinux\venv\lib\python3_6\site-packages\standalone_module.py" />
-    <EmbeddedResource Include="Resources\LambdaDependencies\PythonLambda\Lambda\my_lambda.py" />
-    <EmbeddedResource Include="Resources\LambdaDependencies\PythonLambda\Lambda\lambda-dependencies.yaml" />
-    <EmbeddedResource Include="Resources\LambdaDependencies\PythonLambda\Lambda\other.py" />
-    <EmbeddedResource Include="Resources\LambdaDependencies\PythonLambda\template-complex.yaml" />
-    <EmbeddedResource Include="Resources\LambdaDependencies\PythonLambda\template.yaml" />
-    <EmbeddedResource Include="Resources\LambdaDependencies\PythonLambda\venv\Include\placeholder.txt" />
-    <EmbeddedResource Include="Resources\LambdaDependencies\PythonLambda\venv\lib\site-packages\standalone_1_0_0_dist_info\RECORD.txt" />
-    <EmbeddedResource Include="Resources\LambdaDependencies\PythonLambda\venv\lib\site-packages\mylibrary\__init__.py" />
-    <EmbeddedResource Include="Resources\LambdaDependencies\PythonLambda\venv\lib\site-packages\mylibrary\__pycache__\__init__.pyc" />
-    <EmbeddedResource Include="Resources\LambdaDependencies\PythonLambda\venv\lib\site-packages\standalone_module.py" />
-    <EmbeddedResource Include="Resources\LambdaDependencies\PythonLambda\venv\scripts\placeholder.txt" />
-    <EmbeddedResource Include="Resources\LambdaDependencies\NodeLambda1\Dependencies\mylibrary\libfile.js" />
-    <EmbeddedResource Include="Resources\LambdaDependencies\NodeLambda1\Lambda\lambda-dependencies.yaml" />
-    <EmbeddedResource Include="Resources\LambdaDependencies\NodeLambda1\Lambda\my_lambda.js" />
-    <EmbeddedResource Include="Resources\LambdaDependencies\NodeLambda1\Lambda\other.js" />
-    <EmbeddedResource Include="Resources\LambdaDependencies\NodeLambda1\template.yaml" />
-    <EmbeddedResource Include="Resources\LambdaDependencies\RubyLambda1\Dependencies\mylibrary\libfile.rb" />
-    <EmbeddedResource Include="Resources\LambdaDependencies\RubyLambda1\Lambda\lambda-dependencies.yaml" />
-    <EmbeddedResource Include="Resources\LambdaDependencies\RubyLambda1\Lambda\my_lambda.rb" />
-    <EmbeddedResource Include="Resources\LambdaDependencies\RubyLambda1\Lambda\other.rb" />
-    <EmbeddedResource Include="Resources\LambdaDependencies\RubyLambda1\template.yaml" />
-    <EmbeddedResource Include="Resources\LambdaDependencies\NodeLambda2\Dependencies\mylibrary\libfile.js" />
-    <EmbeddedResource Include="Resources\LambdaDependencies\NodeLambda2\Lambda\lambda-dependencies.yaml" />
-    <EmbeddedResource Include="Resources\LambdaDependencies\NodeLambda2\Lambda\my_lambda.js" />
-    <EmbeddedResource Include="Resources\LambdaDependencies\NodeLambda2\Lambda\other.js" />
-    <EmbeddedResource Include="Resources\LambdaDependencies\NodeLambda2\template.yaml" />
-    <EmbeddedResource Include="Resources\LambdaDependencies\RubyLambda2\Dependencies\mylibrary\libfile.rb" />
-    <EmbeddedResource Include="Resources\LambdaDependencies\RubyLambda2\Lambda\lambda-dependencies.yaml" />
-    <EmbeddedResource Include="Resources\LambdaDependencies\RubyLambda2\Lambda\my_lambda.rb" />
-    <EmbeddedResource Include="Resources\LambdaDependencies\RubyLambda2\Lambda\other.rb" />
-    <EmbeddedResource Include="Resources\LambdaDependencies\RubyLambda2\Lambda\vendor\bundle\ruby\_2_7_0\cache\local_lib\local_lib.rb" />
-    <EmbeddedResource Include="Resources\LambdaDependencies\RubyLambda2\template.yaml" />
-    <EmbeddedResource Include="Resources\LambdaHandler\inlineHandler.yaml" />
-    <EmbeddedResource Include="Resources\LambdaHandler\inlineHandlerBadHandlerMethod.yaml" />
-    <EmbeddedResource Include="Resources\LambdaHandler\ruby_lambda.zip" />
-    <EmbeddedResource Include="Resources\LambdaHandler\zipped_lambda.yaml" />
-    <EmbeddedResource Include="Resources\no_package.yaml" />
-    <EmbeddedResource Include="Resources\ParameterTest.json" />
-    <EmbeddedResource Include="Resources\ParameterTest.yaml" />
-    <EmbeddedResource Include="Resources\Terraform\terraform.tfstate" />
-  </ItemGroup>
-
-  <ItemGroup>
-    <PackageReference Include="Firefly.EmbeddedResourceLoader" Version="0.1.5" />
-    <PackageReference Include="FluentAssertions" Version="5.10.3" />
     <PackageReference Include="Microsoft.NET.Test.Sdk" Version="16.5.0" />
-    <PackageReference Include="Moq" Version="4.14.1" />
     <PackageReference Include="xunit" Version="2.4.0" />
     <PackageReference Include="xunit.runner.visualstudio" Version="2.4.0" />
     <PackageReference Include="coverlet.collector" Version="1.2.0" />
-    <PackageReference Include="Xunit.SkippableFact" Version="1.4.13" />
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\..\src\Firefly.PSCloudFormation\Firefly.PSCloudFormation.csproj" />
-  </ItemGroup>
-
-  <ItemGroup>
-    <Folder Include="Resources\DeepNestedStack\js\" />
+    <ProjectReference Include="..\Firefly.PSCloudFormation.Tests.Common\Firefly.PSCloudFormation.Tests.Common.csproj" />
   </ItemGroup>
 
 </Project>

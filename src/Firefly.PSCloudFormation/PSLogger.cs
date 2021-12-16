@@ -219,7 +219,8 @@
             if (this.cmdlet.MyInvocation.BoundParameters.Keys.Any(
                 k => string.Compare(k, "Debug", StringComparison.OrdinalIgnoreCase) == 0))
             {
-                this.cmdlet.Host.UI.WriteDebugLine(string.Format(message, args));
+                // Terraform binary places all sorts of ANSI codes in string, including braces
+                this.cmdlet.Host.UI.WriteDebugLine(!args.Any() ? message : string.Format(message, args));
             }
         }
 
@@ -230,7 +231,8 @@
         /// <param name="args">The arguments.</param>
         public override void LogError(string message, params object[] args)
         {
-            this.cmdlet.Host.UI.WriteErrorLine(string.Format(message, args));
+            // Terraform binary places all sorts of ANSI codes in string, including braces
+            this.cmdlet.Host.UI.WriteErrorLine(!args.Any() ? message : string.Format(message, args));
         }
 
         /// <summary>
@@ -240,7 +242,8 @@
         /// <param name="args">The arguments.</param>
         public override void LogInformation(string message, params object[] args)
         {
-            this.cmdlet.Host.UI.WriteLine(string.Format(message, args));
+            // Terraform binary places all sorts of ANSI codes in string, including braces
+            this.cmdlet.Host.UI.WriteLine(!args.Any() ? message : string.Format(message, args));
         }
 
         /// <summary>
@@ -332,7 +335,7 @@
             if (this.cmdlet.MyInvocation.BoundParameters.Keys.Any(
                 k => string.Compare(k, "Verbose", StringComparison.OrdinalIgnoreCase) == 0))
             {
-                this.cmdlet.Host.UI.WriteVerboseLine(string.Format(message, args));
+                this.cmdlet.Host.UI.WriteVerboseLine(!args.Any() ? message : string.Format(message, args));
             }
         }
 
@@ -343,7 +346,7 @@
         /// <param name="args">The arguments.</param>
         public override void LogWarning(string message, params object[] args)
         {
-            this.cmdlet.Host.UI.WriteWarningLine(string.Format(message, args));
+            this.cmdlet.Host.UI.WriteWarningLine(!args.Any() ? message : string.Format(message, args));
         }
 
         /// <summary>

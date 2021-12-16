@@ -31,6 +31,14 @@
         }
 
         /// <summary>
+        /// Gets the traits.
+        /// </summary>
+        /// <value>
+        /// The traits.
+        /// </value>
+        protected abstract LambdaTraits Traits { get; }
+
+        /// <summary>
         /// Gets the lambda artifact.
         /// </summary>
         /// <value>
@@ -60,7 +68,7 @@
         /// <value>
         /// The handler regex.
         /// </value>
-        protected virtual Regex HandlerRegex { get; } = null;
+        protected Regex HandlerRegex => this.Traits.HandlerRegex;
 
         /// <summary>
         /// Gets the file extension of script files for the given lambda.
@@ -68,7 +76,7 @@
         /// <value>
         /// The script file extension.
         /// </value>
-        protected virtual string ScriptFileExtension { get; } = null;
+        protected string ScriptFileExtension => this.Traits.ScriptFileExtension;
 
         /// <summary>
         /// Factory method to create a runtime specific lambda packager.

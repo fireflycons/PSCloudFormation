@@ -1,0 +1,144 @@
+{
+    "version": 4,
+    "terraform_version": "1.0.9",
+    "serial": 1,
+    "lineage": "9b5b9a0e-a324-6f97-74a3-d5f717318c76",
+    "outputs": {},
+    "resources": [
+        {
+            "mode": "managed",
+            "type": "aws_cloudfront_distribution",
+            "name": "CloudFrontDistribution",
+            "provider": "provider[\"registry.terraform.io/hashicorp/aws\"]",
+            "instances": [
+                {
+                    "schema_version": 1,
+                    "attributes": {
+                        "aliases": [
+                            "photos.firefly-consulting.co.uk"
+                        ],
+                        "arn": "arn:aws:cloudfront::123456789012:distribution/E2AHAPA36XIF63",
+                        "caller_reference": "9dc67c5f-3926-45ba-b8ba-e124740f9ee5",
+                        "comment": "Photo Album Website",
+                        "custom_error_response": [],
+                        "default_cache_behavior": [
+                            {
+                                "allowed_methods": [
+                                    "DELETE",
+                                    "GET",
+                                    "HEAD",
+                                    "OPTIONS",
+                                    "PATCH",
+                                    "POST",
+                                    "PUT"
+                                ],
+                                "cache_policy_id": "",
+                                "cached_methods": [
+                                    "GET",
+                                    "HEAD"
+                                ],
+                                "compress": false,
+                                "default_ttl": 180,
+                                "field_level_encryption_id": "",
+                                "forwarded_values": [
+                                    {
+                                        "cookies": [
+                                            {
+                                                "forward": "none",
+                                                "whitelisted_names": []
+                                            }
+                                        ],
+                                        "headers": [],
+                                        "query_string": true,
+                                        "query_string_cache_keys": []
+                                    }
+                                ],
+                                "function_association": [],
+                                "lambda_function_association": [],
+                                "max_ttl": 180,
+                                "min_ttl": 0,
+                                "origin_request_policy_id": "",
+                                "realtime_log_config_arn": "",
+                                "smooth_streaming": false,
+                                "target_origin_id": "5GXT6kJ3D2foXEJ",
+                                "trusted_key_groups": [],
+                                "trusted_signers": [],
+                                "viewer_protocol_policy": "https-only"
+                            }
+                        ],
+                        "default_root_object": "index.html",
+                        "domain_name": "d2rs6aigxqm1fk.cloudfront.net",
+                        "enabled": true,
+                        "etag": "E1NTS75AX5JPU1",
+                        "hosted_zone_id": "Z2FDTNDATAQYW2",
+                        "http_version": "http1.1",
+                        "id": "E2AHAPA36XIF63",
+                        "in_progress_validation_batches": 0,
+                        "is_ipv6_enabled": true,
+                        "last_modified_time": "2019-07-02 20:03:10.352 +0000 UTC",
+                        "logging_config": [],
+                        "ordered_cache_behavior": [],
+                        "origin": [
+                            {
+                                "connection_attempts": 3,
+                                "connection_timeout": 10,
+                                "custom_header": [],
+                                "custom_origin_config": [],
+                                "domain_name": "photo-website-eu-west-1-123456789012.s3.amazonaws.com",
+                                "origin_id": "5GXT6kJ3D2foXEJ",
+                                "origin_path": "",
+                                "origin_shield": [],
+                                "s3_origin_config": [
+                                    {
+                                        "origin_access_identity": "origin-access-identity/cloudfront/E39B140YOU5PMS"
+                                    }
+                                ]
+                            }
+                        ],
+                        "origin_group": [],
+                        "price_class": "PriceClass_100",
+                        "restrictions": [
+                            {
+                                "geo_restriction": [
+                                    {
+                                        "locations": [],
+                                        "restriction_type": "none"
+                                    }
+                                ]
+                            }
+                        ],
+                        "retain_on_delete": false,
+                        "status": "Deployed",
+                        "tags": {},
+                        "tags_all": {},
+                        "trusted_key_groups": [
+                            {
+                                "enabled": false,
+                                "items": []
+                            }
+                        ],
+                        "trusted_signers": [
+                            {
+                                "enabled": false,
+                                "items": []
+                            }
+                        ],
+                        "viewer_certificate": [
+                            {
+                                "acm_certificate_arn": "arn:aws:acm:us-east-1:123456789012:certificate/4103fdb5-8949-4f79-824f-ac2ac105df71",
+                                "cloudfront_default_certificate": false,
+                                "iam_certificate_id": "",
+                                "minimum_protocol_version": "TLSv1",
+                                "ssl_support_method": "sni-only"
+                            }
+                        ],
+                        "wait_for_deployment": true,
+                        "web_acl_id": ""
+                    },
+                    "sensitive_attributes": [],
+                    "private": "eyJzY2hlbWFfdmVyc2lvbiI6IjEifQ=="
+                }
+            ]
+        }
+    ]
+}

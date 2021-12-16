@@ -8,10 +8,8 @@
     using System.Text.RegularExpressions;
 
     using Firefly.CloudFormation;
-    using Firefly.CloudFormation.Parsers;
+    using Firefly.CloudFormationParser;
     using Firefly.PSCloudFormation.Utils;
-
-    using Newtonsoft.Json;
 
     /// <summary>
     /// Given a resource, decide if it is a lambda and if so, what sort.
@@ -42,7 +40,7 @@
         /// <summary>
         /// The lambda resource
         /// </summary>
-        private readonly ITemplateResource lambdaResource;
+        private readonly IResource lambdaResource;
 
         /// <summary>
         /// The path resolver
@@ -70,7 +68,7 @@
         /// <param name="templatePath">Path to the template being processed.</param>
         public LambdaArtifact(
             IPathResolver pathResolver,
-            ITemplateResource lambdaResource,
+            IResource lambdaResource,
             ILogger logger,
             IOSInfo platform,
             string templatePath)
@@ -81,7 +79,7 @@
             this.lambdaResource = lambdaResource;
             this.platform = platform;
 
-            switch (lambdaResource.ResourceType)
+            switch (lambdaResource.Type)
             {
                 case "AWS::Lambda::Function":
 
@@ -90,7 +88,7 @@
                         break;
                     }
 
-                    this.InlineCode = this.GetResourcePropertyValue("Code.ZipFile");
+                    this.InlineCode = this.GetScalarResourcePropertyValue("Code.ZipFile");
 
                     if (this.InlineCode != null)
                     {
@@ -105,7 +103,7 @@
                 case "AWS::Serverless::Function":
 
                     // CodeUri or InlineCode
-                    this.InlineCode = this.GetResourcePropertyValue("InlineCode");
+                    this.InlineCode = this.GetScalarResourcePropertyValue("InlineCode");
 
                     if (this.InlineCode != null)
                     {
@@ -190,7 +188,7 @@
         /// <value>
         /// The name of the logical.
         /// </value>
-        public string LogicalName => this.lambdaResource.LogicalName;
+        public string LogicalName => this.lambdaResource.Name;
 
         /// <summary>
         /// Gets the path to the lambda code, if present in the file system.
@@ -280,27 +278,19 @@
 
             // Ensure input file path is absolute
             dependencyFile = System.IO.Path.GetFullPath(dependencyFile);
-            var content = File.ReadAllText(dependencyFile).Trim();
-
-            // Determine if JSON
-            var firstChar = content.Substring(0, 1);
-
-            if (firstChar == "{")
-            {
-                // We are expecting an array, not an object
-                throw new PackagerException($"{dependencyFile} contains a JSON object. Expecting array");
-            }
 
             try
             {
-                var dependencies = firstChar == "["
-                                       ? JsonConvert.DeserializeObject<List<LambdaDependency>>(content)
-                                       : new YamlDotNet.Serialization.Deserializer()
-                                           .Deserialize<List<LambdaDependency>>(content);
+                using (var reader = File.OpenText(dependencyFile))
+                {
+                    var dependencies =
+                        new YamlDotNet.Serialization.Deserializer().Deserialize<List<LambdaDependency>>(reader);
 
-                // Make dependency locations absolute
-                this.cachedDependencies = dependencies.Select(d => d.ResolveDependencyLocation(dependencyFile)).ToList();
-                return this.cachedDependencies;
+                    // Make dependency locations absolute
+                    this.cachedDependencies =
+                        dependencies.Select(d => d.ResolveDependencyLocation(dependencyFile)).ToList();
+                    return this.cachedDependencies;
+                }
             }
             catch (Exception e)
             {
@@ -407,17 +397,16 @@
         /// </summary>
         /// <param name="property">The property.</param>
         /// <returns>The scalar value, or <c>null</c> if not found or not scalar.</returns>
-        private string GetResourcePropertyValue(string property)
+        private string GetScalarResourcePropertyValue(string property)
         {
-            try
+            var prop = this.lambdaResource.GetResourcePropertyValue(property);
+
+            if (prop is string s)
             {
-                return this.lambdaResource.GetResourcePropertyValue(property);
+                return s;
             }
-            catch (FormatException)
-            {
-                // We don't care if the property doesn't exist
-                return null;
-            }
+
+            return null;
         }
 
         /// <summary>
@@ -432,7 +421,7 @@
             var fsi = PackagerUtils.ResolveFileSystemResource(
                 this.pathResolver,
                 this.templatePath,
-                this.GetResourcePropertyValue(propertyName));
+                this.GetScalarResourcePropertyValue(propertyName));
 
             if (fsi == null)
             {
@@ -458,16 +447,16 @@
         /// <exception cref="PackagerException">Invalid or missing <c>Code</c> or <c>CodeUri</c> property for lambda logical name.</exception>
         private void ParseS3Location()
         {
-            var isServerless = this.lambdaResource.ResourceType == "AWS::Serverless::Function";
+            var isServerless = this.lambdaResource.Type == "AWS::Serverless::Function";
 
-            var bucket = this.GetResourcePropertyValue(isServerless ? "CodeUri.Bucket" : "Code.S3Bucket");
-            var key = this.GetResourcePropertyValue(isServerless ? "CodeUri.Key" : "Code.S3Key");
-            var version = this.GetResourcePropertyValue(isServerless ? "CodeUri.Version" : "Code.S3ObjectVersion");
+            var bucket = this.GetScalarResourcePropertyValue(isServerless ? "CodeUri.Bucket" : "Code.S3Bucket");
+            var key = this.GetScalarResourcePropertyValue(isServerless ? "CodeUri.Key" : "Code.S3Key");
+            var version = this.GetScalarResourcePropertyValue(isServerless ? "CodeUri.Version" : "Code.S3ObjectVersion");
 
             if (bucket == null || key == null)
             {
                 throw new PackagerException(
-                    $"Invalid or missing {(isServerless ? "CodeUri" : "Code")} property for {this.lambdaResource.LogicalName}");
+                    $"Invalid or missing {(isServerless ? "CodeUri" : "Code")} property for {this.lambdaResource.Name}");
             }
 
             this.ArtifactType = LambdaArtifactType.FromS3;

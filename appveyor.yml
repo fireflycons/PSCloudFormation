@@ -1,9 +1,44 @@
+version: '0.0.{build}'
+
+# Setup environment
+nuget:
+  disable_publish_on_pr: true
+
+pull_requests:
+  do_not_increment_build_number: true
+
+branches:
+  except:
+    - /tmp|temp/
+
+skip_commits:
+  files:
+  - .github/
+  - .gitattributes
+  - .gitignore
+  - LICENSE
+  - README.md
+  - CONTRIBUTING.md
+  - ISSUE_TEMPLATE.md
+  - CODE_OF_CONDUCT.md
+  - '**/*.DotSettings'
+
+# Build configurations
+platform:
+  - Any CPU
+
+configuration:
+  - Release
+
+matrix:
+  fast_finish: true
+
 environment:
   GalleryApiKey:
     secure: ZwF65Rl156oMAenHhi8BAY0LySWhhjDvNNt91dpU7D5N88E8ToZyZHCziktv7sz3
   APPVEYOR_SSH_KEY: ssh-rsa AAAAB3NzaC1yc2EAAAABJQAAAQEAnGF97nAjzT0pZn7JCrllP+2ao0k0hY9iAUH+kg8/gLrdEJhephXIynCjEuuSPeNB9XxSd1lwm8E80p55T0fYwuzP6LFX11GJVaIsnV4rH3SUFY//MuhILu7o2FxLINDT7Kjrc04VlNxQf6YDhYNeEcyJmK8JO/gVfZmfMuEPtbtbEw9v4v1qTJaotOlJ3gmaXg8kO580N5PYjKvqhirI1ygWe1HOyLny/k4xfKMCHlAvNxSIGXqJBU5OTwXvsXypgI0RQJw4DWv2XG3BSvJkvB/crdLBubZprWv+Q6RlyBzM8FysqXLxT289yGR7n57eq+NY3BSBLfdbYmSv15nFuQ==
   DISABLE_LOCALSTACK: true
-  GITHUB_PAT:
+  GITHUB_ACCESS_TOKEN:
     secure: 53MNc4RNkaB8Cj54MNxuyLf9syy+i54ITECxm7HhmbJZfIJvzIss6WbiHZ4mCXAW
   GITHUB_EMAIL:
     secure: CxOftS/5wmEkPCDl0O/KIiKlF4KhUnGD9436K/1iQwY3RkDMZRCkCEny+dG5zCS+
@@ -15,30 +50,31 @@ image:
 
 install:
   - ps: ./build/install.ps1
+  - ps: ./build/setup-build.ps1
 
-before_build:
-  - ps: ./build/pre-build.ps1
+dotnet_csproj:
+  patch: true
+  file: '**\*.csproj'
+  version: '$(PSCFN_Build_Assembly_Version)'
+  package_version: '$(PSCFN_BuildVersion)'
+  assembly_version: '$(PSCFN_Build_Assembly_Version)'
+  file_version: '$(PSCFN_Build_Assembly_Version)'
+  informational_version: '$(PSCFN_BuildVersion)'
 
-# Does the whole process
+# Build
+build:
+  verbosity: minimal
+
 build_script:
+  - dotnet build
+
+test_script:
+  - ps: ./build/run-tests.ps1
+
+after_test:
   - ps: . ./build/build.ps1 -Task BuildAppVeyor
 
-for:
-- matrix:
-    only:
-      - image: Visual Studio 2019
-  deploy_script:
-    - ps: . ./build/build.ps1 -Task Deploy -ImportDependenciesOnly
+deploy_script:
+  - ps: . ./build/publish-docs.ps1
+  - ps: . ./build/build.ps1 -Task Deploy -ImportDependenciesOnly
 
-# Skip on updates to the readme.
-# We can force this by adding [skip ci] or [ci skip] anywhere in commit message
-skip_commits:
-  message: /NO_CI.*|updated readme.*|update readme.*s/
-
-matrix:
-  fast_finish: true
-
-test: off
-
-on_success:
-  - ps: ./build/publish-docs

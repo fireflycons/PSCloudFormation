@@ -54,7 +54,6 @@
         /// </para>
         /// </summary>
         /// <returns>A Security Token Service client.</returns>
-
         // ReSharper disable once StyleCop.SA1650
         // ReSharper disable once InconsistentNaming
         IAmazonSecurityTokenService CreateSTSClient();
