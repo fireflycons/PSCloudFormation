@@ -12,7 +12,7 @@ You are strongly advised to deploy a copy of a production stack elsewhere, expor
 
 ## Prerequisites
 
-To use this cmdlet, you must have the Terraform CLI installed and able to be found in the path. See the [Terraform downloads](https://www.terraform.io/downloads.html) page. If the CLI binary cannot be located, the cmdlet exits with an error.
+To use the [Export-PSCFNTerraform](xref:Export-PSCFNTerraform) cmdlet, you must have the Terraform CLI installed and able to be found in the path. See the [Terraform downloads](https://www.terraform.io/downloads.html) page. If the CLI binary cannot be located, the cmdlet exits with an error.
 
 ## Supported Terraform Versions
 
@@ -24,18 +24,12 @@ As of December 2021, this has been tested with
 
 Given a scenario where your organisation has dictated that all native CloudFormation stacks should be migrated to Terraform, this cmdlet goes some way to easing the pain of that operation. Currently [terraform import](https://www.terraform.io/docs/cli/import/index.html) does not generate [HCL](https://www.terraform.io/docs/language/index.html) code for imported resources, only state information leaving the user to work out and add in all the attributes for every imported resource.
 
-The [Export-PSCFNTerraform](xref:Export-PSCFNTerraform) cmdlet will read a CloudFormation Stack via the AWS CloudFormation Service and make a best attempt at generating HCL for the resources the stack contains. Additionally it will try to fix up dependencies between these resources, input variables (stack parameters) and output values as best it can. Thus the amount of work to be done in getting the HCL for the stack correct is greatly reduced.
-
-The general procedure for migrating a CloudFormation Stack is as follows
-
-1. Run [Export-PSCFNTerraform](xref:Export-PSCFNTerraform) on the stack, and make manual corrections. Test deploy your terraform stack to another environment/region/account until you're sure it's correct.
-1. Edit the CloudFormation Template and set a `DeletionPolicy` of `Retain` on all resources. Update the stack and ensure that this gets applied. In some cases you might need to force a resource update to one resouce (e.g. add a tag) for these policies to be applied.
-1. Delete the CloudFormation Stack. The stack definition will be removed from CloudFormation, however the resouces it contains will not.
-1. Now the stack resources are wholly owned by Terraform.
+The [Export-PSCFNTerraform](xref:Export-PSCFNTerraform) cmdlet will read a deployed CloudFormation Stack via the AWS CloudFormation Service and make a best attempt at generating HCL for the resources the stack contains. Additionally it will try to fix up dependencies between these resources, input variables (stack parameters) and output values as best it can. Thus the amount of work to be done in getting the HCL for the stack correct is greatly reduced.
 
 ## More Details
 
 * Read about various [caveats here](xref:tf-caveats).
+* How to [migrate a stack](xref:tf-migrating)
 * See the [export workflow](xref:tf-workflow).
 * Examples
     * [VPC Stack](xref:tf-example-vpc-stack).

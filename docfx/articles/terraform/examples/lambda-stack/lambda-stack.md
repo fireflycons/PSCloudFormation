@@ -6,7 +6,7 @@ uid: tf-example-lambda-stack
 
 # Example - Lambda Stack
 
-This example shows a serverless lambda with embedded python script and an event bride rule to trigger it.
+This example shows a serverless lambda with embedded python script and an Event Bridge rule to trigger it.
 
 Demonstrates the following
 * How a serverless resource is expanded to all implied resources.
@@ -28,7 +28,7 @@ This is the command to export `test-lambda` to Terraform in action...
 A few points to note here
 
 * An extra provider [ArthurHlt/Zipper](https://registry.terraform.io/providers/ArthurHlt/zipper/latest) is included to manage the extracted lambda code.
-* There are five imported resources, when the CloudFormation only contains two resources. This is because the serverless lambda declaration implies creation of a role, an Eventbridge event and a lambda permission to permit Eventbridge to invoke the lambda.
+* There are five imported resources, when the CloudFormation only contains two resources. This is because the serverless lambda declaration implies creation of a role, an event resource and a lambda permission to permit Event Bridge to invoke the lambda.
 * When the function is imported (Resource 1/5) the inline python code is extracted and written to a file
 * In the plan stage at the end, we see some changes
     * A new resource. This creates the zip package of the extracted python code for deployment.
@@ -38,5 +38,5 @@ A few points to note here
 
 ## Generated outputs
 
-* `main.tf` is [here](./hcl.md)
+* [main.tf](./hcl.md)
 

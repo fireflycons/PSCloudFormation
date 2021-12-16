@@ -17,6 +17,8 @@
   items:
     - name: Caveats
       href: xref:tf-caveats
+    - name: Stack Migration
+      href: xref:tf-migrating
     - name: Workflow
       href: xref:tf-workflow
     - name: Examples

@@ -35,6 +35,6 @@ This is the command to export `test-vpc` to Terraform in action...
 
 ## Generated outputs
 
-* `main.tf` is [here](./hcl.md)
-* `Terraform.tfvars` is [here](./tfvars.md)
+* [main.tf](./hcl.md)
+* [terraform.tfvars](./tfvars.md)
 
