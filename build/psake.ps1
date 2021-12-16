@@ -141,9 +141,9 @@ Task UpdateManifest -Depends Build {
 
         $Module = $PowerShell.Invoke()
 
-        if (-not $Module)
+        if ($PowerShell.HadErrors)
         {
-            Throw "Could not load module '$($params.Name)'"
+            throw $PowerShell.Streams.Error[0].Exception
         }
 
         $cmdlets = $Module.ExportedCommands.Keys
