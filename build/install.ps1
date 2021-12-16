@@ -13,7 +13,6 @@ if ($windows)
         BuildHelpers = '2.0.16'
         PSDeploy = '1.0.5'
         platyps = '0.14.2'
-        'AWS.Tools.Common' = '4.1.16.0'
         'AWS.Tools.CloudFormation' = '4.1.16.0'
         'AWS.Tools.S3' = '4.1.16.0'
     }
@@ -26,7 +25,7 @@ if ($windows)
             $n = $_
             $v = $modules[$_]
             Write-Host "-" $n $v
-            Install-Module $_ -RequiredVersion $v -Scope CurrentUser -Force | Out-Null
+            Install-Module $_ -RequiredVersion $v -Scope CurrentUser -Force -AllowClobber | Out-Null
         }
     }
     finally
