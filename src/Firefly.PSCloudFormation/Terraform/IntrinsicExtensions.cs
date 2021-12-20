@@ -40,16 +40,21 @@
         /// <param name="self">The intrinsic being rendered.</param>
         /// <param name="template">Reference to CloudFormation template.</param>
         /// <param name="resource">Resource referenced by the intrinsic.</param>
+        /// <param name="inputs">The list of input variables and data sources.</param>
         /// <returns>A <see cref="Reference"/> or <c>null</c> if a reference cannot be created.</returns>
         /// <exception cref="System.ArgumentNullException">self cannot be null</exception>
-        public static Reference Render(this IIntrinsic self, ITemplate template, ResourceMapping resource)
+        public static Reference Render(
+            this IIntrinsic self,
+            ITemplate template,
+            ResourceMapping resource,
+            IList<InputVariable> inputs)
         {
             if (self == null)
             {
                 throw new ArgumentNullException(nameof(self));
             }
 
-            return self.Render(template, resource, -1);
+            return self.Render(template, resource, inputs, -1);
         }
 
         /// <summary>
@@ -58,10 +63,16 @@
         /// <param name="self">The intrinsic being rendered.</param>
         /// <param name="template">Reference to CloudFormation template.</param>
         /// <param name="resource">Resource referenced by the intrinsic.</param>
+        /// <param name="inputs">The list of input variables and data sources.</param>
         /// <param name="index">The index to add as an indexer on the generated reference.</param>
         /// <returns>A <see cref="Reference"/> or <c>null</c> if a reference cannot be created.</returns>
         /// <exception cref="System.ArgumentNullException">self cannot be null</exception>
-        public static Reference Render(this IIntrinsic self, ITemplate template, ResourceMapping resource, int index)
+        public static Reference Render(
+            this IIntrinsic self,
+            ITemplate template,
+            ResourceMapping resource,
+            IList<InputVariable> inputs,
+            int index)
         {
             if (self == null)
             {
@@ -74,22 +85,22 @@
             {
                 case Base64Intrinsic base64Intrinsic:
 
-                    reference = Render(base64Intrinsic, template, resource);
+                    reference = Render(base64Intrinsic, template, resource, inputs);
                     break;
 
                 case CidrIntrinsic cidrIntrinsic:
 
-                    reference = Render(cidrIntrinsic, template, resource, index);
+                    reference = Render(cidrIntrinsic, template, resource, inputs, index);
                     break;
 
                 case FindInMapIntrinsic findInMapIntrinsic:
 
-                    reference = Render(findInMapIntrinsic, template, resource, index);
+                    reference = Render(findInMapIntrinsic, template, resource, inputs, index);
                     break;
 
                 case GetAZsIntrinsic getAZsIntrinsic:
 
-                    reference = Render(getAZsIntrinsic, index);
+                    reference = Render(getAZsIntrinsic, inputs, index);
                     break;
 
                 case RefIntrinsic refIntrinsic:
@@ -99,7 +110,7 @@
 
                 case SelectIntrinsic selectIntrinsic:
 
-                    reference = Render(selectIntrinsic, template, resource);
+                    reference = Render(selectIntrinsic, template, resource, inputs);
                     break;
 
                 case GetAttIntrinsic getAttIntrinsic:
@@ -109,17 +120,17 @@
 
                 case JoinIntrinsic joinIntrinsic:
 
-                    reference = Render(joinIntrinsic, template, resource);
+                    reference = Render(joinIntrinsic, template, resource, inputs);
                     break;
 
                 case SplitIntrinsic splitIntrinsic:
 
-                    reference = Render(splitIntrinsic, template, resource);
+                    reference = Render(splitIntrinsic, template, resource, inputs);
                     break;
 
                 case SubIntrinsic subIntrinsic:
 
-                    reference = Render(subIntrinsic, template, resource);
+                    reference = Render(subIntrinsic, template, resource, inputs);
                     break;
 
                 default:
@@ -141,14 +152,19 @@
         /// <param name="base64Intrinsic">The base64 intrinsic.</param>
         /// <param name="template">The template.</param>
         /// <param name="resource">The resource.</param>
+        /// <param name="inputs">The list of input variables and data sources.</param>
         /// <returns>A <see cref="FunctionReference"/> to an HCL base64encode() expression.</returns>
-        private static Reference Render(Base64Intrinsic base64Intrinsic, ITemplate template, ResourceMapping resource)
+        private static Reference Render(
+            Base64Intrinsic base64Intrinsic,
+            ITemplate template,
+            ResourceMapping resource,
+            IList<InputVariable> inputs)
         {
             object argument;
 
             if (base64Intrinsic.ValueToEncode is IIntrinsic intrinsic)
             {
-                argument = intrinsic.Render(template, resource).ToJConstructor();
+                argument = Render(intrinsic, template, resource, inputs).ToJConstructor();
             }
             else
             {
@@ -164,17 +180,19 @@
         /// <param name="cidrIntrinsic">The cidr intrinsic.</param>
         /// <param name="template">The template.</param>
         /// <param name="resource">The resource.</param>
+        /// <param name="inputs">The list of input variables and data sources.</param>
         /// <param name="index">The index.</param>
         /// <returns>A <see cref="FunctionReference"/></returns>
         private static Reference Render(
             CidrIntrinsic cidrIntrinsic,
             ITemplate template,
             ResourceMapping resource,
+            IList<InputVariable> inputs,
             int index)
         {
             var arguments = new List<object>
                                 {
-                                    RenderObject(cidrIntrinsic.IpBlock, template, resource)
+                                    RenderObject(cidrIntrinsic.IpBlock, template, resource, inputs)
                                 };
 
             // ReSharper disable once ForCanBeConvertedToForeach
@@ -194,12 +212,14 @@
         /// <param name="findInMapIntrinsic">The <see href="https://fireflycons.github.io/Firefly.CloudFormationParser/api/Firefly.CloudFormationParser.Intrinsics.Functions.FindInMapIntrinsic.html"><c>FindInMap</c></see> intrinsic to render.</param>
         /// <param name="template">The <see href="https://fireflycons.github.io/Firefly.CloudFormationParser/api/Firefly.CloudFormationParser.ITemplate.html">imported template</see>.</param>
         /// <param name="resource">The related new terraform resource where this map lookup TODO might need to be all imported resources</param>
+        /// <param name="inputs">The list of input variables and data sources.</param>
         /// <param name="index">Index of second level key item to return, when this is an array</param>
         /// <returns>A <see cref="MapReference"/>.</returns>
         private static Reference Render(
             FindInMapIntrinsic findInMapIntrinsic,
             ITemplate template,
             ResourceMapping resource,
+            IList<InputVariable> inputs,
             int index)
         {
             var sb = new StringBuilder();
@@ -222,7 +242,7 @@
 
                     case RefIntrinsic refIntrinsic:
 
-                        sb.Append($"[{refIntrinsic.Render(template, resource)}]");
+                        sb.Append($"[{Render((IIntrinsic)refIntrinsic, template, resource, inputs)}]");
                         break;
 
                     case IIntrinsic intrinsic:
@@ -243,12 +263,21 @@
         /// Renders the specified GetAZs intrinsic to a data source reference
         /// </summary>
         /// <param name="getAZsIntrinsic">The GetAZs intrinsic.</param>
+        /// <param name="inputs">The list of input variables and data sources.</param>
         /// <param name="index">The index.</param>
         /// <returns>A <see cref="DataSourceReference"/> to <c>aws_availability_zones</c></returns>
-        private static Reference Render(
-            GetAZsIntrinsic getAZsIntrinsic,
-            int index)
+        private static Reference Render(GetAZsIntrinsic getAZsIntrinsic, IList<InputVariable> inputs, int index)
         {
+            // Add an entry to parameters so it gets emitted
+            if (!inputs.Any(i => i.IsDataSource && i.Address == "aws_availability_zones.available"))
+            {
+                inputs.Add(
+                    new DataSourceInput(
+                        "aws_availability_zones",
+                        "available",
+                        new Dictionary<string, string> { { "state", "available" } }));
+            }
+
             // This is only going to work against the provider's region
             return new DataSourceReference("aws_availability_zones", "available", $"names[{index}]", false);
         }
@@ -315,12 +344,17 @@
         /// <param name="selectIntrinsic">The select intrinsic.</param>
         /// <param name="template">The template.</param>
         /// <param name="resource">The resource.</param>
+        /// <param name="inputs">The list of input variables and data sources.</param>
         /// <returns>A <see cref="Reference"/> derivative according to what is being selected, with selection indexer.</returns>
-        private static Reference Render(SelectIntrinsic selectIntrinsic, ITemplate template, ResourceMapping resource)
+        private static Reference Render(
+            SelectIntrinsic selectIntrinsic,
+            ITemplate template,
+            ResourceMapping resource,
+            IList<InputVariable> inputs)
         {
             if (selectIntrinsic.Items.Count == 1 && selectIntrinsic.Items[0] is IIntrinsic intrinsic)
             {
-                return intrinsic.Render(template, resource, selectIntrinsic.Index);
+                return intrinsic.Render(template, resource, inputs, selectIntrinsic.Index);
             }
 
             return null;
@@ -369,8 +403,13 @@
         /// <param name="joinIntrinsic">The join intrinsic.</param>
         /// <param name="template">The template.</param>
         /// <param name="resource">The resource.</param>
+        /// <param name="inputs">The list of input variables and data sources.</param>
         /// <returns>A <see cref="FunctionReference"/> to an HCL join() expression.</returns>
-        private static Reference Render(JoinIntrinsic joinIntrinsic, ITemplate template, ResourceMapping resource)
+        private static Reference Render(
+            JoinIntrinsic joinIntrinsic,
+            ITemplate template,
+            ResourceMapping resource,
+            IList<InputVariable> inputs)
         {
             // Build up a join() function reference
             var joinArguments = new List<object> { joinIntrinsic.Separator };
@@ -382,7 +421,7 @@
                 {
                     case IIntrinsic nestedIntrinsic:
 
-                        joinList.Add(nestedIntrinsic.Render(template, resource).ToJConstructor());
+                        joinList.Add(Render(nestedIntrinsic, template, resource, inputs).ToJConstructor());
                         break;
 
                     default:
@@ -404,8 +443,13 @@
         /// <param name="splitIntrinsic">The split intrinsic.</param>
         /// <param name="template">The template.</param>
         /// <param name="resource">The resource.</param>
-        /// <returns></returns>
-        private static Reference Render(SplitIntrinsic splitIntrinsic, ITemplate template, ResourceMapping resource)
+        /// <param name="inputs">The list of input variables and data sources.</param>
+        /// <returns>A <see cref="FunctionReference"/> to the <c>split()</c> built-in.</returns>
+        private static Reference Render(
+            SplitIntrinsic splitIntrinsic,
+            ITemplate template,
+            ResourceMapping resource,
+            IList<InputVariable> inputs)
         {
             var splitArguments = new List<object> { splitIntrinsic.Delimiter };
 
@@ -413,7 +457,7 @@
             {
                 case IIntrinsic intrinsic:
 
-                    splitArguments.Add(intrinsic.Render(template, resource).ToJConstructor());
+                    splitArguments.Add(Render(intrinsic, template, resource, inputs).ToJConstructor());
                     break;
 
                 default:
@@ -431,8 +475,13 @@
         /// <param name="subIntrinsic">The sub intrinsic.</param>
         /// <param name="template">The template.</param>
         /// <param name="resource">The resource.</param>
+        /// <param name="inputs">The list of input variables and data sources.</param>
         /// <returns>A <see cref="InterpolationReference"/> for the interpolated string to insert.</returns>
-        private static Reference Render(SubIntrinsic subIntrinsic, ITemplate template, ResourceMapping resource)
+        private static Reference Render(
+            SubIntrinsic subIntrinsic,
+            ITemplate template,
+            ResourceMapping resource,
+            IList<InputVariable> inputs)
         {
             // Build up an interpolated string as the replacement
             // Start with the !Sub intrinsic expression.
@@ -444,7 +493,7 @@
             foreach (var nestedIntrinsic in subIntrinsic.ImplicitReferences.Cast<IReferenceIntrinsic>())
             {
                 // Try to render to an HCL expression
-                var reference = nestedIntrinsic.Render(template, resource);
+                var reference = Render((IIntrinsic)nestedIntrinsic, template, resource, inputs);
 
                 if (reference == null)
                 {
@@ -460,7 +509,7 @@
 
                 if (substitution.Value is IIntrinsic intrinsic)
                 {
-                    replacement = intrinsic.Render(template, resource).ReferenceExpression;
+                    replacement = Render(intrinsic, template, resource, inputs).ReferenceExpression;
                 }
                 else
                 {
@@ -484,12 +533,17 @@
         /// <param name="value">The value.</param>
         /// <param name="template">The template.</param>
         /// <param name="resource">The resource.</param>
-        /// <returns></returns>
-        private static object RenderObject(object value, ITemplate template, ResourceMapping resource)
+        /// <param name="inputs">The list of input variables and data sources.</param>
+        /// <returns>Object value which is a JConstructor if the input is an intrinsic, else the string value of the input.</returns>
+        private static object RenderObject(
+            object value,
+            ITemplate template,
+            ResourceMapping resource,
+            IList<InputVariable> inputs)
         {
             if (value is IIntrinsic intrinsic)
             {
-                return intrinsic.Render(template, resource).ToJConstructor();
+                return Render(intrinsic, template, resource, inputs).ToJConstructor();
             }
 
             return value.ToString();

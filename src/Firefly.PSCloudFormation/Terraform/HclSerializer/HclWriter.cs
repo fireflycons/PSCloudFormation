@@ -103,11 +103,13 @@
         /// <param name="cloudFormationResource">The cloud formation resource.</param>
         /// <param name="attributes">The attributes.</param>
         /// <param name="mapping">The mapping.</param>
+        /// <param name="inputs"></param>
         /// <param name="codeDefinition">The code definition.</param>
         private static void ResolveLambdaS3Code(
             ITemplateObject cloudFormationResource,
             JObject attributes,
             ResourceMapping mapping,
+            IList<InputVariable> inputs,
             IDictionary<string, object> codeDefinition)
         {
             // Must contain S3Key and S3Bucket, and optionally S3ObjectVersion
@@ -121,12 +123,14 @@
                 cloudFormationResource.Template,
                 attributes,
                 mapping,
+                inputs,
                 codeDefinition["S3Bucket"]);
             UpdatePropertyValue(
                 "s3_key",
                 cloudFormationResource.Template,
                 attributes,
                 mapping,
+                inputs,
                 codeDefinition["S3Key"]);
 
             if (codeDefinition.ContainsKey("S3ObjectVersion"))
@@ -136,6 +140,7 @@
                     cloudFormationResource.Template,
                     attributes,
                     mapping,
+                    inputs,
                     codeDefinition["S3ObjectVersion"]);
             }
         }
@@ -148,12 +153,14 @@
         /// <param name="cloudFormationResource">The cloud formation resource.</param>
         /// <param name="attributes">The attributes.</param>
         /// <param name="mapping">The mapping.</param>
+        /// <param name="inputs"></param>
         private static void ResolveLambdaZipCode(
             TextWriter writer,
             string runtime,
             ITemplateObject cloudFormationResource,
             JObject attributes,
-            ResourceMapping mapping)
+            ResourceMapping mapping,
+            IList<InputVariable> inputs)
         {
             var traits = LambdaTraits.FromRuntime(runtime);
 
@@ -184,6 +191,7 @@
                     cloudFormationResource.Template,
                     attributes,
                     mapping,
+                    inputs,
                     $"index.{m.Groups["handler"].Value}");
             }
 
@@ -192,12 +200,14 @@
                 cloudFormationResource.Template,
                 attributes,
                 mapping,
+                inputs,
                 new IndirectReference($"zipper_file.{zipperResource}.output_path"));
             UpdatePropertyValue(
                 "source_code_hash",
                 cloudFormationResource.Template,
                 attributes,
                 mapping,
+                inputs,
                 new IndirectReference($"zipper_file.{zipperResource}.output_sha"));
         }
 
@@ -208,12 +218,14 @@
         /// <param name="template">The template.</param>
         /// <param name="attributes">The attributes.</param>
         /// <param name="resourceMapping">The resource mapping.</param>
+        /// <param name="inputs"></param>
         /// <param name="newValue">The new value.</param>
         private static void UpdatePropertyValue(
             string key,
             ITemplate template,
             JObject attributes,
             ResourceMapping resourceMapping,
+            IList<InputVariable> inputs,
             object newValue)
         {
             JToken newJToken;
@@ -222,7 +234,7 @@
             {
                 case IIntrinsic intrinsic:
 
-                    newJToken = intrinsic.Render(template, resourceMapping).ToJConstructor();
+                    newJToken = IntrinsicExtensions.Render(intrinsic, template, resourceMapping, inputs).ToJConstructor();
                     break;
 
                 case Reference reference:
@@ -417,10 +429,12 @@
         /// <param name="writer">The writer.</param>
         /// <param name="stateFile">The state file.</param>
         /// <param name="importedResources">The imported resources.</param>
+        /// <param name="inputs"></param>
         private void ResolveLambdaCode(
             TextWriter writer,
             StateFile stateFile,
-            IReadOnlyCollection<ResourceMapping> importedResources)
+            IReadOnlyCollection<ResourceMapping> importedResources,
+            IList<InputVariable> inputs)
         {
             foreach (var cloudFormationResource in this.settings.Template.Resources.Where(
                 r => r.Type == "AWS::Lambda::Function" && r.GetResourcePropertyValue("Code") != null))
@@ -458,7 +472,7 @@
                         continue;
                     }
 
-                    ResolveLambdaZipCode(writer, runtimeObject.ToString(), cloudFormationResource, attributes, mapping);
+                    ResolveLambdaZipCode(writer, runtimeObject.ToString(), cloudFormationResource, attributes, mapping, inputs);
                 }
                 else if (lambdaCode.ContainsKey("ImageUri"))
                 {
@@ -467,11 +481,12 @@
                         cloudFormationResource.Template,
                         attributes,
                         mapping,
+                        inputs,
                         lambdaCode["ImageUri"]);
                 }
                 else
                 {
-                    ResolveLambdaS3Code(cloudFormationResource, attributes, mapping, lambdaCode);
+                    ResolveLambdaS3Code(cloudFormationResource, attributes, mapping, inputs, lambdaCode);
                 }
             }
         }
@@ -572,7 +587,7 @@
                 FileAccess.Write))
             using (var writer = new StreamWriter(stream, new UTF8Encoding(false)))
             {
-                this.ResolveLambdaCode(writer, stateFile, importedResources);
+                this.ResolveLambdaCode(writer, stateFile, importedResources, parameters);
                 this.ResolveResourceDependencies(stateFile, parameters, importedResources);
                 this.WriteProviders(writer);
                 WriteInputsAndDataBlocks(writer, parameters);

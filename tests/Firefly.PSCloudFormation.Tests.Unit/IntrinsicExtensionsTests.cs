@@ -3,8 +3,10 @@
     using System.Collections.Generic;
 
     using Firefly.CloudFormationParser;
+    using Firefly.CloudFormationParser.Intrinsics;
     using Firefly.CloudFormationParser.Intrinsics.Functions;
     using Firefly.PSCloudFormation.Terraform;
+    using Firefly.PSCloudFormation.Terraform.Hcl;
 
     using FluentAssertions;
 
@@ -28,7 +30,7 @@
 
             var @ref = new RefIntrinsic(ParamName);
 
-            @ref.Render(template.Object, null).ReferenceExpression.Should().Be(expected);
+            IntrinsicExtensions.Render((IIntrinsic)@ref, template.Object, (ResourceMapping)null, null).ReferenceExpression.Should().Be(expected);
         }
 
         [Theory]
@@ -47,7 +49,7 @@
 
             var @ref = new RefIntrinsic(pseudo);
 
-            @ref.Render(template.Object, null).ReferenceExpression.Should().Be(reference);
+            IntrinsicExtensions.Render((IIntrinsic)@ref, template.Object, (ResourceMapping)null, null).ReferenceExpression.Should().Be(reference);
         }
 
         [Fact]
@@ -67,7 +69,7 @@
 
             var findInMap = new FindInMapIntrinsic(new object[] { @ref, "TopKey", "SecondKey" });
 
-            findInMap.Render(template.Object, null).ReferenceExpression.Should().Be(expected);
+            IntrinsicExtensions.Render((IIntrinsic)findInMap, template.Object, (ResourceMapping)null, null).ReferenceExpression.Should().Be(expected);
         }
 
         [Fact]
@@ -87,7 +89,7 @@
 
             var findInMap = new FindInMapIntrinsic(new object[] { "MapName", @ref, "SecondKey" });
 
-            findInMap.Render(template.Object, null).ReferenceExpression.Should().Be(expected);
+            IntrinsicExtensions.Render((IIntrinsic)findInMap, template.Object, (ResourceMapping)null, null).ReferenceExpression.Should().Be(expected);
         }
     }
 }

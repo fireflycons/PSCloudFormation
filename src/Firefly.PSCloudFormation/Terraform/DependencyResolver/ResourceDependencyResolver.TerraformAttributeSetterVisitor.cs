@@ -378,22 +378,12 @@
                     case IntrinsicType.Join:
                     case IntrinsicType.Sub:
 
-                        var reference = intrinsic.Render(context.Template, intrinsicInfo.TargetResource);
-
-                        if (reference is DataSourceReference ds && !ds.IsParameter)
-                        {
-                            if (!context.Inputs.Any(i => i.IsDataSource && i.Address == ds.BlockAddress))
-                            {
-                                context.Inputs.Add(new DataSourceInput(ds.Type, ds.Name));
-                            }
-                        }
-
                         context.Modifications.Add(
                             new StateModification(
                                 jsonValue,
                                 context.Index,
                                 context.ContainingProperty,
-                                reference));
+                                intrinsic.Render(context.Template, intrinsicInfo.TargetResource, context.Inputs)));
                         break;
                 }
             }
