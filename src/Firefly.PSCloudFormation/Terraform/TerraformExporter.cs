@@ -115,8 +115,8 @@
             {
                 this.InitializeWorkspace(initialHcl.ToString());
 
-                var importedResources = resourcesToImport.Where(r => r.AwsType != "AWS::SecretsManager::SecretTargetAttachment" && !UnsupportedResources.Contains(r.AwsType)).ToList();
-                //var importedResources = this.ImportResources(resourcesToImport);
+                //var importedResources = resourcesToImport.Where(r => r.AwsType != "AWS::SecretsManager::SecretTargetAttachment" && !UnsupportedResources.Contains(r.AwsType)).ToList();
+                var importedResources = this.ImportResources(resourcesToImport);
 
                 // Copy of the state file that we will insert references to inputs, other resources etc. before serialization to HCL.
                 var stateFile = JsonConvert.DeserializeObject<StateFile>(File.ReadAllText(StateFileName));

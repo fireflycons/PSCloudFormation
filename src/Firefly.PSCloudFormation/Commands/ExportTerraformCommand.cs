@@ -132,26 +132,26 @@
             var state = Path.Combine(this.ResolvedWorkspaceDirectory, "terraform.tfstate");
             var stateBackup = Path.Combine(this.ResolvedWorkspaceDirectory, "terraform.tfstate.backup");
 
-            //if (File.Exists(state))
-            //{
-            //    if (!this.Force)
-            //    {
-            //        if (this.AskYesNo(
-            //                "Overwrite existing state?",
-            //                "Existing terraform state will be deleted.",
-            //                ChoiceResponse.No,
-            //                "Delete the state",
-            //                "Abort operation") == ChoiceResponse.No)
-            //        {
-            //            return new CloudFormationResult();
-            //        }
-            //    }
+            if (File.Exists(state))
+            {
+                if (!this.Force)
+                {
+                    if (this.AskYesNo(
+                            "Overwrite existing state?",
+                            "Existing terraform state will be deleted.",
+                            ChoiceResponse.No,
+                            "Delete the state",
+                            "Abort operation") == ChoiceResponse.No)
+                    {
+                        return new CloudFormationResult();
+                    }
+                }
 
-            //    foreach (var file in new[] { state, stateBackup }.Where(File.Exists))
-            //    {
-            //        File.Delete(file);
-            //    }
-            //}
+                foreach (var file in new[] { state, stateBackup }.Where(File.Exists))
+                {
+                    File.Delete(file);
+                }
+            }
 
             var context = this.CreateCloudFormationContext();
 
