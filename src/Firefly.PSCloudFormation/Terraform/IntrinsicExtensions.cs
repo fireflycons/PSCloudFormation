@@ -98,9 +98,24 @@
                     reference = Render(findInMapIntrinsic, template, resource, inputs, index);
                     break;
 
+                case GetAttIntrinsic getAttIntrinsic:
+
+                    reference = Render(getAttIntrinsic, template, resource);
+                    break;
+
                 case GetAZsIntrinsic getAZsIntrinsic:
 
                     reference = Render(getAZsIntrinsic, inputs, index);
+                    break;
+
+                case ImportValueIntrinsic importValueIntrinsic:
+
+                    reference = Render(importValueIntrinsic, template, inputs);
+                    break;
+
+                case JoinIntrinsic joinIntrinsic:
+
+                    reference = Render(joinIntrinsic, template, resource, inputs);
                     break;
 
                 case RefIntrinsic refIntrinsic:
@@ -111,16 +126,6 @@
                 case SelectIntrinsic selectIntrinsic:
 
                     reference = Render(selectIntrinsic, template, resource, inputs);
-                    break;
-
-                case GetAttIntrinsic getAttIntrinsic:
-
-                    reference = Render(getAttIntrinsic, template, resource);
-                    break;
-
-                case JoinIntrinsic joinIntrinsic:
-
-                    reference = Render(joinIntrinsic, template, resource, inputs);
                     break;
 
                 case SplitIntrinsic splitIntrinsic:
@@ -280,6 +285,31 @@
 
             // This is only going to work against the provider's region
             return new DataSourceReference("aws_availability_zones", "available", $"names[{index}]", false);
+        }
+
+        /// <summary>
+        /// Renders the specified import value intrinsic.
+        /// </summary>
+        /// <param name="importValueIntrinsic">The import value intrinsic.</param>
+        /// <param name="template">The template.</param>
+        /// <param name="inputs">The list of input variables and data sources.</param>
+        /// <returns>A <see cref="DataSourceReference"/> to <c>aws_cloudformation_export</c></returns>
+        private static Reference Render(ImportValueIntrinsic importValueIntrinsic, ITemplate template, IList<InputVariable> inputs)
+        {
+            var exportName = importValueIntrinsic.Evaluate(template).ToString();
+            var dataSourceAddress = $"aws_cloudformation_export.{exportName}";
+
+            // Add an entry to parameters so it gets emitted
+            if (!inputs.Any(i => i.IsDataSource && i.Address == dataSourceAddress))
+            {
+                inputs.Add(
+                    new DataSourceInput(
+                        "aws_cloudformation_export",
+                        exportName,
+                        new Dictionary<string, string> { { "name ", exportName } }));
+            }
+
+            return new DataSourceReference("aws_cloudformation_export", exportName, "value", false);
         }
 
         /// <summary>

@@ -20,11 +20,6 @@
     internal partial class ResourceDependencyResolver
     {
         /// <summary>
-        /// All exported CloudFormation resources.
-        /// </summary>
-        private readonly IReadOnlyCollection<CloudFormationResource> cloudFormationResources;
-
-        /// <summary>
         /// All input variables generated from the exported CloudFormation Stack.
         /// </summary>
         private readonly IList<InputVariable> inputs;
@@ -40,31 +35,36 @@
         private readonly IReadOnlyCollection<StateFileResourceDeclaration> terraformResources;
 
         /// <summary>
-        /// The CloudFormation resource currently being processed.
-        /// </summary>
-        private CloudFormationResource currentCloudFormationResource;
-
-        /// <summary>
         /// The warning list
         /// </summary>
         private readonly IList<string> warnings;
 
         /// <summary>
+        /// The settings
+        /// </summary>
+        private readonly ITerraformSettings settings;
+
+        /// <summary>
+        /// The CloudFormation resource currently being processed.
+        /// </summary>
+        private CloudFormationResource currentCloudFormationResource;
+
+        /// <summary>
         /// Initializes a new instance of the <see cref="ResourceDependencyResolver"/> class.
         /// </summary>
-        /// <param name="cloudFormationResources">All exported CloudFormation resources..</param>
+        /// <param name="settings">Main settings object.</param>
         /// <param name="terraformResources">All imported terraform resources (as JSON from state file).</param>
         /// <param name="inputs">All input variables generated from the exported CloudFormation Stack.</param>
-        /// <param name="warnings"></param>
+        /// <param name="warnings">Global warning list.</param>
         public ResourceDependencyResolver(
-            IReadOnlyCollection<CloudFormationResource> cloudFormationResources,
+            ITerraformSettings settings,
             IReadOnlyCollection<StateFileResourceDeclaration> terraformResources,
             IList<InputVariable> inputs,
             IList<string> warnings)
         {
+            this.settings = settings;
             this.warnings = warnings;
-            this.cloudFormationResources = cloudFormationResources;
-            this.template = cloudFormationResources.First().TemplateResource.Template;
+            this.template = settings.Template;
             this.terraformResources = terraformResources;
             this.inputs = inputs;
         }
@@ -81,7 +81,7 @@
 
                 // Get CF resource for the current state file resource entry
                 this.currentCloudFormationResource =
-                    this.cloudFormationResources.First(r => r.LogicalResourceId == terraformStateFileResource.Name);
+                    this.settings.Resources.First(r => r.LogicalResourceId == terraformStateFileResource.Name);
 
                 // Find related resources that may be merged into this one
                 var relatedResources = this.template.DependencyGraph.Edges.Where(
@@ -93,7 +93,7 @@
                 {
                     // Visit the CF resource gathering all intrinsics that might imply reference to another resource or input
                     var intrinsicVisitorContext = new IntrinsicVisitorContext(
-                        this.cloudFormationResources,
+                        this.settings,
                         this.terraformResources,
                         this.inputs,
                         cloudFormationResource,

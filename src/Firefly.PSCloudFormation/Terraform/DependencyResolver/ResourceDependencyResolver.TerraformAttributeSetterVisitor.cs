@@ -377,6 +377,7 @@
                     case IntrinsicType.GetAtt:
                     case IntrinsicType.Join:
                     case IntrinsicType.Sub:
+                    case IntrinsicType.ImportValue:
 
                         context.Modifications.Add(
                             new StateModification(

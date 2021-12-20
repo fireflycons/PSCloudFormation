@@ -546,7 +546,7 @@
             this.logger.LogInformation("\nResolving dependencies between resources...");
 
             var resolver = new ResourceDependencyResolver(
-                this.settings.Resources,
+                this.settings,
                 stateFile.Resources,
                 parameters,
                 this.warnings);

@@ -185,6 +185,11 @@
             private readonly IList<string> warnings;
 
             /// <summary>
+            /// The settings
+            /// </summary>
+            private readonly ITerraformSettings settings;
+
+            /// <summary>
             /// The intrinsic whose properties are currently being examined
             /// </summary>
             private IntrinsicInfo currentIntrinsicInfo;
@@ -204,24 +209,24 @@
             /// <summary>
             /// Initializes a new instance of the <see cref="IntrinsicVisitorContext"/> class.
             /// </summary>
-            /// <param name="cloudFormationResources">All parsed CloudFormation resources.</param>
+            /// <param name="settings">Main settings object.</param>
             /// <param name="terraformResources">All imported terraform resources.</param>
             /// <param name="inputs">All generated input variables.</param>
             /// <param name="resource">The CLoudFormation resource being visited.</param>
             /// <param name="warnings">The warnings collection.</param>
             public IntrinsicVisitorContext(
-                IReadOnlyCollection<CloudFormationResource> cloudFormationResources,
+                ITerraformSettings settings,
                 IReadOnlyCollection<StateFileResourceDeclaration> terraformResources,
                 IList<InputVariable> inputs,
                 IResource resource,
                 IList<string> warnings)
             {
+                this.settings = settings;
                 this.currentCloudFormationResource = resource;
                 this.warnings = warnings;
-                this.CloudFormationResources = cloudFormationResources;
                 this.TerraformResources = terraformResources;
                 this.Inputs = inputs;
-                this.template = cloudFormationResources.First().TemplateResource.Template;
+                this.template = settings.Template;
             }
 
             /// <summary>
@@ -235,7 +240,7 @@
             /// <summary>
             /// Gets all CloudFormation resources read from stack
             /// </summary>
-            private IReadOnlyCollection<CloudFormationResource> CloudFormationResources { get; }
+            private IEnumerable<CloudFormationResource> CloudFormationResources => this.settings.Resources;
 
             /// <summary>
             /// Gets all current CloudFormation parameters with values expressed as terraform input variables.
@@ -387,6 +392,10 @@
                             null,
                             intrinsic.Evaluate(this.template));
 
+                    case IntrinsicType.ImportValue:
+
+                        return this.ProcessImportValue((ImportValueIntrinsic)intrinsic, currentPath);
+
                     default:
 
                         throw new UnreferenceableIntrinsicWarning(
@@ -397,9 +406,9 @@
             }
 
             /// <summary>
-            /// Creates an <see cref="IntrinsicInfo"/> for a !GetAtt intrinsic.
+            /// Creates an <see cref="IntrinsicInfo"/> for a <c>!GetAtt</c> intrinsic.
             /// </summary>
-            /// <param name="getAttIntrinsic">The !GetAtt intrinsic.</param>
+            /// <param name="getAttIntrinsic">The <c>!GetAtt</c> intrinsic.</param>
             /// <param name="currentPath">The current path.</param>
             /// <returns>An <see cref="IntrinsicInfo"/></returns>
             private IntrinsicInfo ProcessGetAtt(GetAttIntrinsic getAttIntrinsic, PropertyPath currentPath)
@@ -483,7 +492,7 @@
                     evaluation = context.Value;
                 }
 
-                return new IntrinsicInfo(currentPath.Clone(), getAttIntrinsic, targetResourceSummary, evaluation);
+                return new IntrinsicInfo(currentPath, getAttIntrinsic, targetResourceSummary, evaluation);
             }
 
             /// <summary>
@@ -536,7 +545,32 @@
 
                 evaluation = cloudFormationResource.PhysicalResourceId;
 
-                return new IntrinsicInfo(currentPath.Clone(), refIntrinsic, targetResourceSummary, evaluation);
+                return new IntrinsicInfo(currentPath, refIntrinsic, targetResourceSummary, evaluation);
+            }
+
+            /// <summary>
+            /// Creates an <see cref="IntrinsicInfo"/> for an ImportValue intrinsic.
+            /// </summary>
+            /// <param name="importValueIntrinsic">The import value intrinsic.</param>
+            /// <param name="currentPath">The current path.</param>
+            /// <returns>An <see cref="IntrinsicInfo"/></returns>
+            private IntrinsicInfo ProcessImportValue(
+                ImportValueIntrinsic importValueIntrinsic,
+                PropertyPath currentPath)
+            {
+                // Evaluation will be the name of the export
+                var target = importValueIntrinsic.Evaluate(this.template).ToString();
+                var export = this.settings.StackExports.FirstOrDefault(e => e.Name == target);
+
+                if (export == null)
+                {
+                    throw new MissingExportWarning(
+                        importValueIntrinsic,
+                        this.currentCloudFormationResource,
+                        currentPath);
+                }
+
+                return new IntrinsicInfo(currentPath, importValueIntrinsic, null, export.Value);
             }
         }
     }
