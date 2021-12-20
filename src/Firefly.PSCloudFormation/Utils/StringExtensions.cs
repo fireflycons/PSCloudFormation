@@ -3,6 +3,8 @@
     using System.Linq;
     using System.Text.RegularExpressions;
 
+    using Amazon.CloudFormation.Model.Internal.MarshallTransformations;
+
     internal static class StringExtensions
     {
         /// <summary>
@@ -62,6 +64,26 @@
             var rx = new Regex(pattern.Replace(".", @"\.").Replace("*", ".*"));
 
             return rx.IsMatch(self);
+        }
+
+        /// <summary>
+        /// Quotes the specified self.
+        /// </summary>
+        /// <param name="self">The self.</param>
+        /// <returns>Double quoted copy of the string.</returns>
+        public static string Quote(this string self)
+        {
+            if (self == null)
+            {
+                return null;
+            }
+
+            if (self.StartsWith("\"") && self.EndsWith("\""))
+            {
+                return self;
+            }
+
+            return $"\"{self}\"";
         }
     }
 }

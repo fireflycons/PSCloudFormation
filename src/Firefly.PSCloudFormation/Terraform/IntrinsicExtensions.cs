@@ -28,10 +28,10 @@
         private static readonly Dictionary<string, Reference> PseudoParameterToDataBlock =
             new Dictionary<string, Reference>
                 {
-                    { "AWS::Region", new DataSourceReference("aws_region", "current", "name") },
-                    { "AWS::AccountId", new DataSourceReference("aws_caller_identity", "current", "account_id") },
-                    { "AWS::Partition", new DataSourceReference("aws_partition", "partition", "partition") },
-                    { "AWS::URLSuffix", new DataSourceReference("aws_partition", "url_suffix", "dns_suffix") }
+                    { "AWS::Region", new DataSourceReference("aws_region", "current", "name", true) },
+                    { "AWS::AccountId", new DataSourceReference("aws_caller_identity", "current", "account_id", true) },
+                    { "AWS::Partition", new DataSourceReference("aws_partition", "partition", "partition", true) },
+                    { "AWS::URLSuffix", new DataSourceReference("aws_partition", "url_suffix", "dns_suffix", true) }
                 };
 
         /// <summary>
@@ -250,7 +250,7 @@
             int index)
         {
             // This is only going to work against the provider's region
-            return new DataSourceReference("aws_availability_zones", "available", $"names[{index}]");
+            return new DataSourceReference("aws_availability_zones", "available", $"names[{index}]", false);
         }
 
         /// <summary>
@@ -292,7 +292,7 @@
                     {
                         if (param.IsSsmParameter)
                         {
-                            return new DataSourceReference("aws_ssm_parameter", refIntrinsic.Reference, "value");
+                            return new DataSourceReference("aws_ssm_parameter", refIntrinsic.Reference, "value", true);
                         }
 
                         return index < 0

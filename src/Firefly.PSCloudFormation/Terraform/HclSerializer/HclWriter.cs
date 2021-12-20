@@ -60,7 +60,9 @@
         /// </summary>
         private readonly IList<string> warnings;
 
-        // The error list
+        /// <summary>
+        /// The error list
+        /// </summary>
         private readonly IList<string> errors;
 
         /// <summary>
@@ -88,7 +90,7 @@
         public int Serialize(
             StateFile stateFile,
             IReadOnlyCollection<ResourceMapping> importedResources,
-            IReadOnlyCollection<InputVariable> parameters)
+            IList<InputVariable> parameters)
         {
             this.WriteMain(importedResources, parameters, stateFile);
             this.WriteTfVars(parameters);
@@ -263,12 +265,6 @@
             {
                 writer.WriteLine(param.GenerateHcl(true));
             }
-
-            // Emit an aws_availability_zones block for any GetAZs
-            writer.WriteLine("data \"aws_availability_zones\" \"available\" {");
-            writer.WriteLine("  state = \"available\"");
-            writer.WriteLine("}");
-            writer.WriteLine();
         }
 
         /// <summary>
@@ -529,7 +525,7 @@
         /// <param name="importedResources">The imported resources.</param>
         private void ResolveResourceDependencies(
             StateFile stateFile,
-            IReadOnlyCollection<InputVariable> parameters,
+            IList<InputVariable> parameters,
             IEnumerable<ResourceMapping> importedResources)
         {
             this.logger.LogInformation("\nResolving dependencies between resources...");
@@ -564,7 +560,7 @@
         /// <param name="stateFile">The state file.</param>
         private void WriteMain(
             IReadOnlyCollection<ResourceMapping> importedResources,
-            IReadOnlyCollection<InputVariable> parameters,
+            IList<InputVariable> parameters,
             StateFile stateFile)
         {
             this.logger.LogInformation($"Writing {MainScriptFile}");
@@ -576,11 +572,11 @@
                 FileAccess.Write))
             using (var writer = new StreamWriter(stream, new UTF8Encoding(false)))
             {
+                this.ResolveLambdaCode(writer, stateFile, importedResources);
+                this.ResolveResourceDependencies(stateFile, parameters, importedResources);
                 this.WriteProviders(writer);
                 WriteInputsAndDataBlocks(writer, parameters);
                 this.WriteLocalsAndMappings(writer);
-                this.ResolveLambdaCode(writer, stateFile, importedResources);
-                this.ResolveResourceDependencies(stateFile, parameters, importedResources);
                 WriteResources(writer, stateFile);
                 WriteOutputs(writer, this.ResolveOutputDependencies(importedResources));
             }

@@ -21,7 +21,7 @@
         [Fact]
         public void DataSourceReferenceCanBeEncodedAndDecoded()
         {
-            var reference = new DataSourceReference("aws_region", "current", "name");
+            var reference = new DataSourceReference("aws_region", "current", "name", true);
             var jtoken = JObject.Parse(json);
 
             var property = (JProperty)jtoken.SelectToken("Property")?.Parent;

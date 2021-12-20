@@ -22,6 +22,7 @@
         {
         }
 
+        /// <inheritdoc />
         public override bool IsDataSource => true;
 
         /// <inheritdoc />

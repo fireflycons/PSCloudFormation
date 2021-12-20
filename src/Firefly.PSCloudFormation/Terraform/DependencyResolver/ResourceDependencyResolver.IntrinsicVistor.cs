@@ -212,7 +212,7 @@
             public IntrinsicVisitorContext(
                 IReadOnlyCollection<CloudFormationResource> cloudFormationResources,
                 IReadOnlyCollection<StateFileResourceDeclaration> terraformResources,
-                IReadOnlyCollection<InputVariable> inputs,
+                IList<InputVariable> inputs,
                 IResource resource,
                 IList<string> warnings)
             {
@@ -240,7 +240,7 @@
             /// <summary>
             /// Gets all current CloudFormation parameters with values expressed as terraform input variables.
             /// </summary>
-            private IReadOnlyCollection<InputVariable> Inputs { get; }
+            private IList<InputVariable> Inputs { get; }
 
             /// <summary>
             /// Gets all terraform resources read from state file

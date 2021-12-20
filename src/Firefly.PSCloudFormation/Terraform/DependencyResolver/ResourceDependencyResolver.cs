@@ -27,7 +27,7 @@
         /// <summary>
         /// All input variables generated from the exported CloudFormation Stack.
         /// </summary>
-        private readonly IReadOnlyCollection<InputVariable> inputs;
+        private readonly IList<InputVariable> inputs;
 
         /// <summary>
         /// Reference to the parsed CloudFormation template
@@ -59,7 +59,7 @@
         public ResourceDependencyResolver(
             IReadOnlyCollection<CloudFormationResource> cloudFormationResources,
             IReadOnlyCollection<StateFileResourceDeclaration> terraformResources,
-            IReadOnlyCollection<InputVariable> inputs,
+            IList<InputVariable> inputs,
             IList<string> warnings)
         {
             this.warnings = warnings;
@@ -110,7 +110,8 @@
                 var dependencyContext = new TerraformAttributeSetterContext(
                     referenceLocations,
                     this.template,
-                    terraformStateFileResource);
+                    terraformStateFileResource,
+                    this.inputs);
 
                 terraformStateFileResource.StateFileResourceInstance.Attributes.Accept(
                     new TerraformAttributeSetterVisitor(),

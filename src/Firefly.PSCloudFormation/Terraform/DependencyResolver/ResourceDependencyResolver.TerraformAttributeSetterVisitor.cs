@@ -3,9 +3,11 @@
     using System;
     using System.Collections.Generic;
     using System.Linq;
+    using System.Runtime.CompilerServices;
 
     using Firefly.CloudFormationParser;
     using Firefly.CloudFormationParser.Intrinsics;
+    using Firefly.PSCloudFormation.Terraform.Hcl;
     using Firefly.PSCloudFormation.Terraform.HclSerializer;
     using Firefly.PSCloudFormation.Terraform.HclSerializer.Traits;
     using Firefly.PSCloudFormation.Terraform.State;
@@ -105,16 +107,27 @@
             /// <param name="intrinsicInfo">The intrinsic information.</param>
             /// <param name="template">Reference to parsed CloudFormation template.</param>
             /// <param name="resource">Reference to resource being updated.</param>
+            /// <param name="inputs">The list of input variables and data sources.</param>
             public TerraformAttributeSetterContext(
                 IReadOnlyCollection<IntrinsicInfo> intrinsicInfo,
                 ITemplate template,
-                StateFileResourceDeclaration resource)
+                StateFileResourceDeclaration resource,
+                IList<InputVariable> inputs)
             {
                 this.Template = template;
                 this.IntrinsicInfos = intrinsicInfo;
                 this.Resource = resource;
                 this.ResourceTraits = ResourceTraitsCollection.Get(resource.Type);
+                this.Inputs = inputs;
             }
+
+            /// <summary>
+            /// Gets the inputs.
+            /// </summary>
+            /// <value>
+            /// The inputs.
+            /// </value>
+            public IList<InputVariable> Inputs { get; }
 
             /// <summary>
             /// Gets the containing property if this modification is within nested JSON, e.g. a policy document.
@@ -365,12 +378,22 @@
                     case IntrinsicType.Join:
                     case IntrinsicType.Sub:
 
+                        var reference = intrinsic.Render(context.Template, intrinsicInfo.TargetResource);
+
+                        if (reference is DataSourceReference ds && !ds.IsParameter)
+                        {
+                            if (!context.Inputs.Any(i => i.IsDataSource && i.Address == ds.BlockAddress))
+                            {
+                                context.Inputs.Add(new DataSourceInput(ds.Type, ds.Name));
+                            }
+                        }
+
                         context.Modifications.Add(
                             new StateModification(
                                 jsonValue,
                                 context.Index,
                                 context.ContainingProperty,
-                                intrinsic.Render(context.Template, intrinsicInfo.TargetResource)));
+                                reference));
                         break;
                 }
             }
