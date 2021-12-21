@@ -2,6 +2,7 @@
 {
     using System.Collections.Generic;
 
+    using Amazon.CloudFormation;
     using Amazon.CloudFormation.Model;
 
     using Firefly.CloudFormationParser;
@@ -13,16 +14,25 @@
     internal class TerraformSettings : ITerraformSettings
     {
         /// <inheritdoc />
+        public bool AddDefaultTag { get; set; }
+
+        /// <inheritdoc />
         public string AwsAccountId { get; set; }
 
         /// <inheritdoc />
         public string AwsRegion { get; set; }
 
         /// <inheritdoc />
-        public IReadOnlyCollection<CloudFormationResource> Resources { get; set;  }
+        public IAmazonCloudFormation CloudFormationClient { get; set; }
+
+        /// <inheritdoc />
+        public IReadOnlyCollection<CloudFormationResource> Resources { get; set; }
 
         /// <inheritdoc />
         public ITerraformRunner Runner { get; set; }
+
+        /// <inheritdoc />
+        public IReadOnlyCollection<Export> StackExports { get; set; }
 
         /// <inheritdoc />
         public string StackName { get; set; }
@@ -32,11 +42,5 @@
 
         /// <inheritdoc />
         public string WorkspaceDirectory { get; set; }
-
-        /// <inheritdoc />
-        public IReadOnlyCollection<Export> StackExports { get; set;  }
-
-        /// <inheritdoc />
-        public bool AddDefaultTag { get; set; }
     }
 }

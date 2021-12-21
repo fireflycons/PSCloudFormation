@@ -234,7 +234,7 @@
             {
                 case IIntrinsic intrinsic:
 
-                    newJToken = IntrinsicExtensions.Render(intrinsic, template, resourceMapping, inputs).ToJConstructor();
+                    newJToken = intrinsic.Render(template, resourceMapping, inputs).ToJConstructor();
                     break;
 
                 case Reference reference:

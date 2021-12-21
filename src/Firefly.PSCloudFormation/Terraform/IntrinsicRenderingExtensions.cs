@@ -10,6 +10,7 @@
     using Firefly.CloudFormationParser.Intrinsics;
     using Firefly.CloudFormationParser.Intrinsics.Abstractions;
     using Firefly.CloudFormationParser.Intrinsics.Functions;
+    using Firefly.PSCloudFormation.Terraform.DependencyResolver;
     using Firefly.PSCloudFormation.Terraform.Hcl;
     using Firefly.PSCloudFormation.Terraform.HclSerializer.Traits;
     using Firefly.PSCloudFormation.Terraform.State;
@@ -20,7 +21,7 @@
     /// </summary>
     [SuppressMessage("StyleCop.CSharp.DocumentationRules", "SA1650:ElementDocumentationMustBeSpelledCorrectly", Justification = "Reviewed. Suppression is OK here.")]
     // ReSharper disable once UnusedMember.Global
-    internal static class IntrinsicExtensions
+    internal static class IntrinsicRenderingExtensions
     {
         /// <summary>
         /// Maps supported pseudo-parameters by name to <see cref="DataSourceReference"/>.
@@ -294,6 +295,7 @@
         /// <param name="template">The template.</param>
         /// <param name="inputs">The list of input variables and data sources.</param>
         /// <returns>A <see cref="DataSourceReference"/> to <c>aws_cloudformation_export</c></returns>
+        // ReSharper disable once SuggestBaseTypeForParameter - want this to be explicit.
         private static Reference Render(ImportValueIntrinsic importValueIntrinsic, ITemplate template, IList<InputVariable> inputs)
         {
             var exportName = importValueIntrinsic.Evaluate(template).ToString();
@@ -359,6 +361,11 @@
                                    : new InputVariableReference(refIntrinsic.Reference, index);
                     }
 
+                    if (refIntrinsic.ExtraData is IntrinsicInfo intrinsicInfo)
+                    {
+                        resource = intrinsicInfo.TargetResource;
+                    }
+
                     if (resource != null && template.Resources.Any(r => r.Name == resource.LogicalId))
                     {
                         return new DirectReference(resource.Address);
@@ -416,11 +423,25 @@
                 attributeName = getAttIntrinsic.AttributeName.ToString();
             }
 
-            var traits = ResourceTraitsCollection.Get(resource.TerraformType);
+            // Edge case. When the GetAtt is for an output of a referenced aws_cloudformation_stack
+            // then just re-case "Outputs"
+            if (attributeName.StartsWith("Outputs."))
+            {
+                attributeName = attributeName.Replace("Outputs.", "outputs.");
+            }
+            else
+            {
+                var traits = ResourceTraitsCollection.Get(resource.TerraformType);
 
-            attributeName = traits.AttributeMap.ContainsKey(attributeName)
-                                ? traits.AttributeMap[attributeName]
-                                : attributeName.CamelCaseToSnakeCase();
+                attributeName = traits.AttributeMap.ContainsKey(attributeName)
+                                    ? traits.AttributeMap[attributeName]
+                                    : attributeName.CamelCaseToSnakeCase();
+            }
+
+            if (getAttIntrinsic.ExtraData is IntrinsicInfo intrinsicInfo)
+            {
+                resource = intrinsicInfo.TargetResource;
+            }
 
             return template.Resources.Any(r => r.Name == resource.LogicalId)
                        ? new IndirectReference($"{resource.Address}.{attributeName}")
@@ -523,7 +544,7 @@
             foreach (var nestedIntrinsic in subIntrinsic.ImplicitReferences.Cast<IReferenceIntrinsic>())
             {
                 // Try to render to an HCL expression
-                var reference = Render((IIntrinsic)nestedIntrinsic, template, resource, inputs);
+                var reference = Render(nestedIntrinsic, template, resource, inputs);
 
                 if (reference == null)
                 {

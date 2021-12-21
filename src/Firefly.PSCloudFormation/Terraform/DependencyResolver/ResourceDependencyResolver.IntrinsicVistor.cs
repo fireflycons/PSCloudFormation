@@ -2,7 +2,6 @@
 {
     using System;
     using System.Collections.Generic;
-    using System.Diagnostics;
     using System.Linq;
 
     using Firefly.CloudFormationParser;
@@ -24,83 +23,10 @@
     internal partial class ResourceDependencyResolver
     {
         /// <summary>
-        /// Object to store intrinsic functions extracted by visiting the CloudFormation resource object
-        /// </summary>
-        [DebuggerDisplay("{PropertyPath.Path}: {Intrinsic}")]
-        internal class IntrinsicInfo
-        {
-            protected IIntrinsic intrinsic;
-
-            protected object evaluation;
-
-            protected ResourceMapping targetResource;
-
-            /// <summary>
-            /// Initializes a new instance of the <see cref="IntrinsicInfo"/> class.
-            /// </summary>
-            /// <param name="propertyPath">The property path.</param>
-            /// <param name="intrinsic">The intrinsic.</param>
-            /// <param name="resourceMapping">Summary info of the resource targeted by this intrinsic.</param>
-            /// <param name="evaluation">The evaluation.</param>
-            public IntrinsicInfo(
-                PropertyPath propertyPath,
-                IIntrinsic intrinsic,
-                ResourceMapping resourceMapping,
-                object evaluation)
-            {
-                this.targetResource = resourceMapping;
-                this.intrinsic = intrinsic;
-                this.PropertyPath = propertyPath.Clone();
-                this.evaluation = evaluation;
-            }
-
-            /// <summary>
-            /// Gets the evaluation.
-            /// </summary>
-            /// <value>
-            /// The evaluation.
-            /// </value>
-            public virtual object Evaluation => this.evaluation;
-
-            /// <summary>
-            /// Gets the intrinsic.
-            /// </summary>
-            /// <value>
-            /// The intrinsic.
-            /// </value>
-            public virtual IIntrinsic Intrinsic => this.intrinsic;
-
-            /// <summary>
-            /// Gets the list of nested intrinsic
-            /// </summary>
-            /// <value>
-            /// The list of nested intrinsic.
-            /// </value>
-            // ReSharper disable once CollectionNeverQueried.Local - Really only here for use when debugging to see what was read.
-            public IList<IntrinsicInfo> NestedIntrinsics { get; } = new List<IntrinsicInfo>();
-
-            /// <summary>
-            /// Gets the property path.
-            /// </summary>
-            /// <value>
-            /// The property path.
-            /// </value>
-            public PropertyPath PropertyPath { get; }
-
-            /// <summary>
-            /// Gets the summary info of the resource targeted by this intrinsic.
-            /// </summary>
-            /// <value>
-            /// The targeted resource. Will be <c>null</c> when reference is not to a resource.
-            /// </value>
-            public virtual ResourceMapping TargetResource => this.targetResource;
-        }
-
-        /// <summary>
         /// Special case for !If. We don't process it directly, instead handing off to the first function in the
         /// branch selected by prevailing conditions.
         /// </summary>
-        /// <seealso cref="Firefly.PSCloudFormation.Terraform.DependencyResolver.ResourceDependencyResolver.IntrinsicInfo" />
+        /// <seealso cref="IntrinsicInfo" />
         public class IfIntrinsicInfo : IntrinsicInfo
         {
             /// <summary>
@@ -121,7 +47,7 @@
 
             /// <inheritdoc />
             public override object Evaluation =>
-                this.NestedIntrinsics.Any() ? this.NestedIntrinsics.First().Evaluation : this.evaluation;
+                this.NestedIntrinsics.Any() ? this.NestedIntrinsics.First().Evaluation : this.InitialEvaluation;
 
             /// <inheritdoc />
             public override IIntrinsic Intrinsic => this.NestedIntrinsics.Any() ? this.NestedIntrinsics.First().Intrinsic : this.intrinsic;
@@ -454,7 +380,25 @@
                 if (traits.AttributeMap.ContainsKey(attribute))
                 {
                     var token = referencedResource.Attributes[traits.AttributeMap[attribute]];
+                    evaluation = GetEvaluation(token);
+                }
+                else if (attribute.StartsWith("Outputs."))
+                {
+                    // Nested stack output reference
+                    var token = referencedResource.Attributes.SelectToken(attribute.Replace("Outputs.", "outputs."));
+                    evaluation = GetEvaluation(token);
+                }
+                else
+                {
+                    var context = new TerraformAttributeGetterContext(attribute);
+                    referencedResource.Attributes.Accept(new TerraformAttributeGetterVisitor(), context);
+                    evaluation = context.Value;
+                }
 
+                return new IntrinsicInfo(currentPath, getAttIntrinsic, targetResourceSummary, evaluation);
+
+                object GetEvaluation(JToken token)
+                {
                     if (token is JValue jv)
                     {
                         switch (jv.Type)
@@ -477,22 +421,17 @@
 
                             default:
 
-                                throw new InvalidOperationException($"Unexpected JValue type: {jv.Type} while processing {getAttIntrinsic}");
+                                throw new InvalidOperationException(
+                                    $"Unexpected JValue type: {jv.Type} while processing {getAttIntrinsic}");
                         }
                     }
                     else
                     {
                         throw new InvalidOperationException($"Unexpected JToken type: {token.Type} while processing {getAttIntrinsic}");
                     }
-                }
-                else
-                {
-                    var context = new TerraformAttributeGetterContext(attribute);
-                    referencedResource.Attributes.Accept(new TerraformAttributeGetterVisitor(), context);
-                    evaluation = context.Value;
-                }
 
-                return new IntrinsicInfo(currentPath, getAttIntrinsic, targetResourceSummary, evaluation);
+                    return evaluation;
+                }
             }
 
             /// <summary>

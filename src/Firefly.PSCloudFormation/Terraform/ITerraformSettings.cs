@@ -2,6 +2,7 @@
 {
     using System.Collections.Generic;
 
+    using Amazon.CloudFormation;
     using Amazon.CloudFormation.Model;
 
     using Firefly.CloudFormationParser;
@@ -11,6 +12,14 @@
     /// </summary>
     internal interface ITerraformSettings
     {
+        /// <summary>
+        /// Gets a value indicating whether to add the <c>terraform:stack_name</c> default tag to all resources.
+        /// </summary>
+        /// <value>
+        ///   <c>true</c> if [add default tag]; otherwise, <c>false</c>.
+        /// </value>
+        bool AddDefaultTag { get; }
+
         /// <summary>
         /// Gets the AWS account identifier.
         /// </summary>
@@ -28,6 +37,14 @@
         string AwsRegion { get; }
 
         /// <summary>
+        /// Gets the cloud formation client.
+        /// </summary>
+        /// <value>
+        /// The cloud formation client.
+        /// </value>
+        IAmazonCloudFormation CloudFormationClient { get; }
+
+        /// <summary>
         /// Gets the resources.
         /// </summary>
         /// <value>
@@ -42,6 +59,14 @@
         /// The runner.
         /// </value>
         ITerraformRunner Runner { get; }
+
+        /// <summary>
+        /// Gets the list of stack exports for use when evaluating <c>Fn::Import</c>
+        /// </summary>
+        /// <value>
+        /// The stack exports.
+        /// </value>
+        IReadOnlyCollection<Export> StackExports { get; }
 
         /// <summary>
         /// Gets the name of the stack being exported.
@@ -66,21 +91,5 @@
         /// The workspace directory.
         /// </value>
         string WorkspaceDirectory { get; }
-
-        /// <summary>
-        /// Gets the list of stack exports for use when evaluating <c>Fn::Import</c>
-        /// </summary>
-        /// <value>
-        /// The stack exports.
-        /// </value>
-        IReadOnlyCollection<Export> StackExports { get; }
-
-        /// <summary>
-        /// Gets a value indicating whether to add the <c>terraform:stack_name</c> default tag to all resources.
-        /// </summary>
-        /// <value>
-        ///   <c>true</c> if [add default tag]; otherwise, <c>false</c>.
-        /// </value>
-        bool AddDefaultTag { get; }
     }
 }

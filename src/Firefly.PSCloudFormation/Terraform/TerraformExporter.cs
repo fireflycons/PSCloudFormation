@@ -6,6 +6,9 @@
     using System.IO;
     using System.Linq;
     using System.Text;
+    using System.Threading.Tasks;
+
+    using Amazon.CloudFormation.Model;
 
     using Firefly.CloudFormation;
     using Firefly.CloudFormationParser.TemplateObjects;
@@ -16,6 +19,7 @@
     using Firefly.PSCloudFormation.Terraform.State;
 
     using Newtonsoft.Json;
+    using Newtonsoft.Json.Linq;
 
     internal class TerraformExporter : AutoResourceLoader
     {
@@ -84,7 +88,8 @@
         /// <summary>
         /// Performs Terraform export.
         /// </summary>
-        public void Export()
+        /// <returns><c>true</c> if resources were imported; else <c>false</c></returns>
+        public async Task<bool> Export()
         {
             var initialHcl = new StringBuilder();
 
@@ -104,7 +109,7 @@
             if (!resourcesToImport.Any())
             {
                 this.logger.LogWarning("No resources were found that could be imported.");
-                return;
+                return false;
             }
 
             var cwd = Directory.GetCurrentDirectory();
@@ -117,6 +122,8 @@
 
                 //var importedResources = resourcesToImport.Where(r => r.AwsType != "AWS::SecretsManager::SecretTargetAttachment" && !UnsupportedResources.Contains(r.AwsType)).ToList();
                 var importedResources = this.ImportResources(resourcesToImport);
+
+                await this.FixCloudFormationStacksAsync(importedResources);
 
                 // Copy of the state file that we will insert references to inputs, other resources etc. before serialization to HCL.
                 var stateFile = JsonConvert.DeserializeObject<StateFile>(File.ReadAllText(StateFileName));
@@ -150,6 +157,8 @@
                 this.WriteSummary(terraformExecutionErrorCount, warningCount);
                 Directory.SetCurrentDirectory(cwd);
             }
+
+            return true;
         }
 
         /// <summary>
@@ -252,6 +261,62 @@
             }
 
             return importedResources;
+        }
+
+        /// <summary>
+        /// Fixes the imported <c>aws_cloudformation_stack</c> resources by replacing the imported template body with the S3 URL in external state.
+        /// </summary>
+        /// <param name="importedResources">List of imported resources</param>
+        /// <returns>Task to await.</returns>
+        private async Task FixCloudFormationStacksAsync(IEnumerable<ResourceMapping> importedResources)
+        {
+            var changes = new List<StateFileModification>();
+
+            foreach (var importedResource in importedResources.Where(r => r.TerraformType == "aws_cloudformation_stack"))
+            {
+                // ReSharper disable once StyleCop.SA1305
+                var s3Url = this.settings.Resources.FirstOrDefault(r => r.LogicalResourceId == importedResource.LogicalId)
+                    ?.TemplateResource.GetResourcePropertyValue("TemplateURL");
+
+                if (s3Url == null)
+                {
+                    continue;
+                }
+
+                // Set template URL
+                changes.Add(new StateFileModification(importedResource.LogicalId, "$.template_url", new JValue(s3Url.ToString())));
+
+                // Clear template body
+                changes.Add(
+                    new StateFileModification(importedResource.LogicalId, "$.template_body", JValue.CreateNull()));
+
+                // Retrieve parameters for stack
+                var parameters =
+                    (await this.settings.CloudFormationClient.DescribeStacksAsync(
+                         new DescribeStacksRequest { StackName = importedResource.PhysicalId })).Stacks.First()
+                    .Parameters;
+
+                if (!parameters.Any())
+                {
+                    continue;
+                }
+
+                var parameterBlock = new JObject();
+
+                foreach (var parameter in parameters)
+                {
+                    // AWS List<> types must be string JValues here, i.e. comma separated,
+                    // thus no requirement to assess parameter types and create a JArray.
+                    parameterBlock[parameter.ParameterKey] = parameter.ParameterValue;
+                }
+
+                changes.Add(new StateFileModification(importedResource.LogicalId, "$.parameters", parameterBlock));
+            }
+
+            if (changes.Count > 0)
+            {
+                await StateFile.UpdateExternalStateFileAsync(changes);
+            }
         }
 
         /// <summary>

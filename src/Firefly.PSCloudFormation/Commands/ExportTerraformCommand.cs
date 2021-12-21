@@ -216,10 +216,13 @@
                                        StackName = this.StackName,
                                        Template = template,
                                        WorkspaceDirectory = this.ResolvedWorkspaceDirectory,
-                                       AddDefaultTag = this.WithDefaultTag
+                                       AddDefaultTag = this.WithDefaultTag,
+                                       CloudFormationClient = client
                                    };
 
-                new TerraformExporter(settings, this.Logger).Export();
+                var exporter = new TerraformExporter(settings, this.Logger);
+                    
+                await exporter.Export();
             }
 
             return new CloudFormationResult();

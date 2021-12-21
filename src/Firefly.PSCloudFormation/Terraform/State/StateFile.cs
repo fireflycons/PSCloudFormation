@@ -3,15 +3,31 @@
     using System;
     using System.Collections.Generic;
     using System.IO;
+    using System.Linq;
     using System.Text;
+    using System.Text.RegularExpressions;
+    using System.Threading.Tasks;
+
+    using Firefly.PSCloudFormation.Utils;
 
     using Newtonsoft.Json;
+    using Newtonsoft.Json.Linq;
 
     /// <summary>
     /// Deserialization of the Terraform state file
     /// </summary>
     internal class StateFile
     {
+        /// <summary>
+        /// The state file name
+        /// </summary>
+        private const string StateFileName = "terraform.tfstate";
+
+        /// <summary>
+        /// Regex to find last index on a JSON path
+        /// </summary>
+        private static readonly Regex IndexRegex = new Regex(@"\[(?<index>\d+)\]$");
+
         /// <summary>
         /// The serial number
         /// </summary>
@@ -68,10 +84,69 @@
         public int Version { get; set; }
 
         /// <summary>
+        /// Updates the external state file (i.e. <c>terraform.tfstate</c>).
+        /// </summary>
+        /// <param name="changes">List of changes to make to state file.</param>
+        /// <remarks>
+        /// Assumes the working directory is set to the terraform workspace
+        /// </remarks>
+        /// <returns><c>true</c> if the state file was modified.</returns>
+        public static async Task<bool> UpdateExternalStateFileAsync(IEnumerable<StateFileModification> changes)
+        {
+            var stateFile = JsonConvert.DeserializeObject<StateFile>(await AsyncFileHelpers.ReadAllTextAsync(StateFileName));
+            var modified = false;
+
+            foreach (var change in changes)
+            {
+                var resource = stateFile.Resources.FirstOrDefault(r => r.Name == change.ResourceName);
+                var targetValue = resource?.Instances.First().Attributes.SelectToken(change.AttributePath);
+
+                if (targetValue == null)
+                {
+                    continue;
+                }
+
+                switch (targetValue.Parent)
+                {
+                    case JProperty jp:
+
+                        jp.Value = change.NewValue;
+                        modified = true;
+                        break;
+
+                    case JArray ja:
+                        {
+                            // Index is last indexer on the provided path
+                            var m = IndexRegex.Match(change.AttributePath);
+
+                            if (!m.Success)
+                            {
+                                return false;
+                            }
+
+                            var index = int.Parse(m.Groups["index"].Value);
+
+                            ja[index] = change.NewValue;
+                            modified = true;
+                            break;
+                        }
+                }
+            }
+
+            if (modified)
+            {
+                await stateFile.SaveAsync(StateFileName);
+            }
+
+            return modified;
+        }
+
+        /// <summary>
         /// Saves the state file to the specified path.
         /// </summary>
         /// <param name="path">The path.</param>
-        public void Save(string path)
+        /// <returns>Task to await.</returns>
+        public async Task SaveAsync(string path)
         {
             if (File.Exists(path))
             {
@@ -86,7 +161,7 @@
                 File.Delete(path);
             }
 
-            File.WriteAllText(path, JsonConvert.SerializeObject(this, Formatting.Indented), new UTF8Encoding(false));
+            await AsyncFileHelpers.WriteAllTextAsync(path, JsonConvert.SerializeObject(this, Formatting.Indented));
         }
     }
 }

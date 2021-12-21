@@ -120,6 +120,13 @@
         - - launch_template.#.id
           - launch_template.#.name
 
+- Group: CloudFormation
+  Resources:
+    - Resource: aws_cloudformation_stack
+      ComputedAttributes:
+        - outputs
+        - template_body
+
 - Group: CloudFront
   Resources:
     - Resource: aws_cloudfront_distribution
