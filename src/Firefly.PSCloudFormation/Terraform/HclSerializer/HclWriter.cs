@@ -46,11 +46,6 @@
         public const string VarsFile = "terraform.tfvars";
 
         /// <summary>
-        /// The logger
-        /// </summary>
-        private readonly ILogger logger;
-
-        /// <summary>
         /// The settings
         /// </summary>
         private readonly ITerraformExportSettings settings;
@@ -69,14 +64,12 @@
         /// Initializes a new instance of the <see cref="HclWriter"/> class.
         /// </summary>
         /// <param name="settings">The settings.</param>
-        /// <param name="logger">The logger.</param>
         /// <param name="warnings">Warning list</param>
         /// <param name="errors">Error list</param>
-        public HclWriter(ITerraformExportSettings settings, ILogger logger, IList<string> warnings, IList<string> errors)
+        public HclWriter(ITerraformExportSettings settings, IList<string> warnings, IList<string> errors)
         {
             this.errors = errors;
             this.warnings = warnings;
-            this.logger = logger;
             this.settings = settings;
         }
 
@@ -103,7 +96,7 @@
         /// <param name="cloudFormationResource">The cloud formation resource.</param>
         /// <param name="attributes">The attributes.</param>
         /// <param name="mapping">The mapping.</param>
-        /// <param name="inputs"></param>
+        /// <param name="inputs">The list of input variables and data sources.</param>
         /// <param name="codeDefinition">The code definition.</param>
         private static void ResolveLambdaS3Code(
             ITemplateObject cloudFormationResource,
@@ -153,7 +146,7 @@
         /// <param name="cloudFormationResource">The cloud formation resource.</param>
         /// <param name="attributes">The attributes.</param>
         /// <param name="mapping">The mapping.</param>
-        /// <param name="inputs"></param>
+        /// <param name="inputs">The list of input variables and data sources.</param>
         private static void ResolveLambdaZipCode(
             TextWriter writer,
             string runtime,
@@ -218,7 +211,7 @@
         /// <param name="template">The template.</param>
         /// <param name="attributes">The attributes.</param>
         /// <param name="resourceMapping">The resource mapping.</param>
-        /// <param name="inputs"></param>
+        /// <param name="inputs">The list of input variables and data sources.</param>
         /// <param name="newValue">The new value.</param>
         private static void UpdatePropertyValue(
             string key,
@@ -313,9 +306,9 @@
         {
             var validationOutput = new List<string>();
 
-            this.logger.LogInformation("Formatting output...");
+            this.settings.Logger.LogInformation("Formatting output...");
             this.settings.Runner.Run("fmt", true, true, msg => validationOutput.Add(msg));
-            this.logger.LogInformation("Validating output...");
+            this.settings.Logger.LogInformation("Validating output...");
             this.settings.Runner.Run("validate", true, true, msg => validationOutput.Add(msg));
             this.Plan();
 
@@ -331,7 +324,7 @@
             var destructiveChanges = 0;
             var totalChanges = 0;
 
-            this.logger.LogInformation("Planning...");
+            this.settings.Logger.LogInformation("Planning...");
             var success = this.settings.Runner.Run(
                 "plan",
                 false,
@@ -346,7 +339,7 @@
 
             if (totalChanges == 0)
             {
-                this.logger.LogInformation("No changes were detected by 'terraform plan', however the configuration should still be tested against a non-prod stack.");
+                this.settings.Logger.LogInformation("No changes were detected by 'terraform plan', however the configuration should still be tested against a non-prod stack.");
             }
 
             void LogChange(JObject planOutput)
@@ -378,14 +371,14 @@
                             case "destroy":
 
                                 var warn = $"Resource \"{addr}\" {PlanActions[action]}";
-                                this.logger.LogWarning(warn);
+                                this.settings.Logger.LogWarning(warn);
                                 this.warnings.Add(warn);
                                 ++destructiveChanges;
                                 break;
 
                             default:
 
-                                this.logger.LogInformation($"Resource \"{addr}\" {PlanActions[action]}");
+                                this.settings.Logger.LogInformation($"Resource \"{addr}\" {PlanActions[action]}");
                                 break;
                         }
 
@@ -400,12 +393,12 @@
 
                         if (severity == "error")
                         {
-                            this.logger.LogError("ERROR: " + msg);
+                            this.settings.Logger.LogError("ERROR: " + msg);
                             this.errors.Add(msg);
                         }
                         else
                         {
-                            this.logger.LogWarning(msg);
+                            this.settings.Logger.LogWarning(msg);
                             this.warnings.Add(msg);
                         }
 
@@ -429,7 +422,7 @@
         /// <param name="writer">The writer.</param>
         /// <param name="stateFile">The state file.</param>
         /// <param name="importedResources">The imported resources.</param>
-        /// <param name="inputs"></param>
+        /// <param name="inputs">The list of input variables and data sources.</param>
         private void ResolveLambdaCode(
             TextWriter writer,
             StateFile stateFile,
@@ -543,7 +536,7 @@
             IList<InputVariable> parameters,
             IEnumerable<ResourceMapping> importedResources)
         {
-            this.logger.LogInformation("\nResolving dependencies between resources...");
+            this.settings.Logger.LogInformation("\nResolving dependencies between resources...");
 
             var resolver = new ResourceDependencyResolver(
                 this.settings,
@@ -578,7 +571,7 @@
             IList<InputVariable> parameters,
             StateFile stateFile)
         {
-            this.logger.LogInformation($"Writing {MainScriptFile}");
+            this.settings.Logger.LogInformation($"Writing {MainScriptFile}");
 
             // Write main.tf
             using (var stream = new FileStream(
@@ -617,7 +610,7 @@
         /// <param name="parameters">The parameters.</param>
         private void WriteTfVars(IEnumerable<InputVariable> parameters)
         {
-            this.logger.LogInformation($"Writing {VarsFile}");
+            this.settings.Logger.LogInformation($"Writing {VarsFile}");
 
             using (var stream = new FileStream(
                 Path.Combine(this.settings.WorkspaceDirectory, VarsFile),

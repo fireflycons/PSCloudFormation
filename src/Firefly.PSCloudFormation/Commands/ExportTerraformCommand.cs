@@ -226,10 +226,11 @@
                                        WorkspaceDirectory = this.ResolvedWorkspaceDirectory,
                                        AddDefaultTag = this.WithDefaultTag,
                                        CloudFormationClient = client,
-                                       ExportNestedStacks = this.ExportNestedStacks
+                                       ExportNestedStacks = this.ExportNestedStacks,
+                                       Logger = this.Logger
                                    };
 
-                var exporter = new TerraformExporter(settings, this.Logger);
+                var exporter = new TerraformExporter(settings);
                     
                 await exporter.Export();
             }

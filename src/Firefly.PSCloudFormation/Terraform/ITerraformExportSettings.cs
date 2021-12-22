@@ -5,6 +5,7 @@
     using Amazon.CloudFormation;
     using Amazon.CloudFormation.Model;
 
+    using Firefly.CloudFormation;
     using Firefly.CloudFormationParser;
 
     /// <summary>
@@ -99,5 +100,13 @@
         /// The workspace directory.
         /// </value>
         string WorkspaceDirectory { get; }
+
+        /// <summary>
+        /// Gets the logger.
+        /// </summary>
+        /// <value>
+        /// The logger.
+        /// </value>
+        ILogger Logger { get; }
     }
 }

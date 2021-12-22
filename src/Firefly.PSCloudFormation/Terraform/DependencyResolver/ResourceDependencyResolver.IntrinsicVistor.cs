@@ -137,7 +137,7 @@
             /// </summary>
             /// <param name="settings">Main settings object.</param>
             /// <param name="terraformResources">All imported terraform resources.</param>
-            /// <param name="inputs">All generated input variables.</param>
+            /// <param name="inputs">The list of input variables and data sources.</param>
             /// <param name="resource">The CLoudFormation resource being visited.</param>
             /// <param name="warnings">The warnings collection.</param>
             public IntrinsicVisitorContext(

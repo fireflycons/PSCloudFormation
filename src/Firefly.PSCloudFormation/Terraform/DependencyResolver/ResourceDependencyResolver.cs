@@ -54,7 +54,7 @@
         /// </summary>
         /// <param name="settings">Main settings object.</param>
         /// <param name="terraformResources">All imported terraform resources (as JSON from state file).</param>
-        /// <param name="inputs">All input variables generated from the exported CloudFormation Stack.</param>
+        /// <param name="inputs">The list of input variables and data sources.</param>
         /// <param name="warnings">Global warning list.</param>
         public ResourceDependencyResolver(
             ITerraformExportSettings settings,

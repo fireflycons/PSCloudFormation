@@ -55,11 +55,6 @@
         private const string StateFileName = "terraform.tfstate";
 
         /// <summary>
-        /// The logger
-        /// </summary>
-        private readonly ILogger logger;
-
-        /// <summary>
         /// The export settings
         /// </summary>
         private readonly ITerraformExportSettings settings;
@@ -78,11 +73,9 @@
         /// Initializes a new instance of the <see cref="TerraformExporter"/> class.
         /// </summary>
         /// <param name="settings">The settings.</param>
-        /// <param name="logger">The logger.</param>
-        public TerraformExporter(ITerraformExportSettings settings, ILogger logger)
+        public TerraformExporter(ITerraformExportSettings settings)
         {
             this.settings = settings;
-            this.logger = logger;
         }
 
         /// <summary>
@@ -93,7 +86,7 @@
         {
             var initialHcl = new StringBuilder();
 
-            this.logger.LogInformation("\nInitializing inputs and resources...");
+            this.settings.Logger.LogInformation("\nInitializing inputs and resources...");
 
             var builder = new ConfigurationBlockBuilder().WithRegion(this.settings.AwsRegion)
                 .WithDefaultTag(this.settings.AddDefaultTag ? this.settings.StackName : null)
@@ -108,7 +101,7 @@
 
             if (!resourcesToImport.Any())
             {
-                this.logger.LogWarning("No resources were found that could be imported.");
+                this.settings.Logger.LogWarning("No resources were found that could be imported.");
                 return false;
             }
 
@@ -128,12 +121,12 @@
                 // Copy of the state file that we will insert references to inputs, other resources etc. before serialization to HCL.
                 var stateFile = JsonConvert.DeserializeObject<StateFile>(File.ReadAllText(StateFileName));
 
-                warningCount += new HclWriter(this.settings, this.logger, this.warnings, this.errors).Serialize(
+                warningCount += new HclWriter(this.settings, this.warnings, this.errors).Serialize(
                     stateFile,
                     importedResources,
                     parameters);
 
-                this.logger.LogInformation($"\nExport of stack \"{this.settings.StackName}\" to terraform complete!");
+                this.settings.Logger.LogInformation($"\nExport of stack \"{this.settings.StackName}\" to terraform complete!");
             }
             catch (TerraformRunnerException e)
             {
@@ -170,7 +163,7 @@
         /// <param name="initialHcl">Initial HCL to write to workspace</param>
         private void InitializeWorkspace(string initialHcl)
         {
-            this.logger.LogInformation("\nInitializing workspace...");
+            this.settings.Logger.LogInformation("\nInitializing workspace...");
 
             // Set up workspace directory
             if (!Directory.Exists(this.settings.WorkspaceDirectory))
@@ -201,7 +194,7 @@
             var importedResources = new List<ResourceMapping>();
             var totalResources = resourcesToImport.Count;
 
-            this.logger.LogInformation(
+            this.settings.Logger.LogInformation(
                 $"\nImporting {totalResources} mapped resources from stack \"{this.settings.StackName}\" to terraform state...");
             var imported = 0;
             
@@ -209,7 +202,7 @@
             {
                 var resourceToImport = resource.PhysicalId;
 
-                this.logger.LogInformation($"\nImporting resource {++imported}/{totalResources} - {resource.Address}");
+                this.settings.Logger.LogInformation($"\nImporting resource {++imported}/{totalResources} - {resource.Address}");
 
                 if (ResourceImporter.RequiresResourceImporter(resource.TerraformType))
                 {
@@ -217,7 +210,7 @@
                         new ResourceImporterSettings
                             {
                                 Errors = this.errors,
-                                Logger = this.logger,
+                                Logger = this.settings.Logger,
                                 Resource = resource,
                                 ResourcesToImport = resourcesToImport,
                                 Warnings = this.warnings
@@ -326,7 +319,7 @@
         /// <param name="warningCount">The warning count.</param>
         private void WriteSummary(int terraformExecutionErrorCount, int warningCount)
         {
-            this.logger.LogInformation("\n");
+            this.settings.Logger.LogInformation("\n");
             this.GenerateWarnings();
 
             var totalErrors = terraformExecutionErrorCount + this.errors.Count;
@@ -339,22 +332,22 @@
 
             foreach (var error in this.errors)
             {
-                this.logger.LogError(error.StartsWith("Error:", StringComparison.OrdinalIgnoreCase) ? error : $"ERROR: {error}");
+                this.settings.Logger.LogError(error.StartsWith("Error:", StringComparison.OrdinalIgnoreCase) ? error : $"ERROR: {error}");
             }
 
             foreach (var warning in this.warnings)
             {
-                this.logger.LogWarning(warning);
+                this.settings.Logger.LogWarning(warning);
             }
 
             if (this.settings.Resources.Any(r => r.StackResource.ResourceType.StartsWith("Custom::")))
             {
-                this.logger.LogInformation(
+                this.settings.Logger.LogInformation(
                     "\nIt appears this stack contains custom resources. For a suggestion on how to manage these with terraform, see");
-                this.logger.LogInformation("https://trackit.io/trackit-whitepapers/cloudformation-to-terraform-conversion/");
+                this.settings.Logger.LogInformation("https://trackit.io/trackit-whitepapers/cloudformation-to-terraform-conversion/");
             }
 
-            this.logger.LogInformation($"\n       Errors: {totalErrors}, Warnings: {warningCount + this.warnings.Count}\n");
+            this.settings.Logger.LogInformation($"\n       Errors: {totalErrors}, Warnings: {warningCount + this.warnings.Count}\n");
         }
 
         /// <summary>
@@ -400,7 +393,7 @@
         /// <returns>A list of <see cref="InputVariable"/></returns>
         private List<InputVariable> ProcessInputVariables()
         {
-            this.logger.LogInformation("Importing parameters...");
+            this.settings.Logger.LogInformation("Importing parameters...");
             var parameters = new List<InputVariable>();
 
             foreach (var p in this.settings.Template.Parameters.Concat(this.settings.Template.PseudoParameters))
@@ -413,7 +406,7 @@
                                   ? $"Pseudo-parameter '{p.Name}' cannot be imported as it is not supported by terraform."
                                   : $"Stack parameter '{p.Name}' cannot be imported.";
 
-                    this.logger.LogWarning(wrn);
+                    this.settings.Logger.LogWarning(wrn);
                     this.warnings.Add(wrn);
                 }
                 else
@@ -434,7 +427,7 @@
         {
             var resourceMap = JsonConvert.DeserializeObject<List<ResourceTypeMapping>>(resourceMapJson);
             var resourcesToImport = new List<ResourceMapping>();
-            this.logger.LogInformation("Processing stack resources and mapping to terraform resource types...");
+            this.settings.Logger.LogInformation("Processing stack resources and mapping to terraform resource types...");
 
             foreach (var resource in this.settings.Resources)
             {
@@ -448,7 +441,7 @@
                 {
                     var wrn =
                         $"Resource \"{resource.LogicalResourceId}\" ({resource.ResourceType}): Not supported for import.";
-                    this.logger.LogWarning(wrn);
+                    this.settings.Logger.LogWarning(wrn);
                     this.warnings.Add(wrn);
                     continue;
                 }
@@ -459,7 +452,7 @@
                 {
                     var wrn =
                         $"Resource \"{resource.LogicalResourceId}\" ({resource.ResourceType}): No corresponding terraform resource.";
-                    this.logger.LogWarning(wrn);
+                    this.settings.Logger.LogWarning(wrn);
                     this.warnings.Add(wrn);
                 }
                 else

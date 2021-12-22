@@ -5,6 +5,7 @@
     using Amazon.CloudFormation;
     using Amazon.CloudFormation.Model;
 
+    using Firefly.CloudFormation;
     using Firefly.CloudFormationParser;
 
     /// <summary>
@@ -45,5 +46,8 @@
 
         /// <inheritdoc />
         public string WorkspaceDirectory { get; set; }
+
+        /// <inheritdoc />
+        public ILogger Logger { get; set; }
     }
 }
