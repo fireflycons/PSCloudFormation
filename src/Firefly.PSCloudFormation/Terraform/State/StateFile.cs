@@ -98,8 +98,8 @@
 
             foreach (var change in changes)
             {
-                var resource = stateFile.Resources.FirstOrDefault(r => r.Name == change.ResourceName);
-                var targetValue = resource?.Instances.First().Attributes.SelectToken(change.AttributePath);
+                var resource = stateFile.Resources.FirstOrDefault(r => r.Module == change.Module && r.Name == change.ResourceName);
+                var targetValue = resource?.ResourceInstance?.Attributes.SelectToken(change.AttributePath);
 
                 if (targetValue == null)
                 {

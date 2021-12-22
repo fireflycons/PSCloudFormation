@@ -113,7 +113,7 @@
                     terraformStateFileResource,
                     this.inputs);
 
-                terraformStateFileResource.StateFileResourceInstance.Attributes.Accept(
+                terraformStateFileResource.ResourceInstance.Attributes.Accept(
                     new TerraformAttributeSetterVisitor(),
                     dependencyContext);
 
@@ -125,7 +125,7 @@
                     {
                         // Normal resource attribute
                         ApplyNewValue(
-                            terraformStateFileResource.StateFileResourceInstance.Attributes.SelectToken(
+                            terraformStateFileResource.ResourceInstance.Attributes.SelectToken(
                                 modification.ValueToReplace.Path),
                             modification);
                     }

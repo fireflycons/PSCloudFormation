@@ -5,9 +5,85 @@ param
 
 import-module (Join-Path $PSScriptRoot 'PSCloudFormation.psd1')
 
-C:\OneDrive\abm\OneDrive\Dev\Git\acg-challenge-2020-09\venv\Scripts\Activate.ps1
-Remove-PSCFNStack -StackName acg-test -Region eu-west-2
-#New-PSCFNStack -TemplateLocation "C:\OneDrive\abm\OneDrive\Dev\Git\acg-challenge-2020-09\cloudFormation.yaml" -Capabilities CAPABILITY_IAM,CAPABILITY_AUTO_EXPAND -Region eu-west-2
+#New-PSCFNStack -StackName test-import -TemplateLocation C:\OneDrive\abm\OneDrive\Dev\Git\PSCloudFormation\ScratchPad\imports.yaml
+
+#cd C:\OneDrive\abm\OneDrive\Dev\Spike\MinValueTest
+#New-PSCFNStack -StackName min-value-test -TemplateLocation C:\OneDrive\abm\OneDrive\Dev\Spike\PSCFN-TestStacks\TestParameterValidation.yaml -ParamValue sssss -Debug
+
+
+$doImport = $true
+
+if ($doImport)
+{
+    $stacks = @(
+        'fc-basestack'
+        #'test-vpc'
+        #'test-lambda'
+        #'test-sg'
+        #'fc-basestack-Vpc-AGGQ9RLPLCGZ'
+        #'xrefmap-service'
+        #'proget'
+        #'photo-viewer'                     
+        #'dead-mans-handle'
+        #'torrent-instance'
+        #'packer-role'
+        #'dynamic-ip-watcher'
+        #'fc-basestack-NatInstance-X7Y0C6YDEBWD'  #!Base64 render - ImportValue can't be rendered
+        #'iam-user-ddns'
+        #'redirect-to-linkedin'             # Lambda permissions not being wired to functions
+        #'chef-test-kitchen'
+
+    )
+    $stacks |
+    Foreach-Object {
+        Export-PSCFNTerraform -StackName $_ -WorkspaceDirectory c:\temp\torrent-tf -Force -Debug
+        Copy-Item "c:\temp\torrent-tf\terraform.tfstate" "c:\temp\torrent-tf\fc-$_.tfstate"
+    }
+}
+else
+{
+    $stacks = @(
+        'fc-test-vpc'
+        #'fc-test-lambda'
+        #'fc-test-sg'
+        #'fc-fc-basestack-Vpc-AGGQ9RLPLCGZ'
+        #'fc-dead-mans-handle'
+        #'fc-xrefmap-service'
+        #'fc-photo-viewer'
+        #'fc-proget'
+        #'fc-torrent-instance'
+        #'fc-packer-role'
+        #'fc-dynamic-ip-watcher'
+        #'fc-fc-basestack-NatInstance-X7Y0C6YDEBWD'
+        #'fc-iam-user-ddns'
+        #'fc-redirect-to-linkedin'
+        #'fc-chef-test-kitchen'
+
+    )
+
+    $stacks |
+    Foreach-Object {
+        Copy-Item "c:\temp\torrent-tf\$_.tfstate" "c:\temp\torrent-tf\terraform.tfstate"
+        Export-PSCFNTerraform -StackName ($_.SubString(3)) -WorkspaceDirectory c:\temp\torrent-tf -Force -Debug
+    }
+}
+
+
+
+#cd  C:\OneDrive\abm\OneDrive\Dev\Bitbucket\redirector-service
+#.\venv\Scripts\Activate.ps1
+#New-PSCFNStack -StackName redirector-service -Capabilities CAPABILITY_IAM,CAPABILITY_AUTO_EXPAND -TemplateLocation .\redirector-service.yaml -BindTargetGroup 0
+#Update-PSCFNStack  -StackName redirector-service -Capabilities CAPABILITY_IAM,CAPABILITY_AUTO_EXPAND -IncludeNestedStacks -TemplateLocation .\redirector-service.yaml -BindTargetGroup 1
+#Remove-PSCFNStack -StackName redirector-service
+
+#cd C:\OneDrive\abm\OneDrive\Dev\Git\aws-nested-changeset-bug
+#cd C:\OneDrive\abm\OneDrive\Dev\Spike\Serverless
+#New-PSCFNStack -StackName nested-changeset-bug -TemplateLocation root-stack.yaml -DeployRule 0
+#New-PSCFNChangeSet -StackName nested-changeset-bug -TemplateLocation root-stack.yaml -IncludeNestedStacks -ShowInBrowser -DeployRule 1
+#Remove-PSCFNStack -StackName nested-changeset-bug
+#.\venv\Scripts\Activate.ps1
+
+#Update-PSCFNStack -StackName serverless-test -TemplateLocation serverless-test.yaml -Capabilities CAPABILITY_IAM,CAPABILITY_AUTO_EXPAND
 
 
 Read-Host -Prompt "Press Enter" | Out-Null

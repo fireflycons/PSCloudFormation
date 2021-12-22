@@ -16,6 +16,11 @@
     internal class StateFileResourceDeclaration
     {
         /// <summary>
+        /// Identifier for root module
+        /// </summary>
+        public static readonly string RootModule = null;
+
+        /// <summary>
         /// The instances of this resource. When importing from a CloudFormation stack, there should only be one instance per resource.
         /// </summary>
         private List<StateFileResourceInstance> instances;
@@ -28,6 +33,15 @@
         /// </value>
         [JsonProperty("mode")]
         public string Mode { get; set; }
+
+        /// <summary>
+        /// Gets or sets the module.
+        /// </summary>
+        /// <value>
+        /// The module.
+        /// </value>
+        [JsonProperty("module")]
+        public string Module { get; set; }
 
         /// <summary>
         /// Gets or sets the type.
@@ -92,7 +106,7 @@
         /// The resource instance.
         /// </value>
         [JsonIgnore]
-        public StateFileResourceInstance StateFileResourceInstance => this.instances.FirstOrDefault();
+        public StateFileResourceInstance ResourceInstance => this.instances.FirstOrDefault();
 
         /// <summary>
         /// Gets the resource instance address.
@@ -102,5 +116,14 @@
         /// </value>
         [JsonIgnore]
         public string Address => $"{this.Type}.{this.Name}";
+
+        /// <summary>
+        /// Suppress serialization of <see cref="Module"/> property when it has no value.
+        /// </summary>
+        /// <returns><c>true</c> if the property should be written.</returns>
+        public bool ShouldSerializeModule()
+        {
+            return !string.IsNullOrEmpty(this.Module);
+        }
     }
 }

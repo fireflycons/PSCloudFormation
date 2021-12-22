@@ -284,11 +284,11 @@
                 }
 
                 // Set template URL
-                changes.Add(new StateFileModification(importedResource.LogicalId, "$.template_url", new JValue(s3Url.ToString())));
+                changes.Add(new StateFileModification(StateFileResourceDeclaration.RootModule, importedResource.LogicalId, "$.template_url", new JValue(s3Url.ToString())));
 
                 // Clear template body
                 changes.Add(
-                    new StateFileModification(importedResource.LogicalId, "$.template_body", JValue.CreateNull()));
+                    new StateFileModification(StateFileResourceDeclaration.RootModule, importedResource.LogicalId, "$.template_body", JValue.CreateNull()));
 
                 // Retrieve parameters for stack
                 var parameters =
@@ -310,7 +310,7 @@
                     parameterBlock[parameter.ParameterKey] = parameter.ParameterValue;
                 }
 
-                changes.Add(new StateFileModification(importedResource.LogicalId, "$.parameters", parameterBlock));
+                changes.Add(new StateFileModification(StateFileResourceDeclaration.RootModule, importedResource.LogicalId, "$.parameters", parameterBlock));
             }
 
             if (changes.Count > 0)
