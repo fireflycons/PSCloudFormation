@@ -263,6 +263,8 @@
 - Group: IAM
   Resources:
     - Resource: aws_iam_role
+      ComputedAttributes:
+        - name
       ConflictingArguments:
         - - name
           - name_prefix
