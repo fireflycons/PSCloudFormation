@@ -30,7 +30,7 @@
 
             var @ref = new RefIntrinsic(ParamName);
 
-            IntrinsicExtensions.Render((IIntrinsic)@ref, template.Object, (ResourceMapping)null, null).ReferenceExpression.Should().Be(expected);
+            @ref.Render(template.Object, (ResourceMapping)null, null).ReferenceExpression.Should().Be(expected);
         }
 
         [Theory]
@@ -49,7 +49,7 @@
 
             var @ref = new RefIntrinsic(pseudo);
 
-            IntrinsicExtensions.Render((IIntrinsic)@ref, template.Object, (ResourceMapping)null, null).ReferenceExpression.Should().Be(reference);
+            @ref.Render(template.Object, (ResourceMapping)null, null).ReferenceExpression.Should().Be(reference);
         }
 
         [Fact]
@@ -69,7 +69,7 @@
 
             var findInMap = new FindInMapIntrinsic(new object[] { @ref, "TopKey", "SecondKey" });
 
-            IntrinsicExtensions.Render((IIntrinsic)findInMap, template.Object, (ResourceMapping)null, null).ReferenceExpression.Should().Be(expected);
+            findInMap.Render(template.Object, (ResourceMapping)null, null).ReferenceExpression.Should().Be(expected);
         }
 
         [Fact]
@@ -89,7 +89,7 @@
 
             var findInMap = new FindInMapIntrinsic(new object[] { "MapName", @ref, "SecondKey" });
 
-            IntrinsicExtensions.Render((IIntrinsic)findInMap, template.Object, (ResourceMapping)null, null).ReferenceExpression.Should().Be(expected);
+            findInMap.Render(template.Object, (ResourceMapping)null, null).ReferenceExpression.Should().Be(expected);
         }
     }
 }
