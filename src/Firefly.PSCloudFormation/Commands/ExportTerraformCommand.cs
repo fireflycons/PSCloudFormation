@@ -1,6 +1,5 @@
 ﻿namespace Firefly.PSCloudFormation.Commands
 {
-    using System;
     using System.IO;
     using System.Linq;
     using System.Management.Automation;
@@ -95,6 +94,17 @@
         }
 
         /// <summary>
+        /// Gets or sets the export nested stacks.
+        /// <para type="description">
+        /// If set, export nested stacks as Terraform modules.
+        /// </para>
+        /// </summary>
+        /// <value>
+        /// The export nested stacks.
+        /// </value>
+        public SwitchParameter ExportNestedStacks { get; set; }
+
+        /// <summary>
         /// Gets or sets the with default tag.
         /// <para type="description">
         /// If this switch is present, then a <c>default_tags</c> block is added to the AWS provider declaration.
@@ -175,14 +185,15 @@
                 userArgs.Add("AWS::Partition", mc.Groups["partition"].Value);
                 userArgs.Add("AWS::NotificationARNs", stack.NotificationARNs);
 
+                // Get all exports in region, for use where Fn::Import is found
+                var exports = (await client.ListExportsAsync(new ListExportsRequest())).Exports;
+
                 var builder = new DeserializerSettingsBuilder().WithCloudFormationStack(client, this.StackName)
                     .WithExcludeConditionalResources(true)
                     .WithParameterValues(userArgs);
 
                 // Get the template
-                var dssettings = builder.Build();
-
-                var template = await Template.Deserialize(dssettings);
+                var template = await Template.Deserialize(builder.Build());
 
                 // Get the physical resources
                 var resources =
@@ -199,10 +210,7 @@
                         "Number of parsed resources does not match number of actual physical resources.");
                 }
 
-                // Get all exports, for use where Fn::Import is found
-                var exports = (await client.ListExportsAsync(new ListExportsRequest())).Exports;
-
-                var cr = resources.StackResources.OrderBy(sr => sr.LogicalResourceId).Zip(
+                var cloudFormationResources = resources.StackResources.OrderBy(sr => sr.LogicalResourceId).Zip(
                     template.Resources.OrderBy(tr => tr.Name),
                     (sr, tr) => new CloudFormationResource(tr, sr)).ToList();
 
@@ -211,13 +219,14 @@
                                        AwsAccountId = mc.Groups["account"].Value,
                                        AwsRegion = mc.Groups["region"].Value,
                                        StackExports = exports,
-                                       Resources = cr,
+                                       Resources = cloudFormationResources,
                                        Runner = new TerraformRunner(context.Credentials, this.Logger),
                                        StackName = this.StackName,
                                        Template = template,
                                        WorkspaceDirectory = this.ResolvedWorkspaceDirectory,
                                        AddDefaultTag = this.WithDefaultTag,
-                                       CloudFormationClient = client
+                                       CloudFormationClient = client,
+                                       ExportNestedStacks = this.ExportNestedStacks
                                    };
 
                 var exporter = new TerraformExporter(settings, this.Logger);

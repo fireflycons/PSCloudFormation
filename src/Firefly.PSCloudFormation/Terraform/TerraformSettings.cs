@@ -26,6 +26,9 @@
         public IAmazonCloudFormation CloudFormationClient { get; set; }
 
         /// <inheritdoc />
+        public bool ExportNestedStacks { get; set; }
+
+        /// <inheritdoc />
         public IReadOnlyCollection<CloudFormationResource> Resources { get; set; }
 
         /// <inheritdoc />

@@ -45,6 +45,14 @@
         IAmazonCloudFormation CloudFormationClient { get; }
 
         /// <summary>
+        /// Gets a value indicating whether to export nested stacks as Terraform modules.
+        /// </summary>
+        /// <value>
+        ///   <c>true</c> to export modules; otherwise, <c>false</c>.
+        /// </value>
+        bool ExportNestedStacks { get; }
+
+        /// <summary>
         /// Gets the resources.
         /// </summary>
         /// <value>
