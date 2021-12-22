@@ -113,7 +113,7 @@
             /// <summary>
             /// The settings
             /// </summary>
-            private readonly ITerraformSettings settings;
+            private readonly ITerraformExportSettings settings;
 
             /// <summary>
             /// The intrinsic whose properties are currently being examined
@@ -141,7 +141,7 @@
             /// <param name="resource">The CLoudFormation resource being visited.</param>
             /// <param name="warnings">The warnings collection.</param>
             public IntrinsicVisitorContext(
-                ITerraformSettings settings,
+                ITerraformExportSettings settings,
                 IReadOnlyCollection<StateFileResourceDeclaration> terraformResources,
                 IList<InputVariable> inputs,
                 IResource resource,

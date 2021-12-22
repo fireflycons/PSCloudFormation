@@ -17,7 +17,7 @@
         /// <param name="terraformSettings">The terraform settings.</param>
         public Route53RecordImporter(
             IResourceImporterSettings importSettings,
-            ITerraformSettings terraformSettings)
+            ITerraformExportSettings terraformSettings)
             : base(importSettings, terraformSettings)
         {
         }

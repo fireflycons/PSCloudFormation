@@ -15,7 +15,7 @@
         /// <param name="terraformSettings">The terraform settings.</param>
         public ApiGatewayBasePathMappingImporter(
             IResourceImporterSettings importSettings,
-            ITerraformSettings terraformSettings)
+            ITerraformExportSettings terraformSettings)
             : base(importSettings, terraformSettings)
         {
         }

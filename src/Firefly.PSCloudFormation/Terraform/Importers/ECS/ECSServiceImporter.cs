@@ -14,7 +14,7 @@
         /// </summary>
         /// <param name="importSettings">The import settings.</param>
         /// <param name="terraformSettings">The terraform settings.</param>
-        public ECSServiceImporter(IResourceImporterSettings importSettings, ITerraformSettings terraformSettings)
+        public ECSServiceImporter(IResourceImporterSettings importSettings, ITerraformExportSettings terraformSettings)
             : base(importSettings, terraformSettings)
         {
         }

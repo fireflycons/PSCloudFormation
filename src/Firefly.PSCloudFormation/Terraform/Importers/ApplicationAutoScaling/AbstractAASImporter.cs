@@ -11,7 +11,7 @@
         /// </summary>
         /// <param name="importSettings">The import settings.</param>
         /// <param name="terraformSettings">The terraform settings.</param>
-        protected AbstractAASImporter(IResourceImporterSettings importSettings, ITerraformSettings terraformSettings)
+        protected AbstractAASImporter(IResourceImporterSettings importSettings, ITerraformExportSettings terraformSettings)
             : base(importSettings, terraformSettings)
         {
         }

@@ -18,7 +18,7 @@
         /// <param name="terraformSettings">The terraform settings.</param>
         public RouteTableAssociationImporter(
             IResourceImporterSettings importSettings,
-            ITerraformSettings terraformSettings)
+            ITerraformExportSettings terraformSettings)
             : base(importSettings, terraformSettings)
         {
         }

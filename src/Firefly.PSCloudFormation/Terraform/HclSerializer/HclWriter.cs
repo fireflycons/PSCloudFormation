@@ -53,7 +53,7 @@
         /// <summary>
         /// The settings
         /// </summary>
-        private readonly ITerraformSettings settings;
+        private readonly ITerraformExportSettings settings;
 
         /// <summary>
         /// The warning list
@@ -72,7 +72,7 @@
         /// <param name="logger">The logger.</param>
         /// <param name="warnings">Warning list</param>
         /// <param name="errors">Error list</param>
-        public HclWriter(ITerraformSettings settings, ILogger logger, IList<string> warnings, IList<string> errors)
+        public HclWriter(ITerraformExportSettings settings, ILogger logger, IList<string> warnings, IList<string> errors)
         {
             this.errors = errors;
             this.warnings = warnings;

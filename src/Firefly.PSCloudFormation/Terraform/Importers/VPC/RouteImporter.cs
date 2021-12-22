@@ -13,7 +13,7 @@
         /// <param name="terraformSettings">The terraform settings.</param>
         public RouteImporter(
             IResourceImporterSettings importSettings,
-            ITerraformSettings terraformSettings)
+            ITerraformExportSettings terraformSettings)
             : base(importSettings, terraformSettings)
         {
         }

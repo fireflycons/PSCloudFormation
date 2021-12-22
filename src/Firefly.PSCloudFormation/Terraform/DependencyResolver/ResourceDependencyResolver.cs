@@ -42,7 +42,7 @@
         /// <summary>
         /// The settings
         /// </summary>
-        private readonly ITerraformSettings settings;
+        private readonly ITerraformExportSettings settings;
 
         /// <summary>
         /// The CloudFormation resource currently being processed.
@@ -57,7 +57,7 @@
         /// <param name="inputs">All input variables generated from the exported CloudFormation Stack.</param>
         /// <param name="warnings">Global warning list.</param>
         public ResourceDependencyResolver(
-            ITerraformSettings settings,
+            ITerraformExportSettings settings,
             IReadOnlyCollection<StateFileResourceDeclaration> terraformResources,
             IList<InputVariable> inputs,
             IList<string> warnings)

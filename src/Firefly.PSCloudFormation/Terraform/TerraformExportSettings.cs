@@ -10,8 +10,8 @@
     /// <summary>
     /// Settings object passed to the exporter mechanism
     /// </summary>
-    /// <seealso cref="Firefly.PSCloudFormation.Terraform.ITerraformSettings" />
-    internal class TerraformSettings : ITerraformSettings
+    /// <seealso cref="ITerraformExportSettings" />
+    internal class TerraformExportSettings : ITerraformExportSettings
     {
         /// <inheritdoc />
         public bool AddDefaultTag { get; set; }

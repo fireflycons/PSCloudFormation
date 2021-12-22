@@ -214,7 +214,7 @@
                     template.Resources.OrderBy(tr => tr.Name),
                     (sr, tr) => new CloudFormationResource(tr, sr)).ToList();
 
-                var settings = new TerraformSettings
+                var settings = new TerraformExportSettings
                                    {
                                        AwsAccountId = mc.Groups["account"].Value,
                                        AwsRegion = mc.Groups["region"].Value,

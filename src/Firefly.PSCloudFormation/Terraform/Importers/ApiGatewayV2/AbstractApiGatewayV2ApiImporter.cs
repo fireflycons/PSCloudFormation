@@ -13,7 +13,7 @@
         /// <param name="terraformSettings">The terraform settings.</param>
         protected AbstractApiGatewayV2ApiImporter(
             IResourceImporterSettings importSettings,
-            ITerraformSettings terraformSettings)
+            ITerraformExportSettings terraformSettings)
             : base(importSettings, terraformSettings)
         {
         }

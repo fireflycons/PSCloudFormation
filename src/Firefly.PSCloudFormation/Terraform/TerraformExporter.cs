@@ -62,7 +62,7 @@
         /// <summary>
         /// The export settings
         /// </summary>
-        private readonly ITerraformSettings settings;
+        private readonly ITerraformExportSettings settings;
 
         /// <summary>
         /// The accumulated warnings
@@ -79,7 +79,7 @@
         /// </summary>
         /// <param name="settings">The settings.</param>
         /// <param name="logger">The logger.</param>
-        public TerraformExporter(ITerraformSettings settings, ILogger logger)
+        public TerraformExporter(ITerraformExportSettings settings, ILogger logger)
         {
             this.settings = settings;
             this.logger = logger;

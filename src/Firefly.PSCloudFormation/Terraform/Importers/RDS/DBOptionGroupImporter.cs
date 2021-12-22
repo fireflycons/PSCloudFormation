@@ -12,7 +12,7 @@
         /// </summary>
         /// <param name="importSettings">The import settings.</param>
         /// <param name="terraformSettings">The terraform settings.</param>
-        public DBOptionGroupImporter(IResourceImporterSettings importSettings, ITerraformSettings terraformSettings)
+        public DBOptionGroupImporter(IResourceImporterSettings importSettings, ITerraformExportSettings terraformSettings)
             : base(importSettings, terraformSettings)
         {
         }

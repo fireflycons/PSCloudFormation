@@ -12,7 +12,7 @@
         /// </summary>
         /// <param name="importSettings">The import settings.</param>
         /// <param name="terraformSettings">The terraform settings.</param>
-        public AASServiceScalableTargetImporter(IResourceImporterSettings importSettings, ITerraformSettings terraformSettings)
+        public AASServiceScalableTargetImporter(IResourceImporterSettings importSettings, ITerraformExportSettings terraformSettings)
             : base(importSettings, terraformSettings)
         {
         }

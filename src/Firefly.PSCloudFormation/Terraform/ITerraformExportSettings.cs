@@ -10,7 +10,7 @@
     /// <summary>
     /// Settings for terraform exporter
     /// </summary>
-    internal interface ITerraformSettings
+    internal interface ITerraformExportSettings
     {
         /// <summary>
         /// Gets a value indicating whether to add the <c>terraform:stack_name</c> default tag to all resources.
