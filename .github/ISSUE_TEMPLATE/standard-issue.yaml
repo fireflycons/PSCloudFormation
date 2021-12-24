@@ -35,8 +35,8 @@ body:
       label: Command Line
       description: What was the command line that produced the error?
       placeholder: e.g. New-PSCFNStack -StackName a-stack -TemplateLocation template.yaml
-    validations:
       render: text
+    validations:
       required: true
   - type: textarea
     attributes:
