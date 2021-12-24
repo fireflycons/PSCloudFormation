@@ -91,7 +91,17 @@
         /// <param name="stateFile">The state file.</param>
         public void Serialize(StateFile stateFile)
         {
-            foreach (var r in stateFile.Resources)
+            this.Serialize(stateFile, null);
+        }
+
+        /// <summary>
+        /// Serializes the specified state file to HCL.
+        /// </summary>
+        /// <param name="stateFile">The state file.</param>
+        /// <param name="moduleName">Name of module whose resources to serialize</param>
+        public void Serialize(StateFile stateFile, string moduleName)
+        {
+            foreach (var r in stateFile.FilteredResources(moduleName))
             {
                 this.emitter.Emit(new ResourceStart(r.Type, r.Name));
                 r.Instances.First().Attributes.Accept(

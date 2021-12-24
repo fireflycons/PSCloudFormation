@@ -35,10 +35,10 @@
         public string Mode { get; set; }
 
         /// <summary>
-        /// Gets or sets the module.
+        /// Gets or sets the module name.
         /// </summary>
         /// <value>
-        /// The module.
+        /// The module, which is <c>null</c> for the root module.
         /// </value>
         [JsonProperty("module")]
         public string Module { get; set; }

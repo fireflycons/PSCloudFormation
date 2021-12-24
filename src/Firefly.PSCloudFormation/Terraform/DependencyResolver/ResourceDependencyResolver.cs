@@ -58,14 +58,14 @@
         /// <param name="warnings">Global warning list.</param>
         public ResourceDependencyResolver(
             ITerraformExportSettings settings,
-            IReadOnlyCollection<StateFileResourceDeclaration> terraformResources,
+            IEnumerable<StateFileResourceDeclaration> terraformResources,
             IList<InputVariable> inputs,
             IList<string> warnings)
         {
             this.settings = settings;
             this.warnings = warnings;
             this.template = settings.Template;
-            this.terraformResources = terraformResources;
+            this.terraformResources = terraformResources.ToList();
             this.inputs = inputs;
         }
 
@@ -85,7 +85,7 @@
 
                 // Find related resources that may be merged into this one
                 var relatedResources = this.template.DependencyGraph.Edges.Where(
-                    e => e.Source.Name == this.currentCloudFormationResource.LogicalResourceId && e.Target.TemplateObject is IResource res && TerraformExporter.MergedResources.Contains(res.Type))
+                    e => e.Source.Name == this.currentCloudFormationResource.LogicalResourceId && e.Target.TemplateObject is IResource res && ModuleInfo.MergedResources.Contains(res.Type))
                     .Select(e => (IResource)e.Target.TemplateObject);
 
                 foreach (var cloudFormationResource in new[] { this.currentCloudFormationResource.TemplateResource }

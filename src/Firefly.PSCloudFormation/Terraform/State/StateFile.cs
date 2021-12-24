@@ -4,7 +4,6 @@
     using System.Collections.Generic;
     using System.IO;
     using System.Linq;
-    using System.Text;
     using System.Text.RegularExpressions;
     using System.Threading.Tasks;
 
@@ -139,6 +138,18 @@
             }
 
             return modified;
+        }
+
+        /// <summary>
+        /// Gets resources filtered by module name.
+        /// </summary>
+        /// <param name="moduleName">Name of the module.</param>
+        /// <returns>Filtered resources.</returns>
+        public IEnumerable<StateFileResourceDeclaration> FilteredResources(string moduleName)
+        {
+            return string.IsNullOrEmpty(moduleName)
+                       ? this.Resources.Where(r => r.Module == null) // root module
+                       : this.Resources.Where(r => r.Module == $"module.{moduleName}");
         }
 
         /// <summary>

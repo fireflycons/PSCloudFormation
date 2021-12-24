@@ -61,7 +61,7 @@
 
             var traits = LambdaTraits.FromRuntime(runtimeObject.ToString());
 
-            var dirName = Path.Combine("lambda", this.ImportSettings.Resource.LogicalId);
+            var dirName = Path.Combine(this.TerraformSettings.ModuleDirectory, "lambda", this.ImportSettings.Resource.LogicalId);
             Directory.CreateDirectory(dirName);
             var fileName = Path.Combine(dirName, $"index{traits.ScriptFileExtension}");
 

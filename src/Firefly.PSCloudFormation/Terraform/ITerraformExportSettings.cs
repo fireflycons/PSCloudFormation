@@ -54,6 +54,31 @@
         bool ExportNestedStacks { get; }
 
         /// <summary>
+        /// Gets a value indicating whether these settings relate to the root module.
+        /// </summary>
+        /// <value>
+        ///   <c>true</c> if this instance is the root module; otherwise, <c>false</c>.
+        /// </value>
+        bool IsRootModule { get; }
+
+        /// <summary>
+        /// Gets the logger.
+        /// </summary>
+        /// <value>
+        /// The logger.
+        /// </value>
+        ILogger Logger { get; }
+
+        /// <summary>
+        /// Gets the module directory when processing a module.
+        /// This is relative to workspace directory
+        /// </summary>
+        /// <value>
+        /// The module directory.
+        /// </value>
+        string ModuleDirectory { get; }
+
+        /// <summary>
         /// Gets the resources.
         /// </summary>
         /// <value>
@@ -102,11 +127,17 @@
         string WorkspaceDirectory { get; }
 
         /// <summary>
-        /// Gets the logger.
+        /// Creates a copy of the settings with new values for the fields that change on a per-module basis.
         /// </summary>
-        /// <value>
-        /// The logger.
-        /// </value>
-        ILogger Logger { get; }
+        /// <param name="template">The template.</param>
+        /// <param name="resources">The resources.</param>
+        /// <param name="stackName">Name of the stack.</param>
+        /// <param name="moduleDirectory">The module directory.</param>
+        /// <returns>A copy of the settings with updated property values.</returns>
+        ITerraformExportSettings CopyWith(
+            ITemplate template,
+            IEnumerable<CloudFormationResource> resources,
+            string stackName,
+            string moduleDirectory);
     }
 }

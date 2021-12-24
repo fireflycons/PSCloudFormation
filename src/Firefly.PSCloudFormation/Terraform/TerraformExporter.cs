@@ -5,54 +5,36 @@
     using System.Diagnostics;
     using System.IO;
     using System.Linq;
+    using System.Runtime.CompilerServices;
     using System.Text;
+    using System.Text.RegularExpressions;
     using System.Threading.Tasks;
 
+    using Amazon.CloudFormation;
     using Amazon.CloudFormation.Model;
 
-    using Firefly.CloudFormation;
+    using Firefly.CloudFormationParser.Serialization.Settings;
     using Firefly.CloudFormationParser.TemplateObjects;
-    using Firefly.EmbeddedResourceLoader;
     using Firefly.PSCloudFormation.Terraform.Hcl;
     using Firefly.PSCloudFormation.Terraform.HclSerializer;
     using Firefly.PSCloudFormation.Terraform.Importers;
     using Firefly.PSCloudFormation.Terraform.State;
+    using Firefly.PSCloudFormation.Utils;
 
     using Newtonsoft.Json;
     using Newtonsoft.Json.Linq;
 
-    internal class TerraformExporter : AutoResourceLoader
+    internal class TerraformExporter
     {
         /// <summary>
-        /// These resources have no direct terraform representation.
-        /// They are merged into the resources that depend on them
-        /// when the dependent resource is imported.
+        /// The stack identifier regex
         /// </summary>
-        public static readonly List<string> MergedResources = new List<string>
-                                                                  {
-                                                                      "AWS::CloudFront::CloudFrontOriginAccessIdentity",
-                                                                      "AWS::IAM::Policy",
-                                                                      "AWS::EC2::SecurityGroupIngress",
-                                                                      "AWS::EC2::SecurityGroupEgress",
-                                                                      "AWS::EC2::VPCGatewayAttachment",
-                                                                      "AWS::EC2::SubnetNetworkAclAssociation",
-                                                                      "AWS::EC2::NetworkAclEntry"
-                                                                  };
+        private static readonly Regex StackIdRegex = new Regex(@"^arn:(?<partition>\w+):cloudformation:(?<region>[^:]+):(?<account>\d+):stack/(?<stack>[^/]+)");
 
         /// <summary>
-        /// These resources are currently not supported for import.
+        /// Path to the Terraform state file
         /// </summary>
-        public static readonly List<string> UnsupportedResources = new List<string> { "AWS::ApiGateway::Deployment" };
-
-        /// <summary>
-        /// Combination of merged and unsupported resources.
-        /// </summary>
-        public static readonly List<string> IgnoredResources = MergedResources.Concat(UnsupportedResources).ToList();
-
-        /// <summary>
-        /// Name of the Terraform state file
-        /// </summary>
-        private const string StateFileName = "terraform.tfstate";
+        private readonly string stateFilePath;
 
         /// <summary>
         /// The export settings
@@ -76,6 +58,76 @@
         public TerraformExporter(ITerraformExportSettings settings)
         {
             this.settings = settings;
+            this.stateFilePath = Path.Combine(settings.WorkspaceDirectory, "terraform.tfstate");
+        }
+
+        /// <summary>
+        /// Reads the stack asynchronous.
+        /// </summary>
+        /// <param name="cloudFormationClient">The cloud formation client.</param>
+        /// <param name="stackName">Name of the stack.</param>
+        /// <param name="parameterValues">The parameter values.</param>
+        /// <returns>A <see cref="ReadStackResult"/> with the </returns>
+        /// <exception cref="System.InvalidOperationException">Number of parsed resources does not match number of actual physical resources.</exception>
+        public static async Task<ReadStackResult> ReadStackAsync(IAmazonCloudFormation cloudFormationClient, string stackName, IDictionary<string, object> parameterValues = null)
+        {
+            if (parameterValues == null)
+            {
+                parameterValues = new Dictionary<string, object>();
+            }
+
+            // Determine various pseudo-parameter values from the stack description
+            var stack =
+                (await cloudFormationClient.DescribeStacksAsync(new DescribeStacksRequest { StackName = stackName })).Stacks
+                .First();
+
+            var match = StackIdRegex.Match(stack.StackId);
+
+            parameterValues.Add("AWS::AccountId", match.Groups["account"].Value);
+            parameterValues.Add("AWS::Region", match.Groups["region"].Value);
+            parameterValues.Add("AWS::StackName", match.Groups["stack"].Value);
+            parameterValues.Add("AWS::StackId", stack.StackId);
+            parameterValues.Add("AWS::Partition", match.Groups["partition"].Value);
+            parameterValues.Add("AWS::NotificationARNs", stack.NotificationARNs);
+            
+            var builder = new DeserializerSettingsBuilder().WithCloudFormationStack(cloudFormationClient, stackName)
+                .WithExcludeConditionalResources(true)
+                .WithParameterValues(parameterValues);
+
+            // Get the template
+            var template = await Template.Deserialize(builder.Build());
+
+            // Get the physical resources
+            var resources =
+                await cloudFormationClient.DescribeStackResourcesAsync(
+                    new DescribeStackResourcesRequest { StackName = stackName });
+
+            // This should be equivalent to what we read from the template
+            var check = resources.StackResources.Select(r => r.LogicalResourceId).OrderBy(lr => lr)
+                .SequenceEqual(template.Resources.Select(r => r.Name).OrderBy(lr => lr));
+
+            if (!check)
+            {
+                throw new System.InvalidOperationException(
+                    "Number of parsed resources does not match number of actual physical resources.");
+            }
+
+            // Combine physical stack resources and parsed template resources into single objects containing both.
+            var combinedResources = resources.StackResources.Join(
+                    template.Resources,
+                    sr => sr.LogicalResourceId,
+                    tr => tr.Name,
+                    (stackResource, templateResource) =>
+                        new CloudFormationResource(templateResource, stackResource))
+                .ToList();
+
+            return new ReadStackResult
+                       {
+                           AccountId = match.Groups["account"].Value,
+                           Region = match.Groups["region"].Value,
+                           Resources = combinedResources,
+                           Template = template
+                       };
         }
 
         /// <summary>
@@ -84,71 +136,82 @@
         /// <returns><c>true</c> if resources were imported; else <c>false</c></returns>
         public async Task<bool> Export()
         {
-            var initialHcl = new StringBuilder();
-
             this.settings.Logger.LogInformation("\nInitializing inputs and resources...");
 
-            var builder = new ConfigurationBlockBuilder().WithRegion(this.settings.AwsRegion)
-                .WithDefaultTag(this.settings.AddDefaultTag ? this.settings.StackName : null)
-                .WithZipper(this.settings.Template.Resources.Any(
-                    r => r.Type == "AWS::Lambda::Function" && r.GetResourcePropertyValue("Code.ZipFile") != null));
-
-            initialHcl.AppendLine(builder.Build());
-
-            var parameters = this.ProcessInputVariables();
-
-            var resourcesToImport = this.ProcessResources(initialHcl);
-
-            if (!resourcesToImport.Any())
+            using (new WorkingDirectoryContext(this.settings.WorkspaceDirectory))
             {
-                this.settings.Logger.LogWarning("No resources were found that could be imported.");
-                return false;
-            }
+                var configurationBlocks = new ConfigurationBlockBuilder().WithRegion(this.settings.AwsRegion)
+                    .WithDefaultTag(this.settings.AddDefaultTag ? this.settings.StackName : null).WithZipper(
+                        this.settings.Template.Resources.Any(
+                            r => r.Type == "AWS::Lambda::Function"
+                                 && r.GetResourcePropertyValue("Code.ZipFile") != null)).Build();
 
-            var cwd = Directory.GetCurrentDirectory();
-            var terraformExecutionErrorCount = 0;
-            var warningCount = 0;
 
-            try
-            {
-                this.InitializeWorkspace(initialHcl.ToString());
+                // Write out terraform and provider blocks.
+                using (var writer = new StreamWriter(HclWriter.MainScriptFile))
+                {
+                    await writer.WriteLineAsync(configurationBlocks);
+                }
 
-                //var importedResources = resourcesToImport.Where(r => r.AwsType != "AWS::SecretsManager::SecretTargetAttachment" && !UnsupportedResources.Contains(r.AwsType)).ToList();
-                var importedResources = this.ImportResources(resourcesToImport);
+                // Gather and write out initial stack resources
+                var mapper = new ResourceMapper(this.settings, this.warnings);
+                var rootModule = await mapper.ProcessStackAsync();
 
-                await this.FixCloudFormationStacksAsync(importedResources);
+                var allModules = rootModule?.DescendentsAndThis().ToList();
 
-                // Copy of the state file that we will insert references to inputs, other resources etc. before serialization to HCL.
-                var stateFile = JsonConvert.DeserializeObject<StateFile>(File.ReadAllText(StateFileName));
+                if (rootModule == null || !allModules.Any())
+                {
+                    this.settings.Logger.LogWarning("No resources were found that could be imported.");
+                    return false;
+                }
 
-                warningCount += new HclWriter(this.settings, this.warnings, this.errors).Serialize(
-                    stateFile,
-                    importedResources,
-                    parameters);
+                var terraformExecutionErrorCount = 0;
+                var warningCount = 0;
 
-                this.settings.Logger.LogInformation($"\nExport of stack \"{this.settings.StackName}\" to terraform complete!");
-            }
-            catch (TerraformRunnerException e)
-            {
-                // Errors already reported by output of terraform
-                terraformExecutionErrorCount += e.Errors;
-                warningCount += e.Warnings;
-                throw;
-            }
-            catch (HclSerializerException e)
-            {
-                this.errors.Add(e.Message);
-                throw;
-            }
-            catch (Exception e)
-            {
-                this.errors.Add($"ERROR: Internal error: {e.Message}");
-                throw;
-            }
-            finally
-            {
-                this.WriteSummary(terraformExecutionErrorCount, warningCount);
-                Directory.SetCurrentDirectory(cwd);
+                try
+                {
+                    this.InitializeWorkspace();
+
+                    foreach (var module in allModules)
+                    {
+                        var importedResources = await module.ImportResources(this.warnings, this.errors);
+
+                        if (!this.settings.ExportNestedStacks)
+                        {
+                            // If leaving nested stacks as aws_cloudformation_stack, then fix up S3 locations of these.
+                            await this.FixCloudFormationStacksAsync(importedResources);
+                        }
+
+                        var stateFile = JsonConvert.DeserializeObject<StateFile>(
+                            await AsyncFileHelpers.ReadAllTextAsync(this.stateFilePath));
+
+                        warningCount += new HclWriter(module, this.warnings, this.errors).Serialize(stateFile);
+
+                        this.settings.Logger.LogInformation(
+                            $"\nExport of stack \"{module.Settings.StackName}\" to terraform complete!");
+                    }
+                }
+                catch (TerraformRunnerException e)
+                {
+                    // Errors already reported by output of terraform
+                    terraformExecutionErrorCount += e.Errors;
+                    warningCount += e.Warnings;
+                    throw;
+                }
+                catch (HclSerializerException e)
+                {
+                    this.errors.Add(e.Message);
+                    throw;
+                }
+                catch (Exception e)
+                {
+                    this.errors.Add($"ERROR: Internal error: {e.Message}");
+                    throw;
+                }
+                finally
+                {
+                    this.WriteSummary(terraformExecutionErrorCount, warningCount);
+                }
             }
 
             return true;
@@ -160,26 +223,14 @@
         /// Write HCL block with empty resources ready for import
         /// and run <c>terraform init</c>.
         /// </summary>
-        /// <param name="initialHcl">Initial HCL to write to workspace</param>
-        private void InitializeWorkspace(string initialHcl)
+        private void InitializeWorkspace()
         {
             this.settings.Logger.LogInformation("\nInitializing workspace...");
-
-            // Set up workspace directory
-            if (!Directory.Exists(this.settings.WorkspaceDirectory))
-            {
-                Directory.CreateDirectory(this.settings.WorkspaceDirectory);
-            }
-
-            Directory.SetCurrentDirectory(this.settings.WorkspaceDirectory);
 
             if (File.Exists(HclWriter.VarsFile))
             {
                 File.Delete(HclWriter.VarsFile);
             }
-
-            // Write out initial HCL with empty resource declarations, so that terraform import has something to work with
-            File.WriteAllText(HclWriter.MainScriptFile, initialHcl, new UTF8Encoding(false));
 
             this.settings.Runner.Run("init", true, true, null);
         }
@@ -187,22 +238,23 @@
         /// <summary>
         /// Imports the resources by calling <c>terraform import</c> on each.
         /// </summary>
-        /// <param name="resourcesToImport">The resources to import.</param>
+        /// <param name="module">Module containing resources to import.</param>
         /// <returns>List of resources that were imported.</returns>
-        private List<ResourceMapping> ImportResources(List<ResourceMapping> resourcesToImport)
+        private List<ResourceMapping> ImportResources(ModuleInfo module)
         {
+            var resourcesToImport = module.ResourceMappings;
             var importedResources = new List<ResourceMapping>();
             var totalResources = resourcesToImport.Count;
 
             this.settings.Logger.LogInformation(
-                $"\nImporting {totalResources} mapped resources from stack \"{this.settings.StackName}\" to terraform state...");
+                $"\nImporting {totalResources} mapped resources from stack \"{module.Settings.StackName}\" to terraform state...");
             var imported = 0;
             
             foreach (var resource in resourcesToImport)
             {
                 var resourceToImport = resource.PhysicalId;
 
-                this.settings.Logger.LogInformation($"\nImporting resource {++imported}/{totalResources} - {resource.Address}");
+                this.settings.Logger.LogInformation($"\nImporting resource {++imported}/{totalResources} - {resource.ImportAddress}");
 
                 if (ResourceImporter.RequiresResourceImporter(resource.TerraformType))
                 {
@@ -212,10 +264,10 @@
                                 Errors = this.errors,
                                 Logger = this.settings.Logger,
                                 Resource = resource,
-                                ResourcesToImport = resourcesToImport,
+                                ResourcesToImport = resourcesToImport.Where(r => r.Module == resource.Module).ToList(), // Only resources in same stack
                                 Warnings = this.warnings
                             },
-                        this.settings);
+                        module.Settings);
 
                     if (importer != null)
                     {
@@ -235,7 +287,7 @@
                     true,
                     msg => cmdOutput.Add(msg),
                     "-no-color",
-                    resource.Address,
+                    resource.ImportAddress,
                     resourceToImport);
 
                 if (success)
@@ -394,13 +446,13 @@
         private List<InputVariable> ProcessInputVariables()
         {
             this.settings.Logger.LogInformation("Importing parameters...");
-            var parameters = new List<InputVariable>();
+            var inputVariables = new List<InputVariable>();
 
             foreach (var p in this.settings.Template.Parameters.Concat(this.settings.Template.PseudoParameters))
             {
-                var hclParam = InputVariable.CreateParameter(p);
+                var inputVariable = InputVariable.CreateParameter(p);
 
-                if (hclParam == null)
+                if (inputVariable == null)
                 {
                     var wrn = p is PseudoParameter
                                   ? $"Pseudo-parameter '{p.Name}' cannot be imported as it is not supported by terraform."
@@ -411,103 +463,11 @@
                 }
                 else
                 {
-                    parameters.Add(hclParam);
+                    inputVariables.Add(inputVariable);
                 }
             }
 
-            return parameters;
+            return inputVariables;
         }
-
-        /// <summary>
-        /// Processes the AWS resources, mapping them to equivalent Terraform resources.
-        /// </summary>
-        /// <param name="initialHcl">The initial HCL.</param>
-        /// <returns>A list of <see cref="ResourceMapping"/> for successfully mapped AWS resources.</returns>
-        private List<ResourceMapping> ProcessResources(StringBuilder initialHcl)
-        {
-            var resourceMap = JsonConvert.DeserializeObject<List<ResourceTypeMapping>>(resourceMapJson);
-            var resourcesToImport = new List<ResourceMapping>();
-            this.settings.Logger.LogInformation("Processing stack resources and mapping to terraform resource types...");
-
-            foreach (var resource in this.settings.Resources)
-            {
-                if (MergedResources.Contains(resource.StackResource.ResourceType))
-                {
-                    // Resource is merged into its dependencies.
-                    continue;
-                }
-
-                if (UnsupportedResources.Contains(resource.StackResource.ResourceType))
-                {
-                    var wrn =
-                        $"Resource \"{resource.LogicalResourceId}\" ({resource.ResourceType}): Not supported for import.";
-                    this.settings.Logger.LogWarning(wrn);
-                    this.warnings.Add(wrn);
-                    continue;
-                }
-
-                var mapping = resourceMap.FirstOrDefault(m => m.Aws == resource.ResourceType);
-
-                if (mapping == null)
-                {
-                    var wrn =
-                        $"Resource \"{resource.LogicalResourceId}\" ({resource.ResourceType}): No corresponding terraform resource.";
-                    this.settings.Logger.LogWarning(wrn);
-                    this.warnings.Add(wrn);
-                }
-                else
-                {
-                    initialHcl.AppendLine($"resource \"{mapping.Terraform}\" \"{resource.LogicalResourceId}\" {{}}")
-                        .AppendLine();
-                    resourcesToImport.Add(
-                        new ResourceMapping
-                            {
-                                PhysicalId = resource.PhysicalResourceId,
-                                LogicalId = resource.LogicalResourceId,
-                                TerraformType = mapping.Terraform,
-                                AwsType = resource.ResourceType
-                            });
-                }
-            }
-
-            return resourcesToImport;
-        }
-
-        /// <summary>
-        /// Maps an AWS resource type to equivalent Terraform resource.
-        /// This is backed by the embedded resource <c>terraform-resource-map.json</c>
-        /// </summary>
-        [DebuggerDisplay("{Aws} -> {Terraform}")]
-        private class ResourceTypeMapping
-        {
-            /// <summary>
-            /// Gets or sets the AWS type name.
-            /// </summary>
-            /// <value>
-            /// The AWS type name.
-            /// </value>
-            [JsonProperty("AWS")]
-            public string Aws { get; set; }
-
-            /// <summary>
-            /// Gets or sets the terraform type name.
-            /// </summary>
-            /// <value>
-            /// The terraform.
-            /// </value>
-            [JsonProperty("TF")]
-            public string Terraform { get; set; }
-        }
-
-#pragma warning disable 649
-
-        /// <summary>
-        /// Map of AWS resource type to Terraform resource type, generated during build.
-        /// </summary>
-        [EmbeddedResource("terraform-resource-map.json")]
-
-        // ReSharper disable once StyleCop.SA1600 - Loaded by auto-resource
-        private static string resourceMapJson;
-#pragma warning restore 649
     }
 }

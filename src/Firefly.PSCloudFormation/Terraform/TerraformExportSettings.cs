@@ -1,6 +1,7 @@
 ﻿namespace Firefly.PSCloudFormation.Terraform
 {
     using System.Collections.Generic;
+    using System.Linq;
 
     using Amazon.CloudFormation;
     using Amazon.CloudFormation.Model;
@@ -30,6 +31,15 @@
         public bool ExportNestedStacks { get; set; }
 
         /// <inheritdoc />
+        public bool IsRootModule => this.ModuleDirectory == ".";
+
+        /// <inheritdoc />
+        public ILogger Logger { get; set; }
+
+        /// <inheritdoc />
+        public string ModuleDirectory { get; set; } = ".";
+
+        /// <inheritdoc />
         public IReadOnlyCollection<CloudFormationResource> Resources { get; set; }
 
         /// <inheritdoc />
@@ -48,6 +58,19 @@
         public string WorkspaceDirectory { get; set; }
 
         /// <inheritdoc />
-        public ILogger Logger { get; set; }
+        public ITerraformExportSettings CopyWith(
+            ITemplate template,
+            IEnumerable<CloudFormationResource> resources,
+            string stackName,
+            string moduleDirectory)
+        {
+            var newSettings = (TerraformExportSettings)this.MemberwiseClone();
+            newSettings.Template = template;
+            newSettings.Resources = resources.ToList();
+            newSettings.ModuleDirectory = moduleDirectory;
+            newSettings.StackName = stackName;
+
+            return newSettings;
+        }
     }
 }

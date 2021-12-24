@@ -2,7 +2,7 @@
 {
     using System.Collections.Generic;
     using System.IO;
-    using System.Runtime.CompilerServices;
+    using System.Net;
     using System.Text;
     using System.Threading.Tasks;
 
@@ -22,9 +22,48 @@
         private const FileOptions DefaultOptions = FileOptions.Asynchronous | FileOptions.SequentialScan;
 
         /// <summary>
-        /// The default encoding
+        /// Gets the default encoding.
         /// </summary>
-        private static readonly Encoding DefaultEncoding = new UTF8Encoding(false);
+        /// <value>
+        /// The default encoding.
+        /// </value>
+        public static Encoding DefaultEncoding { get; } = new UTF8Encoding(false);
+
+        /// <summary>
+        /// Opens an existing file for async reading.
+        /// </summary>
+        /// <param name="filePath">The file path.</param>
+        /// <returns>A read-only FileStream on the specified path.</returns>
+        public static FileStream OpenReadAsync(string filePath)
+        {
+            return new FileStream(
+                filePath,
+                FileMode.Open,
+                FileAccess.Read,
+                FileShare.Read,
+                DefaultBufferSize,
+                DefaultOptions);
+        }
+
+        /// <summary>
+        /// Opens an existing file or creates a new file for async writing.
+        /// </summary>
+        /// <param name="filePath">The file path.</param>
+        /// <returns>An unshared FileStream object on the specified path with Write access.</returns>
+        public static FileStream OpenWriteAsync(string filePath)
+        {
+            return new FileStream(filePath, FileMode.Create, FileAccess.Write, FileShare.None, DefaultBufferSize, true);
+        }
+
+        /// <summary>
+        /// Opens an existing file for async append.
+        /// </summary>
+        /// <param name="filePath">The file path.</param>
+        /// <returns>An unshared FileStream object on the specified path with Write access.</returns>
+        public static FileStream OpenAppendAsync(string filePath)
+        {
+            return new FileStream(filePath, FileMode.Append, FileAccess.Write, FileShare.None, DefaultBufferSize, true);
+        }
 
         /// <summary>
         /// Reads all lines asynchronous.
@@ -35,13 +74,7 @@
         {
             var lines = new List<string>();
 
-            using (var sourceStream = new FileStream(
-                       filePath,
-                       FileMode.Open,
-                       FileAccess.Read,
-                       FileShare.Read,
-                       DefaultBufferSize,
-                       DefaultOptions))
+            using (var sourceStream = OpenReadAsync(filePath))
             using (var reader = new StreamReader(sourceStream, DefaultEncoding))
             {
                 string line;
@@ -61,13 +94,7 @@
         /// <returns>String containing all text.</returns>
         public static async Task<string> ReadAllTextAsync(string filePath)
         {
-            using (var sourceStream = new FileStream(
-                       filePath,
-                       FileMode.Open,
-                       FileAccess.Read,
-                       FileShare.Read,
-                       DefaultBufferSize,
-                       DefaultOptions))
+            using (var sourceStream = OpenReadAsync(filePath))
             using (var reader = new StreamReader(sourceStream, DefaultEncoding))
             {
                 return await reader.ReadToEndAsync();
@@ -84,13 +111,7 @@
         {
             byte[] encodedText = DefaultEncoding.GetBytes(text);
 
-            using (FileStream sourceStream = new FileStream(
-                       filePath,
-                       FileMode.Append,
-                       FileAccess.Write,
-                       FileShare.None,
-                       DefaultBufferSize,
-                       true))
+            using (FileStream sourceStream = OpenWriteAsync(filePath))
             {
                 await sourceStream.WriteAsync(encodedText, 0, encodedText.Length);
             }

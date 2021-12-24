@@ -4,6 +4,8 @@
     using System.Collections.Generic;
     using System.IO;
     using System.Linq;
+    using System.Reflection;
+    using System.Runtime.CompilerServices;
     using System.Text;
 
     using Firefly.CloudFormation;
@@ -27,7 +29,7 @@
         private static readonly Dictionary<string, string> PlanActions = new Dictionary<string, string>
                                                                              {
                                                                                  { "create", "will be created." },
-                                                                                 { "destroy", "will be DESTROYED!" },
+                                                                                 { "delete", "will be DESTROYED!" },
                                                                                  {
                                                                                      "update",
                                                                                      "will be updated in-place."
@@ -46,6 +48,11 @@
         public const string VarsFile = "terraform.tfvars";
 
         /// <summary>
+        /// Name of the file declaring imported modules
+        /// </summary>
+        public const string ModulesFile = "module_imports.tf";
+
+        /// <summary>
         /// The settings
         /// </summary>
         private readonly ITerraformExportSettings settings;
@@ -61,33 +68,36 @@
         private readonly IList<string> errors;
 
         /// <summary>
+        /// The module to serialize
+        /// </summary>
+        private readonly ModuleInfo module;
+
+        /// <summary>
         /// Initializes a new instance of the <see cref="HclWriter"/> class.
         /// </summary>
-        /// <param name="settings">The settings.</param>
+        /// <param name="module">The module to serialize.</param>
         /// <param name="warnings">Warning list</param>
         /// <param name="errors">Error list</param>
-        public HclWriter(ITerraformExportSettings settings, IList<string> warnings, IList<string> errors)
+        public HclWriter(ModuleInfo module, IList<string> warnings, IList<string> errors)
         {
+            this.module = module;
             this.errors = errors;
             this.warnings = warnings;
-            this.settings = settings;
+            this.settings = module.Settings;
         }
 
         /// <summary>
         /// Generate and write out all HCL.
         /// </summary>
         /// <param name="stateFile">The state file.</param>
-        /// <param name="importedResources">The imported resources.</param>
-        /// <param name="parameters">The parameters.</param>
         /// <returns>Count of validation warnings.</returns>
         public int Serialize(
-            StateFile stateFile,
-            IReadOnlyCollection<ResourceMapping> importedResources,
-            IList<InputVariable> parameters)
+            StateFile stateFile)
         {
-            this.WriteMain(importedResources, parameters, stateFile);
-            this.WriteTfVars(parameters);
-            return this.FormatAndValidateOutput();
+            this.WriteMain(stateFile);
+            this.WriteTfVars(this.module.Inputs);
+
+            return this.settings.IsRootModule ? this.FormatAndValidateOutput() : 0;
         }
 
         /// <summary>
@@ -290,11 +300,11 @@
         /// </summary>
         /// <param name="writer">The <see cref="TextWriter"/> to write to.</param>
         /// <param name="stateFile">The in-memory state file.</param>
-        private static void WriteResources(TextWriter writer, StateFile stateFile)
+        private void WriteResources(TextWriter writer, StateFile stateFile)
         {
             // Serialize the resources
             var serializer = new StateFileSerializer(new HclEmitter(writer));
-            serializer.Serialize(stateFile);
+            serializer.Serialize(stateFile, this.module.Name);
         }
 
         /// <summary>
@@ -368,7 +378,7 @@
                         switch (action)
                         {
                             case "replace":
-                            case "destroy":
+                            case "delete":
 
                                 var warn = $"Resource \"{addr}\" {PlanActions[action]}";
                                 this.settings.Logger.LogWarning(warn);
@@ -421,25 +431,21 @@
         /// </summary>
         /// <param name="writer">The writer.</param>
         /// <param name="stateFile">The state file.</param>
-        /// <param name="importedResources">The imported resources.</param>
-        /// <param name="inputs">The list of input variables and data sources.</param>
         private void ResolveLambdaCode(
             TextWriter writer,
-            StateFile stateFile,
-            IReadOnlyCollection<ResourceMapping> importedResources,
-            IList<InputVariable> inputs)
+            StateFile stateFile)
         {
             foreach (var cloudFormationResource in this.settings.Template.Resources.Where(
                 r => r.Type == "AWS::Lambda::Function" && r.GetResourcePropertyValue("Code") != null))
             {
-                var mapping = importedResources.FirstOrDefault(ir => ir.LogicalId == cloudFormationResource.Name);
+                var mapping = this.module.ResourceMappings.FirstOrDefault(ir => ir.LogicalId == cloudFormationResource.Name);
 
                 if (mapping == null)
                 {
                     continue;
                 }
 
-                var terraformResource = stateFile.Resources.FirstOrDefault(
+                var terraformResource = stateFile.FilteredResources(this.module.Name).FirstOrDefault(
                     rd => rd.Name == mapping.LogicalId && rd.Type == mapping.TerraformType);
 
                 if (terraformResource == null)
@@ -465,7 +471,7 @@
                         continue;
                     }
 
-                    ResolveLambdaZipCode(writer, runtimeObject.ToString(), cloudFormationResource, attributes, mapping, inputs);
+                    ResolveLambdaZipCode(writer, runtimeObject.ToString(), cloudFormationResource, attributes, mapping, this.module.Inputs);
                 }
                 else if (lambdaCode.ContainsKey("ImageUri"))
                 {
@@ -474,12 +480,12 @@
                         cloudFormationResource.Template,
                         attributes,
                         mapping,
-                        inputs,
+                        this.module.Inputs,
                         lambdaCode["ImageUri"]);
                 }
                 else
                 {
-                    ResolveLambdaS3Code(cloudFormationResource, attributes, mapping, inputs, lambdaCode);
+                    ResolveLambdaS3Code(cloudFormationResource, attributes, mapping, this.module.Inputs, lambdaCode);
                 }
             }
         }
@@ -487,10 +493,8 @@
         /// <summary>
         /// Resolves dependencies between resources and output values.
         /// </summary>
-        /// <param name="importedResources">The imported resources.</param>
         /// <returns>List of output values to emit.</returns>
-        private IEnumerable<OutputValue> ResolveOutputDependencies(
-            IReadOnlyCollection<ResourceMapping> importedResources)
+        private IEnumerable<OutputValue> ResolveOutputDependencies()
         {
             var outputValues = new List<OutputValue>();
 
@@ -503,7 +507,7 @@
 
                 var resourceName = intrinsic.Reference;
                 var evaluatedValue = intrinsic.Evaluate(this.settings.Template);
-                var resource = importedResources.FirstOrDefault(r => r.LogicalId == resourceName);
+                var resource = this.module.ResourceMappings.FirstOrDefault(r => r.LogicalId == resourceName);
 
                 if (resource == null)
                 {
@@ -529,24 +533,20 @@
         /// Resolves dependencies between resources updating the in-memory copy of the state file with variable and resource references.
         /// </summary>
         /// <param name="stateFile">The state file.</param>
-        /// <param name="parameters">The parameters.</param>
-        /// <param name="importedResources">The imported resources.</param>
         private void ResolveResourceDependencies(
-            StateFile stateFile,
-            IList<InputVariable> parameters,
-            IEnumerable<ResourceMapping> importedResources)
+            StateFile stateFile)
         {
             this.settings.Logger.LogInformation("\nResolving dependencies between resources...");
 
             var resolver = new ResourceDependencyResolver(
                 this.settings,
-                stateFile.Resources,
-                parameters,
+                stateFile.FilteredResources(this.module.Name),
+                this.module.Inputs,
                 this.warnings);
 
-            foreach (var tfr in importedResources)
+            foreach (var tfr in this.module.ResourceMappings)
             {
-                resolver.ResolveDependencies(stateFile.Resources.First(r => r.Name == tfr.LogicalId));
+                resolver.ResolveDependencies(stateFile.FilteredResources(this.module.Name).First(r => r.Name == tfr.LogicalId));
             }
         }
 
@@ -563,35 +563,35 @@
         /// <summary>
         /// Serialize the in-memory copy of the state file and write out <c>main.tf</c>.
         /// </summary>
-        /// <param name="importedResources">The imported resources.</param>
-        /// <param name="parameters">The parameters.</param>
         /// <param name="stateFile">The state file.</param>
-        private void WriteMain(
-            IReadOnlyCollection<ResourceMapping> importedResources,
-            IList<InputVariable> parameters,
-            StateFile stateFile)
+        private void WriteMain(StateFile stateFile)
         {
             this.settings.Logger.LogInformation($"Writing {MainScriptFile}");
 
             // Write main.tf
             using (var stream = new FileStream(
-                Path.Combine(this.settings.WorkspaceDirectory, MainScriptFile),
+                Path.Combine(this.settings.WorkspaceDirectory, this.settings.ModuleDirectory, MainScriptFile),
                 FileMode.Create,
                 FileAccess.Write))
             using (var writer = new StreamWriter(stream, new UTF8Encoding(false)))
             {
-                this.ResolveLambdaCode(writer, stateFile, importedResources, parameters);
-                this.ResolveResourceDependencies(stateFile, parameters, importedResources);
-                this.WriteProviders(writer);
-                WriteInputsAndDataBlocks(writer, parameters);
+                this.ResolveLambdaCode(writer, stateFile);
+                this.ResolveResourceDependencies(stateFile);
+
+                if (this.settings.IsRootModule)
+                {
+                    this.WriteProviders(writer);
+                }
+
+                WriteInputsAndDataBlocks(writer, this.module.Inputs);
                 this.WriteLocalsAndMappings(writer);
-                WriteResources(writer, stateFile);
-                WriteOutputs(writer, this.ResolveOutputDependencies(importedResources));
+                this.WriteResources(writer, stateFile);
+                WriteOutputs(writer, this.ResolveOutputDependencies());
             }
         }
 
         /// <summary>
-        /// Writes the terraform and  providers sections of <c>main.ff</c>.
+        /// Writes the terraform and  providers sections of <c>main.tf</c>.
         /// </summary>
         /// <param name="writer">The <see cref="TextWriter"/> to write to.</param>
         private void WriteProviders(TextWriter writer)
@@ -613,7 +613,7 @@
             this.settings.Logger.LogInformation($"Writing {VarsFile}");
 
             using (var stream = new FileStream(
-                Path.Combine(this.settings.WorkspaceDirectory, VarsFile),
+                Path.Combine(this.settings.WorkspaceDirectory, this.settings.ModuleDirectory, VarsFile),
                 FileMode.Create,
                 FileAccess.Write))
             using (var s = new StreamWriter(stream, new UTF8Encoding(false)))
