@@ -1,14 +1,10 @@
 ﻿namespace Firefly.PSCloudFormation.Terraform.HclSerializer
 {
-    using System;
     using System.Collections.Generic;
     using System.IO;
     using System.Linq;
-    using System.Reflection;
-    using System.Runtime.CompilerServices;
     using System.Text;
 
-    using Firefly.CloudFormation;
     using Firefly.CloudFormationParser;
     using Firefly.CloudFormationParser.Intrinsics;
     using Firefly.CloudFormationParser.Intrinsics.Functions;
@@ -26,6 +22,21 @@
     /// </summary>
     internal class HclWriter
     {
+        /// <summary>
+        /// Name of the main script file
+        /// </summary>
+        public const string MainScriptFile = "main.tf";
+
+        /// <summary>
+        /// Name of the file declaring imported modules
+        /// </summary>
+        public const string ModulesFile = "module_imports.tf";
+
+        /// <summary>
+        /// Name of the variable values file
+        /// </summary>
+        public const string VarsFile = "terraform.tfvars";
+
         private static readonly Dictionary<string, string> PlanActions = new Dictionary<string, string>
                                                                              {
                                                                                  { "create", "will be created." },
@@ -38,19 +49,14 @@
                                                                              };
 
         /// <summary>
-        /// Name of the main script file
+        /// The error list
         /// </summary>
-        public const string MainScriptFile = "main.tf";
+        private readonly IList<string> errors;
 
         /// <summary>
-        /// Name of the variable values file
+        /// The module to serialize
         /// </summary>
-        public const string VarsFile = "terraform.tfvars";
-
-        /// <summary>
-        /// Name of the file declaring imported modules
-        /// </summary>
-        public const string ModulesFile = "module_imports.tf";
+        private readonly ModuleInfo module;
 
         /// <summary>
         /// The settings
@@ -61,16 +67,6 @@
         /// The warning list
         /// </summary>
         private readonly IList<string> warnings;
-
-        /// <summary>
-        /// The error list
-        /// </summary>
-        private readonly IList<string> errors;
-
-        /// <summary>
-        /// The module to serialize
-        /// </summary>
-        private readonly ModuleInfo module;
 
         /// <summary>
         /// Initializes a new instance of the <see cref="HclWriter"/> class.
@@ -91,11 +87,10 @@
         /// </summary>
         /// <param name="stateFile">The state file.</param>
         /// <returns>Count of validation warnings.</returns>
-        public int Serialize(
-            StateFile stateFile)
+        public int Serialize(StateFile stateFile)
         {
             this.WriteMain(stateFile);
-            this.WriteTfVars(this.module.Inputs);
+            this.WriteTfVars();
 
             return this.settings.IsRootModule ? this.FormatAndValidateOutput() : 0;
         }
@@ -219,7 +214,7 @@
         /// </summary>
         /// <param name="key">The key.</param>
         /// <param name="template">The template.</param>
-        /// <param name="attributes">The attributes.</param>
+        /// <param name="attributes">The attributes of the resource to update.</param>
         /// <param name="resourceMapping">The resource mapping.</param>
         /// <param name="inputs">The list of input variables and data sources.</param>
         /// <param name="newValue">The new value.</param>
@@ -269,20 +264,6 @@
         }
 
         /// <summary>
-        /// Writes the input variables and data blocks sections of <c>main.tf</c>.
-        /// </summary>
-        /// <param name="writer">The <see cref="TextWriter"/> to write to.</param>
-        /// <param name="parameters">The parameters.</param>
-        private static void WriteInputsAndDataBlocks(TextWriter writer, IEnumerable<InputVariable> parameters)
-        {
-            // TODO: Suppress any vars not referenced (e.g. only existed for condition blocks)
-            foreach (var param in parameters.OrderBy(p => p.IsDataSource).ThenBy(p => p.Name))
-            {
-                writer.WriteLine(param.GenerateHcl(true));
-            }
-        }
-
-        /// <summary>
         /// Writes the outputs section of <c>main.tf</c>.
         /// </summary>
         /// <param name="writer">The <see cref="TextWriter"/> to write to.</param>
@@ -293,18 +274,6 @@
             {
                 writer.WriteLine(output.GenerateHcl());
             }
-        }
-
-        /// <summary>
-        /// Writes the resources section of <c>main.tf</c>.
-        /// </summary>
-        /// <param name="writer">The <see cref="TextWriter"/> to write to.</param>
-        /// <param name="stateFile">The in-memory state file.</param>
-        private void WriteResources(TextWriter writer, StateFile stateFile)
-        {
-            // Serialize the resources
-            var serializer = new StateFileSerializer(new HclEmitter(writer));
-            serializer.Serialize(stateFile, this.module.Name);
         }
 
         /// <summary>
@@ -335,21 +304,18 @@
             var totalChanges = 0;
 
             this.settings.Logger.LogInformation("Planning...");
-            var success = this.settings.Runner.Run(
-                "plan",
-                false,
-                false,
-                msg => LogChange(JObject.Parse(msg)),
-                "-json");
+            var success = this.settings.Runner.Run("plan", false, false, msg => LogChange(JObject.Parse(msg)), "-json");
 
             if (destructiveChanges > 0)
             {
-                this.warnings.Add("One or more resources will be REPLACED or DESTROYED with the current configuration!");
+                this.warnings.Add(
+                    "One or more resources will be REPLACED or DESTROYED with the current configuration!");
             }
 
             if (totalChanges == 0)
             {
-                this.settings.Logger.LogInformation("No changes were detected by 'terraform plan', however the configuration should still be tested against a non-prod stack.");
+                this.settings.Logger.LogInformation(
+                    "No changes were detected by 'terraform plan', however the configuration should still be tested against a non-prod stack.");
             }
 
             void LogChange(JObject planOutput)
@@ -431,14 +397,13 @@
         /// </summary>
         /// <param name="writer">The writer.</param>
         /// <param name="stateFile">The state file.</param>
-        private void ResolveLambdaCode(
-            TextWriter writer,
-            StateFile stateFile)
+        private void ResolveLambdaCode(TextWriter writer, StateFile stateFile)
         {
             foreach (var cloudFormationResource in this.settings.Template.Resources.Where(
-                r => r.Type == "AWS::Lambda::Function" && r.GetResourcePropertyValue("Code") != null))
+                         r => r.Type == "AWS::Lambda::Function" && r.GetResourcePropertyValue("Code") != null))
             {
-                var mapping = this.module.ResourceMappings.FirstOrDefault(ir => ir.LogicalId == cloudFormationResource.Name);
+                var mapping =
+                    this.module.ResourceMappings.FirstOrDefault(ir => ir.LogicalId == cloudFormationResource.Name);
 
                 if (mapping == null)
                 {
@@ -471,7 +436,13 @@
                         continue;
                     }
 
-                    ResolveLambdaZipCode(writer, runtimeObject.ToString(), cloudFormationResource, attributes, mapping, this.module.Inputs);
+                    ResolveLambdaZipCode(
+                        writer,
+                        runtimeObject.ToString(),
+                        cloudFormationResource,
+                        attributes,
+                        mapping,
+                        this.module.Inputs);
                 }
                 else if (lambdaCode.ContainsKey("ImageUri"))
                 {
@@ -533,8 +504,7 @@
         /// Resolves dependencies between resources updating the in-memory copy of the state file with variable and resource references.
         /// </summary>
         /// <param name="stateFile">The state file.</param>
-        private void ResolveResourceDependencies(
-            StateFile stateFile)
+        private void ResolveResourceDependencies(StateFile stateFile)
         {
             this.settings.Logger.LogInformation("\nResolving dependencies between resources...");
 
@@ -546,7 +516,21 @@
 
             foreach (var tfr in this.module.ResourceMappings)
             {
-                resolver.ResolveDependencies(stateFile.FilteredResources(this.module.Name).First(r => r.Name == tfr.LogicalId));
+                resolver.ResolveDependencies(
+                    stateFile.FilteredResources(this.module.Name).First(r => r.Name == tfr.LogicalId));
+            }
+        }
+
+        /// <summary>
+        /// Writes the input variables and data blocks sections of <c>main.tf</c>.
+        /// </summary>
+        /// <param name="writer">The <see cref="TextWriter"/> to write to.</param>
+        private void WriteInputsAndDataBlocks(TextWriter writer)
+        {
+            // TODO: Suppress any vars not referenced (e.g. only existed for condition blocks)
+            foreach (var param in this.module.Inputs.OrderBy(p => p.IsDataSource).ThenBy(p => p.Name))
+            {
+                writer.WriteLine(param.GenerateHcl(true));
             }
         }
 
@@ -570,9 +554,9 @@
 
             // Write main.tf
             using (var stream = new FileStream(
-                Path.Combine(this.settings.WorkspaceDirectory, this.settings.ModuleDirectory, MainScriptFile),
-                FileMode.Create,
-                FileAccess.Write))
+                       Path.Combine(this.settings.WorkspaceDirectory, this.settings.ModuleDirectory, MainScriptFile),
+                       FileMode.Create,
+                       FileAccess.Write))
             using (var writer = new StreamWriter(stream, new UTF8Encoding(false)))
             {
                 this.ResolveLambdaCode(writer, stateFile);
@@ -583,7 +567,7 @@
                     this.WriteProviders(writer);
                 }
 
-                WriteInputsAndDataBlocks(writer, this.module.Inputs);
+                this.WriteInputsAndDataBlocks(writer);
                 this.WriteLocalsAndMappings(writer);
                 this.WriteResources(writer, stateFile);
                 WriteOutputs(writer, this.ResolveOutputDependencies());
@@ -605,33 +589,52 @@
         }
 
         /// <summary>
+        /// Writes the resources section of <c>main.tf</c>.
+        /// </summary>
+        /// <param name="writer">The <see cref="TextWriter"/> to write to.</param>
+        /// <param name="stateFile">The in-memory state file.</param>
+        private void WriteResources(TextWriter writer, StateFile stateFile)
+        {
+            // Serialize the resources
+            var serializer = new StateFileSerializer(new HclEmitter(writer));
+            serializer.Serialize(stateFile, this.module.Name);
+        }
+
+        /// <summary>
         /// Write out <c>terraform.tfvars</c> using current values of parameters extracted from deployed CloudFormation stack.
         /// </summary>
-        /// <param name="parameters">The parameters.</param>
-        private void WriteTfVars(IEnumerable<InputVariable> parameters)
+        private void WriteTfVars()
         {
+            if (!this.module.Inputs.Any())
+            {
+                return;
+            }
+
             this.settings.Logger.LogInformation($"Writing {VarsFile}");
 
             using (var stream = new FileStream(
-                Path.Combine(this.settings.WorkspaceDirectory, this.settings.ModuleDirectory, VarsFile),
-                FileMode.Create,
-                FileAccess.Write))
+                       Path.Combine(this.settings.WorkspaceDirectory, this.settings.ModuleDirectory, VarsFile),
+                       FileMode.Create,
+                       FileAccess.Write))
             using (var s = new StreamWriter(stream, new UTF8Encoding(false)))
             {
-                s.WriteLine("###################################################################");
+                var title = $"# Variable values as per current state of stack \"{this.settings.StackName}\"";
+                var border = new string('#', title.Length);
+
+                s.WriteLine(border);
                 s.WriteLine("#");
-                s.WriteLine($"# Variable values as per current state of stack \"{this.settings.StackName}\"");
+                s.WriteLine(title);
                 s.WriteLine("#");
-                s.WriteLine("###################################################################");
+                s.WriteLine(border);
                 s.WriteLine();
 
-                foreach (var param in parameters.OrderBy(p => p.Name))
+                foreach (var input in this.module.Inputs.OrderBy(p => p.Name))
                 {
-                    var hcl = param.GenerateTfVar();
+                    var hcl = input.GenerateTfVar();
 
                     if (!string.IsNullOrEmpty(hcl))
                     {
-                        s.WriteLine(param.GenerateTfVar());
+                        s.WriteLine(input.GenerateTfVar());
                         s.WriteLine();
                     }
                 }
