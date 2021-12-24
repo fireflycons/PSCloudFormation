@@ -1,5 +1,9 @@
 # Release Notes
 
+# 4.1.16.1 
+
+* Fix - Exception thrown on creating new stack with nested stacks. [Issue link](https://github.com/fireflycons/PSCloudFormation/issues/126)
+
 # 4.1.16.0
 
 * Enhancement - Use new [CloudFormation Parser](https://github.com/fireflycons/Firefly.CloudFormationParser)
