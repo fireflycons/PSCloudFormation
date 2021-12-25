@@ -1,6 +1,10 @@
 # Release Notes
 
-# 4.1.16.1 
+# 4.1.16.2
+
+* Fix - Bump dependencies again due to another occurrence of the issue below on a different part of the template.
+
+# 4.1.16.1 (Delisted)
 
 * Fix - Exception thrown on creating new stack with nested stacks. [Issue link](https://github.com/fireflycons/PSCloudFormation/issues/126)
 
