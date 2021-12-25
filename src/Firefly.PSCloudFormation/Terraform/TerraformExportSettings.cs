@@ -58,9 +58,13 @@
         public string WorkspaceDirectory { get; set; }
 
         /// <inheritdoc />
+        public IReadOnlyCollection<Output> CloudFormationOutputs { get; set; } = new List<Output>();
+
+        /// <inheritdoc />
         public ITerraformExportSettings CopyWith(
             ITemplate template,
             IEnumerable<CloudFormationResource> resources,
+            IEnumerable<Output> cloudFormationOutputs,
             string stackName,
             string moduleDirectory)
         {
@@ -69,6 +73,11 @@
             newSettings.Resources = resources.ToList();
             newSettings.ModuleDirectory = moduleDirectory;
             newSettings.StackName = stackName;
+
+            if (cloudFormationOutputs != null)
+            {
+                newSettings.CloudFormationOutputs = cloudFormationOutputs.ToList();
+            }
 
             return newSettings;
         }

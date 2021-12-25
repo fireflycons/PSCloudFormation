@@ -2,10 +2,12 @@
 {
     using System.Collections.Generic;
 
+    using Amazon.CloudFormation.Model;
+
     using Firefly.CloudFormationParser;
 
     /// <summary>
-    /// Entity returned by <see cref="TerraformExporter.ReadStackAsync"/>
+    /// Entity returned by <see cref="StackHelper.ReadStackAsync"/>
     /// </summary>
     internal class ReadStackResult
     {
@@ -40,5 +42,13 @@
         /// The template.
         /// </value>
         public ITemplate Template { get; set; }
+
+        /// <summary>
+        /// Gets or sets the stack outputs.
+        /// </summary>
+        /// <value>
+        /// The outputs.
+        /// </value>
+        public IList<Output> Outputs { get; set; }
     }
 }

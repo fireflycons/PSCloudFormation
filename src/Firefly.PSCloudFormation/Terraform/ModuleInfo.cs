@@ -8,6 +8,8 @@
     using System.Text;
     using System.Threading.Tasks;
 
+    using Amazon.CloudFormation.Model;
+
     using Firefly.EmbeddedResourceLoader;
     using Firefly.PSCloudFormation.Terraform.Hcl;
     using Firefly.PSCloudFormation.Terraform.HclSerializer;
@@ -59,10 +61,7 @@
         static ModuleInfo()
         {
             ResourceTypeMappings = JsonConvert.DeserializeObject<List<ResourceTypeMapping>>(
-                ResourceLoader.GetStringResource(
-                        ResourceLoader.GetResourceStream(
-                            "terraform-resource-map.json",
-                            Assembly.GetExecutingAssembly()))
+                ResourceLoader.GetStringResource("terraform-resource-map.json")
                     .ToString());
         }
 
@@ -71,7 +70,13 @@
         /// </summary>
         /// <param name="settings">The settings.</param>
         /// <param name="nestedModules">The nested modules.</param>
-        public ModuleInfo(ITerraformExportSettings settings, IReadOnlyCollection<ModuleInfo> nestedModules)
+        /// <param name="inputs">List of input variables.</param>
+        /// <param name="outputs">List of CloudFormation outputs</param>
+        public ModuleInfo(
+            ITerraformExportSettings settings,
+            IReadOnlyCollection<ModuleInfo> nestedModules,
+            IEnumerable<InputVariable> inputs,
+            IEnumerable<Output> outputs)
         {
             this.Settings = settings;
             this.NestedModules = nestedModules ?? new List<ModuleInfo>();
@@ -79,6 +84,16 @@
             foreach (var nestedModule in this.NestedModules)
             {
                 nestedModule.Parent = this;
+            }
+
+            if (inputs != null)
+            {
+                this.Inputs = inputs.ToList();
+            }
+
+            if (outputs != null)
+            {
+                this.Outputs = outputs.ToList();
             }
         }
 
@@ -91,13 +106,21 @@
         public string FriendlyName => this.IsRootModule ? "<ROOT>" : this.Name;
 
         /// <summary>
-        /// Gets or sets the inputs.
+        /// Gets the inputs.
         /// </summary>
         /// <value>
         /// The inputs.
         /// </value>
-        public List<InputVariable> Inputs { get; set; } = new List<InputVariable>();
+        public IList<InputVariable> Inputs { get; } = new List<InputVariable>();
 
+        /// <summary>
+        /// Gets the CloudFormation outputs.
+        /// </summary>
+        /// <value>
+        /// The outputs.
+        /// </value>
+        public IReadOnlyCollection<Output> Outputs { get; } = new List<Output>();
+        
         /// <summary>
         /// Gets a value indicating whether this module has been imported.
         /// </summary>
@@ -281,7 +304,7 @@
         {
             var resourcesToImport = new List<ResourceMapping>();
             this.Settings.Logger.LogInformation(
-                "Processing stack resources and mapping to terraform resource types...");
+                "- Mapping stack resources to terraform resource types...");
 
             foreach (var resource in this.Settings.Resources)
             {

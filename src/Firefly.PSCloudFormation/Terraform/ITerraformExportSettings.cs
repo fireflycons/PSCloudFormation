@@ -127,16 +127,26 @@
         string WorkspaceDirectory { get; }
 
         /// <summary>
+        /// Gets the list of outputs from the stack being processed.
+        /// </summary>
+        /// <value>
+        /// The cloud formation outputs.
+        /// </value>
+        IReadOnlyCollection<Output> CloudFormationOutputs { get; }
+
+        /// <summary>
         /// Creates a copy of the settings with new values for the fields that change on a per-module basis.
         /// </summary>
         /// <param name="template">The template.</param>
         /// <param name="resources">The resources.</param>
+        /// <param name="cloudFormationOutputs">List of outputs from the stack being processed.</param>
         /// <param name="stackName">Name of the stack.</param>
         /// <param name="moduleDirectory">The module directory.</param>
         /// <returns>A copy of the settings with updated property values.</returns>
         ITerraformExportSettings CopyWith(
             ITemplate template,
             IEnumerable<CloudFormationResource> resources,
+            IEnumerable<Output> cloudFormationOutputs,
             string stackName,
             string moduleDirectory);
     }

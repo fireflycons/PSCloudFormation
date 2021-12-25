@@ -214,7 +214,7 @@
         /// </summary>
         /// <param name="key">The key.</param>
         /// <param name="template">The template.</param>
-        /// <param name="attributes">The attributes of the resource to update.</param>
+        /// <param name="attributes">The attributes ofd the resource ti.</param>
         /// <param name="resourceMapping">The resource mapping.</param>
         /// <param name="inputs">The list of input variables and data sources.</param>
         /// <param name="newValue">The new value.</param>
@@ -511,7 +511,7 @@
             var resolver = new ResourceDependencyResolver(
                 this.settings,
                 stateFile.FilteredResources(this.module.Name),
-                this.module.Inputs,
+                this.module,
                 this.warnings);
 
             foreach (var tfr in this.module.ResourceMappings)

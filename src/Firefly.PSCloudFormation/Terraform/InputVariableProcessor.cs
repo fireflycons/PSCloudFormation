@@ -46,7 +46,7 @@
         /// <returns>List of <see cref="InputVariable"/></returns>
         public List<InputVariable> ProcessInputs()
         {
-            this.logger.LogInformation("Importing parameters...");
+            this.logger.LogInformation("- Importing parameters...");
             var inputVariables = new List<InputVariable>();
 
             foreach (var p in this.template.Parameters.Concat(this.template.PseudoParameters))

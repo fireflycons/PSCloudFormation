@@ -27,11 +27,6 @@
     internal class TerraformExporter
     {
         /// <summary>
-        /// The stack identifier regex
-        /// </summary>
-        private static readonly Regex StackIdRegex = new Regex(@"^arn:(?<partition>\w+):cloudformation:(?<region>[^:]+):(?<account>\d+):stack/(?<stack>[^/]+)");
-
-        /// <summary>
         /// Path to the Terraform state file
         /// </summary>
         private readonly string stateFilePath;
@@ -59,75 +54,6 @@
         {
             this.settings = settings;
             this.stateFilePath = Path.Combine(settings.WorkspaceDirectory, "terraform.tfstate");
-        }
-
-        /// <summary>
-        /// Reads the stack asynchronous.
-        /// </summary>
-        /// <param name="cloudFormationClient">The cloud formation client.</param>
-        /// <param name="stackName">Name of the stack.</param>
-        /// <param name="parameterValues">The parameter values.</param>
-        /// <returns>A <see cref="ReadStackResult"/> with the </returns>
-        /// <exception cref="System.InvalidOperationException">Number of parsed resources does not match number of actual physical resources.</exception>
-        public static async Task<ReadStackResult> ReadStackAsync(IAmazonCloudFormation cloudFormationClient, string stackName, IDictionary<string, object> parameterValues = null)
-        {
-            if (parameterValues == null)
-            {
-                parameterValues = new Dictionary<string, object>();
-            }
-
-            // Determine various pseudo-parameter values from the stack description
-            var stack =
-                (await cloudFormationClient.DescribeStacksAsync(new DescribeStacksRequest { StackName = stackName })).Stacks
-                .First();
-
-            var match = StackIdRegex.Match(stack.StackId);
-
-            parameterValues.Add("AWS::AccountId", match.Groups["account"].Value);
-            parameterValues.Add("AWS::Region", match.Groups["region"].Value);
-            parameterValues.Add("AWS::StackName", match.Groups["stack"].Value);
-            parameterValues.Add("AWS::StackId", stack.StackId);
-            parameterValues.Add("AWS::Partition", match.Groups["partition"].Value);
-            parameterValues.Add("AWS::NotificationARNs", stack.NotificationARNs);
-            
-            var builder = new DeserializerSettingsBuilder().WithCloudFormationStack(cloudFormationClient, stackName)
-                .WithExcludeConditionalResources(true)
-                .WithParameterValues(parameterValues);
-
-            // Get the template
-            var template = await Template.Deserialize(builder.Build());
-
-            // Get the physical resources
-            var resources =
-                await cloudFormationClient.DescribeStackResourcesAsync(
-                    new DescribeStackResourcesRequest { StackName = stackName });
-
-            // This should be equivalent to what we read from the template
-            var check = resources.StackResources.Select(r => r.LogicalResourceId).OrderBy(lr => lr)
-                .SequenceEqual(template.Resources.Select(r => r.Name).OrderBy(lr => lr));
-
-            if (!check)
-            {
-                throw new System.InvalidOperationException(
-                    "Number of parsed resources does not match number of actual physical resources.");
-            }
-
-            // Combine physical stack resources and parsed template resources into single objects containing both.
-            var combinedResources = resources.StackResources.Join(
-                    template.Resources,
-                    sr => sr.LogicalResourceId,
-                    tr => tr.Name,
-                    (stackResource, templateResource) =>
-                        new CloudFormationResource(templateResource, stackResource))
-                .ToList();
-
-            return new ReadStackResult
-                       {
-                           AccountId = match.Groups["account"].Value,
-                           Region = match.Groups["region"].Value,
-                           Resources = combinedResources,
-                           Template = template
-                       };
         }
 
         /// <summary>
@@ -437,37 +363,6 @@
             {
                 this.warnings.Add($"Resource \"{templateResource.Name}\" - Policy likely not imported. Add it in manually.");
             }
-        }
-
-        /// <summary>
-        /// Processes the input variables.
-        /// </summary>
-        /// <returns>A list of <see cref="InputVariable"/></returns>
-        private List<InputVariable> ProcessInputVariables()
-        {
-            this.settings.Logger.LogInformation("Importing parameters...");
-            var inputVariables = new List<InputVariable>();
-
-            foreach (var p in this.settings.Template.Parameters.Concat(this.settings.Template.PseudoParameters))
-            {
-                var inputVariable = InputVariable.CreateParameter(p);
-
-                if (inputVariable == null)
-                {
-                    var wrn = p is PseudoParameter
-                                  ? $"Pseudo-parameter '{p.Name}' cannot be imported as it is not supported by terraform."
-                                  : $"Stack parameter '{p.Name}' cannot be imported.";
-
-                    this.settings.Logger.LogWarning(wrn);
-                    this.warnings.Add(wrn);
-                }
-                else
-                {
-                    inputVariables.Add(inputVariable);
-                }
-            }
-
-            return inputVariables;
         }
     }
 }

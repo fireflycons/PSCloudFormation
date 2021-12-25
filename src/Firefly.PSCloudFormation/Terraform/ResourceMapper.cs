@@ -18,12 +18,6 @@
     internal class ResourceMapper
     {
         /// <summary>
-        /// Regex to extract stack name
-        /// </summary>
-        private static readonly Regex StackNameRegex =
-            new Regex(@"arn:[\w\-]+:cloudformation:[\w\-]+:\d+:stack/(?<stackName>[\w\-]+)");
-
-        /// <summary>
         /// The settings
         /// </summary>
         private readonly ITerraformExportSettings settings;
@@ -55,13 +49,16 @@
                 return await ProcessChildModule(this.settings, this.warnings);
             }
 
+            this.settings.Logger.LogInformation($"Processing stack {settings.StackName}...");
+
             using (var fs = AsyncFileHelpers.OpenAppendAsync(HclWriter.MainScriptFile))
             using (var writer = new StreamWriter(fs, AsyncFileHelpers.DefaultEncoding))
             {
-                var module = new ModuleInfo(this.settings, null)
-                                 {
-                                     Inputs = new InputVariableProcessor(this.settings, this.warnings).ProcessInputs()
-                                 };
+                var module = new ModuleInfo(
+                    this.settings,
+                    null,
+                    new InputVariableProcessor(this.settings, this.warnings).ProcessInputs(),
+                    null);
 
                 await module.ProcessResources(writer, this.warnings);
 
@@ -85,7 +82,7 @@
                          r => r.ResourceType == "AWS::CloudFormation::Stack"))
             {
                 var stackName = GetStackName(child.StackResource.PhysicalResourceId);
-                var stackData = await TerraformExporter.ReadStackAsync(
+                var stackData = await StackHelper.ReadStackAsync(
                                     settings.CloudFormationClient,
                                     stackName,
                                     new Dictionary<string, object>());
@@ -93,6 +90,7 @@
                 var childModuleSettings = settings.CopyWith(
                     stackData.Template,
                     stackData.Resources,
+                    stackData.Outputs,
                     stackName,
                     Path.Combine("modules", stackName));
 
@@ -106,6 +104,7 @@
                 Directory.CreateDirectory(workingDirectory);
             }
 
+            settings.Logger.LogInformation($"Processing stack {settings.StackName}...");
             var scriptFile = Path.Combine(workingDirectory, HclWriter.MainScriptFile);
 
             ModuleInfo module;
@@ -116,13 +115,15 @@
                 var thisModuleSettings = settings.CopyWith(
                     settings.Template,
                     settings.Resources.Where(r => r.ResourceType != "AWS::CloudFormation::Stack"),
+                    null,
                     settings.StackName,
                     settings.IsRootModule ? "." : settings.ModuleDirectory);
 
-                module = new ModuleInfo(thisModuleSettings, childModules)
-                                 {
-                                     Inputs = new InputVariableProcessor(thisModuleSettings, warnings).ProcessInputs()
-                                 };
+                module = new ModuleInfo(
+                    thisModuleSettings,
+                    childModules,
+                    new InputVariableProcessor(thisModuleSettings, warnings).ProcessInputs(),
+                    thisModuleSettings.CloudFormationOutputs);
 
                 await module.ProcessResources(writer, warnings);
             }
@@ -145,11 +146,11 @@
                 return stackId;
             }
 
-            var match = StackNameRegex.Match(stackId);
+            var match = StackHelper.StackIdRegex.Match(stackId);
 
             if (match.Success)
             {
-                return match.Groups["stackName"].Value;
+                return match.Groups["stack"].Value;
             }
 
             throw new InvalidOperationException($"'{stackId}' is not a valid stack ARN");

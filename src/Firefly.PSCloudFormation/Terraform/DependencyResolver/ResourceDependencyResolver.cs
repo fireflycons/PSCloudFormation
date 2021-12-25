@@ -50,23 +50,29 @@
         private CloudFormationResource currentCloudFormationResource;
 
         /// <summary>
+        /// The module being processed
+        /// </summary>
+        private readonly ModuleInfo module;
+
+        /// <summary>
         /// Initializes a new instance of the <see cref="ResourceDependencyResolver"/> class.
         /// </summary>
         /// <param name="settings">Main settings object.</param>
         /// <param name="terraformResources">All imported terraform resources (as JSON from state file).</param>
-        /// <param name="inputs">The list of input variables and data sources.</param>
+        /// <param name="module">The module being processed.</param>
         /// <param name="warnings">Global warning list.</param>
         public ResourceDependencyResolver(
             ITerraformExportSettings settings,
             IEnumerable<StateFileResourceDeclaration> terraformResources,
-            IList<InputVariable> inputs,
+            ModuleInfo module,
             IList<string> warnings)
         {
+            this.module = module;
             this.settings = settings;
             this.warnings = warnings;
             this.template = settings.Template;
             this.terraformResources = terraformResources.ToList();
-            this.inputs = inputs;
+            this.inputs = module.Inputs.ToList();
         }
 
         /// <summary>

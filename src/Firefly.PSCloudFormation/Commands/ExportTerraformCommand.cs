@@ -187,7 +187,7 @@
                 // Get all exports in region, for use where Fn::Import is found
                 var exports = (await client.ListExportsAsync(new ListExportsRequest())).Exports;
 
-                var stackData = await TerraformExporter.ReadStackAsync(client, this.StackName, userArgs);
+                var stackData = await StackHelper.ReadStackAsync(client, this.StackName, userArgs);
 
                 var exporter = new TerraformExporter(
                     new TerraformExportSettings
