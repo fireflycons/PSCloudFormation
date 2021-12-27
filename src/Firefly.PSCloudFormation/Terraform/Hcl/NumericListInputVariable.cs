@@ -37,9 +37,7 @@
         {
             return this.CurrentValue == null 
                        ? string.Empty 
-                       : this.CurrentValue is Reference reference 
-                           ? $"{this.Name} = {reference.ReferenceExpression}" 
-                           : new StringBuilder().AppendLine($"{this.Name} = [")
+                       : new StringBuilder().AppendLine($"{this.Name} = [")
                                .AppendLine(string.Join(",\n", this.ListIdentity.Select(v => $"  {v}"))).AppendLine("]")
                                .ToString();
         }

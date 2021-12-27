@@ -10,6 +10,7 @@
 
     using Amazon.CloudFormation.Model;
 
+    using Firefly.CloudFormationParser;
     using Firefly.EmbeddedResourceLoader;
     using Firefly.PSCloudFormation.Terraform.Hcl;
     using Firefly.PSCloudFormation.Terraform.HclSerializer;
@@ -161,6 +162,14 @@
         /// The logical identifier.
         /// </value>
         public string LogicalId => this.Settings.LogicalId;
+
+        /// <summary>
+        /// Gets the <see cref="IResource"/> representing the CloudFormation <c>AWS::CloudFormation::Stack</c> that backs this module.
+        /// </summary>
+        /// <value>
+        /// The stack resource.
+        /// </value>
+        public IResource StackResource => this.Parent?.Settings.Template.Resources.First(r => r.Name == this.LogicalId);
 
         /// <summary>
         /// Gets the nested modules.
@@ -393,7 +402,7 @@
                         // corresponding "variable" declarations are visible to Terraform command.
                         foreach (var input in module.Inputs.Where(i => !(i.IsDataSource || i is PseudoParameterInput)))
                         {
-                            sb.AppendLine($"  {input.GenerateTfVar()}");
+                            sb.AppendLine($"  {input.GenerateVariableAssignment()}");
                         }
                     }
 

@@ -25,6 +25,6 @@
         }
 
         /// <inheritdoc />
-        public override string ReferenceExpression => this.ObjectAddress;
+        public override string ReferenceExpression => $"module.{this.ObjectAddress}";
     }
 }

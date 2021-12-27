@@ -5,10 +5,12 @@
     using System.Linq;
 
     using Firefly.CloudFormationParser;
+    using Firefly.CloudFormationParser.Intrinsics.Functions;
     using Firefly.CloudFormationParser.TemplateObjects.Traversal.AcceptExtensions;
     using Firefly.PSCloudFormation.Terraform.Hcl;
     using Firefly.PSCloudFormation.Terraform.HclSerializer;
     using Firefly.PSCloudFormation.Terraform.State;
+    using Firefly.PSCloudFormation.Utils;
     using Firefly.PSCloudFormation.Utils.JsonTraversal;
 
     using Newtonsoft.Json;
@@ -79,7 +81,7 @@
         /// Resolves the dependencies for the given terraform resource.
         /// </summary>
         /// <param name="terraformStateFileResource">The current terraform resource from state file.</param>
-        public void ResolveDependencies(StateFileResourceDeclaration terraformStateFileResource)
+        public void ResolveResourceDependencies(StateFileResourceDeclaration terraformStateFileResource)
         {
             try
             {
@@ -167,6 +169,64 @@
                     terraformStateFileResource.Name,
                     terraformStateFileResource.Type,
                     e);
+            }
+        }
+
+        /// <summary>
+        /// Resolves the input dependencies of a module imported by the current module.
+        /// </summary>
+        /// <param name="referencedModule">The referenced module.</param>
+        public void ResolveModuleDependencies(ModuleInfo referencedModule)
+        {
+            // Visit the CF resource gathering all intrinsics that might imply reference to another resource or input
+            var intrinsicVisitorContext = new IntrinsicVisitorContext(
+                this.settings,
+                this.terraformResources,
+                this.inputs,
+                referencedModule.StackResource,
+                this.warnings,
+                this.module);
+
+            var intrinsicVisitor =
+                new IntrinsicVisitor(this.template);
+            referencedModule.StackResource.Accept(intrinsicVisitor, intrinsicVisitorContext);
+
+            foreach (var intrinsicInfo in intrinsicVisitorContext.ReferenceLocations)
+            {
+                switch (intrinsicInfo.TargetType)
+                {
+                    case IntrinsicTargetType.Input:
+
+                        // The intrinsic must be !Ref
+                        if (intrinsicInfo.Intrinsic is RefIntrinsic refIntrinsic)
+                        {
+                            var reference = new InputVariableReference(refIntrinsic.Reference);
+                            var index = GetInputIndex(
+                                referencedModule.Inputs,
+                                (tuple) => tuple.Item1.ScalarIdentity == intrinsicInfo.Evaluation.ToString());
+
+                            if (index != -1)
+                            {
+                                referencedModule.Inputs[index] = new ModuleInputVariable(
+                                    referencedModule.Inputs[index].Name,
+                                    reference);
+                            }
+                        }
+
+                        break;
+                }
+            }
+        }
+
+        private static int GetInputIndex(IEnumerable<InputVariable> inputs, Func<(InputVariable, int), bool> predicate)
+        {
+            try
+            {
+                return inputs.WithIndex().First(predicate).Item2;
+            }
+            catch
+            {
+                return -1;
             }
         }
 

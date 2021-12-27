@@ -4,6 +4,7 @@
     using System.Diagnostics;
 
     using Firefly.CloudFormationParser.Intrinsics;
+    using Firefly.CloudFormationParser.Intrinsics.Functions;
     using Firefly.CloudFormationParser.Utils;
     using Firefly.PSCloudFormation.Terraform.Hcl;
 
@@ -91,5 +92,34 @@
         /// The targeted resource. Will be <c>null</c> when reference is not to a resource.
         /// </value>
         public virtual ResourceMapping TargetResource => this.targetResource;
+
+        /// <summary>
+        /// Gets the type object targeted by the current intrinsic.
+        /// </summary>
+        /// <value>
+        /// The type of the target.
+        /// </value>
+        public IntrinsicTargetType TargetType
+        {
+            get
+            {
+                if (this.TargetResource == null && this.Intrinsic is RefIntrinsic)
+                {
+                    return IntrinsicTargetType.Input;
+                }
+
+                if (this.TargetResource?.Module != null)
+                {
+                    return IntrinsicTargetType.Module;
+                }
+
+                if (this.TargetResource != null)
+                {
+                    return IntrinsicTargetType.Resource;
+                }
+
+                return IntrinsicTargetType.Unknown;
+            }
+        }
     }
 }

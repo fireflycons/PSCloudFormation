@@ -19,7 +19,7 @@
         }
 
         /// <inheritdoc />
-        protected override string ReferencedAwsResource => "AWS::Lambda::Function";
+        protected override string ReferencedAwsResource => TerraformExporterConstants.AwsLambdaFunction;
 
         /// <inheritdoc />
         protected override string ReferencingPropertyPath => "FunctionName";

@@ -30,9 +30,7 @@
         {
             return this.CurrentValue == null 
                        ? string.Empty
-                       : this.CurrentValue is Reference reference 
-                           ? $"{this.Name} = {reference.ReferenceExpression}"
-                           : $"{this.Name} = {this.CurrentValue}";
+                       : $"{this.Name} = {this.CurrentValue}";
         }
 
         /// <inheritdoc />

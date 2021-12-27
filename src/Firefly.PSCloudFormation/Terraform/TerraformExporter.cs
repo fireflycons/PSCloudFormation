@@ -106,7 +106,9 @@
                         var stateFile = JsonConvert.DeserializeObject<StateFile>(
                             await AsyncFileHelpers.ReadAllTextAsync(this.stateFilePath));
 
-                        warningCount += new HclWriter(module, this.warnings, this.errors).Serialize(stateFile);
+                        var writer = new HclWriter(module, this.warnings, this.errors);
+
+                        warningCount += await writer.Serialize(stateFile);
 
                         this.settings.Logger.LogInformation(
                             $"\nExport of stack \"{module.Settings.StackName}\" to terraform complete!");

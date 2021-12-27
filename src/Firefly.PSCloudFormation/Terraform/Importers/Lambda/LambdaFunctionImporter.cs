@@ -43,7 +43,7 @@
             var templateResource = this.TerraformSettings.Resources.First(
                 r => r.LogicalResourceId == this.ImportSettings.Resource.LogicalId).TemplateResource;
 
-            var zipFile = templateResource.GetResourcePropertyValue("Code.ZipFile");
+            var zipFile = templateResource.GetResourcePropertyValue(TerraformExporterConstants.LambdaZipFile);
 
             if (zipFile == null)
             {

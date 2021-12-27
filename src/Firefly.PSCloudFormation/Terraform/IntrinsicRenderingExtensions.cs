@@ -432,7 +432,7 @@
                 if (resource.Module?.LogicalId == getAttIntrinsic.LogicalId && resource.Module.Outputs.Any(o => o.OutputKey == referencedOutput))
                 {
                     // This reference is to a module output
-                    return new ModuleReference($"module.{resource.Module.Name}.{referencedOutput}");
+                    return new ModuleReference($"{resource.Module.Name}.{referencedOutput}");
                 }
 
                 // The reference is to an aws_cloudformation_stack as the use did not elect to import nested stacks.

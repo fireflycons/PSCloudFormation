@@ -4,6 +4,7 @@
     using System.IO;
     using System.Linq;
     using System.Text;
+    using System.Threading.Tasks;
 
     using Firefly.CloudFormationParser;
     using Firefly.CloudFormationParser.Intrinsics;
@@ -87,9 +88,9 @@
         /// </summary>
         /// <param name="stateFile">The state file.</param>
         /// <returns>Count of validation warnings.</returns>
-        public int Serialize(StateFile stateFile)
+        public async Task<int> Serialize(StateFile stateFile)
         {
-            this.WriteMain(stateFile);
+            await this.WriteMain(stateFile);
             this.WriteTfVars();
 
             return this.settings.IsRootModule ? this.FormatAndValidateOutput() : 0;
@@ -400,7 +401,7 @@
         private void ResolveLambdaCode(TextWriter writer, StateFile stateFile)
         {
             foreach (var cloudFormationResource in this.settings.Template.Resources.Where(
-                         r => r.Type == "AWS::Lambda::Function" && r.GetResourcePropertyValue("Code") != null))
+                         r => r.Type == TerraformExporterConstants.AwsLambdaFunction && r.GetResourcePropertyValue("Code") != null))
             {
                 var mapping =
                     this.module.ResourceMappings.FirstOrDefault(ir => ir.LogicalId == cloudFormationResource.Name);
@@ -508,16 +509,24 @@
         {
             this.settings.Logger.LogInformation("\nResolving dependencies between resources...");
 
+            // Resources from state file that are declared by this module.
+            var moduleResources = stateFile.FilteredResources(this.module.Name).ToList();
+
             var resolver = new ResourceDependencyResolver(
                 this.settings,
-                stateFile.FilteredResources(this.module.Name),
+                moduleResources,
                 this.module,
                 this.warnings);
 
-            foreach (var tfr in this.module.ResourceMappings)
+            foreach (var resourceMapping in this.module.ResourceMappings)
             {
-                resolver.ResolveDependencies(
-                    stateFile.FilteredResources(this.module.Name).First(r => r.Name == tfr.LogicalId));
+                resolver.ResolveResourceDependencies(
+                    moduleResources.First(r => r.Name == resourceMapping.LogicalId));
+            }
+
+            foreach (var importedModule in this.module.NestedModules)
+            {
+                resolver.ResolveModuleDependencies(importedModule);
             }
         }
 
@@ -548,7 +557,8 @@
         /// Serialize the in-memory copy of the state file and write out <c>main.tf</c>.
         /// </summary>
         /// <param name="stateFile">The state file.</param>
-        private void WriteMain(StateFile stateFile)
+        /// <returns>Task to await.</returns>
+        private async Task WriteMain(StateFile stateFile)
         {
             this.settings.Logger.LogInformation($"Writing {MainScriptFile}");
 
@@ -567,6 +577,8 @@
                     this.WriteProviders(writer);
                 }
 
+                await this.module.WriteModuleBlocksAsync();
+
                 this.WriteInputsAndDataBlocks(writer);
                 this.WriteLocalsAndMappings(writer);
                 this.WriteResources(writer, stateFile);
@@ -583,7 +595,7 @@
             var builder = new ConfigurationBlockBuilder().WithRegion(this.settings.AwsRegion)
                 .WithDefaultTag(this.settings.AddDefaultTag ? this.settings.StackName : null).WithZipper(
                     this.settings.Template.Resources.Any(
-                        r => r.Type == "AWS::Lambda::Function" && r.GetResourcePropertyValue("Code.ZipFile") != null));
+                        r => r.Type == TerraformExporterConstants.AwsLambdaFunction && r.GetResourcePropertyValue(TerraformExporterConstants.LambdaZipFile) != null));
 
             writer.Write(builder.Build());
         }
@@ -630,11 +642,11 @@
 
                 foreach (var input in this.module.Inputs.OrderBy(p => p.Name))
                 {
-                    var hcl = input.GenerateTfVar();
+                    var hcl = input.GenerateVariableAssignment();
 
                     if (!string.IsNullOrEmpty(hcl))
                     {
-                        s.WriteLine(input.GenerateTfVar());
+                        s.WriteLine(input.GenerateVariableAssignment());
                         s.WriteLine();
                     }
                 }
