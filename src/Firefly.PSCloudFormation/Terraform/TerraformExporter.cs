@@ -2,28 +2,23 @@
 {
     using System;
     using System.Collections.Generic;
-    using System.Diagnostics;
     using System.IO;
     using System.Linq;
-    using System.Runtime.CompilerServices;
-    using System.Text;
-    using System.Text.RegularExpressions;
     using System.Threading.Tasks;
 
-    using Amazon.CloudFormation;
     using Amazon.CloudFormation.Model;
 
-    using Firefly.CloudFormationParser.Serialization.Settings;
-    using Firefly.CloudFormationParser.TemplateObjects;
     using Firefly.PSCloudFormation.Terraform.Hcl;
     using Firefly.PSCloudFormation.Terraform.HclSerializer;
-    using Firefly.PSCloudFormation.Terraform.Importers;
     using Firefly.PSCloudFormation.Terraform.State;
     using Firefly.PSCloudFormation.Utils;
 
     using Newtonsoft.Json;
     using Newtonsoft.Json.Linq;
 
+    /// <summary>
+    /// Class that manages the end-to-end export of CloudFormation to Terraform
+    /// </summary>
     internal class TerraformExporter
     {
         /// <summary>
@@ -69,8 +64,8 @@
                 var configurationBlocks = new ConfigurationBlockBuilder().WithRegion(this.settings.AwsRegion)
                     .WithDefaultTag(this.settings.AddDefaultTag ? this.settings.StackName : null).WithZipper(
                         this.settings.Template.Resources.Any(
-                            r => r.Type == "AWS::Lambda::Function"
-                                 && r.GetResourcePropertyValue("Code.ZipFile") != null)).Build();
+                            r => r.Type == TerraformExporterConstants.AwsLambdaFunction
+                                 && r.GetResourcePropertyValue(TerraformExporterConstants.LambdaZipFile) != null)).Build();
 
 
                 // Write out terraform and provider blocks.
@@ -159,79 +154,6 @@
             }
 
             this.settings.Runner.Run("init", true, true, null);
-        }
-
-        /// <summary>
-        /// Imports the resources by calling <c>terraform import</c> on each.
-        /// </summary>
-        /// <param name="module">Module containing resources to import.</param>
-        /// <returns>List of resources that were imported.</returns>
-        private List<ResourceMapping> ImportResources(ModuleInfo module)
-        {
-            var resourcesToImport = module.ResourceMappings;
-            var importedResources = new List<ResourceMapping>();
-            var totalResources = resourcesToImport.Count;
-
-            this.settings.Logger.LogInformation(
-                $"\nImporting {totalResources} mapped resources from stack \"{module.Settings.StackName}\" to terraform state...");
-            var imported = 0;
-            
-            foreach (var resource in resourcesToImport)
-            {
-                var resourceToImport = resource.PhysicalId;
-
-                this.settings.Logger.LogInformation($"\nImporting resource {++imported}/{totalResources} - {resource.ImportAddress}");
-
-                if (ResourceImporter.RequiresResourceImporter(resource.TerraformType))
-                {
-                    var importer = ResourceImporter.Create(
-                        new ResourceImporterSettings
-                            {
-                                Errors = this.errors,
-                                Logger = this.settings.Logger,
-                                Resource = resource,
-                                ResourcesToImport = resourcesToImport.Where(r => r.Module == resource.Module).ToList(), // Only resources in same stack
-                                Warnings = this.warnings
-                            },
-                        module.Settings);
-
-                    if (importer != null)
-                    {
-                        resourceToImport = importer.GetImportId();
-
-                        if (resourceToImport == null)
-                        {
-                            continue;
-                        }
-                    }
-                }
-
-                var cmdOutput = new List<string>();
-                var success = this.settings.Runner.Run(
-                    "import",
-                    false,
-                    true,
-                    msg => cmdOutput.Add(msg),
-                    "-no-color",
-                    resource.ImportAddress,
-                    resourceToImport);
-
-                if (success)
-                {
-                    importedResources.Add(resource);
-                }
-                else
-                {
-                    var error = cmdOutput.FirstOrDefault(o => o.StartsWith("Error: "))?.Substring(7);
-
-                    this.errors.Add(
-                        error != null
-                            ? $"ERROR: {resource.AwsAddress}: {error}"
-                            : $"ERROR: Could not import {resource.AwsAddress}");
-                }
-            }
-
-            return importedResources;
         }
 
         /// <summary>
@@ -352,7 +274,7 @@
 
             // Scan for lambdas with embedded code (ZipFile) and warn about it
             foreach (var templateResource in this.settings.Template.Resources.Where(
-                r => r.Type == "AWS::Lambda::Function" && r.GetResourcePropertyValue("Code.ZipFile") != null))
+                r => r.Type == TerraformExporterConstants.AwsLambdaFunction && r.GetResourcePropertyValue(TerraformExporterConstants.LambdaZipFile) != null))
             {
                 this.warnings.Add(
                     $"Resource \"{templateResource.Name}\" contains embedded function code (ZipFile) which may not be the latest version.");
