@@ -79,8 +79,9 @@
             var childModules = new List<ModuleInfo>();
 
             foreach (var child in settings.Resources.Where(
-                         r => r.ResourceType == "AWS::CloudFormation::Stack"))
+                         r => r.ResourceType == TerraformExporterConstants.AwsCloudFormationStack))
             {
+                var logicalId = child.LogicalResourceId;
                 var stackName = GetStackName(child.StackResource.PhysicalResourceId);
                 var stackData = await StackHelper.ReadStackAsync(
                                     settings.CloudFormationClient,
@@ -92,7 +93,8 @@
                     stackData.Resources,
                     stackData.Outputs,
                     stackName,
-                    Path.Combine("modules", stackName));
+                    Path.Combine("modules", stackName),
+                    logicalId);
 
                 childModules.Add(await ProcessChildModule(childModuleSettings, warnings));
             }
@@ -114,10 +116,11 @@
             {
                 var thisModuleSettings = settings.CopyWith(
                     settings.Template,
-                    settings.Resources.Where(r => r.ResourceType != "AWS::CloudFormation::Stack"),
+                    settings.Resources.Where(r => r.ResourceType != TerraformExporterConstants.AwsCloudFormationStack),
                     null,
                     settings.StackName,
-                    settings.IsRootModule ? "." : settings.ModuleDirectory);
+                    settings.IsRootModule ? "." : settings.ModuleDirectory,
+                    settings.LogicalId);
 
                 module = new ModuleInfo(
                     thisModuleSettings,

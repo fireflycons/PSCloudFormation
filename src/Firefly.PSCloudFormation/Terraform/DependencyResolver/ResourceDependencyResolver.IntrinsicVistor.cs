@@ -50,10 +50,12 @@
                 this.NestedIntrinsics.Any() ? this.NestedIntrinsics.First().Evaluation : this.InitialEvaluation;
 
             /// <inheritdoc />
-            public override IIntrinsic Intrinsic => this.NestedIntrinsics.Any() ? this.NestedIntrinsics.First().Intrinsic : this.intrinsic;
+            public override IIntrinsic Intrinsic =>
+                this.NestedIntrinsics.Any() ? this.NestedIntrinsics.First().Intrinsic : this.intrinsic;
 
             /// <inheritdoc />
-            public override ResourceMapping TargetResource => this.NestedIntrinsics.Any() ? this.NestedIntrinsics.First().TargetResource : this.targetResource;
+            public override ResourceMapping TargetResource =>
+                this.NestedIntrinsics.Any() ? this.NestedIntrinsics.First().TargetResource : this.targetResource;
         }
 
         /// <summary>
@@ -101,6 +103,16 @@
             private readonly Stack<IntrinsicInfo> intrinsicInfos = new Stack<IntrinsicInfo>();
 
             /// <summary>
+            /// The current module being processed.
+            /// </summary>
+            private readonly ModuleInfo module;
+
+            /// <summary>
+            /// The settings
+            /// </summary>
+            private readonly ITerraformExportSettings settings;
+
+            /// <summary>
             /// Reference to parsed CLoudFormation template.
             /// </summary>
             private readonly ITemplate template;
@@ -109,11 +121,6 @@
             /// Reference to the exporter's warnings collection so warnings can be added to it.
             /// </summary>
             private readonly IList<string> warnings;
-
-            /// <summary>
-            /// The settings
-            /// </summary>
-            private readonly ITerraformExportSettings settings;
 
             /// <summary>
             /// The intrinsic whose properties are currently being examined
@@ -140,13 +147,16 @@
             /// <param name="inputs">The list of input variables and data sources.</param>
             /// <param name="resource">The CLoudFormation resource being visited.</param>
             /// <param name="warnings">The warnings collection.</param>
+            /// <param name="module">The current module being processed.</param>
             public IntrinsicVisitorContext(
                 ITerraformExportSettings settings,
                 IReadOnlyCollection<StateFileResourceDeclaration> terraformResources,
                 IList<InputVariable> inputs,
                 IResource resource,
-                IList<string> warnings)
+                IList<string> warnings,
+                ModuleInfo module)
             {
+                this.module = module;
                 this.settings = settings;
                 this.currentCloudFormationResource = resource;
                 this.warnings = warnings;
@@ -205,7 +215,9 @@
                             // !! NASTY KLUDGE ALERT !!
                             // AWS treats this property as a !Ref which is lambda function's name, but terraform actually wants the ARN here.
                             // If I find more cases like this, then I'll put something into resource traits
-                            intrinsic = new GetAttIntrinsic(intrinsic.GetReferencedObjects(this.template).First(), "Arn");
+                            intrinsic = new GetAttIntrinsic(
+                                intrinsic.GetReferencedObjects(this.template).First(),
+                                "Arn");
                         }
 
                         this.intrinsicInfos.Push(this.currentIntrinsicInfo);
@@ -312,11 +324,7 @@
                     case IntrinsicType.Split:
                     case IntrinsicType.Sub:
 
-                        return new IntrinsicInfo(
-                            currentPath,
-                            intrinsic,
-                            null,
-                            intrinsic.Evaluate(this.template));
+                        return new IntrinsicInfo(currentPath, intrinsic, null, intrinsic.Evaluate(this.template));
 
                     case IntrinsicType.ImportValue:
 
@@ -344,6 +352,27 @@
                 // Logical name of the resource being referenced by this !GetAtt
                 var (referencedResourceName, attribute) =
                     (Tuple<string, string>)getAttIntrinsic.Evaluate(this.template);
+
+                // Is the reference to a nested stack module?
+                var referencedModule =
+                    this.module.NestedModules.FirstOrDefault(m => m.LogicalId == referencedResourceName);
+
+                if (referencedModule != null)
+                {
+                    var targetModuleSummary = new ResourceMapping
+                                                  {
+                                                      AwsType = TerraformExporterConstants.AwsCloudFormationStack,
+                                                      LogicalId = referencedModule.LogicalId,
+                                                      PhysicalId = referencedModule.Name,
+                                                      Module = referencedModule
+                                                  };
+
+                    var parts = attribute.Split('.');
+                    evaluation = referencedModule.Outputs.Where(o => o.OutputKey == parts[1])
+                        .Select(o => o.OutputValue).SingleOrDefault();
+
+                    return new IntrinsicInfo(currentPath, getAttIntrinsic, targetModuleSummary, evaluation);
+                }
 
                 // State file instance of the resource being referenced by this !GetAtt
                 var referencedResource = this.TerraformResources.FirstOrDefault(r => r.Name == referencedResourceName)
@@ -382,10 +411,13 @@
                     var token = referencedResource.Attributes[traits.AttributeMap[attribute]];
                     evaluation = GetEvaluation(token);
                 }
-                else if (attribute.StartsWith("Outputs."))
+                else if (attribute.StartsWith(TerraformExporterConstants.StackOutputAttributeIndentifier))
                 {
                     // Nested stack output reference
-                    var token = referencedResource.Attributes.SelectToken(attribute.Replace("Outputs.", "outputs."));
+                    var token = referencedResource.Attributes.SelectToken(
+                        attribute.Replace(
+                            TerraformExporterConstants.StackOutputAttributeIndentifier,
+                            TerraformExporterConstants.StackOutputAttributeIndentifier.ToLowerInvariant()));
                     evaluation = GetEvaluation(token);
                 }
                 else
@@ -427,11 +459,37 @@
                     }
                     else
                     {
-                        throw new InvalidOperationException($"Unexpected JToken type: {token.Type} while processing {getAttIntrinsic}");
+                        throw new InvalidOperationException(
+                            $"Unexpected JToken type: {token.Type} while processing {getAttIntrinsic}");
                     }
 
                     return evaluation;
                 }
+            }
+
+            /// <summary>
+            /// Creates an <see cref="IntrinsicInfo"/> for an ImportValue intrinsic.
+            /// </summary>
+            /// <param name="importValueIntrinsic">The import value intrinsic.</param>
+            /// <param name="currentPath">The current path.</param>
+            /// <returns>An <see cref="IntrinsicInfo"/></returns>
+            private IntrinsicInfo ProcessImportValue(
+                ImportValueIntrinsic importValueIntrinsic,
+                PropertyPath currentPath)
+            {
+                // Evaluation will be the name of the export
+                var target = importValueIntrinsic.Evaluate(this.template).ToString();
+                var export = this.settings.StackExports.FirstOrDefault(e => e.Name == target);
+
+                if (export == null)
+                {
+                    throw new MissingExportWarning(
+                        importValueIntrinsic,
+                        this.currentCloudFormationResource,
+                        currentPath);
+                }
+
+                return new IntrinsicInfo(currentPath, importValueIntrinsic, null, export.Value);
             }
 
             /// <summary>
@@ -485,31 +543,6 @@
                 evaluation = cloudFormationResource.PhysicalResourceId;
 
                 return new IntrinsicInfo(currentPath, refIntrinsic, targetResourceSummary, evaluation);
-            }
-
-            /// <summary>
-            /// Creates an <see cref="IntrinsicInfo"/> for an ImportValue intrinsic.
-            /// </summary>
-            /// <param name="importValueIntrinsic">The import value intrinsic.</param>
-            /// <param name="currentPath">The current path.</param>
-            /// <returns>An <see cref="IntrinsicInfo"/></returns>
-            private IntrinsicInfo ProcessImportValue(
-                ImportValueIntrinsic importValueIntrinsic,
-                PropertyPath currentPath)
-            {
-                // Evaluation will be the name of the export
-                var target = importValueIntrinsic.Evaluate(this.template).ToString();
-                var export = this.settings.StackExports.FirstOrDefault(e => e.Name == target);
-
-                if (export == null)
-                {
-                    throw new MissingExportWarning(
-                        importValueIntrinsic,
-                        this.currentCloudFormationResource,
-                        currentPath);
-                }
-
-                return new IntrinsicInfo(currentPath, importValueIntrinsic, null, export.Value);
             }
         }
     }

@@ -155,6 +155,14 @@
         public string Name => this.IsRootModule ? null : this.Settings.StackName;
 
         /// <summary>
+        /// Gets the logical identifier of the <c>AWS::CloudFormation::Stack</c> that this module represents..
+        /// </summary>
+        /// <value>
+        /// The logical identifier.
+        /// </value>
+        public string LogicalId => this.Settings.LogicalId;
+
+        /// <summary>
         /// Gets the nested modules.
         /// </summary>
         /// <value>
@@ -344,7 +352,7 @@
                                 LogicalId = resource.LogicalResourceId,
                                 TerraformType = mapping.Terraform,
                                 AwsType = resource.ResourceType,
-                                Module = this.Settings.IsRootModule ? null : this.Settings.StackName
+                                Module = this.Settings.IsRootModule ? null : this
                             });
                 }
             }

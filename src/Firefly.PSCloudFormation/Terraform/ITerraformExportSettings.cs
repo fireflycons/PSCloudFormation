@@ -111,6 +111,14 @@
         string StackName { get; }
 
         /// <summary>
+        /// Gets the logical identifier associated with <see cref="StackName"/>.
+        /// </summary> 
+        /// <value>
+        /// The logical identifier.
+        /// </value>
+        string LogicalId { get; }
+
+        /// <summary>
         /// Gets the template as parsed by CloudFormation Parser.
         /// </summary>
         /// <value>
@@ -142,12 +150,14 @@
         /// <param name="cloudFormationOutputs">List of outputs from the stack being processed.</param>
         /// <param name="stackName">Name of the stack.</param>
         /// <param name="moduleDirectory">The module directory.</param>
+        /// <param name="logicalId">Logical identifier associated with <see cref="StackName"/></param>
         /// <returns>A copy of the settings with updated property values.</returns>
         ITerraformExportSettings CopyWith(
             ITemplate template,
             IEnumerable<CloudFormationResource> resources,
             IEnumerable<Output> cloudFormationOutputs,
             string stackName,
-            string moduleDirectory);
+            string moduleDirectory,
+            string logicalId);
     }
 }

@@ -1,5 +1,9 @@
 ﻿namespace Firefly.PSCloudFormation.Terraform.State
 {
+    /// <summary>
+    /// A normal <c>!GetAtt</c> reference to a named property within a resource.
+    /// </summary>
+    /// <seealso cref="Firefly.PSCloudFormation.Terraform.State.Reference" />
     internal class IndirectReference : Reference
     {
         /// <summary>

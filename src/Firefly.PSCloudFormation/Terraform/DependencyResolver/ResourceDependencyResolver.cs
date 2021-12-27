@@ -103,7 +103,8 @@
                         this.terraformResources,
                         this.inputs,
                         cloudFormationResource,
-                        this.warnings);
+                        this.warnings,
+                        this.module);
 
                     var intrinsicVisitor =
                         new IntrinsicVisitor(this.template);

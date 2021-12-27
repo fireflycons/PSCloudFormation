@@ -423,11 +423,23 @@
                 attributeName = getAttIntrinsic.AttributeName.ToString();
             }
 
-            // Edge case. When the GetAtt is for an output of a referenced aws_cloudformation_stack
-            // then just re-case "Outputs"
-            if (attributeName.StartsWith("Outputs."))
+            // This GetAtt refers to a nested stack which may or may not have been imported as a terraform module.
+            if (attributeName.StartsWith(TerraformExporterConstants.StackOutputAttributeIndentifier))
             {
-                attributeName = attributeName.Replace("Outputs.", "outputs.");
+                var referencedOutput =
+                    attributeName.Substring(TerraformExporterConstants.StackOutputAttributeIndentifier.Length);
+
+                if (resource.Module?.LogicalId == getAttIntrinsic.LogicalId && resource.Module.Outputs.Any(o => o.OutputKey == referencedOutput))
+                {
+                    // This reference is to a module output
+                    return new ModuleReference($"module.{resource.Module.Name}.{referencedOutput}");
+                }
+
+                // The reference is to an aws_cloudformation_stack as the use did not elect to import nested stacks.
+                // Just lowercase "Outputs." which will then resolve to the terraform resource.
+                attributeName = attributeName.Replace(
+                    TerraformExporterConstants.StackOutputAttributeIndentifier,
+                    TerraformExporterConstants.StackOutputAttributeIndentifier.ToLowerInvariant());
             }
             else
             {

@@ -32,7 +32,7 @@
         /// The import address.
         /// </value>
         public string ImportAddress =>
-            string.IsNullOrEmpty(this.Module) ? this.Address : $"module.{this.Module}.{this.Address}";
+            this.Module == null ? this.Address : $"module.{this.Module.Name}.{this.Address}";
 
         /// <summary>
         /// Gets or sets the physical identifier, as in the identifier given to the resource by a CloudFormation deployment
@@ -73,6 +73,6 @@
         /// <value>
         /// The module.
         /// </value>
-         public string Module { get; set; }
+         public ModuleInfo Module { get; set; }
     }
 }

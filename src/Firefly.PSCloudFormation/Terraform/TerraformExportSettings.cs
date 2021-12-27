@@ -52,6 +52,9 @@
         public string StackName { get; set; }
 
         /// <inheritdoc />
+        public string LogicalId { get; set; }
+
+        /// <inheritdoc />
         public ITemplate Template { get; set; }
 
         /// <inheritdoc />
@@ -66,13 +69,15 @@
             IEnumerable<CloudFormationResource> resources,
             IEnumerable<Output> cloudFormationOutputs,
             string stackName,
-            string moduleDirectory)
+            string moduleDirectory,
+            string logicalId)
         {
             var newSettings = (TerraformExportSettings)this.MemberwiseClone();
             newSettings.Template = template;
             newSettings.Resources = resources.ToList();
             newSettings.ModuleDirectory = moduleDirectory;
             newSettings.StackName = stackName;
+            newSettings.LogicalId = logicalId;
 
             if (cloudFormationOutputs != null)
             {
