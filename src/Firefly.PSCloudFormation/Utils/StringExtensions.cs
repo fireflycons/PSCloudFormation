@@ -3,8 +3,6 @@
     using System.Linq;
     using System.Text.RegularExpressions;
 
-    using Amazon.CloudFormation.Model.Internal.MarshallTransformations;
-
     internal static class StringExtensions
     {
         /// <summary>

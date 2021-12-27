@@ -3,7 +3,6 @@
     using System.IO;
     using System.Linq;
     using System.Management.Automation;
-    using System.Text.RegularExpressions;
     using System.Threading.Tasks;
 
     using Amazon.CloudFormation;
@@ -12,8 +11,6 @@
 
     using Firefly.CloudFormation;
     using Firefly.CloudFormation.Model;
-    using Firefly.CloudFormationParser.Serialization.Settings;
-    using Firefly.CloudFormationParser.TemplateObjects;
     using Firefly.PSCloudFormation.AbstractCommands;
     using Firefly.PSCloudFormation.Terraform;
 

@@ -9,7 +9,6 @@
 
     using Firefly.CloudFormationParser;
     using Firefly.PSCloudFormation.Terraform.HclSerializer;
-    using Firefly.PSCloudFormation.Terraform.State;
 
     /// <summary>
     /// A numeric list input variable
@@ -69,7 +68,12 @@
             return string.Empty;
         }
 
-        private List<double> CurrentValueToList()
+        /// <summary>
+        /// Converts the current value to a list.
+        /// </summary>
+        /// <returns>A list of numeric values</returns>
+        /// <exception cref="Firefly.PSCloudFormation.Terraform.HclSerializer.HclSerializerException">null - null - Cannot serialize input variable of type {this.CurrentValue.GetType().Name}</exception>
+        private IEnumerable<double> CurrentValueToList()
         {
             List<double> doubles;
 

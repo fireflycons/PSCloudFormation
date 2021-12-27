@@ -49,12 +49,13 @@
         /// <param name="collection">The collection.</param>
         public EmitterEventQueue(IEnumerable<T> collection)
         {
-            var count = collection.Count();
+            var coll = collection.ToList();
+            var count = coll.Count();
 
             if (count > 0)
             {
                 this.buffer = new T[count];
-                this.DoInsertRange(0, collection, count);
+                this.DoInsertRange(0, coll, count);
             }
             else
             {
@@ -204,7 +205,7 @@
 
             set
             {
-                if (!this.ObjectIsT(value))
+                if (!ObjectIsT(value))
                 {
                     throw new ArgumentException("Item is not of the correct type.", nameof(value));
                 }
@@ -437,7 +438,7 @@
         /// <exception cref="System.ArgumentException">Item is not of the correct type. - value</exception>
         int IList.Add(object value)
         {
-            if (!this.ObjectIsT(value))
+            if (!ObjectIsT(value))
             {
                 throw new ArgumentException("Item is not of the correct type.", nameof(value));
             }
@@ -456,7 +457,7 @@
         /// <exception cref="System.ArgumentException">Item is not of the correct type. - value</exception>
         bool IList.Contains(object value)
         {
-            if (!this.ObjectIsT(value))
+            if (!ObjectIsT(value))
             {
                 throw new ArgumentException("Item is not of the correct type.", nameof(value));
             }
@@ -503,7 +504,7 @@
         /// <exception cref="System.ArgumentException">Item is not of the correct type. - value</exception>
         int IList.IndexOf(object value)
         {
-            if (!this.ObjectIsT(value))
+            if (!ObjectIsT(value))
             {
                 throw new ArgumentException("Item is not of the correct type.", nameof(value));
             }
@@ -519,7 +520,7 @@
         /// <exception cref="System.ArgumentException">Item is not of the correct type. - value</exception>
         void IList.Insert(int index, object value)
         {
-            if (!this.ObjectIsT(value))
+            if (!ObjectIsT(value))
             {
                 throw new ArgumentException("Item is not of the correct type.", nameof(value));
             }
@@ -534,7 +535,7 @@
         /// <exception cref="System.ArgumentException">Item is not of the correct type. - value</exception>
         void IList.Remove(object value)
         {
-            if (!this.ObjectIsT(value))
+            if (!ObjectIsT(value))
             {
                 throw new ArgumentException("Item is not of the correct type.", nameof(value));
             }
@@ -677,6 +678,43 @@
         }
 
         /// <summary>
+        /// Returns whether or not the type of a given item indicates it is appropriate for storing in this container.
+        /// </summary>
+        /// <param name="item">The item to test.</param>
+        /// <returns><c>true</c> if the item is appropriate to store in this container; otherwise, <c>false</c>.</returns>
+        private static bool ObjectIsT(object item)
+        {
+            switch (item)
+            {
+                case T _:
+                    return true;
+
+                case null:
+                    {
+                        var type = typeof(T);
+                        if (type.IsClass && !type.IsPointer)
+                        {
+                            return true; // classes, arrays, and delegates
+                        }
+
+                        if (type.IsInterface)
+                        {
+                            return true; // interfaces
+                        }
+
+                        if (type.IsGenericType && type.GetGenericTypeDefinition() == typeof(Nullable<>))
+                        {
+                            return true; // nullable value types
+                        }
+
+                        break;
+                    }
+            }
+
+            return false;
+        }
+
+        /// <summary>
         /// Applies the offset to <paramref name="index"/>, resulting in a buffer index.
         /// </summary>
         /// <param name="index">The queue index.</param>
@@ -730,7 +768,8 @@
                 this.DoAddToFront(item);
                 return;
             }
-            else if (index == this.Count)
+
+            if (index == this.Count)
             {
                 this.DoAddToBack(item);
                 return;
@@ -803,7 +842,8 @@
                 this.DoRemoveFromFront();
                 return;
             }
-            else if (index == this.Count - 1)
+
+            if (index == this.Count - 1)
             {
                 this.DoRemoveFromBack();
                 return;
@@ -847,7 +887,8 @@
                 this.Count -= collectionCount;
                 return;
             }
-            else if (index == this.Count - collectionCount)
+
+            if (index == this.Count - collectionCount)
             {
                 // Removing from the ending: trim the existing view
                 this.Count -= collectionCount;
@@ -905,45 +946,8 @@
         {
             if (this.IsFull)
             {
-                this.Capacity = this.Capacity * 2;
+                this.Capacity *= 2;
             }
-        }
-
-        /// <summary>
-        /// Returns whether or not the type of a given item indicates it is appropriate for storing in this container.
-        /// </summary>
-        /// <param name="item">The item to test.</param>
-        /// <returns><c>true</c> if the item is appropriate to store in this container; otherwise, <c>false</c>.</returns>
-        private bool ObjectIsT(object item)
-        {
-            switch (item)
-            {
-                case T _:
-                    return true;
-
-                case null:
-                    {
-                        var type = typeof(T);
-                        if (type.IsClass && !type.IsPointer)
-                        {
-                            return true; // classes, arrays, and delegates
-                        }
-
-                        if (type.IsInterface)
-                        {
-                            return true; // interfaces
-                        }
-
-                        if (type.IsGenericType && type.GetGenericTypeDefinition() == typeof(Nullable<>))
-                        {
-                            return true; // nullable value types
-                        }
-
-                        break;
-                    }
-            }
-
-            return false;
         }
 
         /// <summary>

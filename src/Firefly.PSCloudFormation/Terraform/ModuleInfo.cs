@@ -4,7 +4,6 @@
     using System.Diagnostics;
     using System.IO;
     using System.Linq;
-    using System.Reflection;
     using System.Text;
     using System.Threading.Tasks;
 
@@ -62,8 +61,7 @@
         static ModuleInfo()
         {
             ResourceTypeMappings = JsonConvert.DeserializeObject<List<ResourceTypeMapping>>(
-                ResourceLoader.GetStringResource("terraform-resource-map.json")
-                    .ToString());
+                ResourceLoader.GetStringResource("terraform-resource-map.json"));
         }
 
         /// <summary>

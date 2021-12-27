@@ -203,7 +203,7 @@
                             var reference = new InputVariableReference(refIntrinsic.Reference);
                             var index = GetInputIndex(
                                 referencedModule.Inputs,
-                                (tuple) => tuple.Item1.ScalarIdentity == intrinsicInfo.Evaluation.ToString());
+                                tuple => tuple.Item1.ScalarIdentity == intrinsicInfo.Evaluation.ToString());
 
                             if (index != -1)
                             {

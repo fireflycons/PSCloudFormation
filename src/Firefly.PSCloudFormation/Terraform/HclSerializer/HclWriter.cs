@@ -305,7 +305,7 @@
             var totalChanges = 0;
 
             this.settings.Logger.LogInformation("Planning...");
-            var success = this.settings.Runner.Run("plan", false, false, msg => LogChange(JObject.Parse(msg)), "-json");
+            this.settings.Runner.Run("plan", false, false, msg => LogChange(JObject.Parse(msg)), "-json");
 
             if (destructiveChanges > 0)
             {
@@ -319,6 +319,7 @@
                     "No changes were detected by 'terraform plan', however the configuration should still be tested against a non-prod stack.");
             }
 
+            // ReSharper disable once SuggestBaseTypeForParameter - these are always JObject
             void LogChange(JObject planOutput)
             {
                 var type = SafeGetToken("type");

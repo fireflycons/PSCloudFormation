@@ -1,4 +1,5 @@
-﻿namespace Firefly.PSCloudFormation.Terraform.Hcl
+﻿// ReSharper disable UnassignedGetOnlyAutoProperty
+namespace Firefly.PSCloudFormation.Terraform.Hcl
 {
     using System;
     using System.Collections.Generic;

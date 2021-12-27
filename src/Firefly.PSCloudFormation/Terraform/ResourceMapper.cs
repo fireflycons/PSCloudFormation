@@ -1,10 +1,8 @@
 ﻿namespace Firefly.PSCloudFormation.Terraform
 {
-    using System;
     using System.Collections.Generic;
     using System.IO;
     using System.Linq;
-    using System.Text.RegularExpressions;
     using System.Threading.Tasks;
 
     using Firefly.PSCloudFormation.Terraform.HclSerializer;
@@ -49,7 +47,7 @@
                 return await ProcessChildModule(this.settings, this.warnings);
             }
 
-            this.settings.Logger.LogInformation($"Processing stack {settings.StackName}...");
+            this.settings.Logger.LogInformation($"Processing stack {this.settings.StackName}...");
 
             using (var fs = AsyncFileHelpers.OpenAppendAsync(HclWriter.MainScriptFile))
             using (var writer = new StreamWriter(fs, AsyncFileHelpers.DefaultEncoding))

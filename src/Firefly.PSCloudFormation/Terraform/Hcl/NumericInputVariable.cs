@@ -5,7 +5,6 @@
     using System.Text;
 
     using Firefly.CloudFormationParser;
-    using Firefly.PSCloudFormation.Terraform.State;
 
     /// <summary>
     /// A numeric scalar input variable

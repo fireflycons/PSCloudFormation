@@ -8,7 +8,6 @@
 
     using Firefly.CloudFormationParser;
     using Firefly.PSCloudFormation.Terraform.HclSerializer;
-    using Firefly.PSCloudFormation.Terraform.State;
 
     /// <summary>
     /// A string list input variable

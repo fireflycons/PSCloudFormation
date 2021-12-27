@@ -98,6 +98,7 @@
         /// <inheritdoc />
         public override JConstructor ToJConstructor()
         {
+            // ReSharper disable AssignNullToNotNullAttribute
             return this.Index < 0
                        ? new JConstructor(
                            JConstructorName,
@@ -110,6 +111,7 @@
                            this.FunctionName,
                            JArray.FromObject(this.functionArguments),
                            this.Index);
+            // ReSharper restore AssignNullToNotNullAttribute
         }
 
         /// <summary>

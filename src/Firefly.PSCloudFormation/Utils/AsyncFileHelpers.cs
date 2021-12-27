@@ -2,7 +2,6 @@
 {
     using System.Collections.Generic;
     using System.IO;
-    using System.Net;
     using System.Text;
     using System.Threading.Tasks;
 
@@ -109,9 +108,9 @@
         /// <returns>Task to await.</returns>
         public static async Task WriteAllTextAsync(string filePath, string text)
         {
-            byte[] encodedText = DefaultEncoding.GetBytes(text);
+            var encodedText = DefaultEncoding.GetBytes(text);
 
-            using (FileStream sourceStream = OpenWriteAsync(filePath))
+            using (var sourceStream = OpenWriteAsync(filePath))
             {
                 await sourceStream.WriteAsync(encodedText, 0, encodedText.Length);
             }

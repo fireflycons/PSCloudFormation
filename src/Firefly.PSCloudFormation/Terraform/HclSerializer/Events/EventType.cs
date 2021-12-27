@@ -24,12 +24,6 @@
 
         JsonStart,
 
-        JsonEnd,
-
-        BlockStart,
-
-        BlockEnd,
-
-        Comment
+        JsonEnd
     }
 }

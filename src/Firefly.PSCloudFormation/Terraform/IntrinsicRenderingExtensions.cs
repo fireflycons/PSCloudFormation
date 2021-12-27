@@ -248,7 +248,7 @@
 
                     case RefIntrinsic refIntrinsic:
 
-                        sb.Append($"[{Render((IIntrinsic)refIntrinsic, template, resource, inputs)}]");
+                        sb.Append($"[{refIntrinsic.Render(template, resource, inputs)}]");
                         break;
 
                     case IIntrinsic intrinsic:
@@ -272,6 +272,7 @@
         /// <param name="inputs">The list of input variables and data sources.</param>
         /// <param name="index">The index.</param>
         /// <returns>A <see cref="DataSourceReference"/> to <c>aws_availability_zones</c></returns>
+        // ReSharper disable once UnusedParameter.Local - there for clarity
         private static Reference Render(GetAZsIntrinsic getAZsIntrinsic, IList<InputVariable> inputs, int index)
         {
             // Add an entry to parameters so it gets emitted

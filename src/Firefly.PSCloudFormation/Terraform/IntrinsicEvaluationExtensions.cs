@@ -10,6 +10,7 @@
     /// Attach an extra Evaluate method to intrinsics which works on actual values from the state file.
     /// </summary>
     // ReSharper disable once StyleCop.SA1650 - Extension methods
+    // ReSharper disable once UnusedMember.Global
     internal static class IntrinsicEvaluationExtensions
     {
         /// <summary>

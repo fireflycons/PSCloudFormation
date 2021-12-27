@@ -3,7 +3,6 @@
     using System;
     using System.Collections.Generic;
     using System.Linq;
-    using System.Runtime.CompilerServices;
 
     using Firefly.CloudFormationParser;
     using Firefly.CloudFormationParser.Intrinsics;
@@ -426,12 +425,12 @@
 
                 var tok = token;
 
-                while (tok.Type != JTokenType.Property)
+                while (tok != null && tok.Type != JTokenType.Property)
                 {
                     tok = tok.Parent;
                 }
 
-                return ((JProperty)tok).Name;
+                return ((JProperty)tok)?.Name;
             }
         }
     }
