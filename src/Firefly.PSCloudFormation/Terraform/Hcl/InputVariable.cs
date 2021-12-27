@@ -238,7 +238,7 @@
         /// Generates a <c>.tfvars</c> entry using the current value where it isn't the same as the default
         /// </summary>
         /// <returns>HCL variable value assignment.</returns>
-        public virtual string GenerateTfVar()
+        public virtual string GenerateVariableAssignment()
         {
             return string.Empty;
         }

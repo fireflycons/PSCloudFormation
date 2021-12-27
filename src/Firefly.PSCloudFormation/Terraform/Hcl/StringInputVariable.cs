@@ -5,6 +5,7 @@
     using System.Text;
 
     using Firefly.CloudFormationParser;
+    using Firefly.PSCloudFormation.Terraform.State;
 
     /// <summary>
     /// A string scalar input variable
@@ -25,9 +26,13 @@
         public override string Type => "string";
 
         /// <inheritdoc />
-        public override string GenerateTfVar()
+        public override string GenerateVariableAssignment()
         {
-            return this.CurrentValue == null ? string.Empty : $"{this.Name} = \"{this.CurrentValue}\"";
+            return this.CurrentValue == null 
+                       ? string.Empty 
+                       : this.CurrentValue is Reference reference
+                           ? $"{this.Name} = {reference.ReferenceExpression}"
+                           : $"{this.Name} = \"{this.CurrentValue}\"";
         }
 
         /// <inheritdoc />

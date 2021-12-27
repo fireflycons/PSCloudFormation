@@ -81,7 +81,7 @@
         }
 
         /// <inheritdoc />
-        public override string GenerateTfVar()
+        public override string GenerateVariableAssignment()
         {
             return string.Empty;
         }
