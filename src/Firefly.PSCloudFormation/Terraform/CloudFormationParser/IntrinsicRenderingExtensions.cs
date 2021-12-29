@@ -1,4 +1,4 @@
-﻿namespace Firefly.PSCloudFormation.Terraform
+﻿namespace Firefly.PSCloudFormation.Terraform.CloudFormationParser
 {
     using System;
     using System.Collections.Generic;
@@ -425,10 +425,10 @@
             }
 
             // This GetAtt refers to a nested stack which may or may not have been imported as a terraform module.
-            if (attributeName.StartsWith(TerraformExporterConstants.StackOutputAttributeIndentifier))
+            if (attributeName.StartsWith(TerraformExporterConstants.StackOutputQualifier))
             {
                 var referencedOutput =
-                    attributeName.Substring(TerraformExporterConstants.StackOutputAttributeIndentifier.Length);
+                    attributeName.Substring(TerraformExporterConstants.StackOutputQualifier.Length);
 
                 if (resource.Module?.LogicalId == getAttIntrinsic.LogicalId && resource.Module.Outputs.Any(o => o.OutputKey == referencedOutput))
                 {
@@ -439,8 +439,8 @@
                 // The reference is to an aws_cloudformation_stack as the use did not elect to import nested stacks.
                 // Just lowercase "Outputs." which will then resolve to the terraform resource.
                 attributeName = attributeName.Replace(
-                    TerraformExporterConstants.StackOutputAttributeIndentifier,
-                    TerraformExporterConstants.StackOutputAttributeIndentifier.ToLowerInvariant());
+                    TerraformExporterConstants.StackOutputQualifier,
+                    TerraformExporterConstants.StackOutputQualifier.ToLowerInvariant());
             }
             else
             {

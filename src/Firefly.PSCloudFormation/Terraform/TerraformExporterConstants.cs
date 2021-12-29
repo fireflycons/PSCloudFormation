@@ -11,6 +11,6 @@
 
         public const string LambdaZipFile = "Code.ZipFile";
 
-        public const string StackOutputAttributeIndentifier = "Outputs.";
+        public const string StackOutputQualifier = "Outputs.";
     }
 }

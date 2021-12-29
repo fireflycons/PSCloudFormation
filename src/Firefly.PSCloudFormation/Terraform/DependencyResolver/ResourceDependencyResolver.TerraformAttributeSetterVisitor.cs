@@ -6,6 +6,7 @@
 
     using Firefly.CloudFormationParser;
     using Firefly.CloudFormationParser.Intrinsics;
+    using Firefly.PSCloudFormation.Terraform.CloudFormationParser;
     using Firefly.PSCloudFormation.Terraform.Hcl;
     using Firefly.PSCloudFormation.Terraform.HclSerializer;
     using Firefly.PSCloudFormation.Terraform.HclSerializer.Traits;

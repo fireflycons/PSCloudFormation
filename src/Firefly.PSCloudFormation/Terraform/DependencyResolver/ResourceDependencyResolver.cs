@@ -5,8 +5,10 @@
     using System.Linq;
 
     using Firefly.CloudFormationParser;
+    using Firefly.CloudFormationParser.Intrinsics;
     using Firefly.CloudFormationParser.Intrinsics.Functions;
     using Firefly.CloudFormationParser.TemplateObjects.Traversal.AcceptExtensions;
+    using Firefly.PSCloudFormation.Terraform.CloudFormationParser;
     using Firefly.PSCloudFormation.Terraform.Hcl;
     using Firefly.PSCloudFormation.Terraform.HclSerializer;
     using Firefly.PSCloudFormation.Terraform.State;
@@ -22,9 +24,14 @@
     internal partial class ResourceDependencyResolver
     {
         /// <summary>
-        /// All input variables generated from the exported CloudFormation Stack.
+        /// The module being processed
         /// </summary>
-        private readonly IList<InputVariable> inputs;
+        private readonly ModuleInfo module;
+
+        /// <summary>
+        /// The settings
+        /// </summary>
+        private readonly ITerraformExportSettings settings;
 
         /// <summary>
         /// Reference to the parsed CloudFormation template
@@ -42,19 +49,9 @@
         private readonly IList<string> warnings;
 
         /// <summary>
-        /// The settings
-        /// </summary>
-        private readonly ITerraformExportSettings settings;
-
-        /// <summary>
         /// The CloudFormation resource currently being processed.
         /// </summary>
         private CloudFormationResource currentCloudFormationResource;
-
-        /// <summary>
-        /// The module being processed
-        /// </summary>
-        private readonly ModuleInfo module;
 
         /// <summary>
         /// Initializes a new instance of the <see cref="ResourceDependencyResolver"/> class.
@@ -65,7 +62,7 @@
         /// <param name="warnings">Global warning list.</param>
         public ResourceDependencyResolver(
             ITerraformExportSettings settings,
-            IEnumerable<StateFileResourceDeclaration> terraformResources,
+            IReadOnlyCollection<StateFileResourceDeclaration> terraformResources,
             ModuleInfo module,
             IList<string> warnings)
         {
@@ -73,8 +70,38 @@
             this.settings = settings;
             this.warnings = warnings;
             this.template = settings.Template;
-            this.terraformResources = terraformResources.ToList();
-            this.inputs = module.Inputs.ToList();
+            this.terraformResources = terraformResources;
+        }
+
+        /// <summary>
+        /// Resolves the input dependencies of a module imported by the current module.
+        /// </summary>
+        /// <param name="referencedModule">The referenced module.</param>
+        public void ResolveModuleDependencies(ModuleInfo referencedModule)
+        {
+            // Visit the AWS::CloudFormation::Stack resource gathering all intrinsics that might imply reference to another resource or input
+            var intrinsicVisitorContext = new IntrinsicVisitorContext(
+                this.settings,
+                this.terraformResources,
+                this.module.Inputs,
+                referencedModule.StackResource,
+                this.warnings,
+                this.module);
+
+            // Visit the AWS::CloudFormation::Stack associated with the given module and pull out
+            // intrinsic references in Parameters property.
+            var intrinsicVisitor = new IntrinsicVisitor(this.template);
+            referencedModule.StackResource.Accept(intrinsicVisitor, intrinsicVisitorContext);
+
+            foreach (var intrinsicInfo in intrinsicVisitorContext.ReferenceLocations)
+            {
+                var reference = this.GetModuleInputReference(referencedModule, intrinsicInfo);
+
+                if (reference != null)
+                {
+                    ApplyModuleInputReference(referencedModule, intrinsicInfo, reference);
+                }
+            }
         }
 
         /// <summary>
@@ -93,23 +120,24 @@
 
                 // Find related resources that may be merged into this one
                 var relatedResources = this.template.DependencyGraph.Edges.Where(
-                    e => e.Source.Name == this.currentCloudFormationResource.LogicalResourceId && e.Target.TemplateObject is IResource res && ModuleInfo.MergedResources.Contains(res.Type))
+                        e => e.Source.Name == this.currentCloudFormationResource.LogicalResourceId
+                             && e.Target.TemplateObject is IResource res
+                             && ModuleInfo.MergedResources.Contains(res.Type))
                     .Select(e => (IResource)e.Target.TemplateObject);
 
                 foreach (var cloudFormationResource in new[] { this.currentCloudFormationResource.TemplateResource }
-                    .Concat(relatedResources))
+                             .Concat(relatedResources))
                 {
                     // Visit the CF resource gathering all intrinsics that might imply reference to another resource or input
                     var intrinsicVisitorContext = new IntrinsicVisitorContext(
                         this.settings,
                         this.terraformResources,
-                        this.inputs,
+                        this.module.Inputs,
                         cloudFormationResource,
                         this.warnings,
                         this.module);
 
-                    var intrinsicVisitor =
-                        new IntrinsicVisitor(this.template);
+                    var intrinsicVisitor = new IntrinsicVisitor(this.template);
                     cloudFormationResource.Accept(intrinsicVisitor, intrinsicVisitorContext);
 
                     referenceLocations.AddRange(intrinsicVisitorContext.ReferenceLocations);
@@ -120,20 +148,19 @@
                     referenceLocations,
                     this.template,
                     terraformStateFileResource,
-                    this.inputs);
+                    this.module.Inputs);
 
                 terraformStateFileResource.ResourceInstance.Attributes.Accept(
                     new TerraformAttributeSetterVisitor(),
                     dependencyContext);
 
                 // For each found modification, update attribute value with JSON encoded reference expression or string interpolation.
-                foreach (var modification in dependencyContext.Modifications.Where(
-                    m => m.Reference != null))
+                foreach (var modification in dependencyContext.Modifications.Where(m => m.Reference != null))
                 {
                     if (modification.ContainingProperty == null)
                     {
                         // Normal resource attribute
-                        ApplyNewValue(
+                        ApplyResourceAttributeReference(
                             terraformStateFileResource.ResourceInstance.Attributes.SelectToken(
                                 modification.ValueToReplace.Path),
                             modification);
@@ -149,14 +176,15 @@
                             terraformStateFileResource.Type,
                             out var document);
 
-                        ApplyNewValue(document.SelectToken(modification.ValueToReplace.Path), modification);
+                        ApplyResourceAttributeReference(
+                            document.SelectToken(modification.ValueToReplace.Path),
+                            modification);
 
                         // Now put back the nested JSON complete with added reference
                         var enc = document.ToString(Formatting.None);
                         modification.ContainingProperty.Value = enc;
                     }
                 }
-
             }
             catch (HclSerializerException)
             {
@@ -173,60 +201,27 @@
         }
 
         /// <summary>
-        /// Resolves the input dependencies of a module imported by the current module.
+        /// Hooks up a module input to a <see cref="Reference"/> that gets its value.
         /// </summary>
         /// <param name="referencedModule">The referenced module.</param>
-        public void ResolveModuleDependencies(ModuleInfo referencedModule)
+        /// <param name="intrinsicInfo">The intrinsic information.</param>
+        /// <param name="reference">The reference.</param>
+        private static void ApplyModuleInputReference(
+            ModuleInfo referencedModule,
+            IntrinsicInfo intrinsicInfo,
+            Reference reference)
         {
-            // Visit the CF resource gathering all intrinsics that might imply reference to another resource or input
-            var intrinsicVisitorContext = new IntrinsicVisitorContext(
-                this.settings,
-                this.terraformResources,
-                this.inputs,
-                referencedModule.StackResource,
-                this.warnings,
-                this.module);
+            // Find input with value matching the intrinsic evaluation
+            var index = GetModuleInputIndex(
+                referencedModule.Inputs,
+                tuple => tuple.Item1.ScalarIdentity == intrinsicInfo.Evaluation.ToString());
 
-            var intrinsicVisitor =
-                new IntrinsicVisitor(this.template);
-            referencedModule.StackResource.Accept(intrinsicVisitor, intrinsicVisitorContext);
-
-            foreach (var intrinsicInfo in intrinsicVisitorContext.ReferenceLocations)
+            if (index != -1)
             {
-                switch (intrinsicInfo.TargetType)
-                {
-                    case IntrinsicTargetType.Input:
-
-                        // The intrinsic must be !Ref
-                        if (intrinsicInfo.Intrinsic is RefIntrinsic refIntrinsic)
-                        {
-                            var reference = new InputVariableReference(refIntrinsic.Reference);
-                            var index = GetInputIndex(
-                                referencedModule.Inputs,
-                                tuple => tuple.Item1.ScalarIdentity == intrinsicInfo.Evaluation.ToString());
-
-                            if (index != -1)
-                            {
-                                referencedModule.Inputs[index] = new ModuleInputVariable(
-                                    referencedModule.Inputs[index].Name,
-                                    reference);
-                            }
-                        }
-
-                        break;
-                }
-            }
-        }
-
-        private static int GetInputIndex(IEnumerable<InputVariable> inputs, Func<(InputVariable, int), bool> predicate)
-        {
-            try
-            {
-                return inputs.WithIndex().First(predicate).Item2;
-            }
-            catch
-            {
-                return -1;
+                // Overwrite the original scalar input with a new reference.
+                referencedModule.Inputs[index] = new ModuleInputVariable(
+                    referencedModule.Inputs[index].Name,
+                    reference);
             }
         }
 
@@ -235,7 +230,7 @@
         /// </summary>
         /// <param name="token">The token to replace.</param>
         /// <param name="modification">The modification data.</param>
-        private static void ApplyNewValue(JToken token, StateModification modification)
+        private static void ApplyResourceAttributeReference(JToken token, StateModification modification)
         {
             var newValue = modification.Reference.ToJConstructor();
 
@@ -249,6 +244,195 @@
                 case JArray ja:
 
                     ja[modification.Index] = newValue;
+                    break;
+            }
+        }
+
+        /// <summary>
+        /// Gets the index of the module input whose value matches the predicate..
+        /// </summary>
+        /// <param name="inputs">The module inputs.</param>
+        /// <param name="predicate">The predicate to check the values.</param>
+        /// <returns>Index of matching input; else -1</returns>
+        private static int GetModuleInputIndex(
+            IEnumerable<InputVariable> inputs,
+            Func<(InputVariable, int), bool> predicate)
+        {
+            try
+            {
+                return inputs.WithIndex().First(predicate).Item2;
+            }
+            catch
+            {
+                return -1;
+            }
+        }
+
+        /// <summary>
+        /// Given an <see cref="IntrinsicInfo"/>, create a <see cref="Reference"/> for the given module's input.
+        /// </summary>
+        /// <param name="referencedModule">The referenced module.</param>
+        /// <param name="intrinsicInfo">The intrinsic information.</param>
+        /// <returns>A <see cref="Reference"/></returns>
+        private Reference GetModuleInputReference(ModuleInfo referencedModule, IntrinsicInfo intrinsicInfo)
+        {
+            Reference reference = null;
+
+            switch (intrinsicInfo.TargetType)
+            {
+                case IntrinsicTargetType.Input:
+                    {
+                        // Here it is a !Ref to an input variable.
+                        if (intrinsicInfo.Intrinsic is RefIntrinsic refIntrinsic)
+                        {
+                            reference = new InputVariableReference(refIntrinsic.Reference);
+                        }
+
+                        break;
+                    }
+
+                case IntrinsicTargetType.Resource:
+                    {
+                        // Here it points to another resource in the current module
+                        // which could be a !Ref or a !GetAtt.
+                        switch (intrinsicInfo.Intrinsic)
+                        {
+                            case RefIntrinsic refIntrinsic:
+
+                                var targetResource =
+                                    this.terraformResources.First(tr => tr.Name == refIntrinsic.Reference);
+
+                                reference = new DirectReference(targetResource.Address);
+                                break;
+
+                            case GetAttIntrinsic getAttIntrinsic:
+
+                                var referencedResource =
+                                    this.terraformResources.First(tr => tr.Name == getAttIntrinsic.LogicalId);
+
+                                var result = getAttIntrinsic.GetTargetValue(
+                                    this.template,
+                                    referencedResource.ResourceInstance);
+
+                                if (result.Success)
+                                {
+                                    reference = new IndirectReference(
+                                        $"{referencedResource.Type}.{getAttIntrinsic.LogicalId}.{result.TargetAttributePath}");
+                                }
+
+                                break;
+                        }
+
+                        break;
+                    }
+
+                case IntrinsicTargetType.Module:
+                    {
+                        // Here it must be a !GetAtt pointing to the output of another imported module
+                        if (intrinsicInfo.Intrinsic is GetAttIntrinsic getAttIntrinsic)
+                        {
+                            var attributeName = getAttIntrinsic.GetResolvedAttributeName(this.template);
+
+                            // Remove the "Outputs" qualifier.
+                            if (!attributeName.StartsWith(TerraformExporterConstants.StackOutputQualifier))
+                            {
+                                // Shouldn't get here (famous last words)
+                                break;
+                            }
+
+                            reference = new ModuleReference(
+                                $"{intrinsicInfo.TargetResource.Module.Name}.{attributeName.Substring(TerraformExporterConstants.StackOutputQualifier.Length)}");
+                        }
+
+                        break;
+                    }
+
+                case IntrinsicTargetType.Unknown:
+
+                    // We have a compound intrinsic like !Select, !Join etc.
+                    // TODO - This is another recursion through intrinsics containing more intrinsics :-(
+                    this.ProcessCompoundIntrinsic(intrinsicInfo, referencedModule);
+                    break;
+            }
+
+            return reference;
+        }
+
+        private void ProcessCompoundIntrinsic(IntrinsicInfo intrinsicInfo, ModuleInfo referencedModule)
+        {
+            // TODO - This is another recursion through intrinsics containing more intrinsics :-(
+            switch (intrinsicInfo.Intrinsic)
+            {
+                case JoinIntrinsic joinIntrinsic:
+
+                    // Does the join evaluation match a scalar input?
+                    var scalarEvaluation = joinIntrinsic.Evaluate(intrinsicInfo).ToString();
+                    var index = GetModuleInputIndex(
+                        referencedModule.Inputs,
+                        tuple => tuple.Item1.ScalarIdentity == scalarEvaluation);
+
+                    if (index != -1)
+                    {
+                        // TODO - Test this
+                        referencedModule.Inputs[index] = new ModuleInputVariable(
+                            referencedModule.Inputs[index].Name,
+                            new JoinFunctionReference(joinIntrinsic, this.template, this.module.Inputs));
+
+                        return;
+                    }
+
+                    // A nested CF stack may have a List<...> input, however when passing the values
+                    // from the root stack, they have to be passed as a comma separated list.
+                    // Make the assumption here that if the join delimiter is comma, then this is
+                    // what is happening.
+                    if (joinIntrinsic.Separator == ",")
+                    {
+                        var elements = new List<string>();
+
+                        foreach (var item in joinIntrinsic.Items)
+                        {
+                            if (item is IIntrinsic intrinsic)
+                            {
+                                var nested = (IntrinsicInfo)intrinsic.ExtraData;
+
+                                // ReSharper disable once PossibleNullReferenceException - if null, then it's most likely a bug.
+                                elements.Add(nested.Intrinsic.Evaluate(nested).ToString());
+                            }
+                            else
+                            {
+                                elements.Add(item.ToString());
+                            }
+                        }
+
+                        foreach (var input in referencedModule.Inputs.WithIndex()
+                                     .Where(tuple => tuple.item is StringListInputVariable))
+                        {
+                            if (input.item.ListIdentity.OrderBy(i => i).SequenceEqual(elements.OrderBy(e => e)))
+                            {
+                                // Create a ModuleInputVariable with a list of references
+                                var args = new List<object>();
+
+                                foreach (var item in joinIntrinsic.Items)
+                                {
+                                    if (item is IIntrinsic intrinsic)
+                                    {
+                                        switch (intrinsic)
+                                        {
+                                            case RefIntrinsic refIntrinsic:
+
+                                                args.Add(new InputVariableReference(refIntrinsic.Reference));
+                                                break;
+
+                                            case GetAttIntrinsic getAttIntrinsic:
+
+                                                break;
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+
                     break;
             }
         }

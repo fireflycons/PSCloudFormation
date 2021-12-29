@@ -9,10 +9,10 @@
     using Firefly.CloudFormationParser.Intrinsics.Functions;
     using Firefly.CloudFormationParser.TemplateObjects.Traversal;
     using Firefly.CloudFormationParser.Utils;
+    using Firefly.PSCloudFormation.Terraform.CloudFormationParser;
     using Firefly.PSCloudFormation.Terraform.Hcl;
     using Firefly.PSCloudFormation.Terraform.HclSerializer.Traits;
     using Firefly.PSCloudFormation.Terraform.State;
-    using Firefly.PSCloudFormation.Utils.JsonTraversal;
 
     using Newtonsoft.Json.Linq;
 
@@ -411,20 +411,30 @@
                     var token = referencedResource.Attributes[traits.AttributeMap[attribute]];
                     evaluation = GetEvaluation(token);
                 }
-                else if (attribute.StartsWith(TerraformExporterConstants.StackOutputAttributeIndentifier))
+                else if (attribute.StartsWith(TerraformExporterConstants.StackOutputQualifier))
                 {
                     // Nested stack output reference
                     var token = referencedResource.Attributes.SelectToken(
                         attribute.Replace(
-                            TerraformExporterConstants.StackOutputAttributeIndentifier,
-                            TerraformExporterConstants.StackOutputAttributeIndentifier.ToLowerInvariant()));
+                            TerraformExporterConstants.StackOutputQualifier,
+                            TerraformExporterConstants.StackOutputQualifier.ToLowerInvariant()));
                     evaluation = GetEvaluation(token);
                 }
                 else
                 {
-                    var context = new TerraformAttributeGetterContext(attribute);
-                    referencedResource.Attributes.Accept(new TerraformAttributeGetterVisitor(), context);
-                    evaluation = context.Value;
+                    var result = getAttIntrinsic.GetTargetValue(this.template, referencedResource);
+
+                    if (result.Success)
+                    {
+                        evaluation = result.Value;
+                    }
+                    else
+                    {
+                        throw new UnreferenceableIntrinsicWarning(
+                            getAttIntrinsic,
+                            cloudFormationResource.TemplateResource,
+                            currentPath);
+                    }
                 }
 
                 return new IntrinsicInfo(currentPath, getAttIntrinsic, targetResourceSummary, evaluation);

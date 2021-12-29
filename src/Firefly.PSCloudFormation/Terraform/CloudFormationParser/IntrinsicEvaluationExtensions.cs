@@ -1,4 +1,4 @@
-﻿namespace Firefly.PSCloudFormation.Terraform
+﻿namespace Firefly.PSCloudFormation.Terraform.CloudFormationParser
 {
     using System.Collections.Generic;
 

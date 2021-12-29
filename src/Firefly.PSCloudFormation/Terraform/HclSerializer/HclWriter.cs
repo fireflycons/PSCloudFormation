@@ -11,6 +11,7 @@
     using Firefly.CloudFormationParser.Intrinsics.Functions;
     using Firefly.CloudFormationParser.TemplateObjects;
     using Firefly.PSCloudFormation.LambdaPackaging;
+    using Firefly.PSCloudFormation.Terraform.CloudFormationParser;
     using Firefly.PSCloudFormation.Terraform.DependencyResolver;
     using Firefly.PSCloudFormation.Terraform.Hcl;
     using Firefly.PSCloudFormation.Terraform.Importers.Lambda;
@@ -201,6 +202,7 @@
                 mapping,
                 inputs,
                 new IndirectReference($"zipper_file.{zipperResource}.output_path"));
+
             UpdatePropertyValue(
                 "source_code_hash",
                 cloudFormationResource.Template,
@@ -215,7 +217,7 @@
         /// </summary>
         /// <param name="key">The key.</param>
         /// <param name="template">The template.</param>
-        /// <param name="attributes">The attributes ofd the resource ti.</param>
+        /// <param name="attributes">The attributes of the resource to update.</param>
         /// <param name="resourceMapping">The resource mapping.</param>
         /// <param name="inputs">The list of input variables and data sources.</param>
         /// <param name="newValue">The new value.</param>
@@ -503,12 +505,13 @@
         }
 
         /// <summary>
-        /// Resolves dependencies between resources updating the in-memory copy of the state file with variable and resource references.
+        /// Resolves dependencies within this module updating the in-memory copy of the state file
+        /// and inputs to submodules with variable and resource references.
         /// </summary>
         /// <param name="stateFile">The state file.</param>
-        private void ResolveResourceDependencies(StateFile stateFile)
+        private void ResolveDependencies(StateFile stateFile)
         {
-            this.settings.Logger.LogInformation("\nResolving dependencies between resources...");
+            this.settings.Logger.LogInformation("\nResolving module's dependencies...");
 
             // Resources from state file that are declared by this module.
             var moduleResources = stateFile.FilteredResources(this.module.Name).ToList();
@@ -519,15 +522,23 @@
                 this.module,
                 this.warnings);
 
-            foreach (var resourceMapping in this.module.ResourceMappings)
+            if (this.module.ResourceMappings.Any())
             {
-                resolver.ResolveResourceDependencies(
-                    moduleResources.First(r => r.Name == resourceMapping.LogicalId));
+                this.settings.Logger.LogInformation("- Resources...");
+                foreach (var resourceMapping in this.module.ResourceMappings)
+                {
+                    resolver.ResolveResourceDependencies(
+                        moduleResources.First(r => r.Name == resourceMapping.LogicalId));
+                }
             }
 
-            foreach (var importedModule in this.module.NestedModules)
+            if (this.module.NestedModules.Any())
             {
-                resolver.ResolveModuleDependencies(importedModule);
+                this.settings.Logger.LogInformation("- Submodules...");
+                foreach (var importedModule in this.module.NestedModules)
+                {
+                    resolver.ResolveModuleDependencies(importedModule);
+                }
             }
         }
 
@@ -571,7 +582,7 @@
             using (var writer = new StreamWriter(stream, new UTF8Encoding(false)))
             {
                 this.ResolveLambdaCode(writer, stateFile);
-                this.ResolveResourceDependencies(stateFile);
+                this.ResolveDependencies(stateFile);
 
                 if (this.settings.IsRootModule)
                 {

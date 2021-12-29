@@ -217,9 +217,9 @@
         }
 
         /// <summary>
-        /// Gets a depth-first flattened list of all sub-modules from this point.
+        /// Gets a depth-first flattened list of all submodules from this point.
         /// </summary>
-        /// <returns>Depth-first flattened list of all sub-modules from this point.</returns>
+        /// <returns>Depth-first flattened list of all submodules from this point.</returns>
         public IEnumerable<ModuleInfo> DescendentsAndThis()
         {
             return this.NestedModules.Flatten(m => m.NestedModules).Concat(new[] { this });
@@ -377,7 +377,7 @@
 
             if (File.Exists(modulesFile))
             {
-                // In case we removed all pre-existing sub-module references
+                // In case we removed all pre-existing submodule references
                 File.Delete(modulesFile);
             }
 
