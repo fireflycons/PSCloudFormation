@@ -4,6 +4,7 @@
     using System.Collections.Generic;
     using System.Linq;
     using System.Reflection;
+    using System.Runtime.CompilerServices;
 
     using Firefly.CloudFormationParser;
     using Firefly.CloudFormationParser.Intrinsics;
@@ -351,50 +352,54 @@
                 case IntrinsicTargetType.Unknown:
 
                     // We have a compound intrinsic like !Select, !Join etc.
-                    // TODO - This is another recursion through intrinsics containing more intrinsics :-(
-                    this.ProcessCompoundIntrinsic(intrinsicInfo, referencedModule);
+                    reference = this.ProcessOtherIntrinsic(intrinsicInfo, referencedModule);
                     break;
             }
 
             return reference;
         }
 
-        private void ProcessCompoundIntrinsic(IntrinsicInfo intrinsicInfo, ModuleInfo referencedModule)
+        /// <summary>
+        /// Processes intrinsic other than <c>!Ref</c> and <c>!GetAtt</c>
+        /// </summary>
+        /// <param name="intrinsicInfo">The intrinsic info.</param>
+        /// <param name="referencedModule">The module being referenced.</param>
+        /// <returns>A <see cref="Reference"/> that should be used as the module's input variable value; else <c>null</c>.</returns>
+        private Reference ProcessOtherIntrinsic(IntrinsicInfo intrinsicInfo, ModuleInfo referencedModule)
         {
-            // TODO - This is another recursion through intrinsics containing more intrinsics :-(
             switch (intrinsicInfo.Intrinsic)
             {
                 case JoinIntrinsic joinIntrinsic:
 
-                    // Does the join evaluation match a scalar input?
-                    var scalarEvaluation = joinIntrinsic.Evaluate(intrinsicInfo).ToString();
-                    var index = GetModuleInputIndex(
-                        referencedModule.Inputs,
-                        tuple => tuple.Item1.ScalarIdentity == scalarEvaluation);
-
-                    if (index != -1)
                     {
-                        // TODO - Test this
-                        referencedModule.Inputs[index] = new ModuleInputVariable(
-                            referencedModule.Inputs[index].Name,
-                            new JoinFunctionReference(joinIntrinsic, this.template, this.module.Inputs));
+                        // Does the join evaluation match a scalar input?
+                        var scalarEvaluation = joinIntrinsic.Evaluate(intrinsicInfo).ToString();
+                        var index = GetModuleInputIndex(
+                            referencedModule.Inputs,
+                            tuple => tuple.Item1.ScalarIdentity == scalarEvaluation);
 
-                        return;
-                    }
+                        if (index != -1)
+                        {
+                            return new JoinFunctionReference(joinIntrinsic, this.template, this.module.Inputs);
+                        }
 
-                    // A nested CF stack may have a List<...> input, however when passing the values
-                    // from the root stack, they have to be passed as a comma separated list.
-                    // Make the assumption here that if the join delimiter is comma, then this is
-                    // what is happening.
-                    if (joinIntrinsic.Separator == ",")
-                    {
+                        if (joinIntrinsic.Separator != ",")
+                        {
+                            // Should have matched on the scalar evaluation if the separator is anything else.
+                            return null;
+                        }
+
+                        // A nested CF stack may have a List<...> input, however when passing the values
+                        // from the root stack, they have to be passed as a comma separated list.
+                        // Make the assumption here that if the join separator is comma, then this is
+                        // what is happening.
                         var elements = new List<string>();
 
                         foreach (var item in joinIntrinsic.Items)
                         {
                             if (item is IIntrinsic intrinsic)
                             {
-                                var nested = (IntrinsicInfo)intrinsic.ExtraData;
+                                var nested = intrinsic.GetInfo();
 
                                 // ReSharper disable once PossibleNullReferenceException - if null, then it's most likely a bug.
                                 elements.Add(nested.Intrinsic.Evaluate(nested).ToString());
@@ -431,7 +436,7 @@
                                                 args.Add(
                                                     getAttIntrinsic.Render(
                                                         this.template,
-                                                        ((IntrinsicInfo)getAttIntrinsic.ExtraData).TargetResource,
+                                                        getAttIntrinsic.GetInfo().TargetResource,
                                                         this.module.Inputs));
                                                 break;
                                         }
@@ -452,7 +457,13 @@
                         }
                     }
 
-                    break;
+                    // We already replaced the module input
+                    return null;
+
+                default:
+
+                    // Any other kind of intrinsic needs no special handling
+                    return intrinsicInfo.Intrinsic.Render(this.template, intrinsicInfo.TargetResource, this.module.Inputs);
             }
         }
     }

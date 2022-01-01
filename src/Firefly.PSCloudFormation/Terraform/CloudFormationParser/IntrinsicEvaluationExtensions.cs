@@ -46,9 +46,7 @@
             {
                 if (item is IIntrinsic intrinsic)
                 {
-                    var nested = (IntrinsicInfo)intrinsic.ExtraData;
-                    
-                    // ReSharper disable once PossibleNullReferenceException - if null, then it's most likely a bug.
+                    var nested = intrinsic.GetInfo();
                     elements.Add(nested.Intrinsic.Evaluate(nested).ToString());
                 }
                 else
