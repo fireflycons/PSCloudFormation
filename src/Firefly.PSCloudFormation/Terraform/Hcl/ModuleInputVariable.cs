@@ -5,6 +5,10 @@
 
     using Firefly.PSCloudFormation.Terraform.State;
 
+    /// <summary>
+    /// Input variable for a module block
+    /// </summary>
+    /// <seealso cref="Firefly.PSCloudFormation.Terraform.Hcl.InputVariable" />
     internal class ModuleInputVariable : InputVariable
     {
         /// <summary>
@@ -41,7 +45,7 @@
                     sb.AppendLine($"  {RenderObject(value)},");
                 }
 
-                sb.AppendLine("]");
+                sb.Append("]");
                 return sb.ToString();
             }
 

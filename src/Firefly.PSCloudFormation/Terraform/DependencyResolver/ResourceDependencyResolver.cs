@@ -3,6 +3,7 @@
     using System;
     using System.Collections.Generic;
     using System.Linq;
+    using System.Reflection;
 
     using Firefly.CloudFormationParser;
     using Firefly.CloudFormationParser.Intrinsics;
@@ -404,17 +405,19 @@
                             }
                         }
 
-                        foreach (var input in referencedModule.Inputs.WithIndex()
+                        var modifications = new Dictionary<int, InputVariable>();
+
+                        foreach (var (item, itemIndex) in referencedModule.Inputs.WithIndex()
                                      .Where(tuple => tuple.item is StringListInputVariable))
                         {
-                            if (input.item.ListIdentity.OrderBy(i => i).SequenceEqual(elements.OrderBy(e => e)))
+                            if (item.ListIdentity.OrderBy(i => i).SequenceEqual(elements.OrderBy(e => e)))
                             {
                                 // Create a ModuleInputVariable with a list of references
                                 var args = new List<object>();
 
-                                foreach (var item in joinIntrinsic.Items)
+                                foreach (var joinItem in joinIntrinsic.Items)
                                 {
-                                    if (item is IIntrinsic intrinsic)
+                                    if (joinItem is IIntrinsic intrinsic)
                                     {
                                         switch (intrinsic)
                                         {
@@ -425,11 +428,27 @@
 
                                             case GetAttIntrinsic getAttIntrinsic:
 
+                                                args.Add(
+                                                    getAttIntrinsic.Render(
+                                                        this.template,
+                                                        ((IntrinsicInfo)getAttIntrinsic.ExtraData).TargetResource,
+                                                        this.module.Inputs));
                                                 break;
                                         }
                                     }
+                                    else
+                                    {
+                                        args.Add(joinItem.ToString());
+                                    }
                                 }
+
+                                modifications.Add(itemIndex, new ModuleInputVariable(item.Name, args.ToArray()));
                             }
+                        }
+
+                        foreach (var ind in modifications.Keys)
+                        {
+                            referencedModule.Inputs[ind] = modifications[ind];
                         }
                     }
 

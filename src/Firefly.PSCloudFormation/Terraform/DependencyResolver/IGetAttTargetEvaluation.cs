@@ -6,12 +6,12 @@
     internal interface IGetAttTargetEvaluation
     {
         /// <summary>
-        /// Gets or sets the value.
+        /// Gets the value.
         /// </summary>
         /// <value>
         /// The value associated with the attribute.
         /// </value>
-        object Value { get; set; }
+        object Value { get; }
 
         /// <summary>
         /// Gets a value indicating whether the target of the <c>!GetAtt</c> was successfully located..
@@ -22,11 +22,11 @@
         bool Success { get; }
 
         /// <summary>
-        /// Gets or sets the JSON path of the attribute where the value was located.
+        /// Gets the JSON path of the attribute where the value was located.
         /// </summary>
         /// <value>
         /// The JSON path of the target attribute.
         /// </value>
-        string TargetAttributePath { get; set; }
+        string TargetAttributePath { get; }
     }
 }

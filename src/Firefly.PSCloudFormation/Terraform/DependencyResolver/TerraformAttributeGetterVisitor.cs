@@ -15,7 +15,7 @@
         /// <inheritdoc />
         protected override void Visit(JProperty property, TerraformAttributeGetterContext context)
         {
-            if (context.Value != null)
+            if (context.Success)
             {
                 // Already found a value
                 return;
@@ -27,6 +27,8 @@
                 return;
             }
 
+            // In CloudFormation, the only acceptable types are array or scalar
+            // CF does not have object type parameters/variables
             if (property.Value is JArray)
             {
                 context.Value = property.Value;
