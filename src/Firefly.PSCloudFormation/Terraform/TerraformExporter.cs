@@ -69,7 +69,7 @@
 
 
                 // Write out terraform and provider blocks.
-                using (var writer = new StreamWriter(HclWriter.MainScriptFile))
+                using (var writer = new StreamWriter(TerraformExporterConstants.MainScriptFile))
                 {
                     await writer.WriteLineAsync(configurationBlocks);
                 }
@@ -150,9 +150,9 @@
         {
             this.settings.Logger.LogInformation("\nInitializing workspace...");
 
-            if (File.Exists(HclWriter.VarsFile))
+            if (File.Exists(TerraformExporterConstants.VarsFile))
             {
-                File.Delete(HclWriter.VarsFile);
+                File.Delete(TerraformExporterConstants.VarsFile);
             }
 
             this.settings.Runner.Run("init", true, true, null);

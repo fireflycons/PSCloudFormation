@@ -24,21 +24,6 @@
     /// </summary>
     internal class HclWriter
     {
-        /// <summary>
-        /// Name of the main script file
-        /// </summary>
-        public const string MainScriptFile = "main.tf";
-
-        /// <summary>
-        /// Name of the file declaring imported modules
-        /// </summary>
-        public const string ModulesFile = "module_imports.tf";
-
-        /// <summary>
-        /// Name of the variable values file
-        /// </summary>
-        public const string VarsFile = "terraform.tfvars";
-
         private static readonly Dictionary<string, string> PlanActions = new Dictionary<string, string>
                                                                              {
                                                                                  { "create", "will be created." },
@@ -572,11 +557,11 @@
         /// <returns>Task to await.</returns>
         private async Task WriteMain(StateFile stateFile)
         {
-            this.settings.Logger.LogInformation($"Writing {MainScriptFile}");
+            this.settings.Logger.LogInformation($"Writing {TerraformExporterConstants.MainScriptFile}");
 
             // Write main.tf
             using (var stream = new FileStream(
-                       Path.Combine(this.settings.WorkspaceDirectory, this.settings.ModuleDirectory, MainScriptFile),
+                       Path.Combine(this.settings.WorkspaceDirectory, this.settings.ModuleDirectory, TerraformExporterConstants.MainScriptFile),
                        FileMode.Create,
                        FileAccess.Write))
             using (var writer = new StreamWriter(stream, new UTF8Encoding(false)))
@@ -634,10 +619,10 @@
                 return;
             }
 
-            this.settings.Logger.LogInformation($"Writing {VarsFile}");
+            this.settings.Logger.LogInformation($"Writing {TerraformExporterConstants.VarsFile}");
 
             using (var stream = new FileStream(
-                       Path.Combine(this.settings.WorkspaceDirectory, this.settings.ModuleDirectory, VarsFile),
+                       Path.Combine(this.settings.WorkspaceDirectory, this.settings.ModuleDirectory, TerraformExporterConstants.VarsFile),
                        FileMode.Create,
                        FileAccess.Write))
             using (var s = new StreamWriter(stream, new UTF8Encoding(false)))

@@ -531,7 +531,7 @@
                 }
 
                 var cloudFormationResource = this.CloudFormationResources
-                    .Where(r => ModuleInfo.IgnoredResources.All(ir => ir != r.ResourceType))
+                    .Where(r => TerraformExporterConstants.IgnoredResources.All(ir => ir != r.ResourceType))
                     .FirstOrDefault(r => r.LogicalResourceId == target);
 
                 if (cloudFormationResource == null)

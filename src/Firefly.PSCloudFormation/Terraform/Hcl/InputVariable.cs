@@ -14,7 +14,7 @@
         /// <summary>
         /// Text fragment to insert when declaring input variable default
         /// </summary>
-        public const string DefaultDeclaration = "  default     = ";
+        protected const string DefaultDeclaration = "  default     = ";
 
         /// <summary>
         /// Valid pseudo parameter types

@@ -49,7 +49,7 @@
 
             this.settings.Logger.LogInformation($"Processing stack {this.settings.StackName}...");
 
-            using (var fs = AsyncFileHelpers.OpenAppendAsync(HclWriter.MainScriptFile))
+            using (var fs = AsyncFileHelpers.OpenAppendAsync(TerraformExporterConstants.MainScriptFile))
             using (var writer = new StreamWriter(fs, AsyncFileHelpers.DefaultEncoding))
             {
                 var module = new ModuleInfo(
@@ -105,7 +105,7 @@
             }
 
             settings.Logger.LogInformation($"Processing stack {settings.StackName}...");
-            var scriptFile = Path.Combine(workingDirectory, HclWriter.MainScriptFile);
+            var scriptFile = Path.Combine(workingDirectory, TerraformExporterConstants.MainScriptFile);
 
             ModuleInfo module;
 

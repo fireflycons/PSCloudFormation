@@ -124,7 +124,7 @@
                 var relatedResources = this.template.DependencyGraph.Edges.Where(
                         e => e.Source.Name == this.currentCloudFormationResource.LogicalResourceId
                              && e.Target.TemplateObject is IResource res
-                             && ModuleInfo.MergedResources.Contains(res.Type))
+                             && TerraformExporterConstants.MergedResources.Contains(res.Type))
                     .Select(e => (IResource)e.Target.TemplateObject);
 
                 foreach (var cloudFormationResource in new[] { this.currentCloudFormationResource.TemplateResource }

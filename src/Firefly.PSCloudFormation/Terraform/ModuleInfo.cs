@@ -25,32 +25,6 @@
     internal class ModuleInfo
     {
         /// <summary>
-        /// These resources have no direct terraform representation.
-        /// They are merged into the resources that depend on them
-        /// when the dependent resource is imported.
-        /// </summary>
-        public static readonly List<string> MergedResources = new List<string>
-                                                                  {
-                                                                      "AWS::CloudFront::CloudFrontOriginAccessIdentity",
-                                                                      "AWS::IAM::Policy",
-                                                                      "AWS::EC2::SecurityGroupIngress",
-                                                                      "AWS::EC2::SecurityGroupEgress",
-                                                                      "AWS::EC2::VPCGatewayAttachment",
-                                                                      "AWS::EC2::SubnetNetworkAclAssociation",
-                                                                      "AWS::EC2::NetworkAclEntry"
-                                                                  };
-
-        /// <summary>
-        /// These resources are currently not supported for import.
-        /// </summary>
-        public static readonly List<string> UnsupportedResources = new List<string> { "AWS::ApiGateway::Deployment" };
-
-        /// <summary>
-        /// Combination of merged and unsupported resources.
-        /// </summary>
-        public static readonly List<string> IgnoredResources = MergedResources.Concat(UnsupportedResources).ToList();
-
-        /// <summary>
         /// Map of AWS -> Terraform resource names
         /// </summary>
         private static readonly List<ResourceTypeMapping> ResourceTypeMappings;
@@ -323,13 +297,13 @@
 
             foreach (var resource in this.Settings.Resources)
             {
-                if (MergedResources.Contains(resource.StackResource.ResourceType))
+                if (TerraformExporterConstants.MergedResources.Contains(resource.StackResource.ResourceType))
                 {
                     // Resource is merged into its dependencies.
                     continue;
                 }
 
-                if (UnsupportedResources.Contains(resource.StackResource.ResourceType))
+                if (TerraformExporterConstants.UnsupportedResources.Contains(resource.StackResource.ResourceType))
                 {
                     var wrn =
                         $"Resource \"{resource.LogicalResourceId}\" ({resource.ResourceType}): Not supported for import.";
@@ -373,7 +347,7 @@
         /// <returns>Task to await.</returns>
         public async Task WriteModuleBlocksAsync()
         {
-            var modulesFile = Path.Combine(this.ModuleDirectory, HclWriter.ModulesFile);
+            var modulesFile = Path.Combine(this.ModuleDirectory, TerraformExporterConstants.ModulesFile);
 
             if (File.Exists(modulesFile))
             {
