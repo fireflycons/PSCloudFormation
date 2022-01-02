@@ -78,6 +78,7 @@
         {
             await this.WriteMain(stateFile);
             this.WriteTfVars();
+            this.GenerateWarnings(stateFile);
 
             return this.settings.IsRootModule ? this.FormatAndValidateOutput() : 0;
         }
@@ -335,7 +336,7 @@
                             case "replace":
                             case "delete":
 
-                                var warn = $"Resource \"{addr}\" {PlanActions[action]}";
+                                var warn = $"Resource \"{addr}\" {PlanActions[action]} Run 'terraform plan' to see the reason.";
                                 this.settings.Logger.LogWarning(warn);
                                 this.warnings.Add(warn);
                                 ++destructiveChanges;
@@ -647,6 +648,55 @@
                         s.WriteLine();
                     }
                 }
+            }
+        }
+
+        /// <summary>
+        /// Enumerate the resources and issue warnings for those that aren't fully imported..
+        /// </summary>
+        /// <param name="stateFile">In-memory state file</param>
+        private void GenerateWarnings(StateFile stateFile)
+        {
+            var moduleResources = stateFile.FilteredResources(this.module.Name).ToList();
+
+            // Scan for AWS::Cloudformation::Init metadata and warn about it.
+            foreach (var templateResource in this.settings.Template.Resources.Where(
+                r => r.Metadata != null && r.Metadata.Keys.Contains("AWS::CloudFormation::Init")))
+            {
+                this.warnings.Add(
+                    $"Resource \"{GetQualifiedResourceName(templateResource)}\" contains AWS::CloudFormation::Init metadata which is not imported.");
+            }
+
+            // Scan for UserData and warn about it
+            var userDataTypes = new[] { "AWS::AutoScaling::LaunchConfiguration", "AWS::EC2::Instance" };
+
+            foreach (var templateResource in this.settings.Template.Resources.Where(
+                r => userDataTypes.Contains(r.Type) && r.Properties != null && r.Properties.ContainsKey("UserData")))
+            {
+                this.warnings.Add($"Resource \"{GetQualifiedResourceName(templateResource)}\" contains user data which is not correctly imported.");
+            }
+
+            // Scan for lambdas with embedded code (ZipFile) and warn about it
+            foreach (var templateResource in this.settings.Template.Resources.Where(
+                r => r.Type == TerraformExporterConstants.AwsLambdaFunction && r.GetResourcePropertyValue(TerraformExporterConstants.LambdaZipFile) != null))
+            {
+                this.warnings.Add(
+                    $"Resource \"{GetQualifiedResourceName(templateResource)}\" contains embedded function code (ZipFile) which may not be the latest version.");
+            }
+
+            // Scan for bucket polices and warn
+            foreach (var templateResource in this.settings.Template.Resources.Where(r => r.Type == "AWS::S3::BucketPolicy"))
+            {
+                this.warnings.Add($"Resource \"{GetQualifiedResourceName(templateResource)}\" - Policy likely not imported. Add it in manually.");
+            }
+
+            string GetQualifiedResourceName(IResource cloudFormationResource)
+            {
+                var terraformResource = moduleResources.First(r => r.Name == cloudFormationResource.Name);
+
+                return this.module.IsRootModule
+                           ? terraformResource.Address
+                           : $"module.{this.module.Name}.{terraformResource.Address}";
             }
         }
     }

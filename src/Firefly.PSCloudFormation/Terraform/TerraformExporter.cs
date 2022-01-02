@@ -222,7 +222,6 @@
         private void WriteSummary(int terraformExecutionErrorCount, int warningCount)
         {
             this.settings.Logger.LogInformation("\n");
-            this.GenerateWarnings();
 
             var totalErrors = terraformExecutionErrorCount + this.errors.Count;
 
@@ -250,43 +249,6 @@
             }
 
             this.settings.Logger.LogInformation($"\n       Errors: {totalErrors}, Warnings: {warningCount + this.warnings.Count}\n");
-        }
-
-        /// <summary>
-        /// Enumerate the resources and issue warnings for those that aren't fully imported..
-        /// </summary>
-        private void GenerateWarnings()
-        {
-            // Scan for AWS::Cloudformation::Init metadata and warn about it.
-            foreach (var templateResource in this.settings.Template.Resources.Where(
-                r => r.Metadata != null && r.Metadata.Keys.Contains("AWS::CloudFormation::Init")))
-            {
-                this.warnings.Add(
-                    $"Resource \"{templateResource.Name}\" contains AWS::CloudFormation::Init metadata which is not imported.");
-            }
-
-            // Scan for UserData and warn about it
-            var userDataTypes = new[] { "AWS::AutoScaling::LaunchConfiguration", "AWS::EC2::Instance" };
-
-            foreach (var templateResource in this.settings.Template.Resources.Where(
-                r => userDataTypes.Contains(r.Type) && r.Properties != null && r.Properties.ContainsKey("UserData")))
-            {
-                this.warnings.Add($"Resource \"{templateResource.Name}\" contains user data which is not correctly imported.");
-            }
-
-            // Scan for lambdas with embedded code (ZipFile) and warn about it
-            foreach (var templateResource in this.settings.Template.Resources.Where(
-                r => r.Type == TerraformExporterConstants.AwsLambdaFunction && r.GetResourcePropertyValue(TerraformExporterConstants.LambdaZipFile) != null))
-            {
-                this.warnings.Add(
-                    $"Resource \"{templateResource.Name}\" contains embedded function code (ZipFile) which may not be the latest version.");
-            }
-
-            // Scan for bucket polices and warn
-            foreach (var templateResource in this.settings.Template.Resources.Where(r => r.Type == "AWS::S3::BucketPolicy"))
-            {
-                this.warnings.Add($"Resource \"{templateResource.Name}\" - Policy likely not imported. Add it in manually.");
-            }
         }
     }
 }
