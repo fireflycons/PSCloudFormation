@@ -1,10 +1,13 @@
 ﻿namespace Firefly.PSCloudFormation.Terraform.CloudFormationParser
 {
+    using System.Collections;
     using System.Collections.Generic;
+    using System.Linq;
 
     using Firefly.CloudFormationParser.Intrinsics;
     using Firefly.CloudFormationParser.Intrinsics.Functions;
     using Firefly.PSCloudFormation.Terraform.DependencyResolver;
+    using Firefly.PSCloudFormation.Utils;
 
     /// <summary>
     /// Attach an extra Evaluate method to intrinsics which works on actual values from the state file.
@@ -47,7 +50,16 @@
                 if (item is IIntrinsic intrinsic)
                 {
                     var nested = intrinsic.GetInfo();
-                    elements.Add(nested.Intrinsic.Evaluate(nested).ToString());
+                    var evaluation = nested.Intrinsic.Evaluate(nested);
+
+                    if (evaluation.IsScalar())
+                    {
+                        elements.Add(evaluation.ToString());
+                    }
+                    else
+                    {
+                        elements.AddRange(from object listItem in evaluation as IEnumerable select listItem.ToString());
+                    }
                 }
                 else
                 {

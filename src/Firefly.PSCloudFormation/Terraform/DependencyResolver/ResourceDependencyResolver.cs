@@ -1,6 +1,7 @@
 ﻿namespace Firefly.PSCloudFormation.Terraform.DependencyResolver
 {
     using System;
+    using System.Collections;
     using System.Collections.Generic;
     using System.Linq;
     using System.Reflection;
@@ -373,14 +374,18 @@
 
                     {
                         // Does the join evaluation match a scalar input?
-                        var scalarEvaluation = joinIntrinsic.Evaluate(intrinsicInfo).ToString();
-                        var index = GetModuleInputIndex(
-                            referencedModule.Inputs,
-                            tuple => tuple.Item1.ScalarIdentity == scalarEvaluation);
+                        var evaluation = joinIntrinsic.Evaluate(intrinsicInfo);
 
-                        if (index != -1)
+                        if (evaluation.IsScalar())
                         {
-                            return new JoinFunctionReference(joinIntrinsic, this.template, this.module.Inputs);
+                            var index = GetModuleInputIndex(
+                                referencedModule.Inputs,
+                                tuple => tuple.Item1.ScalarIdentity == evaluation.ToString());
+
+                            if (index != -1)
+                            {
+                                return new JoinFunctionReference(joinIntrinsic, this.template, this.module.Inputs);
+                            }
                         }
 
                         if (joinIntrinsic.Separator != ",")
@@ -400,9 +405,16 @@
                             if (item is IIntrinsic intrinsic)
                             {
                                 var nested = intrinsic.GetInfo();
+                                var nestedEvaluation = nested.Intrinsic.Evaluate(nested);
 
-                                // ReSharper disable once PossibleNullReferenceException - if null, then it's most likely a bug.
-                                elements.Add(nested.Intrinsic.Evaluate(nested).ToString());
+                                if (nestedEvaluation.IsScalar())
+                                {
+                                    elements.Add(nestedEvaluation.ToString());
+                                }
+                                else
+                                {
+                                    elements.AddRange(from object listItem in nestedEvaluation as IEnumerable select listItem.ToString());
+                                }
                             }
                             else
                             {
