@@ -170,11 +170,13 @@
     - Resource: aws_instance
       ComputedAttributes:
         - instance_state
-        - private_dns
+        - '*_dns'
+        - public_ip
         - device_name
         - primary_network_interface_id
         - root_block_device.#.volume_id
         - root_block_device.#.device_name
+        - password_data
     - Resource: aws_launch_template
       ComputedAttributes:
         - latest_version
