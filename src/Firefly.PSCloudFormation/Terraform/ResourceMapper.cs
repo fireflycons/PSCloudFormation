@@ -5,7 +5,6 @@
     using System.Linq;
     using System.Threading.Tasks;
 
-    using Firefly.PSCloudFormation.Terraform.HclSerializer;
     using Firefly.PSCloudFormation.Utils;
 
     using InvalidOperationException = Amazon.CloudFormation.Model.InvalidOperationException;
