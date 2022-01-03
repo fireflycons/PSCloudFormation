@@ -16,11 +16,12 @@ A set PowerShell cmdlets for manipulating AWS CloudFormation stacks.
 
 ## Dependencies
 
-This module depends on [AWS.Tools](https://docs.aws.amazon.com/powershell/latest/userguide/pstools-welcome.html) version `4.1.6.0` or higher which you should install/upgrade to first
+This module depends on [AWS.Tools](https://docs.aws.amazon.com/powershell/latest/userguide/pstools-welcome.html) version `4.1.16.0` or higher which you should install/upgrade to first
 
 Required AWS.Tools modules:
 
-* AWS.Tools.Common
+* AWS.Tools.CloudFormation
+* AWS.Tools.S3
 
 ## New Documentation Site
 
