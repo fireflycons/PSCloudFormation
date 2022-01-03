@@ -1,5 +1,9 @@
 # Release Notes
 
+# 4.1.16.3
+
+* Enhancement - Terraform Export now pulls nested stacks as Terraform modules.
+
 # 4.1.16.2
 
 * Fix - Bump dependencies again due to another occurrence of the issue below on a different part of the template.
