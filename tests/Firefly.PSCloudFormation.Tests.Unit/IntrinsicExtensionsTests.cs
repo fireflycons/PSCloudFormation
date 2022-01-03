@@ -6,6 +6,7 @@
     using Firefly.CloudFormationParser.Intrinsics;
     using Firefly.CloudFormationParser.Intrinsics.Functions;
     using Firefly.PSCloudFormation.Terraform;
+    using Firefly.PSCloudFormation.Terraform.CloudFormationParser;
     using Firefly.PSCloudFormation.Terraform.Hcl;
 
     using FluentAssertions;

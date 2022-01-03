@@ -27,6 +27,7 @@
                 case null:
                     return;
 
+                // ReSharper disable once AssignNullToNotNullAttribute - typeof an existing type cannot be null
                 case string s when s.StartsWith(typeof(Reference).Namespace):
                     {
                         // Re-hydrate a smuggled in "Reference" type.

@@ -8,7 +8,6 @@
 
     using Firefly.PSCloudFormation.Terraform.HclSerializer.Events;
     using Firefly.PSCloudFormation.Terraform.HclSerializer.Traits;
-    using Firefly.PSCloudFormation.Utils;
 
     /// <summary>
     /// HCL Emitter. Inspired by YamlDotNet emitter.

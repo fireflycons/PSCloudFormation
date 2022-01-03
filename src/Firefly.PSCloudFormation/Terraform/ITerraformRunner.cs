@@ -17,12 +17,5 @@
         /// <param name="arguments">The arguments.</param>
         /// <returns>If exceptions are disabled by <paramref name="throwOnError"/> then <c>false</c> is returned when terraform exits with non-zero status.</returns>
         bool Run(string command, bool throwOnError, bool echo, Action<string> output, params string[] arguments);
-
-        /// <summary>
-        /// Evaluates the specified expression by invoking <c>terraform console</c>
-        /// </summary>
-        /// <param name="expression">The expression.</param>
-        /// <returns>Evaluation result</returns>
-        string Evaluate(string expression);
     }
 }

@@ -1,19 +1,16 @@
 ﻿namespace Firefly.PSCloudFormation.Commands
 {
-    using System;
     using System.IO;
     using System.Linq;
     using System.Management.Automation;
-    using System.Text.RegularExpressions;
     using System.Threading.Tasks;
 
     using Amazon.CloudFormation;
     using Amazon.CloudFormation.Model;
     using Amazon.Runtime;
 
+    using Firefly.CloudFormation;
     using Firefly.CloudFormation.Model;
-    using Firefly.CloudFormationParser.Serialization.Settings;
-    using Firefly.CloudFormationParser.TemplateObjects;
     using Firefly.PSCloudFormation.AbstractCommands;
     using Firefly.PSCloudFormation.Terraform;
 
@@ -55,11 +52,6 @@
     public class ExportTerraformCommand : TemplateResolvingCloudFormationCommand
     {
         /// <summary>
-        /// The stack identifier regex
-        /// </summary>
-        private static readonly Regex StackIdRegex = new Regex(@"^arn:(?<partition>\w+):cloudformation:(?<region>[^:]+):(?<account>\d+):stack/(?<stack>[^/]+)");
-
-        /// <summary>
         /// The workspace directory
         /// </summary>
         private string workspaceDirectory;
@@ -93,6 +85,18 @@
                 this.UsePreviousTemplateFlag = true;
             }
         }
+
+        /// <summary>
+        /// Gets or sets the export nested stacks.
+        /// <para type="description">
+        /// If set, export nested stacks as Terraform modules.
+        /// </para>
+        /// </summary>
+        /// <value>
+        /// The export nested stacks.
+        /// </value>
+        [Parameter(ValueFromPipelineByPropertyName = true)]
+        public SwitchParameter ExportNestedStacks { get; set; }
 
         /// <summary>
         /// Gets or sets the with default tag.
@@ -137,17 +141,33 @@
                 if (!this.Force)
                 {
                     if (this.AskYesNo(
-                            "Overwrite existing state?",
-                            "Existing terraform state will be deleted.",
+                            $"Overwrite existing configuration in {this.ResolvedWorkspaceDirectory}?",
+                            "All configuration and state will be deleted.",
                             ChoiceResponse.No,
-                            "Delete the state",
+                            "Delete the configuration",
                             "Abort operation") == ChoiceResponse.No)
                     {
                         return new CloudFormationResult();
                     }
                 }
 
-                foreach (var file in new[] { state, stateBackup }.Where(File.Exists))
+                // Clean the workspace of all but providers.
+                foreach (var dir in Directory.GetDirectories(this.ResolvedWorkspaceDirectory)
+                             .Where(d => !d.EndsWith(".terraform")))
+                {
+                    Directory.Delete(dir, true);
+                }
+
+                foreach (var file in new[] { state, stateBackup }.Where(File.Exists)
+                             .Concat(
+                                 Directory.GetFiles(
+                                     this.ResolvedWorkspaceDirectory,
+                                     "*.tf",
+                                     SearchOption.TopDirectoryOnly)).Concat(
+                                 Directory.GetFiles(
+                                     this.ResolvedWorkspaceDirectory,
+                                     "*.tfvars",
+                                     SearchOption.TopDirectoryOnly)))
                 {
                     File.Delete(file);
                 }
@@ -161,66 +181,27 @@
                 var userArgs = this.MyInvocation.BoundParameters.Where(bp => this.StackParameterNames.Contains(bp.Key))
                     .ToDictionary(bp => bp.Key, bp => bp.Value);
 
-                // Determine various pseudo-parameter values from the stack description
-                var stack =
-                    (await client.DescribeStacksAsync(new DescribeStacksRequest { StackName = this.StackName })).Stacks
-                    .First();
-
-                var mc = StackIdRegex.Match(stack.StackId);
-
-                userArgs.Add("AWS::AccountId", mc.Groups["account"].Value);
-                userArgs.Add("AWS::Region", mc.Groups["region"].Value);
-                userArgs.Add("AWS::StackName", mc.Groups["stack"].Value);
-                userArgs.Add("AWS::StackId", stack.StackId);
-                userArgs.Add("AWS::Partition", mc.Groups["partition"].Value);
-                userArgs.Add("AWS::NotificationARNs", stack.NotificationARNs);
-
-                var builder = new DeserializerSettingsBuilder().WithCloudFormationStack(client, this.StackName)
-                    .WithExcludeConditionalResources(true)
-                    .WithParameterValues(userArgs);
-
-                // Get the template
-                var dssettings = builder.Build();
-
-                var template = await Template.Deserialize(dssettings);
-
-                // Get the physical resources
-                var resources =
-                    await client.DescribeStackResourcesAsync(
-                        new DescribeStackResourcesRequest { StackName = this.StackName });
-
-                // This should be equivalent to what we read from the template
-                var check = resources.StackResources.Select(r => r.LogicalResourceId).OrderBy(lr => lr)
-                    .SequenceEqual(template.Resources.Select(r => r.Name).OrderBy(lr => lr));
-
-                if (!check)
-                {
-                    throw new System.InvalidOperationException(
-                        "Number of parsed resources does not match number of actual physical resources.");
-                }
-
-                // Get all exports, for use where Fn::Import is found
+                // Get all exports in region, for use where Fn::Import is found
                 var exports = (await client.ListExportsAsync(new ListExportsRequest())).Exports;
 
-                var cr = resources.StackResources.OrderBy(sr => sr.LogicalResourceId).Zip(
-                    template.Resources.OrderBy(tr => tr.Name),
-                    (sr, tr) => new CloudFormationResource(tr, sr)).ToList();
+                var stackData = await StackHelper.ReadStackAsync(client, this.StackName, userArgs);
 
-                var settings = new TerraformSettings
-                                   {
-                                       AwsAccountId = mc.Groups["account"].Value,
-                                       AwsRegion = mc.Groups["region"].Value,
-                                       StackExports = exports,
-                                       Resources = cr,
-                                       Runner = new TerraformRunner(context.Credentials, this.Logger),
-                                       StackName = this.StackName,
-                                       Template = template,
-                                       WorkspaceDirectory = this.ResolvedWorkspaceDirectory,
-                                       AddDefaultTag = this.WithDefaultTag,
-                                       CloudFormationClient = client
-                                   };
-
-                var exporter = new TerraformExporter(settings, this.Logger);
+                var exporter = new TerraformExporter(
+                    new TerraformExportSettings
+                        {
+                            AwsAccountId = stackData.AccountId,
+                            AwsRegion = stackData.Region,
+                            StackExports = exports,
+                            Resources = stackData.Resources,
+                            Runner = new TerraformRunner(context.Credentials, this.Logger),
+                            StackName = this.StackName,
+                            Template = stackData.Template,
+                            WorkspaceDirectory = this.ResolvedWorkspaceDirectory,
+                            AddDefaultTag = this.WithDefaultTag,
+                            CloudFormationClient = client,
+                            ExportNestedStacks = this.ExportNestedStacks,
+                            Logger = this.Logger
+                        });
                     
                 await exporter.Export();
             }
@@ -233,7 +214,7 @@
         /// </summary>
         /// <param name="context">The context.</param>
         /// <returns>Cloud formation client</returns>
-        private static IAmazonCloudFormation CreateCloudFormationClient(IPSCloudFormationContext context)
+        private static IAmazonCloudFormation CreateCloudFormationClient(ICloudFormationContext context)
         {
             var config = new AmazonCloudFormationConfig { RegionEndpoint = context.Region };
 

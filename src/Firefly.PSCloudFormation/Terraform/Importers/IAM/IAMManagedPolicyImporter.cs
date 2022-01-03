@@ -12,7 +12,7 @@
         /// </summary>
         /// <param name="importSettings">The import settings.</param>
         /// <param name="terraformSettings">The terraform settings.</param>
-        public IAMManagedPolicyImporter(IResourceImporterSettings importSettings, ITerraformSettings terraformSettings)
+        public IAMManagedPolicyImporter(IResourceImporterSettings importSettings, ITerraformExportSettings terraformSettings)
             : base(importSettings, terraformSettings)
         {
         }

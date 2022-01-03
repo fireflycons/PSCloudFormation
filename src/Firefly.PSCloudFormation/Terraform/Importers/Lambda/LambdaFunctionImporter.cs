@@ -17,7 +17,7 @@
         /// </summary>
         /// <param name="importSettings">The import settings.</param>
         /// <param name="terraformSettings">The terraform settings.</param>
-        public LambdaFunctionImporter(IResourceImporterSettings importSettings, ITerraformSettings terraformSettings)
+        public LambdaFunctionImporter(IResourceImporterSettings importSettings, ITerraformExportSettings terraformSettings)
             : base(importSettings, terraformSettings)
         {
         }
@@ -43,7 +43,7 @@
             var templateResource = this.TerraformSettings.Resources.First(
                 r => r.LogicalResourceId == this.ImportSettings.Resource.LogicalId).TemplateResource;
 
-            var zipFile = templateResource.GetResourcePropertyValue("Code.ZipFile");
+            var zipFile = templateResource.GetResourcePropertyValue(TerraformExporterConstants.LambdaZipFile);
 
             if (zipFile == null)
             {
@@ -61,7 +61,7 @@
 
             var traits = LambdaTraits.FromRuntime(runtimeObject.ToString());
 
-            var dirName = Path.Combine("lambda", this.ImportSettings.Resource.LogicalId);
+            var dirName = Path.Combine(this.TerraformSettings.ModuleDirectory, "lambda", this.ImportSettings.Resource.LogicalId);
             Directory.CreateDirectory(dirName);
             var fileName = Path.Combine(dirName, $"index{traits.ScriptFileExtension}");
 

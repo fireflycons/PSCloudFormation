@@ -56,6 +56,7 @@
         - timeouts
       ComputedAttributes:             # State properties that have no HCL equivalent, because they are computed.
         - '*arn'                      # Wildcard attribute name match, so no attributes ending in 'arn' will be emitted anywhere 
+        - '*etag'
         - 'id'
         - 'owner_id'
         - 'unique_id'
@@ -69,32 +70,76 @@
       ConditionalAttributes: []
       AttributeMap: {}                # Where HCL and CF attributes are quire different
 
+- Group: ACM
+  Resources:
+    - Resource: aws_acm_certificate
+      ComputedAttributes:
+        - status
+        - validation_emails
+
+- Group: ACMPCA
+  Resources:
+    - Resource: aws_acmpca_certificate
+      ComputedAttributes:
+        - certificate
+        - certificate_chain
+    - Resource: aws_acmpca_certificate_authority
+      ComputedAttributes:
+        - certificate
+        - certificate_chain
+        - certificate_signing_request
+        - not_after
+        - not_before
+        - serial
+        - status
+
+- Group: Amplify
+  Resources:
+    - Resource: aws_amplify_app
+      ComputedAttributes:
+        - default_domain
+        - production_branch
+    - Resource: aws_amplify_branch
+      ComputedAttributes:
+        - associated_resources
+        - custom_domains
+        - destination_branch
+        - source_branch
+
 - Group: API Gateway
   Resources:
-    - Resource: aws_api_gateway_rest_api
+    - Resource: aws_api_gateway_account
       ComputedAttributes:
-        - lambda_permission
-        - root_resource_id
+        - throttle_settings
     - Resource: aws_api_gateway_api_key
       ComputedAttributes:
         - value
+    - Resource: aws_api_gateway_client_certificate
+      ComputedAttributes:
+        - created_date
+        - expiration_date
+        - pem_encoded_certificate
     - Resource: aws_api_gateway_domain_name
       ComputedAttributes:
         - '*_domain_name'
         - '*_zone_id'
       RequiredAttributes:
         - regional_certificate_arn
+    - Resource: aws_api_gateway_rest_api
+      ComputedAttributes:
+        - lambda_permission
+        - root_resource_id
     - Resource: aws_api_gateway_resource
       ComputedAttributes:
         - path
-    - Resource: aws_api_gateway_usage_plan_key
-      ComputedAttributes:
-        - name
-        - value
     - Resource: aws_api_gateway_stage
       ComputedAttributes:
         - invoke_url
         - lambda_permissions
+    - Resource: aws_api_gateway_usage_plan_key
+      ComputedAttributes:
+        - name
+        - value
 
 - Group: API Gateway V2
   Resources:
@@ -103,6 +148,15 @@
         - api_endpoint
         - invoke_url
         - aws_lambda_permissions
+    - Resource: aws_apigatewayv2_deployment
+      ComputedAttributes:
+        - auto_deployed
+    - Resource: aws_apigatewayv2_domain_name
+      ComputedAttributes:
+        - api_mapping_selection_expression
+    - Resource: aws_apigatewayv2_integration
+      ComputedAttributes:
+        - integration_response_selection_expression
     - Resource: aws_apigatewayv2_stage
       ComputedAttributes:
         - invoke_url
@@ -139,6 +193,12 @@
         - in_progress_validation_batches
         - domain_name
         - hosted_zone_id
+    - Resource: aws_cloudfront_function
+      ComputedAttributes:
+        - status
+    - Resource: aws_cloudfront_public_key
+      ComputedAttributes:
+        - caller_reference
 
 - Group: CloudWatch
   Resources:
@@ -146,6 +206,9 @@
       ConditionalAttributes:
         - Name: datapoints_to_alarm
           Value: 0
+    - Resource: aws_cloudwatch_metric_stream
+      ComputedAttributes:
+        - state
 
 - Group: Cognito
   Resources:
@@ -162,6 +225,8 @@
 - Group: DynamoDB
   Resources:
     - Resource: aws_dynamodb_table
+      ComputedAttributes:
+        - stream_label
       RequiredAttributes:
         - ttl.#.attribute_name
 
@@ -170,11 +235,13 @@
     - Resource: aws_instance
       ComputedAttributes:
         - instance_state
-        - private_dns
+        - '*_dns'
+        - public_ip
         - device_name
         - primary_network_interface_id
         - root_block_device.#.volume_id
         - root_block_device.#.device_name
+        - password_data
     - Resource: aws_launch_template
       ComputedAttributes:
         - latest_version

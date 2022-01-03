@@ -14,7 +14,7 @@
         /// <param name="terraformSettings">The terraform settings.</param>
         public AASAutoScalingPolicyImporter(
             IResourceImporterSettings importSettings,
-            ITerraformSettings terraformSettings)
+            ITerraformExportSettings terraformSettings)
             : base(importSettings, terraformSettings)
         {
         }

@@ -35,6 +35,7 @@ body:
       label: Command Line
       description: What was the command line that produced the error?
       placeholder: e.g. New-PSCFNStack -StackName a-stack -TemplateLocation template.yaml
+      render: text
     validations:
       required: true
   - type: textarea
@@ -42,5 +43,6 @@ body:
       label: Exception Details
       description: Run the above command line with `-Debug` switch
       placeholder: Paste full exception dump and loaded module list here.
+      render: text
     validations:
       required: true

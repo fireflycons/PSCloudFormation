@@ -32,6 +32,7 @@ body:
       label: Command Line
       description: What was the command line that produced the error?
       placeholder: e.g. Export-PSCFNTerraForm -StackName a-stack -WorkspaceDirectory ~/my-test-workspace
+      render: text
     validations:
       required: true
   - type: textarea
@@ -39,11 +40,13 @@ body:
       label: Exception Details
       description: Run the above command line with `-Debug` switch
       placeholder: Paste full exception dump and loaded module list here.
+      render: text
     validations:
       required: true
   - type: textarea
     attributes:
       label: CloudFormation
+      render: yaml
       description: |
         If possible, paste in the CloudFormation template that caused the issue.
         Even better, reproduce the error with a smaller template containing only relevant resources.

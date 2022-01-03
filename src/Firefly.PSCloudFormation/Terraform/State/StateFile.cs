@@ -4,7 +4,6 @@
     using System.Collections.Generic;
     using System.IO;
     using System.Linq;
-    using System.Text;
     using System.Text.RegularExpressions;
     using System.Threading.Tasks;
 
@@ -98,8 +97,8 @@
 
             foreach (var change in changes)
             {
-                var resource = stateFile.Resources.FirstOrDefault(r => r.Name == change.ResourceName);
-                var targetValue = resource?.Instances.First().Attributes.SelectToken(change.AttributePath);
+                var resource = stateFile.Resources.FirstOrDefault(r => r.Module == change.Module && r.Name == change.ResourceName);
+                var targetValue = resource?.ResourceInstance?.Attributes.SelectToken(change.AttributePath);
 
                 if (targetValue == null)
                 {
@@ -139,6 +138,18 @@
             }
 
             return modified;
+        }
+
+        /// <summary>
+        /// Gets resources filtered by module name.
+        /// </summary>
+        /// <param name="moduleName">Name of the module.</param>
+        /// <returns>Filtered resources.</returns>
+        public IEnumerable<StateFileResourceDeclaration> FilteredResources(string moduleName)
+        {
+            return string.IsNullOrEmpty(moduleName)
+                       ? this.Resources.Where(r => r.Module == null) // root module
+                       : this.Resources.Where(r => r.Module == $"module.{moduleName}");
         }
 
         /// <summary>

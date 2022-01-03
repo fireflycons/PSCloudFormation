@@ -31,15 +31,15 @@
         public override IList<string> ListIdentity => this.CurrentValueToList();
 
         /// <inheritdoc />
-        public override string GenerateTfVar()
+        public override string GenerateVariableAssignment()
         {
             return this.CurrentValue == null
                        ? string.Empty
                        : new StringBuilder()
-                           .AppendLine($"{this.Name} = [")
-                           .AppendLine(string.Join(",\n", this.ListIdentity.Select(v => $"  \"{v}\"")))
-                           .AppendLine("]")
-                           .ToString();
+                               .AppendLine($"{this.Name} = [")
+                               .AppendLine(string.Join(",\n", this.ListIdentity.Select(v => $"  \"{v}\"")))
+                               .AppendLine("]")
+                               .ToString();
         }
 
         /// <inheritdoc />

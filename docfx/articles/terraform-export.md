@@ -24,20 +24,24 @@ As of December 2021, this has been tested with
 
 Given a scenario where your organisation has dictated that all native CloudFormation stacks should be migrated to Terraform, this cmdlet goes some way to easing the pain of that operation. Currently [terraform import](https://www.terraform.io/docs/cli/import/index.html) does not generate [HCL](https://www.terraform.io/docs/language/index.html) code for imported resources, only state information leaving the user to work out and add in all the attributes for every imported resource.
 
-The [Export-PSCFNTerraform](xref:Export-PSCFNTerraform) cmdlet will read a deployed CloudFormation Stack via the AWS CloudFormation Service and make a best attempt at generating HCL for the resources the stack contains. Additionally it will try to fix up dependencies between these resources, input variables (stack parameters) and output values as best it can. Thus the amount of work to be done in getting the HCL for the stack correct is greatly reduced.
+The [Export-PSCFNTerraform](xref:Export-PSCFNTerraform) cmdlet will read a deployed CloudFormation Stack via the AWS CloudFormation Service APIs and make a best attempt at generating HCL for the resources the stack contains. Additionally it will try to fix up dependencies between these resources, input variables (stack parameters) and output values as best it can. Thus the amount of work to be done in getting the HCL for the stack correct is greatly reduced.
+
+The cmdlet is also capable of exporting nested stacks as Terraform modules when run with the `-ExportNestedStacks` argument, and will resolve the dependencies between module inputs and outputs against other objects in the configuration. If this argument is omitted, then only the root stack is exported with `aws_cloudformation_stack` resources for each nested stack.
 
 ## More Details
 
 * Read about various [caveats here](xref:tf-caveats).
-* How to [migrate a stack](xref:tf-migrating)
+* How to [migrate a stack](xref:tf-migrating).
 * See the [export workflow](xref:tf-workflow).
 * Examples
     * [VPC Stack](xref:tf-example-vpc-stack).
     * [Lambda Stack](xref:tf-example-lambda-stack).
+    * [Nested Stacks](xref:tf-example-nested).
+
+This tool makes heavy use of my [CloudFormation Parser](https://fireflycons.github.io/Firefly.CloudFormationParser) module, and is the main reason for that module's inception.
 
 ## Future Improvements
 
 * Increase the number of mapped resources.
-* Make the exporter recursive through nested stacks, producing a Terraform module for each nested stack.
 * Learn GoLang and become a contributor to the Terraform AWS provider 😁
 

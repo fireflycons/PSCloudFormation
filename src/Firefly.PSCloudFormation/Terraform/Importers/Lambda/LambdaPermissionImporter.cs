@@ -13,13 +13,13 @@
         /// </summary>
         /// <param name="importSettings">The import settings.</param>
         /// <param name="terraformSettings">The terraform settings.</param>
-        public LambdaPermissionImporter(IResourceImporterSettings importSettings, ITerraformSettings terraformSettings)
+        public LambdaPermissionImporter(IResourceImporterSettings importSettings, ITerraformExportSettings terraformSettings)
             : base(importSettings, terraformSettings)
         {
         }
 
         /// <inheritdoc />
-        protected override string ReferencedAwsResource => "AWS::Lambda::Function";
+        protected override string ReferencedAwsResource => TerraformExporterConstants.AwsLambdaFunction;
 
         /// <inheritdoc />
         protected override string ReferencingPropertyPath => "FunctionName";

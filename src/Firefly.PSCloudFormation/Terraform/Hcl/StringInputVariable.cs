@@ -25,9 +25,11 @@
         public override string Type => "string";
 
         /// <inheritdoc />
-        public override string GenerateTfVar()
+        public override string GenerateVariableAssignment()
         {
-            return this.CurrentValue == null ? string.Empty : $"{this.Name} = \"{this.CurrentValue}\"";
+            return this.CurrentValue == null 
+                       ? string.Empty 
+                       : $"{this.Name} = \"{this.CurrentValue}\"";
         }
 
         /// <inheritdoc />

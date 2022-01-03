@@ -11,7 +11,7 @@
         /// </summary>
         /// <param name="importSettings">The import settings.</param>
         /// <param name="terraformSettings">The terraform settings.</param>
-        public ApiGatewayV2StageImporter(IResourceImporterSettings importSettings, ITerraformSettings terraformSettings)
+        public ApiGatewayV2StageImporter(IResourceImporterSettings importSettings, ITerraformExportSettings terraformSettings)
             : base(importSettings, terraformSettings)
         {
         }

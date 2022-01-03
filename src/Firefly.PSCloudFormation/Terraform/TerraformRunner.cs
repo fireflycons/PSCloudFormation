@@ -107,12 +107,6 @@
             return exitCode == 0;
         }
 
-        /// <inheritdoc />
-        public string Evaluate(string expression)
-        {
-            throw new NotImplementedException();
-        }
-
         /// <summary>
         /// Runs terraform with AWS credentials in the environment
         /// </summary>

@@ -19,6 +19,8 @@
       href: xref:tf-caveats
     - name: Stack Migration
       href: xref:tf-migrating
+    - name: Nested Stacks
+      href: xref:tf-nested
     - name: Workflow
       href: xref:tf-workflow
     - name: Examples
@@ -39,3 +41,30 @@
               href: xref:tf-example-lambda-stack-cf
             - name: Generated main.tf
               href: xref:tf-example-lambda-stack-tf
+        - name: Nested Stacks
+          href: xref:tf-example-nested
+          items:
+            - name: Root CloudFormation
+              href: xref:tf-example-nested-root-cf
+            - name: Root main.tf
+              href: xref:tf-example-nested-main-tf
+            - name: Root module_imports.tf
+              href: xref:tf-example-nested-module-tf
+            - name: Root terraform.tfvars
+              href: xref:tf-example-nested-vars-tf
+            - name: VPC Stack CloudFormation
+              href: xref:tf-example-nested-vpc-cf
+            - name: VPC Stack main.tf
+              href: xref:tf-example-nested-vpc-main-tf
+            - name: VPC Stack terraform.tfvars
+              href: xref:tf-example-nested-vpc-vars-tf
+            - name: EC2 Stack CloudFormation
+              href: xref:tf-example-nested-ec2-cf
+            - name: EC2 Stack main.tf
+              href: xref:tf-example-nested-ec2-main-tf
+            - name: EC2 Stack terraform.tfvars
+              href: xref:tf-example-nested-ec2-vars-tf
+            - name: IAM Stack CloudFormation
+              href: xref:tf-example-nested-iam-cf
+            - name: IAM Stack main.tf
+              href: xref:tf-example-nested-iam-main-tf

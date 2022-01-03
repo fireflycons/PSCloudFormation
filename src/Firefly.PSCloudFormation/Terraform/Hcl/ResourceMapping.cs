@@ -6,7 +6,7 @@
     /// Represents a summary mapping between an imported AWS resource and a Terraform resource.
     /// Maps the resource types, logical name and physical ID.
     /// </summary>
-    [DebuggerDisplay("{Address}: {PhysicalId}")]
+    [DebuggerDisplay("{ImportAddress}: {PhysicalId}")]
     internal class ResourceMapping
     {
         /// <summary>
@@ -24,6 +24,15 @@
         /// The AWS address.
         /// </value>
         public string AwsAddress => $"{this.LogicalId} ({this.AwsType})";
+
+        /// <summary>
+        /// Gets the module-specific import address for this resource.
+        /// </summary>
+        /// <value>
+        /// The import address.
+        /// </value>
+        public string ImportAddress =>
+            this.Module == null ? this.Address : $"module.{this.Module.Name}.{this.Address}";
 
         /// <summary>
         /// Gets or sets the physical identifier, as in the identifier given to the resource by a CloudFormation deployment
@@ -57,5 +66,13 @@
         /// The type of the terraform.
         /// </value>
         public string TerraformType { get; set; }
+
+        /// <summary>
+        /// Gets or sets the module this resource belongs to.
+        /// </summary>
+        /// <value>
+        /// The module.
+        /// </value>
+         public ModuleInfo Module { get; set; }
     }
 }

@@ -141,7 +141,7 @@
         /// <param name="terraformSettings">The terraform settings.</param>
         protected ResourceImporter(
             IResourceImporterSettings importSettings,
-            ITerraformSettings terraformSettings)
+            ITerraformExportSettings terraformSettings)
         {
             this.ImportSettings = importSettings;
             this.TerraformSettings = terraformSettings;
@@ -188,7 +188,7 @@
         /// <value>
         /// The terraform settings.
         /// </value>
-        protected ITerraformSettings TerraformSettings { get; }
+        protected ITerraformExportSettings TerraformSettings { get; }
 
         /// <summary>
         /// Factory to create a resource importer for given resource type.
@@ -198,7 +198,7 @@
         /// <returns>Appropriate subtype of <see cref="ResourceImporter"/></returns>
         public static ResourceImporter Create(
             IResourceImporterSettings importSettings,
-            ITerraformSettings terraformSettings)
+            ITerraformExportSettings terraformSettings)
         {
             if (!ResourceImporters.ContainsKey(importSettings.Resource.TerraformType))
             {

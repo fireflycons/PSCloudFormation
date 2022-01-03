@@ -27,9 +27,9 @@
         }
 
         /// <summary>
-        /// Initializes a new instance of the <see cref="TerraformRunnerException"/> class.
+        /// Prevents a default instance of the <see cref="TerraformRunnerException"/> class from being created.
         /// </summary>
-        protected TerraformRunnerException()
+        private TerraformRunnerException()
         {
         }
 
@@ -37,7 +37,7 @@
         /// Initializes a new instance of the <see cref="TerraformRunnerException"/> class.
         /// </summary>
         /// <param name="message">The message.</param>
-        protected TerraformRunnerException(string message)
+        private TerraformRunnerException(string message)
             : base(message)
         {
         }

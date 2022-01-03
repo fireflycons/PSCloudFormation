@@ -3,10 +3,10 @@
     using System;
     using System.Collections.Generic;
     using System.Linq;
-    using System.Runtime.CompilerServices;
 
     using Firefly.CloudFormationParser;
     using Firefly.CloudFormationParser.Intrinsics;
+    using Firefly.PSCloudFormation.Terraform.CloudFormationParser;
     using Firefly.PSCloudFormation.Terraform.Hcl;
     using Firefly.PSCloudFormation.Terraform.HclSerializer;
     using Firefly.PSCloudFormation.Terraform.HclSerializer.Traits;
@@ -426,12 +426,12 @@
 
                 var tok = token;
 
-                while (tok.Type != JTokenType.Property)
+                while (tok != null && tok.Type != JTokenType.Property)
                 {
                     tok = tok.Parent;
                 }
 
-                return ((JProperty)tok).Name;
+                return ((JProperty)tok)?.Name;
             }
         }
     }

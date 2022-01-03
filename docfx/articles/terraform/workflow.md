@@ -12,6 +12,7 @@ uid: tf-workflow
 1. The CloudFormation stack is parsed and analysed. If additional providers are needed besides `aws`, these are selected
 1. An initial `main.tf` is output with the terraform and provider configuration blocks along with empty resource declarations for the resources found in the CloudFormation template.
 1. `terraform init` is invoked to set up the providers.
+1. If exporting nested stacks to modules, the stacks are processed depth-first and steps 6 thru 10 are executed for each nested stack finishing with the root stack.
 1. For each mapped resouce, `terraform import` is invoked to build up the state file.
 1. The state file is read and analysed alongside the object graph generated from parsing the CloudFormation in order to determine dependencies between resources, inputs and outputs.
 1. Lambdas are analysed and their code locations fixed up (see [here](xref:tf-caveats#embedded-scripts-and-code-provisioners-lambda)).

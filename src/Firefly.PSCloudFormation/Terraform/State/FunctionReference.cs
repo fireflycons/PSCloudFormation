@@ -98,6 +98,7 @@
         /// <inheritdoc />
         public override JConstructor ToJConstructor()
         {
+            // ReSharper disable AssignNullToNotNullAttribute
             return this.Index < 0
                        ? new JConstructor(
                            JConstructorName,
@@ -110,6 +111,7 @@
                            this.FunctionName,
                            JArray.FromObject(this.functionArguments),
                            this.Index);
+            // ReSharper restore AssignNullToNotNullAttribute
         }
 
         /// <summary>
@@ -173,7 +175,7 @@
 
                     case List<object> list:
 
-                        formattedArgs.Add($"[{ProcessArguments(list)}]");
+                        FormatListArgument(list, formattedArgs);
                         break;
 
                     case JConstructor con:
@@ -182,10 +184,10 @@
                         break;
 
                     case JArray ja:
-
-                        formattedArgs.Add($"[{ProcessArguments(ja.Values<object>().ToList())}]");
+                        
+                        FormatListArgument(ja.Values<object>().ToList(), formattedArgs);
                         break;
-
+                        
                     case Reference reference:
 
                         formattedArgs.Add(reference.ReferenceExpression);
@@ -199,6 +201,38 @@
             }
 
             return string.Join(", ", formattedArgs);
+        }
+
+        /// <summary>
+        /// Formats a list argument. Where a single argument is an intrinsic, assume the intrinsic returns a list.
+        /// </summary>
+        /// <param name="list">The list.</param>
+        /// <param name="formattedArgs">The formatted arguments.</param>
+        private static void FormatListArgument(List<object> list, List<string> formattedArgs)
+        {
+            if (list.Count == 1)
+            {
+                switch (list[0])
+                {
+                    case Reference reference1:
+
+                        formattedArgs.Add(reference1.ReferenceExpression);
+                        break;
+
+                    case JConstructor jc:
+                        formattedArgs.Add(FromJConstructor(jc).ReferenceExpression);
+                        break;
+
+                    default:
+
+                        formattedArgs.Add($"[{ProcessArguments(list)}]");
+                        break;
+                }
+            }
+            else
+            {
+                formattedArgs.Add($"[{ProcessArguments(list)}]");
+            }
         }
     }
 }

@@ -32,15 +32,13 @@
         public override IList<string> ListIdentity => this.CurrentValueToList().Select(d => d.ToString(CultureInfo.InvariantCulture)).ToList();
 
         /// <inheritdoc />
-        public override string GenerateTfVar()
+        public override string GenerateVariableAssignment()
         {
-            return this.CurrentValue == null
-                       ? string.Empty
-                       : new StringBuilder()
-                           .AppendLine($"{this.Name} = [")
-                           .AppendLine(string.Join(",\n", this.ListIdentity.Select(v => $"  {v}")))
-                           .AppendLine("]")
-                           .ToString();
+            return this.CurrentValue == null 
+                       ? string.Empty 
+                       : new StringBuilder().AppendLine($"{this.Name} = [")
+                               .AppendLine(string.Join(",\n", this.ListIdentity.Select(v => $"  {v}"))).AppendLine("]")
+                               .ToString();
         }
 
         /// <inheritdoc />
@@ -70,7 +68,12 @@
             return string.Empty;
         }
 
-        private List<double> CurrentValueToList()
+        /// <summary>
+        /// Converts the current value to a list.
+        /// </summary>
+        /// <returns>A list of numeric values</returns>
+        /// <exception cref="Firefly.PSCloudFormation.Terraform.HclSerializer.HclSerializerException">null - null - Cannot serialize input variable of type {this.CurrentValue.GetType().Name}</exception>
+        private IEnumerable<double> CurrentValueToList()
         {
             List<double> doubles;
 
