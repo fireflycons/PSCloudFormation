@@ -104,7 +104,6 @@
             // Build up a join() function reference
             var joinArguments = new List<object> { joinIntrinsic.Separator };
             var joinList = new List<object>();
-            var intrinsicInfo = joinIntrinsic.GetInfo();
 
             foreach (var item in joinIntrinsic.Items)
             {
@@ -113,7 +112,7 @@
                     case IIntrinsic nestedIntrinsic:
 
                         joinList.Add(
-                            nestedIntrinsic.Render(template, intrinsicInfo.TargetResource, inputs).ToJConstructor());
+                            nestedIntrinsic.Render(template, nestedIntrinsic.GetInfo().TargetResource, inputs).ToJConstructor());
                         break;
 
                     default:
