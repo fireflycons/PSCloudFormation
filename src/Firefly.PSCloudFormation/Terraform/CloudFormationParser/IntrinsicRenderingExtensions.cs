@@ -475,30 +475,7 @@
             ResourceMapping resource,
             IList<InputVariable> inputs)
         {
-            // Build up a join() function reference
-            var joinArguments = new List<object> { joinIntrinsic.Separator };
-            var joinList = new List<object>();
-
-            foreach (var item in joinIntrinsic.Items)
-            {
-                switch (item)
-                {
-                    case IIntrinsic nestedIntrinsic:
-
-                        joinList.Add(Render(nestedIntrinsic, template, resource, inputs).ToJConstructor());
-                        break;
-
-                    default:
-
-                        // join() is a string function - all args are therefore string
-                        joinList.Add(item.ToString());
-                        break;
-                }
-            }
-
-            joinArguments.Add(joinList);
-
-            return new FunctionReference("join", joinArguments);
+            return new JoinFunctionReference(joinIntrinsic, template, inputs);
         }
 
         /// <summary>
