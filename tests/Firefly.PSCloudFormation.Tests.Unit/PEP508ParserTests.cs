@@ -163,7 +163,7 @@
         [InlineData("sys_platform == \"win32\" and python_version == \"2.7\" and extra == 'socks'", false)]
         [InlineData("sys_platform == \"win32\"", true)]
         [InlineData("sys_platform==\"win32\"", true)]
-        public void TestMulptipleExpressions(string expression, bool expectedResult)
+        public void TestMultipleExpressions(string expression, bool expectedResult)
         {
             var r = this.parser.Parse(expression);
 
