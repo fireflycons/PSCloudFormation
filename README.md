@@ -12,7 +12,7 @@ A set PowerShell cmdlets for manipulating AWS CloudFormation stacks.
 
 ### Experimental Features
 
-* Export a live CloudFormation Stack to Terraform HCL. This is sitll a work in progress, however it's still better than what you get simply by running [terraform import](https://www.terraform.io/docs/cli/import/index.html). See [Terrafom Export](https://fireflycons.github.io/PSCloudFormation/articles/terraform-export.html)
+* Export a live CloudFormation Stack to Terraform HCL. This is sitll a work in progress, however it's still better than what you get simply by running [terraform import](https://www.terraform.io/docs/cli/import/index.html). See [Terrafom Export](https://fireflycons.github.io/PSCloudFormation/articles/terraform-export.html)</br>Now supports exporting nested stacks as Terraform modules.
 
 ## Dependencies
 
