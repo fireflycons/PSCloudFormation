@@ -22,12 +22,15 @@ There will be more than what's here - I just haven't found them yet!
 
 ## Imported Resources
 
-* The existing resources in a deployed CloudFormation Stack are imported. If the CloudFormation Template that deployed the stack contains conditional resources which may not be instantiated at the time this tool is run, those resources won't be imported to Terraform. If you want the full functionality of the original CloudFormation template, that has to be added manually.
+The instantiated resources in a deployed CloudFormation Stack are imported. If the CloudFormation template that deployed the stack contains conditional resources which may not be instantiated at the time this tool is run, those resources won't be imported to Terraform. If you want the full functionality of the original CloudFormation template, that has to be added manually.
 
 ## Nested Stack Import
 
 When [Export-PSCFNTerraform](xref:Export-PSCFNTerraform) is run with `-ExportNestedStacks` and the root stack contains more than one invocation of the same nested stack template with different parameters, then a separate Terraform module will be created for each instance of the nested stack. This is due to the fact that only *deployed* resources are imported and thus different invocations of the same template may produce a different number of resources, especially when conditions in the nested template may omit some resources.</br>It is therefore an exercise for the user to combine these into a single module.
 
+## Custom Resources
+
+Where custom resource invocations are found, a warning is generated. Usually stacks with custom resource invocations will also contain the lambdas that back them. These lambdas will be imported into the Terraform state.</br>With a bit of extra work it is possible to replicate the custom resource functionality in the Terraform configuration, but would require code changes to the lambdas in terms of inputs and outputs and an invocation of the updated lambda using the `aws_lambda_invocation` data source. Bear in mind that there may also be a Terraform provider or 3rd party module that provides the functionality of the custom resource.
 
 ## Other Quirks
 
