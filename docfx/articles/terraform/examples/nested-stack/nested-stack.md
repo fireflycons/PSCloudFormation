@@ -7,6 +7,11 @@ uid: tf-example-nested
 
 This example takes the completed nested stacks example from [cfn101 workshop](https://cfn101.workshop.aws/intermediate/templates/nested-stacks.html) and exports it as modules to Terraform.
 
+Demonstrates the following
+
+* That each `AWS::CloudFormation::Stack` in the root stack is exported to a Terraform module.
+* That the module blocks for the exported modules are correctly linked up with refrences to input variables and other module outputs.
+
 ## Inputs
 
 The following CloudFormation templates form the nested stack:
