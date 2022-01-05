@@ -1,7 +1,7 @@
 # PSCloudFormation
 [![Build status](https://ci.appveyor.com/api/projects/status/fgt7d0icj7emc6hl/branch/master?svg=true)](https://ci.appveyor.com/project/fireflycons/pscloudformation/branch/master)
 
-A set PowerShell cmdlets for manipulating AWS CloudFormation stacks, and generating Terraform configuration from existing CloudFormation stacks.
+A set of PowerShell cmdlets for manipulating AWS CloudFormation stacks, and [generating Terraform configuration](https://fireflycons.github.io/PSCloudFormation/articles/terraform-export.html) from existing CloudFormation stacks.
 
 ## Features
 
