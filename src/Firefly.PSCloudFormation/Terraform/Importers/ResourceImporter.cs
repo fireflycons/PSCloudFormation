@@ -99,6 +99,11 @@
                                                                                              ApiGatewayV2StageImporter)
                                                                                      },
                                                                                      {
+                                                                                         "aws_apigatewayv2_api_mapping",
+                                                                                         typeof(
+                                                                                             ApiGatewayV2ApiMappingImporter)
+                                                                                     },
+                                                                                     {
                                                                                          "aws_route",
                                                                                          typeof(RouteImporter)
                                                                                      },

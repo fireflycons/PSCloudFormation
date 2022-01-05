@@ -2,6 +2,7 @@
 {
     using System.Collections.Generic;
     using System.Linq;
+    using System.Text.RegularExpressions;
 
     /// <summary>
     /// Constants and declarations used in several locations
@@ -68,5 +69,12 @@
         /// Combination of merged and unsupported resources.
         /// </summary>
         public static readonly List<string> IgnoredResources = MergedResources.Concat(UnsupportedResources).ToList();
+
+        /// <summary>
+        /// Regex to match a valid domain name
+        /// </summary>
+        public static readonly Regex DomainNameRegex = new Regex(
+            @"^(((?!\-))(xn\-\-)?[a-z0-9\-_]{0,61}[a-z0-9]{1,1}\.)*(xn\-\-)?([a-z0-9\-]{1,61}|[a-z0-9\-]{1,30})\.[a-z]{2,}$",
+            RegexOptions.IgnoreCase);
     }
 }
