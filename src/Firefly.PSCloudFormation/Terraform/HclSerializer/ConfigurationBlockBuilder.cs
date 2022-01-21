@@ -60,7 +60,7 @@
             {
                 block.AppendLine("  default_tags {")
                     .AppendLine("    tags = {")
-                    .AppendLine($"      \"terraform: stack_name\" = \"{this.stackNameTag}\"")
+                    .AppendLine($"      \"terraform:stack_name\" = \"{this.stackNameTag}\"")
                     .AppendLine("    }")
                     .AppendLine("  }");
             }
