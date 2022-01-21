@@ -17,11 +17,13 @@
   <ItemGroup>
     <None Remove="Resources\ChangesetFormatter.xslt" />
     <None Remove="Resources\ResourceTraits.yaml" />
+    <None Remove="Resources\terraform-aws-schema.json" />
     <None Remove="Resources\terraform-resource-map.json" />
   </ItemGroup>
   <ItemGroup>
     <EmbeddedResource Include="Resources\ChangesetFormatter.xslt" />
     <EmbeddedResource Include="Resources\ResourceTraits.yaml" />
+    <EmbeddedResource Include="Resources\terraform-aws-schema.json" />
     <EmbeddedResource Include="Resources\terraform-resource-map.json" />
   </ItemGroup>
   <ItemGroup>
