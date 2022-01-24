@@ -158,7 +158,7 @@
 
             ValueSchema currentAttribute = null;
             var currentResource = this;
-            var pathComponents = new Queue<string>(path.Split('.'));
+            var pathComponents = new Queue<string>(AttributePath.Split(path));
             var processedPath = new Stack<string>();
 
             while (true)

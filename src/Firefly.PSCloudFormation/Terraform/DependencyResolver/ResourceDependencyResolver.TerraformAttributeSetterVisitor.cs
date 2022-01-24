@@ -120,8 +120,6 @@
                 this.Schema = StateFileSerializer.AwsSchema.GetResourceSchema(resource.Type);
             }
 
-            public ResourceSchema Schema { get; }
-
             /// <summary>
             /// Gets the inputs.
             /// </summary>
@@ -180,6 +178,14 @@
             public ITemplate Template { get; }
 
             /// <summary>
+            /// Gets the schema for this resource.
+            /// </summary>
+            /// <value>
+            /// The schema.
+            /// </value>
+            private ResourceSchema Schema { get; }
+
+            /// <summary>
             /// Where nested JSON like policy documents is found, call this before deserializing and visiting that JSON
             /// to set the property that has this JSON as its value.
             /// </summary>
@@ -195,6 +201,18 @@
             public void ExitNestedJson()
             {
                 this.ContainingProperty = null;
+            }
+
+            /// <summary>
+            /// Determines whether [is computed value] [the specified property path].
+            /// </summary>
+            /// <param name="propertyPath">The property path.</param>
+            /// <returns>
+            ///   <c>true</c> if [is computed value] [the specified property path]; otherwise, <c>false</c>.
+            /// </returns>
+            public bool IsComputedValue(string propertyPath)
+            {
+                return this.ContainingProperty == null && this.Schema.GetAttributeByPath(propertyPath).IsComputedOnly;
             }
 
             /// <summary>
@@ -242,7 +260,7 @@
             protected override void VisitBoolean(JValue jsonValue, TerraformAttributeSetterContext context)
             {
                 
-                if (context.Schema.GetAttributeByPath(GetParentPropertyPath(jsonValue)).IsComputedOnly)
+                if (context.IsComputedValue(GetParentPropertyPath(jsonValue)))
                 {
                     // Don't adjust computed attributes
                     return;
@@ -270,7 +288,7 @@
             /// <param name="context">The visitor context.</param>
             protected override void VisitFloat(JValue jsonValue, TerraformAttributeSetterContext context)
             {
-                if (context.Schema.GetAttributeByPath(GetParentPropertyPath(jsonValue)).IsComputedOnly)
+                if (context.IsComputedValue(GetParentPropertyPath(jsonValue)))
                 {
                     // Don't adjust computed attributes
                     return;
@@ -288,7 +306,7 @@
             /// <param name="context">The visitor context.</param>
             protected override void VisitInteger(JValue jsonValue, TerraformAttributeSetterContext context)
             {
-                if (context.Schema.GetAttributeByPath(GetParentPropertyPath(jsonValue)).IsComputedOnly)
+                if (context.IsComputedValue(GetParentPropertyPath(jsonValue)))
                 {
                     // Don't adjust computed attributes
                     return;
@@ -306,7 +324,7 @@
             /// <param name="context">The visitor context.</param>
             protected override void VisitString(JValue jsonValue, TerraformAttributeSetterContext context)
             {
-                if (context.Schema.GetAttributeByPath(GetParentPropertyPath(jsonValue)).IsComputedOnly)
+                if (context.IsComputedValue(GetParentPropertyPath(jsonValue)))
                 {
                     // Don't adjust computed attributes
                     return;
