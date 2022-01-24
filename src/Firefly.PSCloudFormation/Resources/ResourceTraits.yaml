@@ -44,6 +44,7 @@
       ConflictingArguments: []        # Where arguments confict. choose the first from this list.
       ConditionalAttributes: []
       AttributeMap: {}                # Where HCL and CF attributes are quire different
+      MissingFromSchema: []           # Attrinbutes found in state file that have no schema definition
 
 - Group: Autoscaling
   Resources:
@@ -68,6 +69,12 @@
         - - verification_message_template
           - email_verification_message
           - email_verification_subject
+
+- Group: DynamoDB
+  Resources:
+    - Resource: aws_dynamodb_table
+      MissingFromSchema:
+        - ttl.0.kms_key_arn
 
 - Group: EC2
   Resources:

@@ -202,7 +202,7 @@
                 {
                     if (tok.SelectToken("Schema") != null)
                     {
-                        this.nestedSchema = tok.ToObject<ResourceSchema>();
+                        this.nestedSchema = tok.ToObject<ProviderResourceSchema>();
                     }
                     else
                     {
@@ -284,7 +284,7 @@
                     // schema is represented in configuration as an attribute or as a nested
                     // block; if Elem is a *schema.Resource then it's a block and it's an
                     // attribute otherwise.
-                    return this.Elem is ResourceSchema;
+                    return this.Elem is ProviderResourceSchema;
                 }
 
                 if (this.Optional && this.Computed && this.ConfigMode == SchemaConfigMode.SchemaConfigModeAttr)

@@ -59,7 +59,12 @@
 
         public ValueSchema Schema { get; }
 
-
+        /// <summary>
+        /// Gets the initial analysis of what this key's value represents.
+        /// </summary>
+        /// <value>
+        /// The initial analysis.
+        /// </value>
         public AttributeContent InitialAnalysis { get; }
 
         /// <summary>

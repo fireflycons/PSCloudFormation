@@ -28,11 +28,10 @@
             this.emitter = emitter;
         }
 
-
         /// <summary>
         /// The entire AWS schema.
         /// </summary>
-        public static AwsSchema AwsSchema => AwsSchema.LoadSchema();
+        public static AwsSchema AwsSchema => new AwsSchema();
 
         /// <summary>
         /// Tests <paramref name="text"/> to see if it is JSON.
@@ -137,12 +136,6 @@
         /// </summary>
         private class EmitterContext : IJsonVisitorContext<EmitterContext>
         {
-#pragma warning disable 414
-
-            public bool IsJson { get; private set; }
-
-            public ResourceSchema Schema { get; }
-
             /// <summary>
             /// Initializes a new instance of the <see cref="EmitterContext"/> class.
             /// </summary>
@@ -154,8 +147,21 @@
                 this.Emitter = emitter;
                 this.CurrentResourceName = currentResourceName;
                 this.CurrentResourceType = currentResourceType;
-                this.Schema = AwsSchema.GetResourceSchema(this.CurrentResourceType);
+                this.ResourceSchema = AwsSchema.GetResourceSchema(this.CurrentResourceType);
             }
+
+            /// <summary>
+            /// Gets a value indicating whether parsing embedded JSON.
+            /// </summary>
+            public bool IsJson { get; private set; }
+
+            /// <summary>
+            /// Gets the resource schema.
+            /// </summary>
+            /// <value>
+            /// The resource schema.
+            /// </value>
+            public ResourceSchema ResourceSchema { get; }
 
             /// <summary>
             /// Gets the name of the current resource.
@@ -251,7 +257,7 @@
                     new MappingKey(
                         json.Name,
                         path,
-                        context.IsJson ? ValueSchema.JsonSchema : context.Schema.GetAttributeByPath(path)));
+                        context.IsJson ? ValueSchema.JsonSchema : context.ResourceSchema.GetAttributeByPath(path)));
                 base.Visit(json, context);
             }
 

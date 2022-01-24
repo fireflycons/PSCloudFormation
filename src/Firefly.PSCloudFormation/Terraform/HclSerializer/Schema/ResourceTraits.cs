@@ -1,6 +1,7 @@
 ﻿namespace Firefly.PSCloudFormation.Terraform.HclSerializer.Schema
 {
     using System.Collections.Generic;
+    using System.Diagnostics;
 
     using Firefly.PSCloudFormation.Terraform.HclSerializer.Events;
 
@@ -10,10 +11,14 @@
     /// Describes traits for the given resource.
     /// The state file contains much that doesn't directly translate to HCL, and this sorts that out.
     /// </summary>
+    [DebuggerDisplay("{ResourceType}")]
     internal class ResourceTraits : IResourceTraits
     {
         /// <inheritdoc />
         public List<ConditionalAttribute> ConditionalAttributes { get; set; } = new List<ConditionalAttribute>();
+
+        /// <inheritdoc />
+        public List<string> MissingFromSchema { get; set; } = new List<string>();
 
         /// <inheritdoc />
         public Dictionary<string, string> AttributeMap { get; set; } = new Dictionary<string, string>();

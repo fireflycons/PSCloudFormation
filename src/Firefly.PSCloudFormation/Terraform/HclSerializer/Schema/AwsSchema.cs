@@ -17,28 +17,18 @@
     /// This is loaded from a JSON embedded resource that is generated from
     /// the provider source code.
     /// </summary>
-    /// <seealso cref="ResourceSchema" />
-    internal class AwsSchema : Dictionary<string, ResourceSchema>
+    /// <seealso cref="ProviderResourceSchema" />
+    internal class AwsSchema
     {
         /// <summary>
         /// Map of AWS -> Terraform resource names
         /// </summary>
-        private static readonly List<ResourceTypeMapping> ResourceTypeMappings;
+        private static readonly List<ResourceTypeMapping> ResourceTypeMappings = new List<ResourceTypeMapping>();
 
         /// <summary>
-        /// Initializes static members of the <see cref="AwsSchema"/> class.
+        /// Map of Terraform resource type  to schema + traits
         /// </summary>
-        static AwsSchema()
-        {
-            ResourceTypeMappings = LoadResourceTypeMappings();
-            ResourceTraits = LoadResourceTraits();
-            TraitsAll = ResourceTraits.First(r => r.ResourceType == "all");
-        }
-
-        /// <summary>
-        /// Gets traits shared by all resources.
-        /// </summary>
-        public static IResourceTraits TraitsAll { get; }
+        private static readonly Dictionary<string, ResourceSchema> Schema = new Dictionary<string, ResourceSchema>();
 
         /// <summary>
         /// Gets the resource traits.
@@ -46,21 +36,23 @@
         /// <value>
         /// The resource traits.
         /// </value>
-        private static List<IResourceTraits> ResourceTraits { get; }
+        private static readonly List<IResourceTraits> ResourceTraits = new List<IResourceTraits>();
 
         /// <summary>
-        /// Loads the schema from the embedded resource.
+        /// Initializes static members of the <see cref="AwsSchema"/> class.
         /// </summary>
-        /// <returns>Entire aws provider schema.</returns>
-        public static AwsSchema LoadSchema()
+        static AwsSchema()
         {
-            using (var reader = new StreamReader(
-                       ResourceLoader.GetResourceStream("terraform-aws-schema.json", Assembly.GetExecutingAssembly())))
-            using (var jsonReader = new JsonTextReader(reader))
-            {
-                return new JsonSerializer().Deserialize<AwsSchema>(jsonReader);
-            }
+            LoadResourceTypeMappings();
+            LoadResourceTraits();
+            TraitsAll = ResourceTraits.First(r => r.ResourceType == "all");
+            LoadSchema();
         }
+
+        /// <summary>
+        /// Gets traits shared by all resources.
+        /// </summary>
+        public static IResourceTraits TraitsAll { get; }
 
         /// <summary>
         /// Gets the <see cref="IResourceTraits"/> with the specified resource type.
@@ -74,7 +66,25 @@
         {
             var traits = ResourceTraits.FirstOrDefault(rt => rt.ResourceType == resourceType);
 
-            return traits != null ? new ConsolitatedResourceTraits(TraitsAll, traits) : TraitsAll;
+            return traits != null ? new ConsolidatedResourceTraits(TraitsAll, traits) : TraitsAll;
+        }
+
+        /// <summary>
+        /// Loads the schema from the embedded resource.
+        /// </summary>
+        /// <returns>Entire aws provider schema.</returns>
+        public static void LoadSchema()
+        {
+            using (var reader = new StreamReader(
+                ResourceLoader.GetResourceStream("terraform-aws-schema.json", Assembly.GetExecutingAssembly())))
+            using (var jsonReader = new JsonTextReader(reader))
+            {
+                foreach (var s in new JsonSerializer().Deserialize<Dictionary<string, ProviderResourceSchema>>(
+                    jsonReader))
+                {
+                    Schema.Add(s.Key, new ResourceSchema(s.Key, s.Value, GetResourceTraits(s.Key)));
+                }
+            }
         }
 
         /// <summary>
@@ -92,40 +102,32 @@
         /// <summary>
         /// Loads the additional resource traits that cannot be determined from the schema directly, or easily
         /// </summary>
-        /// <returns>List of <see cref="IResourceTraits"/></returns>
-        private static List<IResourceTraits> LoadResourceTraits()
+        private static void LoadResourceTraits()
         {
             using (var stream = new StreamReader(
-                       ResourceLoader.GetResourceStream("ResourceTraits.yaml", Assembly.GetCallingAssembly())))
+                ResourceLoader.GetResourceStream("ResourceTraits.yaml", Assembly.GetCallingAssembly())))
             {
                 var deserializer = new DeserializerBuilder().Build();
 
                 var resourceGroups = deserializer.Deserialize<List<ResourceGroup>>(stream);
 
-                var traits = new List<IResourceTraits>();
-
                 foreach (var g in resourceGroups)
                 {
-                    traits.AddRange(g.Resources);
+                    ResourceTraits.AddRange(g.Resources);
                 }
-
-                return traits;
             }
         }
 
         /// <summary>
         /// Loads the map of terraform to AWS resource types
         /// </summary>
-        /// <returns>List of resource type mappings.</returns>
-        private static List<ResourceTypeMapping> LoadResourceTypeMappings()
+        private static void LoadResourceTypeMappings()
         {
             using (var reader = new StreamReader(
-                       ResourceLoader.GetResourceStream(
-                           "terraform-resource-map.json",
-                           Assembly.GetExecutingAssembly())))
+                ResourceLoader.GetResourceStream("terraform-resource-map.json", Assembly.GetExecutingAssembly())))
             using (var jsonReader = new JsonTextReader(reader))
             {
-                return new JsonSerializer().Deserialize<List<ResourceTypeMapping>>(jsonReader);
+                ResourceTypeMappings.AddRange(new JsonSerializer().Deserialize<List<ResourceTypeMapping>>(jsonReader));
             }
         }
 
@@ -154,9 +156,9 @@
         /// <returns>A <see cref="ResourceSchema"/> object.</returns>
         private ResourceSchema GetResourceSchemaByTerraformType(string terraformType)
         {
-            if (this.ContainsKey(terraformType))
+            if (Schema.ContainsKey(terraformType))
             {
-                return this[terraformType];
+                return Schema[terraformType];
             }
 
             throw new KeyNotFoundException($"Resource \"{terraformType}\" not found.");

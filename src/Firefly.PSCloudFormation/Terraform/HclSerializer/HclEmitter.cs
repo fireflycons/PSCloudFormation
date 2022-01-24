@@ -6,6 +6,8 @@
     using System.Linq;
     using System.Text.RegularExpressions;
 
+    using Amazon.Runtime.EventStreams;
+
     using Firefly.PSCloudFormation.Terraform.HclSerializer.Events;
     using Firefly.PSCloudFormation.Terraform.HclSerializer.Schema;
 
@@ -250,7 +252,6 @@
                 }
             }
 
-
             if (!(nextEvent is CollectionStart))
             {
                 throw new HclSerializerException(
@@ -275,59 +276,70 @@
         /// <returns>Result of analysis.</returns>
         private AttributeContent AnalyzeScalar(MappingKey key, Scalar scalarValue)
         {
-            if (key.Schema.Optional)
+            if (!key.Schema.Optional)
             {
-                var value = scalarValue.Value;
-
-                if (value == null)
-                {
-                    return AttributeContent.ValueDefault;
-                }
-
-                if (this.resourceTraits.IsOmittedConditionalAttrbute(key.Path, value))
-                {
-                    return AttributeContent.Empty;
-                }
-
-                // If the value is an unquoted string, then it's a reference to something.
-                if (!scalarValue.IsQuoted && !bool.TryParse(value, out _))
-                {
-                    return AttributeContent.Value;
-                }
-
-                // ReSharper disable once SwitchStatementHandlesSomeKnownEnumValuesWithDefault
-                switch (key.Schema.Type)
-                {
-                    case SchemaValueType.TypeBool:
-
-                        return bool.TryParse(value, out var boolValue) && boolValue
-                                   ? AttributeContent.Value
-                                   : AttributeContent.ValueDefault;
-
-                    case SchemaValueType.TypeInt:
-
-                        return int.TryParse(value, out var intValue) && intValue != 0
-                                   ? AttributeContent.Value
-                                   : AttributeContent.ValueDefault;
-
-                    case SchemaValueType.TypeFloat:
-
-                        return double.TryParse(value, out var doubleValue) && doubleValue != 0
-                                   ? AttributeContent.Value
-                                   : AttributeContent.ValueDefault;
-
-                    case SchemaValueType.TypeString:
-
-                        return string.IsNullOrEmpty(value) ? AttributeContent.ValueDefault : AttributeContent.Value;
-
-                    default:
-
-                        throw new InvalidOperationException($"Invalid \"{key.Schema.Type}\" for scalar value at \"{key.Path}\"");
-                }
-
+                return string.IsNullOrWhiteSpace(scalarValue.Value) ? AttributeContent.Empty : AttributeContent.Value;
             }
 
-            return string.IsNullOrWhiteSpace(scalarValue.Value) ? AttributeContent.EmptyString : AttributeContent.Value;
+            var value = scalarValue.Value;
+
+            if (value == null)
+            {
+                return AttributeContent.ValueDefault;
+            }
+
+            if (this.resourceTraits.IsOmittedConditionalAttrbute(key.Path, value))
+            {
+                return AttributeContent.Empty;
+            }
+
+            // ReSharper disable once SwitchStatementHandlesSomeKnownEnumValuesWithDefault
+            switch (key.Schema.Type)
+            {
+                case SchemaValueType.TypeBool:
+
+                    if (bool.TryParse(value, out var boolValue) && boolValue)
+                    {
+                        return AttributeContent.Value;
+                    }
+
+                    break;
+
+                case SchemaValueType.TypeInt:
+
+                    if (int.TryParse(value, out var intValue) && intValue != 0)
+                    {
+                        return AttributeContent.Value;
+                    }
+
+                    break;
+
+                case SchemaValueType.TypeFloat:
+
+                    if (double.TryParse(value, out var doubleValue) && doubleValue != 0)
+                    {
+                        return AttributeContent.Value;
+                    }
+
+                    break;
+
+                case SchemaValueType.TypeString:
+
+                    return string.IsNullOrEmpty(value) ? AttributeContent.ValueDefault : AttributeContent.Value;
+
+                default:
+
+                    throw new InvalidOperationException($"Invalid \"{key.Schema.Type}\" for scalar value at \"{key.Path}\"");
+            }
+
+            if (value.Length > 0 && char.IsLetter(value.First()) && value.Contains("."))
+            {
+                // A reference
+                return AttributeContent.Value;
+            }
+
+            return AttributeContent.Empty;
+
         }
 
         /// <summary>

@@ -1,6 +1,7 @@
 ﻿namespace Firefly.PSCloudFormation.Terraform.HclSerializer.Schema
 {
     using System.Collections.Generic;
+    using System.Diagnostics;
     using System.Linq;
 
     using Firefly.PSCloudFormation.Terraform.HclSerializer.Events;
@@ -11,15 +12,16 @@
     /// is created which is a union of shared traits and resource specific traits
     /// </summary>
     /// <seealso cref="IResourceTraits" />
-    internal class ConsolitatedResourceTraits : IResourceTraits
+    [DebuggerDisplay("{ResourceType}")]
+    internal class ConsolidatedResourceTraits : IResourceTraits
     {
         /// <summary>
-        /// Initializes a new instance of the <see cref="ConsolitatedResourceTraits"/> class.
+        /// Initializes a new instance of the <see cref="ConsolidatedResourceTraits"/> class.
         /// </summary>
         /// <param name="sharedTraits">The shared traits.</param>
         /// <param name="specificResourceTraits">The specific resource traits.</param>
         // ReSharper disable once UnusedParameter.Local - It might be one day
-        public ConsolitatedResourceTraits(IResourceTraits sharedTraits, IResourceTraits specificResourceTraits)
+        public ConsolidatedResourceTraits(IResourceTraits sharedTraits, IResourceTraits specificResourceTraits)
         {
             // No conflicting arguments defined for all resources
             this.ConflictingArguments = specificResourceTraits.ConflictingArguments;
@@ -34,6 +36,8 @@
             this.AttributeMap = specificResourceTraits.AttributeMap;
 
             this.ResourceType = specificResourceTraits.ResourceType;
+
+            this.MissingFromSchema = specificResourceTraits.MissingFromSchema;
         }
 
         /// <inheritdoc />
@@ -42,6 +46,8 @@
         /// <inheritdoc />
         public List<ConditionalAttribute> ConditionalAttributes { get; }
 
+        /// <inheritdoc />
+        public List<string> MissingFromSchema { get; }
 
         /// <inheritdoc />
         public Dictionary<string, string> AttributeMap { get; }

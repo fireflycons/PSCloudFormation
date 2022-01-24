@@ -29,6 +29,16 @@
         List<ConditionalAttribute> ConditionalAttributes { get; }
 
         /// <summary>
+        /// Gets the list of attributes missing from the provider schema.
+        /// Some attributes show up in the state file which aren't defined in the resource schema.
+        /// e.g. <c>aws_dynamodb_table - ttl.0.kms_key_arn</c>
+        /// </summary>
+        /// <value>
+        /// The missing from schema.
+        /// </value>
+        List<string> MissingFromSchema { get; }
+
+        /// <summary>
         /// Gets the map of CloudFormation attribute name to terraform attribute name
         /// </summary>
         /// <value>

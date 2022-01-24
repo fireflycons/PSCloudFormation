@@ -9,7 +9,7 @@
         /// </summary>
         public TerraformAwsSchemaFixture()
         {
-            this.Schema = AwsSchema.LoadSchema();
+            this.Schema = new AwsSchema();
         }
 
         /// <summary>
