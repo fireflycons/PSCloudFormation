@@ -5,16 +5,6 @@
 # This file contains lists of resource attributes that require special handling
 # when emitting HCL. They are grouped as follows
 #
-# ComputedAttributes
-#    Resource attributes that if present in the HCL cause an Unconfigurable Attribute error.
-#
-# NonBlockTypeAttributes
-#    Attributes that should have their value emitted as a mapping rather than a block, e.g. 'tags'
-#
-# RequiredAttributes
-#    Attributes which must always be present, even if they have no value, or a
-#    Missing Required Argument error is raised.
-#
 # DefaultValues
 #    A map of attribute name to default value to provide defaults for required attributes
 #    that have a null or empty value in the state file.
@@ -50,126 +40,10 @@
 - Group: all
   Resources:
     - Resource: all                   # Common traits for all resources - merged with specific resources.
-      NonBlockTypeAttributes:         # Emiited as e.g. 'tags = {}'' (rather than 'tags {}'')
-        - tags
-      BlockObjectAttributes:          # Stored as map in state, but emitted as block
-        - timeouts
-      ComputedAttributes:             # State properties that have no HCL equivalent, because they are computed.
-        - '*arn'                      # Wildcard attribute name match, so no attributes ending in 'arn' will be emitted anywhere 
-        - '*etag'
-        - 'id'
-        - 'owner_id'
-        - 'unique_id'
-        - '*_date'
-        - '*_time'
-        - tags_all
-        - timeouts
-      RequiredAttributes: []          # Must be present in HCL, even if null or empty
       DefaultValues: {}               # Values to set if state value is null
       ConflictingArguments: []        # Where arguments confict. choose the first from this list.
       ConditionalAttributes: []
       AttributeMap: {}                # Where HCL and CF attributes are quire different
-
-- Group: ACM
-  Resources:
-    - Resource: aws_acm_certificate
-      ComputedAttributes:
-        - status
-        - validation_emails
-        - domain_validation_options
-
-- Group: ACMPCA
-  Resources:
-    - Resource: aws_acmpca_certificate
-      ComputedAttributes:
-        - certificate
-        - certificate_chain
-    - Resource: aws_acmpca_certificate_authority
-      ComputedAttributes:
-        - certificate
-        - certificate_chain
-        - certificate_signing_request
-        - not_after
-        - not_before
-        - serial
-        - status
-
-- Group: Amplify
-  Resources:
-    - Resource: aws_amplify_app
-      ComputedAttributes:
-        - default_domain
-        - production_branch
-    - Resource: aws_amplify_branch
-      ComputedAttributes:
-        - associated_resources
-        - custom_domains
-        - destination_branch
-        - source_branch
-
-- Group: API Gateway
-  Resources:
-    - Resource: aws_api_gateway_account
-      ComputedAttributes:
-        - throttle_settings
-    - Resource: aws_api_gateway_api_key
-      ComputedAttributes:
-        - value
-    - Resource: aws_api_gateway_client_certificate
-      ComputedAttributes:
-        - created_date
-        - expiration_date
-        - pem_encoded_certificate
-    - Resource: aws_api_gateway_domain_name
-      ComputedAttributes:
-        - '*_domain_name'
-        - '*_zone_id'
-      RequiredAttributes:
-        - regional_certificate_arn
-    - Resource: aws_api_gateway_rest_api
-      ComputedAttributes:
-        - lambda_permission
-        - root_resource_id
-    - Resource: aws_api_gateway_resource
-      ComputedAttributes:
-        - path
-    - Resource: aws_api_gateway_stage
-      ComputedAttributes:
-        - invoke_url
-        - lambda_permissions
-    - Resource: aws_api_gateway_usage_plan_key
-      ComputedAttributes:
-        - name
-        - value
-
-- Group: API Gateway V2
-  Resources:
-    - Resource: aws_apigatewayv2_api
-      ComputedAttributes:
-        - api_endpoint
-        - invoke_url
-        - aws_lambda_permissions
-    - Resource: aws_apigatewayv2_deployment
-      ComputedAttributes:
-        - auto_deployed
-    - Resource: aws_apigatewayv2_domain_name
-      ComputedAttributes:
-        - api_mapping_selection_expression
-        - domain_name_configuration.#.hosted_zone_id
-        - domain_name_configuration.#.target_domain_name
-        - target_domain_name
-      RequiredAttributes:
-        - domain_name_configuration.#.certificate_arn
-    - Resource: aws_apigatewayv2_integration
-      ComputedAttributes:
-        - integration_response_selection_expression
-    - Resource: aws_apigatewayv2_stage
-      ComputedAttributes:
-        - invoke_url
-        - aws_lambda_permissions
-      RequiredAttributes:
-        - access_log_settings.#.destination_arn
-        - ttl.#.attribute_name
 
 - Group: Autoscaling
   Resources:
@@ -180,77 +54,24 @@
         - - launch_template.#.id
           - launch_template.#.name
 
-- Group: CloudFormation
-  Resources:
-    - Resource: aws_cloudformation_stack
-      ComputedAttributes:
-        - outputs
-        - template_body
-
-- Group: CloudFront
-  Resources:
-    - Resource: aws_cloudfront_distribution
-      ComputedAttributes:
-        - trusted_key_groups
-        - trusted_signers
-        - caller_reference
-        - etag
-        - status
-        - in_progress_validation_batches
-        - domain_name
-        - hosted_zone_id
-    - Resource: aws_cloudfront_function
-      ComputedAttributes:
-        - status
-    - Resource: aws_cloudfront_public_key
-      ComputedAttributes:
-        - caller_reference
-
 - Group: CloudWatch
   Resources:
     - Resource: aws_cloudwatch_metric_alarm
       ConditionalAttributes:
         - Name: datapoints_to_alarm
           Value: 0
-    - Resource: aws_cloudwatch_metric_stream
-      ComputedAttributes:
-        - state
 
 - Group: Cognito
   Resources:
     - Resource: aws_cognito_user_pool
-      ComputedAttributes:
-        - domain
-        - endpoint
-        - estimated_number_of_users
       ConflictingArguments:
         - - verification_message_template
           - email_verification_message
           - email_verification_subject
 
-- Group: DynamoDB
-  Resources:
-    - Resource: aws_dynamodb_table
-      ComputedAttributes:
-        - stream_label
-      RequiredAttributes:
-        - ttl.#.attribute_name
-
 - Group: EC2
   Resources:
-    - Resource: aws_instance
-      ComputedAttributes:
-        - instance_state
-        - '*_dns'
-        - public_ip
-        - device_name
-        - primary_network_interface_id
-        - root_block_device.#.volume_id
-        - root_block_device.#.device_name
-        - password_data
     - Resource: aws_launch_template
-      ComputedAttributes:
-        - latest_version
       ConditionalAttributes:
         - Name: block_device_mappings.#.ebs.#.throughput
           Value: 0
@@ -258,209 +79,59 @@
         LatestVersionNumber: latest_version
         DefaultVersionNumber: default_version
     - Resource: aws_eip
-      ComputedAttributes:
-        - allocation_id
-        - association_id
-        - domain
-        - private_*
-        - public_*
-        - network_interface
-        - instance
-        - network_border_group
       AttributeMap:
         AllocationId: id
-    - Resource: aws_nat_gateway
-      ComputedAttributes:
-        - '*_ip'
-        - network_interface_id
-    - Resource: aws_ec2_transit_gateway
-      ComputedAttributes:
-        - '*_default_route_table_id'
 
 - Group: ECS
   Resources:
-    - Resource: aws_ecs_task_definition
-      ComputedAttributes:
-        - revision
     - Resource: aws_ecs_service
       ConditionalAttributes:
         - Name: propagate_tags
           Value: NONE
 
-- Group: EFS
-  Resources:
-    - Resource: aws_efs_file_system
-      ComputedAttributes:
-        - size_in_bytes
-        - dns_name
-        - number_of_mount_targets
-    - Resource: aws_efs_mount_target
-      ComputedAttributes:
-        - network_interface_id
-        - availability_zone_*
-        - '*dns_name'
-        - ip_address
-
 - Group: Elastic Loadbalancing V2
   Resources:
     - Resource: aws_lb
-      ComputedAttributes:
-        - dns_name
-        - zone_id
-        - vpc_id
       AttributeMap:
         LoadBalancerFullName: arn_suffix
     - Resource: aws_lb_target_group
       AttributeMap:
         TargetGroupFullName: arn_suffix
     - Resource: aws_lb_listener
-      RequiredAttributes:
-        - load_balancer_arn
       ConditionalAttributes:
         - Name: default_action.#.order
           Value: 0
     - Resource: aws_lb_listener_rule
-      RequiredAttributes:
-        - listener_arn
       ConditionalAttributes:
         - Name: action.#.order
           Value: 0
-    - Resource: aws_lb_listener_certificate
-      RequiredAttributes:
-        - listener_arn
-        - certificate_arn
-    - Resource: aws_lb_listener_rule
-      RequiredAttributes:
-        - listener_arn
 
 - Group: IAM
   Resources:
     - Resource: aws_iam_role
-      ComputedAttributes:
-        - name
       ConflictingArguments:
         - - name
           - name_prefix
-    - Resource: aws_iam_policy
-      ComputedAttributes:
-        - policy_id
-
-- Group: Lambda
-  Resources:
-    - Resource: aws_lambda_function
-      ComputedAttributes:
-        - last_modified
-        - source_code_size
-        - version
-    - Resource: aws_lambda_layer_version
-      ComputedAttributes:
-        - source_code_size
-        - version
-    - Resource: aws_lambda_permission
-      ComputedAttributes:
-        - statement_id
-      RequiredAttributes:
-        - source_arn
-
-- Group: RDS
-  Resources:
-    - Resource: aws_db_instance
-      ComputedAttributes:
-        - '*_id'
-        - latest_restorable_time
-        - address
-        - endpoint
-        - engine_version_actual
-        - status
 
 - Group: Route53
   Resources:
     - Resource: aws_route53_record
-      ComputedAttributes:
-        - fqdn
       ConflictingArguments:
         - - ttl
           - alias
-      RequiredAttributes:
-        - alias.#.evaluate_target_health
 
 - Group: S3
   Resources:
     - Resource: aws_s3_bucket
-      ComputedAttributes:
-        - bucket_domain_name
-        - bucket_regional_domain_name
-        - region
-        - private_dns
-        - device_name
-        - hosted_zone_id
-        - request_payer
       DefaultValues:
         acl: private
         force_destroy: false
       AttributeMap:
         BucketName: bucket
-    - Resource: aws_s3_bucket_policy
-      RequiredAttributes:
-        - policy
-
-- Group: SecretsManager
-  Resources:
-    - Resource: aws_secretsmanager_secret
-      ComputedAttributes:
-        - rotation_enabled
-
-- Group: SNS
-  Resources:
-    - Resource: aws_sns_topic
-      ComputedAttributes:
-        - owner
-    - Resource: aws_sns_topic_subscription
-      ComputedAttributes:
-        - confirmation_was_authenticated
-        - pending_confirmation
-      RequiredAttributes:
-        - topic_arn
-
-- Group: SSM
-  Resources:
-    - Resource: aws_ssm_parameter
-      ComputedAttributes:
-        - version
 
 - Group: VPC
   Resources:
-    - Resource: aws_nat_gateway
-      ComputedAttributes:
-        - connectivity_type
-    - Resource: aws_security_group
-      NonBlockTypeAttributes:
-        - ingress
-        - egress
-      RequiredAttributes:
-        - ingress.#.*
-        - egress.#.*
-    - Resource: aws_network_acl
-      NonBlockTypeAttributes:
-        - ingress
-        - egress
-      RequiredAttributes:
-        - ingress.#.*
-        - egress.#.*
-    - Resource: aws_route
-      ComputedAttributes:
-        - origin
-        - state
-    - Resource: aws_route_table
-      ComputedAttributes:
-        - route  # Exclude this, else it will duplicate at least one of the aws_route entries
     - Resource: aws_subnet
       ConflictingArguments:
         - - availability_zone
           - availability_zone_id
-    - Resource: aws_vpc
-      ComputedAttributes:
-        - '*_id'
-    - Resource: aws_vpc_peering_connection
-      ComputedAttributes:
-        - accept_status

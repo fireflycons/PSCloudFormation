@@ -26,11 +26,6 @@
         EmptyString,
 
         /// <summary>
-        /// Next event is a scalar with value <c>false</c>
-        /// </summary>
-        BooleanFalse,
-
-        /// <summary>
         /// Next group of events is an empty sequence, mapping, block including any nesting of the same.
         /// </summary>
         EmptyCollection,
@@ -58,6 +53,11 @@
         /// <summary>
         /// Attribute has some kind of value
         /// </summary>
-        Value
+        Value,
+
+        /// <summary>
+        /// Attribute has default value as defined by the schema
+        /// </summary>
+        ValueDefault,
     }
 }

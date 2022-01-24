@@ -7,7 +7,7 @@
     using System.Text.RegularExpressions;
 
     using Firefly.PSCloudFormation.Terraform.HclSerializer.Events;
-    using Firefly.PSCloudFormation.Terraform.HclSerializer.Traits;
+    using Firefly.PSCloudFormation.Terraform.HclSerializer.Schema;
 
     /// <summary>
     /// HCL Emitter. Inspired by YamlDotNet emitter.
@@ -44,11 +44,6 @@
         private readonly TextWriter output;
 
         /// <summary>
-        /// Stack used to create resource attribute path (e.g. <c>root_block_device.iops</c> in an EC2 instance).
-        /// </summary>
-        private readonly Stack<string> path = new Stack<string>();
-
-        /// <summary>
         /// Stack of states processed as emitter descends object graph
         /// </summary>
         private readonly Stack<EmitterState> states = new Stack<EmitterState>();
@@ -56,7 +51,7 @@
         /// <summary>
         /// Stack of nested block keys
         /// </summary>
-        private readonly Stack<string> blockKeys = new Stack<string>();
+        private readonly Stack<MappingKey> blockKeys = new Stack<MappingKey>();
 
         /// <summary>
         /// The current column number in the output
@@ -71,7 +66,7 @@
         /// <summary>
         /// The current block key if emitting a block
         /// </summary>
-        private string currentBlockKey;
+        private MappingKey currentBlockKey;
 
         /// <summary>
         /// The current resource name
@@ -113,6 +108,10 @@
         /// </summary>
         private EmitterState state;
 
+        private EmitterState previousState;
+
+        private string currentPath;
+
         /// <summary>
         /// Initializes a new instance of the <see cref="HclEmitter"/> class.
         /// </summary>
@@ -121,7 +120,7 @@
         {
             this.output = output;
             this.state = EmitterState.Resource;
-            this.resourceTraits = ResourceTraitsCollection.TraitsAll;
+            this.resourceTraits = AwsSchema.TraitsAll;
         }
 
         /// <summary>
@@ -159,15 +158,6 @@
             /// </summary>
             BlockObject
         }
-
-        /// <summary>
-        /// Gets the path of the current attribute (e.g. <c>root_block_device.iops</c> in an EC2 instance).
-        /// Where there is a sequence in the path, this is represented by <c>*</c>.
-        /// </summary>
-        /// <value>
-        /// The current path.
-        /// </value>
-        private string CurrentPath => string.Join(".", this.path.Where(p => p != null).Reverse());
 
         /// <summary>
         /// Emits the next event.
@@ -220,7 +210,7 @@
         }
 
         /// <summary>
-        /// Analyzes an attribute's value to see whether it has a value, is null or is ann empty collection.
+        /// Analyzes an attribute's value to see whether it has a value, is null or is an empty collection.
         /// </summary>
         /// <param name="event">The event.</param>
         /// <returns>Result of analysis.</returns>
@@ -228,12 +218,13 @@
         private AttributeContent AnalyzeAttribute(MappingKey @event)
         {
             var nextEvent = this.events.Peek();
+            var currentAnalysis = @event.InitialAnalysis;
 
             switch (nextEvent)
             {
                 case Scalar scalar:
 
-                    return this.AnalyzeScalar(scalar);
+                    return this.AnalyzeScalar(@event, scalar);
 
                 case JsonStart _:
 
@@ -259,6 +250,7 @@
                 }
             }
 
+
             if (!(nextEvent is CollectionStart))
             {
                 throw new HclSerializerException(
@@ -267,101 +259,69 @@
                     $"Expected MappingStart, SequenceStart or JsonStart. Got {nextEvent.GetType().Name}");
             }
 
-            var key = @event.Value;
-            var currentAnalysis = AttributeContent.None;
-
-            var level = 0;
-            var lastEvent = HclEvent.None;
-#if DEBUG
+            // Read ahead the entire collection
             var collection = this.events.PeekUntil(new CollectionPeeker().Done, true).ToList();
-#endif
 
-            foreach (var evt in this.events.PeekUntil(new CollectionPeeker().Done, true))
-            {
-                level += evt.NestingIncrease;
-
-                if (level == 0 && evt is CollectionEnd && lastEvent is CollectionStart)
-                {
-                    // Map or sequence with no elements
-                    return AttributeContent.EmptyCollection;
-                }
-
-                if (currentAnalysis == AttributeContent.BlockObject || currentAnalysis == AttributeContent.BlockList)
-                {
-                    switch (evt)
-                    {
-                        case MappingStart _:
-                        case SequenceStart _:
-                        case ScalarValue scalarValue when !scalarValue.IsEmpty:
-
-                            // Block mapping contains an object, a list or a non empty scalar then we want to emit it.
-                            return currentAnalysis;
-
-                        case MappingEnd _:
-
-                            // Found no populated values, so skip it.
-                            return AttributeContent.EmptyCollection;
-                    }
-
-                    continue;
-                }
-
-                switch (lastEvent)
-                {
-                    case SequenceStart _ when evt is Scalar:
-
-                        return AttributeContent.Sequence;
-
-                    case MappingStart _:
-
-                        return AttributeContent.Mapping;
-                }
-
-                if (!(this.isJson || this.resourceTraits.IsNonBlockAttribute(key)))
-                {
-                    if (lastEvent is SequenceStart && evt is MappingStart)
-                    {
-                        // There's always going to be _something_ so return now
-                        currentAnalysis = AttributeContent.BlockList;
-                    }
-
-                    if (evt is MappingStart && this.resourceTraits.IsBlockObject(key))
-                    {
-                        // Continue reading map values to determine if they have values.
-                        currentAnalysis = AttributeContent.BlockObject;
-                    }
-                }
-
-                lastEvent = evt;
-            }
-
-            // We should not get here.
-            return AttributeContent.Value;
+            return collection.Any(e => e is ScalarValue sv && !sv.IsEmpty)
+                       ? currentAnalysis
+                       : AttributeContent.EmptyCollection;
         }
 
         /// <summary>
         /// Analyzes content of a scalar.
         /// </summary>
-        /// <param name="scalar">The scalar.</param>
+        /// <param name="key">Key of the value being checked.</param>
+        /// <param name="scalarValue">Value to analyze.</param>
         /// <returns>Result of analysis.</returns>
-        private AttributeContent AnalyzeScalar(Scalar scalar)
+        private AttributeContent AnalyzeScalar(MappingKey key, Scalar scalarValue)
         {
-            if (scalar.Value == null)
+            if (key.Schema.Optional)
             {
-                return AttributeContent.Null;
+                var value = scalarValue.Value;
+
+                if (value == null)
+                {
+                    return AttributeContent.ValueDefault;
+                }
+
+                if (this.resourceTraits.IsOmittedConditionalAttrbute(key.Path, value))
+                {
+                    return AttributeContent.Empty;
+                }
+
+                // ReSharper disable once SwitchStatementHandlesSomeKnownEnumValuesWithDefault
+                switch (key.Schema.Type)
+                {
+                    case SchemaValueType.TypeBool:
+
+                        return bool.TryParse(value, out var boolValue) && boolValue
+                                   ? AttributeContent.Value
+                                   : AttributeContent.ValueDefault;
+
+                    case SchemaValueType.TypeInt:
+
+                        return int.TryParse(value, out var intValue) && intValue != 0
+                                   ? AttributeContent.Value
+                                   : AttributeContent.ValueDefault;
+
+                    case SchemaValueType.TypeFloat:
+
+                        return double.TryParse(value, out var doubleValue) && doubleValue != 0
+                                   ? AttributeContent.Value
+                                   : AttributeContent.ValueDefault;
+
+                    case SchemaValueType.TypeString:
+
+                        return string.IsNullOrEmpty(value) ? AttributeContent.ValueDefault : AttributeContent.Value;
+
+                    default:
+
+                        throw new InvalidOperationException($"Invalid \"{key.Schema.Type}\" for scalar value at \"{key.Path}\"");
+                }
+
             }
 
-            if (bool.TryParse(scalar.Value, out var boolValue) && !boolValue)
-            {
-                return AttributeContent.BooleanFalse;
-            }
-
-            if (this.resourceTraits.IsOmittedConditionalAttrbute(this.CurrentPath, scalar.Value))
-            {
-                return AttributeContent.Empty;
-            }
-
-            return string.IsNullOrWhiteSpace(scalar.Value) ? AttributeContent.EmptyString : AttributeContent.Value;
+            return string.IsNullOrWhiteSpace(scalarValue.Value) ? AttributeContent.EmptyString : AttributeContent.Value;
         }
 
         /// <summary>
@@ -374,13 +334,9 @@
 
             this.isJson = false;
             this.indent = this.indents.Pop();
-            this.state = this.states.Pop();
+            this.state = this.PopState();
             this.WriteIndent();
             this.WriteIndicator(")", false, false, false);
-
-            // Pop path at end of JSON block
-            // JSON block is a mapping value so analogous to popping key after scalar value
-            this.PopPath();
 
             if (this.state == EmitterState.Sequence)
             {
@@ -397,7 +353,7 @@
             GetTypedEvent<JsonStart>(@event);
 
             this.isJson = true;
-            this.states.Push(this.state);
+            this.PushState(this.state);
             this.state = EmitterState.Json;
             this.WriteIndicator("jsonencode(", true, false, true);
             this.IncreaseIndent();
@@ -414,22 +370,17 @@
 
             if (this.state != EmitterState.Resource)
             {
-                this.state = this.states.Pop();
+                this.state = this.PopState();
             }
 
             this.indent = this.indents.Pop();
-
-            if (this.state == EmitterState.Mapping && this.path.Any())
-            {
-                // Extra pop for nested mappings - path may be empty when coming to the end of a sequence of blocks (must be able to do this better!)
-                this.PopPath();
-            }
 
             this.WriteIndent();
             this.WriteIndicator("}", false, false, true);
 
             var mappingStart = this.events.Peek() as MappingStart;
 
+            // ReSharper disable once SwitchStatementMissingSomeEnumCasesNoDefault
             switch (this.state)
             {
                 case EmitterState.BlockList when mappingStart != null:
@@ -437,7 +388,7 @@
                     // Next element in a block list
                     this.WriteIndent();
                     this.indent = this.indents.Pop();
-                    this.EmitMappingKey(new MappingKey(this.currentBlockKey, true));
+                    this.EmitMappingKey(this.currentBlockKey);
                     this.IncreaseIndent();
 
                     return;
@@ -458,31 +409,43 @@
         {
             var key = GetTypedEvent<MappingKey>(@event);
             var lastKey = this.currentKey;
+            var analysis = this.AnalyzeAttribute(key);
+
+            if (analysis == AttributeContent.EmptyCollection)
+            {
+                this.events.ConsumeUntil(new CollectionPeeker().Done, true);
+                return;
+            }
+
             this.currentKey = key.Value;
 
             // Don't push path for repeating block key
             if (!key.IsBlockKey)
             {
-                this.path.Push(this.currentKey);
-                var analysis = this.AnalyzeAttribute(key);
-
-                if (!this.resourceTraits.ShouldEmitAttribute(this.CurrentPath, analysis))
+                if (!this.isJson)
                 {
-                    this.events.ConsumeUntil(new CollectionPeeker().Done, true);
-                    this.currentKey = lastKey;
-                    this.PopPath();
-                    return;
+                    if (!key.ShouldEmitAttribute(analysis) || this.resourceTraits.IsConflictingArgument(key.Path))
+                    {
+                        this.events.ConsumeUntil(new CollectionPeeker().Done, true);
+                        this.currentKey = lastKey;
+                        return;
+                    }
+
+                    this.currentPath = key.Path;
                 }
 
                 this.WriteIndent();
-
+            }
+            else
+            {
+                // ReSharper disable once SwitchStatementHandlesSomeKnownEnumValuesWithDefault
                 switch (analysis)
                 {
                     case AttributeContent.BlockList:
 
-                        this.blockKeys.Push(this.currentBlockKey);
-                        this.currentBlockKey = key.Value;
-                        this.states.Push(this.state);
+                        this.blockKeys.Push(key);
+                        this.currentBlockKey = key;
+                        this.PushState(this.state);
                         this.state = EmitterState.BlockList;
                         break;
 
@@ -496,6 +459,9 @@
                         this.state = EmitterState.Mapping;
                         break;
                 }
+
+                this.WriteBreak();
+                this.WriteIndent();
             }
 
             this.EmitScalar(@event);
@@ -514,7 +480,7 @@
         {
             GetTypedEvent<MappingStart>(@event);
 
-            this.states.Push(this.state);
+            this.PushState(this.state);
             this.state = EmitterState.Mapping;
             this.WriteIndicator("{", true, false, false);
             this.IncreaseIndent();
@@ -527,6 +493,7 @@
         /// <param name="event">The event to write.</param>
         private void EmitNode(HclEvent @event)
         {
+            // ReSharper disable once SwitchStatementMissingSomeEnumCasesNoDefault
             switch (@event.Type)
             {
                 case EventType.ResourceStart:
@@ -576,18 +543,10 @@
 
                 case EventType.ResourceEnd:
 
-                    if (this.path.Count > 0)
-                    {
-                        throw new HclSerializerException(
-                            this.currentResourceName,
-                            this.currentResourceType,
-                            $"Internal error. Resource \"{this.currentResourceType}.{this.currentResourceName}. Path not empty: {this.CurrentPath}");
-                    }
-
                     this.indents.Clear();
                     this.column = 0;
                     this.indent = 0;
-                    this.resourceTraits = ResourceTraitsCollection.TraitsAll;
+                    this.resourceTraits = AwsSchema.TraitsAll;
                     this.currentKey = null;
                     this.WriteBreak();
                     this.WriteBreak();
@@ -605,7 +564,7 @@
 
             this.Write("resource");
             this.isWhitespace = false;
-            this.resourceTraits = ResourceTraitsCollection.Get(rs.ResourceType);
+            this.resourceTraits = AwsSchema.GetResourceTraits(rs.ResourceType);
             this.currentResourceName = rs.ResourceName;
             this.currentResourceType = rs.ResourceType;
             this.EmitScalar(new Scalar(rs.ResourceType, true));
@@ -662,13 +621,6 @@
             }
 
             this.isWhitespace = false;
-
-            if (new[] { EmitterState.Mapping, EmitterState.BlockList, EmitterState.BlockObject, EmitterState.Resource }
-                    .Contains(this.state) && @event is ScalarValue)
-            {
-                // When emitting a scalar mapping value, pop this value's key from the path
-                this.PopPath();
-            }
         }
 
         /// <summary>
@@ -684,7 +636,7 @@
                 this.WriteIndent();
             }
 
-            this.EmitScalar(this.resourceTraits.ApplyDefaultValue(this.CurrentPath, scalar));
+            this.EmitScalar(this.resourceTraits.ApplyDefaultValue(this.currentPath, scalar));
         }
 
         /// <summary>
@@ -695,23 +647,16 @@
         {
             GetTypedEvent<SequenceEnd>(@event);
 
-            this.state = this.states.Pop();
+            this.state = this.PopState();
 
-            // Pop sequence (#)
-            this.PopPath();
-
-            if (this.events.Peek().Type != EventType.JsonEnd)
-            {
-                // Pop Mapping key for this sequence
-                // Analogous to popping mapping key after a scalar value
-                this.PopPath();
-            }
-
-            if (this.state == EmitterState.BlockList)
+            if (this.previousState == EmitterState.BlockList)
             {
                 // End of block list
-                this.state = this.states.Pop();
-                this.currentBlockKey = this.blockKeys.Pop();
+                while (this.state == EmitterState.BlockList)
+                {
+                    this.state = this.PopState();
+                }
+
                 return;
             }
 
@@ -735,9 +680,6 @@
 
             if (this.events.Peek() is SequenceEnd)
             {
-                // Pop key for this empty block as we are consuming SequenceEnd
-                this.PopPath();
-
                 // Write empty sequence
                 this.WriteIndicator("[]", true, false, true);
                 this.WriteIndent();
@@ -747,13 +689,13 @@
                 return;
             }
 
-            this.states.Push(this.state);
-            this.path.Push("#");
-
             if (this.state == EmitterState.BlockList)
             {
+                // BlockList state will be pushed at start of mapping
                 return;
             }
+
+            this.PushState(this.state);
 
             this.WriteIndicator("[", true, false, true);
             this.IncreaseIndent();
@@ -768,20 +710,6 @@
         {
             this.indents.Push(this.indent);
             this.indent += 2;
-        }
-
-        /// <summary>
-        /// Pops the path in one place for easier breakpoint.
-        /// </summary>
-        private void PopPath()
-        {
-#if DEBUG
-            if (this.path.Count == 0)
-            {
-                // For breakpoint only
-            }
-#endif
-            this.path.Pop();
         }
 
         /// <summary>
@@ -864,6 +792,25 @@
 
             this.isWhitespace = whitespace;
             this.isIndentation &= indentation;
+        }
+
+        /// <summary>
+        /// Push the current emitter state onto the state stack.
+        /// </summary>
+        /// <param name="currentState">The current state</param>
+        private void PushState(EmitterState currentState)
+        {
+            this.states.Push(currentState);
+        }
+
+        /// <summary>
+        /// Pop the emitter state and store the previous state.
+        /// </summary>
+        /// <returns>The next emitter state.</returns>
+        private EmitterState PopState()
+        {
+            this.previousState = this.state;
+            return this.states.Pop();
         }
 
         /// <summary>

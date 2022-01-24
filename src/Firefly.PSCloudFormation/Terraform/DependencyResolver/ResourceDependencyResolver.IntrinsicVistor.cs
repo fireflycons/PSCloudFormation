@@ -11,7 +11,7 @@
     using Firefly.CloudFormationParser.Utils;
     using Firefly.PSCloudFormation.Terraform.CloudFormationParser;
     using Firefly.PSCloudFormation.Terraform.Hcl;
-    using Firefly.PSCloudFormation.Terraform.HclSerializer.Traits;
+    using Firefly.PSCloudFormation.Terraform.HclSerializer.Schema;
     using Firefly.PSCloudFormation.Terraform.State;
 
     using Newtonsoft.Json.Linq;
@@ -302,6 +302,7 @@
             /// <exception cref="Amazon.CloudFormation.Model.InvalidOperationException">Can't currently describe {intrinsic.TagName}</exception>
             private IntrinsicInfo GetIntrinsicInfo(IIntrinsic intrinsic, PropertyPath currentPath)
             {
+                // ReSharper disable once SwitchStatementHandlesSomeKnownEnumValuesWithDefault
                 switch (intrinsic.Type)
                 {
                     case IntrinsicType.If:
@@ -404,7 +405,7 @@
                 // Now attempt to match up the CloudFormation resource attribute name with the corresponding terraform one
                 // and get the current value from state.
                 // First, look up the attribute map
-                var traits = ResourceTraitsCollection.Get(referencedResource.Parent.Type);
+                var traits = AwsSchema.GetResourceTraits(referencedResource.Parent.Type);
 
                 if (traits.AttributeMap.ContainsKey(attribute))
                 {
@@ -443,6 +444,7 @@
                 {
                     if (token is JValue jv)
                     {
+                        // ReSharper disable once SwitchStatementHandlesSomeKnownEnumValuesWithDefault
                         switch (jv.Type)
                         {
                             case JTokenType.String:

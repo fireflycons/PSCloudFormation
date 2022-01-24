@@ -1,6 +1,6 @@
 ﻿namespace Firefly.PSCloudFormation.Tests.Unit
 {
-    using Firefly.PSCloudFormation.Terraform.Schema;
+    using Firefly.PSCloudFormation.Terraform.HclSerializer.Schema;
 
     public class TerraformAwsSchemaFixture
     {

@@ -1096,6 +1096,10 @@
     "AWS": "AWS::Kinesis::StreamConsumer"
   },
   {
+    "TF": "aws_kinesis_video_stream",
+    "AWS": "AWS::KinesisVideo::Stream"
+  },
+  {
     "TF": "aws_kinesisanalyticsv2_application",
     "AWS": "AWS::KinesisAnalyticsV2::Application"
   },

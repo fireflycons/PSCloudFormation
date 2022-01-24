@@ -9,9 +9,8 @@
     using Firefly.PSCloudFormation.Terraform.CloudFormationParser;
     using Firefly.PSCloudFormation.Terraform.Hcl;
     using Firefly.PSCloudFormation.Terraform.HclSerializer;
-    using Firefly.PSCloudFormation.Terraform.HclSerializer.Traits;
+    using Firefly.PSCloudFormation.Terraform.HclSerializer.Schema;
     using Firefly.PSCloudFormation.Terraform.State;
-    using Firefly.PSCloudFormation.Utils;
     using Firefly.PSCloudFormation.Utils.JsonTraversal;
 
     using Newtonsoft.Json.Linq;
@@ -117,9 +116,11 @@
                 this.Template = template;
                 this.IntrinsicInfos = intrinsicInfo;
                 this.Resource = resource;
-                this.ResourceTraits = ResourceTraitsCollection.Get(resource.Type);
                 this.Inputs = inputs;
+                this.Schema = StateFileSerializer.AwsSchema.GetResourceSchema(resource.Type);
             }
+
+            public ResourceSchema Schema { get; }
 
             /// <summary>
             /// Gets the inputs.
@@ -169,14 +170,6 @@
             /// The resource.
             /// </value>
             public StateFileResourceDeclaration Resource { get; }
-
-            /// <summary>
-            /// Gets the resource traits for the resource being visited.
-            /// </summary>
-            /// <value>
-            /// The resource traits.
-            /// </value>
-            public IResourceTraits ResourceTraits { get; }
 
             /// <summary>
             /// Gets a reference to the parsed CloudFormation template.
@@ -248,7 +241,8 @@
             /// <param name="context">The visitor context.</param>
             protected override void VisitBoolean(JValue jsonValue, TerraformAttributeSetterContext context)
             {
-                if (context.ResourceTraits.ComputedAttributes.Any(a => a.IsLike(GetParentPropertyKey(jsonValue))))
+                
+                if (context.Schema.GetAttributeByPath(GetParentPropertyPath(jsonValue)).IsComputedOnly)
                 {
                     // Don't adjust computed attributes
                     return;
@@ -276,7 +270,7 @@
             /// <param name="context">The visitor context.</param>
             protected override void VisitFloat(JValue jsonValue, TerraformAttributeSetterContext context)
             {
-                if (context.ResourceTraits.ComputedAttributes.Any(a => a.IsLike(GetParentPropertyKey(jsonValue))))
+                if (context.Schema.GetAttributeByPath(GetParentPropertyPath(jsonValue)).IsComputedOnly)
                 {
                     // Don't adjust computed attributes
                     return;
@@ -294,7 +288,7 @@
             /// <param name="context">The visitor context.</param>
             protected override void VisitInteger(JValue jsonValue, TerraformAttributeSetterContext context)
             {
-                if (context.ResourceTraits.ComputedAttributes.Any(a => a.IsLike(GetParentPropertyKey(jsonValue))))
+                if (context.Schema.GetAttributeByPath(GetParentPropertyPath(jsonValue)).IsComputedOnly)
                 {
                     // Don't adjust computed attributes
                     return;
@@ -312,7 +306,7 @@
             /// <param name="context">The visitor context.</param>
             protected override void VisitString(JValue jsonValue, TerraformAttributeSetterContext context)
             {
-                if (context.ResourceTraits.ComputedAttributes.Any(a => a.IsLike(GetParentPropertyKey(jsonValue))))
+                if (context.Schema.GetAttributeByPath(GetParentPropertyPath(jsonValue)).IsComputedOnly)
                 {
                     // Don't adjust computed attributes
                     return;
@@ -366,6 +360,7 @@
             {
                 var intrinsic = intrinsicInfo.Intrinsic;
 
+                // ReSharper disable once SwitchStatementMissingSomeEnumCasesNoDefault
                 switch (intrinsic.Type)
                 {
                     case IntrinsicType.Base64:
@@ -416,8 +411,8 @@
             /// From the given token, walk upwards to find containing JProperty's name.
             /// </summary>
             /// <param name="token">The JToken where the modification will be applied.</param>
-            /// <returns>Name of the containing property.</returns>
-            private static string GetParentPropertyKey(JToken token)
+            /// <returns>Path of the containing property.</returns>
+            private static string GetParentPropertyPath(JToken token)
             {
                 if (token == null)
                 {
@@ -431,7 +426,13 @@
                     tok = tok.Parent;
                 }
 
-                return ((JProperty)tok)?.Name;
+                if (tok != null)
+                {
+                    return new AttributePath(tok.Path).CurrentPath;
+                }
+
+                // Should not get here.
+                throw new InvalidOperationException("Cannot find parent attribute for specified JToken");
             }
         }
     }

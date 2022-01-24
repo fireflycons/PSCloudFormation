@@ -1,0 +1,25 @@
+{
+    "arn": "arn:aws:iam::123456789012:role/torrent-instance-InstanceRole-1F4RMIKWNQ0KK",
+    "assume_role_policy": "{\"Version\":\"2012-10-17\",\"Statement\":[{\"Effect\":\"Allow\",\"Principal\":{\"Service\":\"ec2.amazonaws.com\"},\"Action\":\"sts:AssumeRole\"}]}",
+    "create_date": "2020-04-04T13:16:13Z",
+    "description": "",
+    "force_detach_policies": false,
+    "id": "torrent-instance-InstanceRole-1F4RMIKWNQ0KK",
+    "inline_policy": [
+        {
+            "name": "root",
+            "policy": "{\"Version\":\"2012-10-17\",\"Statement\":[{\"Action\":[\"s3:ListBucket\"],\"Resource\":[\"arn:aws:s3:::bucket1-eu-west-1-123456789012\",\"arn:aws:s3:::bucket2-eu-west-1\",\"arn:aws:s3:::bucket3-west-1-123456789012\"],\"Effect\":\"Allow\"},{\"Action\":[\"s3:GetObject\",\"s3:PutObject\"],\"Resource\":[\"arn:aws:s3:::bucket1-eu-west-1-123456789012/*\",\"arn:aws:s3:::bucket2-eu-west-1/*\",\"arn:aws:s3:::bucket3-west-1-123456789012/*\"],\"Effect\":\"Allow\"}]}"
+        }
+    ],
+    "managed_policy_arns": [
+        "arn:aws:iam::aws:policy/AmazonSSMManagedInstanceCore"
+    ],
+    "max_session_duration": 3600,
+    "name": "torrent-instance-InstanceRole-1F4RMIKWNQ0KK",
+    "name_prefix": "",
+    "path": "/",
+    "permissions_boundary": null,
+    "tags": {},
+    "tags_all": {},
+    "unique_id": "AROARQV6V5BA6VBJEB4OU"
+}

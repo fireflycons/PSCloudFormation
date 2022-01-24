@@ -85,6 +85,8 @@
     <None Remove="Resources\Terraform\FindId_Attributes.json" />
     <None Remove="Resources\Terraform\iam_role\iam_role1.json" />
     <None Remove="Resources\Terraform\iam_role\iam_role2.json" />
+    <None Remove="Resources\Terraform\Serializer\aws_iam_role_attributes.json" />
+    <None Remove="Resources\Terraform\Serializer\aws_instance_attributes.json" />
     <None Remove="Resources\Terraform\terraform.tfstate" />
     <None Remove="Resources\Terraform\VPC\route_table.json" />
     <None Remove="Resources\Terraform\VPC\security_group.json" />
@@ -173,6 +175,8 @@
     <EmbeddedResource Include="Resources\Terraform\FindId_Attributes.json" />
     <EmbeddedResource Include="Resources\Terraform\iam_role\iam_role1.json" />
     <EmbeddedResource Include="Resources\Terraform\iam_role\iam_role2.json" />
+    <EmbeddedResource Include="Resources\Terraform\Serializer\aws_iam_role_attributes.json" />
+    <EmbeddedResource Include="Resources\Terraform\Serializer\aws_instance_attributes.json" />
     <EmbeddedResource Include="Resources\Terraform\terraform.tfstate" />
     <EmbeddedResource Include="Resources\Terraform\VPC\route_table.json" />
     <EmbeddedResource Include="Resources\Terraform\VPC\security_group.json" />
