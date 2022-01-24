@@ -29,6 +29,7 @@
         /// <summary>
         /// Prevents a default instance of the <see cref="TerraformRunnerException"/> class from being created.
         /// </summary>
+        // ReSharper disable once UnusedMember.Local
         private TerraformRunnerException()
         {
         }
@@ -37,6 +38,7 @@
         /// Initializes a new instance of the <see cref="TerraformRunnerException"/> class.
         /// </summary>
         /// <param name="message">The message.</param>
+        // ReSharper disable once UnusedMember.Local
         private TerraformRunnerException(string message)
             : base(message)
         {

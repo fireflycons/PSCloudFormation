@@ -11,6 +11,7 @@
         /// </summary>
         /// <param name="objectAddress">The object address.</param>
         /// <param name="index">The index.</param>
+        // ReSharper disable once UnusedMember.Global - User by reflection
         public InterpolationReference(string objectAddress, int index)
             : base(objectAddress, index)
         {

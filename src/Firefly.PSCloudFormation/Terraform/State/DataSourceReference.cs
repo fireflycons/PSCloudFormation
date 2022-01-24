@@ -29,6 +29,7 @@
         /// <remarks>
         /// This constructor used by HCL emitter
         /// </remarks>
+        // ReSharper disable once UnusedMember.Global - Used by reflection
         public DataSourceReference(string objectAddress)
             : base(objectAddress)
         {
