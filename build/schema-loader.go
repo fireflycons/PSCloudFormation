@@ -27,21 +27,14 @@ type SimpleResource struct {
 
 // Simplified schema object containing only the fields we need.
 type SimpleSchema struct {
-	Type          schema.ValueType
-	ConfigMode    schema.SchemaConfigMode
-	Optional      bool        `json:",omitempty"`
-	Required      bool        `json:",omitempty"`
-	Default       interface{} `json:",omitempty"`
-	InputDefault  string      `json:",omitempty"`
-	Computed      bool        `json:",omitempty"`
-	Elem          interface{} `json:",omitempty"`
-	MaxItems      int         `json:",omitempty"`
-	MinItems      int         `json:",omitempty"`
-	ConflictsWith []string    `json:",omitempty"`
-	ExactlyOneOf  []string    `json:",omitempty"`
-	AtLeastOneOf  []string    `json:",omitempty"`
-	RequiredWith  []string    `json:",omitempty"`
-	Sensitive     bool        `json:",omitempty"`
+	Type         schema.ValueType
+	ConfigMode   schema.SchemaConfigMode
+	Optional     bool        `json:",omitempty"`
+	Required     bool        `json:",omitempty"`
+	Default      interface{} `json:",omitempty"`
+	InputDefault string      `json:",omitempty"`
+	Computed     bool        `json:",omitempty"`
+	Elem         interface{} `json:",omitempty"`
 }
 
 func recurseSchema(elem interface{}) interface{} {
@@ -61,21 +54,14 @@ func recurseSchema(elem interface{}) interface{} {
 func copySchema(s *schema.Schema) *SimpleSchema {
 
 	return &SimpleSchema{
-		Type:          s.Type,
-		ConfigMode:    s.ConfigMode,
-		Optional:      s.Optional,
-		Required:      s.Required,
-		Default:       s.Default,
-		InputDefault:  s.InputDefault,
-		Computed:      s.Computed,
-		Elem:          recurseSchema(s.Elem),
-		MaxItems:      s.MaxItems,
-		MinItems:      s.MinItems,
-		ConflictsWith: s.ConflictsWith,
-		ExactlyOneOf:  s.ExactlyOneOf,
-		AtLeastOneOf:  s.AtLeastOneOf,
-		RequiredWith:  s.RequiredWith,
-		Sensitive:     s.Sensitive,
+		Type:         s.Type,
+		ConfigMode:   s.ConfigMode,
+		Optional:     s.Optional,
+		Required:     s.Required,
+		Default:      s.Default,
+		InputDefault: s.InputDefault,
+		Computed:     s.Computed,
+		Elem:         recurseSchema(s.Elem),
 	}
 }
 
@@ -134,9 +120,6 @@ func main() {
 		resourceNamesOutFile.WriteString(k + "\n")
 		count++
 	}
-
-	fmt.Println("End load")
-	fmt.Println("Begin export")
 
 	j, e := json.MarshalIndent(simpleResourceMap, "", "  ")
 
