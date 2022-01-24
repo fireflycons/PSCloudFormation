@@ -289,6 +289,12 @@
                     return AttributeContent.Empty;
                 }
 
+                // If the value is an unquoted string, then it's a reference to something.
+                if (!scalarValue.IsQuoted && !bool.TryParse(value, out _))
+                {
+                    return AttributeContent.Value;
+                }
+
                 // ReSharper disable once SwitchStatementHandlesSomeKnownEnumValuesWithDefault
                 switch (key.Schema.Type)
                 {
