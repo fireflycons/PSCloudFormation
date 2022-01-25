@@ -31,7 +31,7 @@
         [InlineData("aws_security_group", "ingress")]
         public void AssertAttributeAsBlocksWillBeRenderedAsBlocks(string resourceType, string attributeName)
         {
-            var resource = this.fixture.Schema.GetResourceSchema(resourceType);
+            var resource = AwsSchema.GetResourceSchema(resourceType);
             var attribute = resource.GetAttributeByPath(attributeName);
 
             attribute.IsBlock.Should().BeTrue();
@@ -68,7 +68,7 @@
 
             var expectedMessage =
                 $"Resource \"{UnknownAwsType}\": No corresponding Terraform resource found. If this is incorrect, please raise an issue.";
-            Action action = () => this.fixture.Schema.GetResourceSchema(UnknownAwsType);
+            Action action = () => AwsSchema.GetResourceSchema(UnknownAwsType);
 
             action.Should().Throw<KeyNotFoundException>().WithMessage(expectedMessage);
         }
@@ -76,7 +76,7 @@
         [Fact]
         public void AssertGetResourceSchemaWithValidAwsTypeDoesNotThrow()
         {
-            Action action = () => this.fixture.Schema.GetResourceSchema("AWS::EC2::Instance");
+            Action action = () => AwsSchema.GetResourceSchema("AWS::EC2::Instance");
 
             action.Should().NotThrow();
         }
@@ -134,7 +134,7 @@
             var expectedMessage =
                 $"Resource \"{AwsName}\": No corresponding Terraform resource found. If this is incorrect, please raise an issue.";
 
-            Action action = () => this.fixture.Schema.GetResourceSchema(AwsName);
+            Action action = () => AwsSchema.GetResourceSchema(AwsName);
 
             action.Should().Throw<KeyNotFoundException>().WithMessage(expectedMessage);
         }
@@ -145,7 +145,7 @@
             const string TerraformName = "aws_foo_bar";
             var expectedMessage = $"Resource \"{TerraformName}\" not found.";
 
-            Action action = () => this.fixture.Schema.GetResourceSchema(TerraformName);
+            Action action = () => AwsSchema.GetResourceSchema(TerraformName);
 
             action.Should().Throw<KeyNotFoundException>().WithMessage(expectedMessage);
         }
@@ -170,7 +170,7 @@
             const string InvalidAttribute = "managed_policy_arns.max_session_duration";
             var expectedMessage = $"Resource does not contain an attribute at\"{InvalidAttribute}\".";
 
-            var resource = this.fixture.Schema.GetResourceSchema("aws_iam_role");
+            var resource = AwsSchema.GetResourceSchema("aws_iam_role");
             Action action = () => resource.GetAttributeByPath(InvalidAttribute);
 
             action.Should().Throw<KeyNotFoundException>().WithMessage(expectedMessage);

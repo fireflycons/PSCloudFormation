@@ -117,7 +117,7 @@
                 this.IntrinsicInfos = intrinsicInfo;
                 this.Resource = resource;
                 this.Inputs = inputs;
-                this.Schema = StateFileSerializer.AwsSchema.GetResourceSchema(resource.Type);
+                this.Schema = AwsSchema.GetResourceSchema(resource.Type);
             }
 
             /// <summary>

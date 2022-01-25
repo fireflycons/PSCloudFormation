@@ -10,8 +10,8 @@
     using Amazon.CloudFormation.Model;
 
     using Firefly.CloudFormationParser;
-    using Firefly.EmbeddedResourceLoader;
     using Firefly.PSCloudFormation.Terraform.Hcl;
+    using Firefly.PSCloudFormation.Terraform.HclSerializer.Schema;
     using Firefly.PSCloudFormation.Terraform.Importers;
     using Firefly.PSCloudFormation.Utils;
 
@@ -23,20 +23,6 @@
     [DebuggerDisplay("{FriendlyName}")]
     internal class ModuleInfo
     {
-        /// <summary>
-        /// Map of AWS -> Terraform resource names
-        /// </summary>
-        private static readonly List<ResourceTypeMapping> ResourceTypeMappings;
-
-        /// <summary>
-        /// Initializes static members of the <see cref="ModuleInfo"/> class.
-        /// </summary>
-        static ModuleInfo()
-        {
-            ResourceTypeMappings = JsonConvert.DeserializeObject<List<ResourceTypeMapping>>(
-                ResourceLoader.GetStringResource("terraform-resource-map.json"));
-        }
-
         /// <summary>
         /// Initializes a new instance of the <see cref="ModuleInfo"/> class.
         /// </summary>
@@ -311,7 +297,7 @@
                     continue;
                 }
 
-                var mapping = ResourceTypeMappings.FirstOrDefault(m => m.Aws == resource.ResourceType);
+                var mapping = AwsSchema.ResourceTypeMappings.FirstOrDefault(m => m.Aws == resource.ResourceType);
 
                 if (mapping == null)
                 {

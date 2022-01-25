@@ -1,7 +1,6 @@
 ﻿namespace Firefly.PSCloudFormation.Terraform.HclSerializer.Schema
 {
     using System.Collections.Generic;
-    using System.Diagnostics;
     using System.IO;
     using System.Linq;
     using System.Reflection;
@@ -18,18 +17,8 @@
     /// the provider source code.
     /// </summary>
     /// <seealso cref="ProviderResourceSchema" />
-    internal class AwsSchema
+    internal static class AwsSchema
     {
-        /// <summary>
-        /// Map of AWS -> Terraform resource names
-        /// </summary>
-        private static readonly List<ResourceTypeMapping> ResourceTypeMappings = new List<ResourceTypeMapping>();
-
-        /// <summary>
-        /// Map of Terraform resource type  to schema + traits
-        /// </summary>
-        private static readonly Dictionary<string, ResourceSchema> Schema = new Dictionary<string, ResourceSchema>();
-
         /// <summary>
         /// Gets the resource traits.
         /// </summary>
@@ -37,6 +26,11 @@
         /// The resource traits.
         /// </value>
         private static readonly List<IResourceTraits> ResourceTraits = new List<IResourceTraits>();
+
+        /// <summary>
+        /// Map of Terraform resource type  to schema + traits
+        /// </summary>
+        private static readonly Dictionary<string, ResourceSchema> Schema = new Dictionary<string, ResourceSchema>();
 
         /// <summary>
         /// Initializes static members of the <see cref="AwsSchema"/> class.
@@ -53,6 +47,11 @@
         /// Gets traits shared by all resources.
         /// </summary>
         public static IResourceTraits TraitsAll { get; }
+
+        /// <summary>
+        /// Gets a map of AWS -> Terraform resource names
+        /// </summary>
+        internal static List<ResourceTypeMapping> ResourceTypeMappings { get; } = new List<ResourceTypeMapping>();
 
         /// <summary>
         /// Gets the <see cref="IResourceTraits"/> with the specified resource type.
@@ -72,15 +71,14 @@
         /// <summary>
         /// Loads the schema from the embedded resource.
         /// </summary>
-        /// <returns>Entire aws provider schema.</returns>
         public static void LoadSchema()
         {
             using (var reader = new StreamReader(
-                ResourceLoader.GetResourceStream("terraform-aws-schema.json", Assembly.GetExecutingAssembly())))
+                       ResourceLoader.GetResourceStream("terraform-aws-schema.json", Assembly.GetExecutingAssembly())))
             using (var jsonReader = new JsonTextReader(reader))
             {
                 foreach (var s in new JsonSerializer().Deserialize<Dictionary<string, ProviderResourceSchema>>(
-                    jsonReader))
+                             jsonReader))
                 {
                     Schema.Add(s.Key, new ResourceSchema(s.Key, s.Value, GetResourceTraits(s.Key)));
                 }
@@ -92,11 +90,11 @@
         /// </summary>
         /// <param name="resourceType">Type of the resource.</param>
         /// <returns>A <see cref="ResourceSchema"/> object.</returns>
-        public ResourceSchema GetResourceSchema(string resourceType)
+        public static ResourceSchema GetResourceSchema(string resourceType)
         {
             return resourceType.StartsWith("AWS::")
-                       ? this.GetResourceSchemaByAwsType(resourceType)
-                       : this.GetResourceSchemaByTerraformType(resourceType);
+                       ? GetResourceSchemaByAwsType(resourceType)
+                       : GetResourceSchemaByTerraformType(resourceType);
         }
 
         /// <summary>
@@ -105,7 +103,7 @@
         private static void LoadResourceTraits()
         {
             using (var stream = new StreamReader(
-                ResourceLoader.GetResourceStream("ResourceTraits.yaml", Assembly.GetCallingAssembly())))
+                       ResourceLoader.GetResourceStream("ResourceTraits.yaml", Assembly.GetCallingAssembly())))
             {
                 var deserializer = new DeserializerBuilder().Build();
 
@@ -124,7 +122,9 @@
         private static void LoadResourceTypeMappings()
         {
             using (var reader = new StreamReader(
-                ResourceLoader.GetResourceStream("terraform-resource-map.json", Assembly.GetExecutingAssembly())))
+                       ResourceLoader.GetResourceStream(
+                           "terraform-resource-map.json",
+                           Assembly.GetExecutingAssembly())))
             using (var jsonReader = new JsonTextReader(reader))
             {
                 ResourceTypeMappings.AddRange(new JsonSerializer().Deserialize<List<ResourceTypeMapping>>(jsonReader));
@@ -136,7 +136,7 @@
         /// </summary>
         /// <param name="awsType">Name of the resource.</param>
         /// <returns>A <see cref="ResourceSchema"/> object.</returns>
-        private ResourceSchema GetResourceSchemaByAwsType(string awsType)
+        private static ResourceSchema GetResourceSchemaByAwsType(string awsType)
         {
             var mapping = ResourceTypeMappings.FirstOrDefault(m => m.Aws == awsType);
 
@@ -146,7 +146,7 @@
                     $"Resource \"{awsType}\": No corresponding Terraform resource found. If this is incorrect, please raise an issue.");
             }
 
-            return this.GetResourceSchemaByTerraformType(mapping.Terraform);
+            return GetResourceSchemaByTerraformType(mapping.Terraform);
         }
 
         /// <summary>
@@ -154,7 +154,7 @@
         /// </summary>
         /// <param name="terraformType">Name of the resource.</param>
         /// <returns>A <see cref="ResourceSchema"/> object.</returns>
-        private ResourceSchema GetResourceSchemaByTerraformType(string terraformType)
+        private static ResourceSchema GetResourceSchemaByTerraformType(string terraformType)
         {
             if (Schema.ContainsKey(terraformType))
             {
@@ -162,32 +162,6 @@
             }
 
             throw new KeyNotFoundException($"Resource \"{terraformType}\" not found.");
-        }
-
-        /// <summary>
-        /// Maps an AWS resource type to equivalent Terraform resource.
-        /// This is backed by the embedded resource <c>terraform-resource-map.json</c>
-        /// </summary>
-        [DebuggerDisplay("{Aws} -> {Terraform}")]
-        private class ResourceTypeMapping
-        {
-            /// <summary>
-            /// Gets or sets the AWS type name.
-            /// </summary>
-            /// <value>
-            /// The AWS type name.
-            /// </value>
-            [JsonProperty("AWS")]
-            public string Aws { get; set; }
-
-            /// <summary>
-            /// Gets or sets the terraform type name.
-            /// </summary>
-            /// <value>
-            /// The terraform.
-            /// </value>
-            [JsonProperty("TF")]
-            public string Terraform { get; set; }
         }
     }
 }

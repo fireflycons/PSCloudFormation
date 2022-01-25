@@ -29,11 +29,6 @@
         }
 
         /// <summary>
-        /// The entire AWS schema.
-        /// </summary>
-        public static AwsSchema AwsSchema => new AwsSchema();
-
-        /// <summary>
         /// Tests <paramref name="text"/> to see if it is JSON.
         /// </summary>
         /// <param name="text">The text.</param>
