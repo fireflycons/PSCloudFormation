@@ -132,7 +132,8 @@
         /// </value>
         public static ValueSchema JsonSchema { get; } = new ValueSchema
                                                             {
-                                                                Type = SchemaValueType.TypeJsonData, Required = true
+                                                                Type = SchemaValueType.TypeJsonData,
+                                                                Required = true
                                                             };
 
         #region Imported Properties (from AWS provider)
@@ -170,6 +171,17 @@
         /// behavior, and SchemaConfigModeBlock is not permitted.
         /// </value>
         public SchemaConfigMode ConfigMode { get; set; }
+
+        /// <summary>
+        /// Gets or sets conflicts with.
+        /// </summary>
+        /// <value>
+        /// ConflictsWith is a set of schema keys that conflict with this schema.
+        /// This will only check that they're set in the _config_. This will not
+        /// raise an error for a malfunctioning resource that sets a conflicting
+        /// key.
+        /// </value>
+        public List<string> ConflictsWith { get; set; } = new List<string>();
 
         /// <summary>
         /// Gets or sets the default.
@@ -306,8 +318,14 @@
         /// <value>
         ///   <c>true</c> if this instance is computed only; otherwise, <c>false</c>.
         /// </value>
+        /// <remarks>
+        /// Some attributes are computed _and_ optional.
+        /// These include attributes such as EC2 block devices.
+        /// When block device isn't present in configuration, a computed
+        /// value is brought back which is the values provided by the AMI.
+        /// </remarks>
         [JsonIgnore]
-        public bool IsComputedOnly => this.Computed && !(this.Optional || this.Required);
+        public bool IsComputedOnly => this.Computed && !(this.Required || this.Optional);
 
         /// <summary>
         /// Gets a value indicating whether this instance is a list or set.

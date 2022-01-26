@@ -6,8 +6,6 @@
     using System.Linq;
     using System.Text.RegularExpressions;
 
-    using Amazon.Runtime.EventStreams;
-
     using Firefly.PSCloudFormation.Terraform.HclSerializer.Events;
     using Firefly.PSCloudFormation.Terraform.HclSerializer.Schema;
 
@@ -33,7 +31,7 @@
         /// <summary>
         /// Queue of events to process
         /// </summary>
-        private readonly EmitterEventQueue<HclEvent> events = new EmitterEventQueue<HclEvent>(256);
+        private readonly EventQueue events = new EventQueue();
 
         /// <summary>
         /// Stack of indent levels
@@ -177,6 +175,11 @@
 
             try
             {
+                // Eliminate attributes we don't want to serialize,
+                // thus everything remaining in the queue following
+                // this operation will be emitted.
+                new EventQueuePreprocessor(this.events).ProcessQueue();
+
                 this.state = EmitterState.Resource;
                 while (this.events.Any())
                 {
@@ -226,7 +229,7 @@
             {
                 case Scalar scalar:
 
-                    return this.AnalyzeScalar(@event, scalar);
+                    return scalar.Analyze(@event, this.resourceTraits);
 
                 case JsonStart _:
 
@@ -266,80 +269,6 @@
             return collection.Any(e => e is ScalarValue sv && !sv.IsEmpty)
                        ? currentAnalysis
                        : AttributeContent.EmptyCollection;
-        }
-
-        /// <summary>
-        /// Analyzes content of a scalar.
-        /// </summary>
-        /// <param name="key">Key of the value being checked.</param>
-        /// <param name="scalarValue">Value to analyze.</param>
-        /// <returns>Result of analysis.</returns>
-        private AttributeContent AnalyzeScalar(MappingKey key, Scalar scalarValue)
-        {
-            if (!key.Schema.Optional)
-            {
-                return string.IsNullOrWhiteSpace(scalarValue.Value) ? AttributeContent.Empty : AttributeContent.Value;
-            }
-
-            var value = scalarValue.Value;
-
-            if (value == null)
-            {
-                return AttributeContent.ValueDefault;
-            }
-
-            if (this.resourceTraits.IsOmittedConditionalAttrbute(key.Path, value))
-            {
-                return AttributeContent.Empty;
-            }
-
-            // ReSharper disable once SwitchStatementHandlesSomeKnownEnumValuesWithDefault
-            switch (key.Schema.Type)
-            {
-                case SchemaValueType.TypeBool:
-
-                    if (bool.TryParse(value, out var boolValue) && boolValue)
-                    {
-                        return AttributeContent.Value;
-                    }
-
-                    break;
-
-                case SchemaValueType.TypeInt:
-
-                    if (int.TryParse(value, out var intValue) && intValue != 0)
-                    {
-                        return AttributeContent.Value;
-                    }
-
-                    break;
-
-                case SchemaValueType.TypeFloat:
-
-                    if (double.TryParse(value, out var doubleValue) && doubleValue != 0)
-                    {
-                        return AttributeContent.Value;
-                    }
-
-                    break;
-
-                case SchemaValueType.TypeString:
-
-                    return string.IsNullOrEmpty(value) ? AttributeContent.ValueDefault : AttributeContent.Value;
-
-                default:
-
-                    throw new InvalidOperationException($"Invalid \"{key.Schema.Type}\" for scalar value at \"{key.Path}\"");
-            }
-
-            if (value.Length > 0 && char.IsLetter(value.First()) && value.Contains("."))
-            {
-                // A reference
-                return AttributeContent.Value;
-            }
-
-            return AttributeContent.Empty;
-
         }
 
         /// <summary>
@@ -832,7 +761,7 @@
         }
 
         /// <summary>
-        /// Provides a stateful predicate to <see cref="EmitterEventQueue{T}.PeekUntil"/>
+        /// Provides a stateful predicate to the event queue peek/consume methods
         /// to locate the end of a nested group.
         /// </summary>
         // ReSharper disable once StyleCop.SA1650

@@ -14,5 +14,10 @@
 
         /// <inheritdoc />
         internal override EventType Type => EventType.ResourceStart;
+
+        public override string Repr()
+        {
+            return $"new {this.GetType().Name}(\"{this.ResourceType}\", \"{this.ResourceName}\")";
+        }
     }
 }

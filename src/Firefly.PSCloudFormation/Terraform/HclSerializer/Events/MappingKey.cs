@@ -19,13 +19,10 @@
         /// Initializes a new instance of the <see cref="MappingKey"/> class.
         /// </summary>
         /// <param name="key">The key.</param>
-        protected MappingKey(string key)
-            : base(key, key.Any(IsPunctuation))
-        {
-        }
-
+        /// <param name="path">The path.</param>
+        /// <param name="schema">The schema.</param>
         public MappingKey(string key, AttributePath path, ValueSchema schema)
-        : this(key)
+            : this(key)
         {
             if (path != null)
             {
@@ -57,7 +54,14 @@
             }
         }
 
-        public ValueSchema Schema { get; }
+        /// <summary>
+        /// Initializes a new instance of the <see cref="MappingKey"/> class.
+        /// </summary>
+        /// <param name="key">The key.</param>
+        protected MappingKey(string key)
+            : base(key, key.Any(IsPunctuation))
+        {
+        }
 
         /// <summary>
         /// Gets the initial analysis of what this key's value represents.
@@ -75,34 +79,56 @@
         /// </value>
         public bool IsBlockKey => this.Schema.IsBlock;
 
+        /// <summary>
+        /// Gets the provider path for this attribute key.
+        /// </summary>
+        /// <value>
+        /// The path.
+        /// </value>
         public string Path { get; } = string.Empty;
+
+        /// <summary>
+        /// Gets the schema for the value this key represents.
+        /// </summary>
+        /// <value>
+        /// The schema.
+        /// </value>
+        public ValueSchema Schema { get; }
 
         /// <inheritdoc />
         internal override EventType Type => EventType.MappingKey;
 
-        /// <summary>
-        /// Determines whether the specified character is punctuation.
-        /// </summary>
-        /// <param name="c">The character.</param>
-        /// <returns>
-        ///   <c>true</c> if the specified character is punctuation; otherwise, <c>false</c>.
-        /// </returns>
-        private static bool IsPunctuation(char c)
+        /// <inheritdoc />
+        public override bool Equals(HclEvent other)
         {
-            return char.IsPunctuation(c) && !NotPunctuation.Contains(c);
+            if (other is null)
+            {
+                return false;
+            }
+
+            if (object.ReferenceEquals(this, other))
+            {
+                return true;
+            }
+
+            if (other is MappingKey mk)
+            {
+                return this.Path == mk.Path;
+            }
+
+            return false;
         }
 
-        /// <summary>
-        /// Converts to string.
-        /// </summary>
-        /// <returns>
-        /// A <see cref="System.String" /> that represents this instance.
-        /// </returns>
-        public override string ToString()
+        /// <inheritdoc />
+        public override int GetHashCode(HclEvent obj)
         {
-            return $"{base.ToString()}, IsBlockKey = {this.IsBlockKey}";
-        }
+            if (obj is MappingKey mk)
+            {
+                return mk.Path.GetHashCode();
+            }
 
+            return obj.GetHashCode();
+        }
 
         public bool ShouldEmitAttribute(AttributeContent analysis)
         {
@@ -123,5 +149,36 @@
                        }.Contains(analysis);
         }
 
+        /// <summary>
+        /// Converts to string.
+        /// </summary>
+        /// <returns>
+        /// A <see cref="System.String" /> that represents this instance.
+        /// </returns>
+        public override string ToString()
+        {
+            return $"{this.Path}, IsBlockKey = {this.IsBlockKey}";
+        }
+
+        public override string Repr()
+        {
+            var schema = this.Path.StartsWith("Statement.")
+                             ? "ValueSchema.JsonSchema"
+                             : $"IamRoleSchema.GetAttributeByPath(\"{this.Path}\")";
+            return
+                $"new {this.GetType().Name}(\"{this.Value}\", new {nameof(AttributePath)}(\"{this.Path}\"), {schema})";
+        }
+
+        /// <summary>
+        /// Determines whether the specified character is punctuation.
+        /// </summary>
+        /// <param name="c">The character.</param>
+        /// <returns>
+        ///   <c>true</c> if the specified character is punctuation; otherwise, <c>false</c>.
+        /// </returns>
+        private static bool IsPunctuation(char c)
+        {
+            return char.IsPunctuation(c) && !NotPunctuation.Contains(c);
+        }
     }
 }

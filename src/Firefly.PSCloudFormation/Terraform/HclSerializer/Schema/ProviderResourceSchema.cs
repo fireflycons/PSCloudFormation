@@ -12,6 +12,19 @@
     internal class ProviderResourceSchema
     {
         /// <summary>
+        /// Represents a value that appears in state file that is not defined in the provider schema
+        /// e.g. <c></c>
+        /// </summary>
+        public static readonly ValueSchema MissingFromSchemaValueSchema = new ValueSchema
+                                                                              {
+                                                                                  Type = SchemaValueType.TypeInvalid,
+                                                                                  ConfigMode =
+                                                                                      SchemaConfigMode
+                                                                                          .SchemaConfigModeAuto,
+                                                                                  Computed = true
+                                                                              };
+
+        /// <summary>
         /// Schema for "id", meta-argument which is implicit on all resources.
         /// </summary>
         private static readonly ValueSchema IdentitySchema = new ValueSchema
@@ -108,17 +121,6 @@
                                                                                             }
                                                                                 }
                                                                  };
-
-        /// <summary>
-        /// Represents a value that appears in state file that is not defined in the provider schema
-        /// e.g. <c></c>
-        /// </summary>
-        private static readonly ValueSchema MissingFromSchemaValueSchema = new ValueSchema
-                                                                               {
-                                                                                   Type = SchemaValueType.TypeInvalid,
-                                                                                   ConfigMode = SchemaConfigMode.SchemaConfigModeAuto,
-                                                                                   Computed = true
-                                                                               };
 
         /// <summary>
         /// Gets or sets the resource attributes schema.
@@ -228,7 +230,8 @@
                         currentResource = resourceSchema;
                         break;
 
-                    case ValueSchema valueSchema when pathComponents.Count == 1 && currentAttribute.Type == SchemaValueType.TypeMap:
+                    case ValueSchema valueSchema
+                        when pathComponents.Count == 1 && currentAttribute.Type == SchemaValueType.TypeMap:
 
                         return valueSchema;
 
@@ -261,8 +264,7 @@
         /// </returns>
         private static bool IsListIndexIndicator(string pathComponent, bool ignoreDigits = false)
         {
-            var isListIndicator = pathComponent != null
-                   && (pathComponent == "*" || pathComponent == "#");
+            var isListIndicator = pathComponent != null && (pathComponent == "*" || pathComponent == "#");
 
             if (ignoreDigits)
             {

@@ -21,11 +21,6 @@
         Empty,
 
         /// <summary>
-        /// Next event is a scalar with value empty string
-        /// </summary>
-        EmptyString,
-
-        /// <summary>
         /// Next group of events is an empty sequence, mapping, block including any nesting of the same.
         /// </summary>
         EmptyCollection,
@@ -56,8 +51,10 @@
         Value,
 
         /// <summary>
-        /// Attribute has default value as defined by the schema
+        /// The key was not found.
+        /// May occur during emitter queue preprocessing if a key
+        /// has previously been eliminated.
         /// </summary>
-        ValueDefault,
+        NotFound,
     }
 }

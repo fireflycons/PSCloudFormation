@@ -27,14 +27,15 @@ type SimpleResource struct {
 
 // Simplified schema object containing only the fields we need.
 type SimpleSchema struct {
-	Type         schema.ValueType
-	ConfigMode   schema.SchemaConfigMode
-	Optional     bool        `json:",omitempty"`
-	Required     bool        `json:",omitempty"`
-	Default      interface{} `json:",omitempty"`
-	InputDefault string      `json:",omitempty"`
-	Computed     bool        `json:",omitempty"`
-	Elem         interface{} `json:",omitempty"`
+	Type          schema.ValueType
+	ConfigMode    schema.SchemaConfigMode
+	Optional      bool        `json:",omitempty"`
+	Required      bool        `json:",omitempty"`
+	Default       interface{} `json:",omitempty"`
+	ConflictsWith []string    `json:",omitempty"`
+	InputDefault  string      `json:",omitempty"`
+	Computed      bool        `json:",omitempty"`
+	Elem          interface{} `json:",omitempty"`
 }
 
 func recurseSchema(elem interface{}) interface{} {
@@ -54,14 +55,15 @@ func recurseSchema(elem interface{}) interface{} {
 func copySchema(s *schema.Schema) *SimpleSchema {
 
 	return &SimpleSchema{
-		Type:         s.Type,
-		ConfigMode:   s.ConfigMode,
-		Optional:     s.Optional,
-		Required:     s.Required,
-		Default:      s.Default,
-		InputDefault: s.InputDefault,
-		Computed:     s.Computed,
-		Elem:         recurseSchema(s.Elem),
+		Type:          s.Type,
+		ConfigMode:    s.ConfigMode,
+		Optional:      s.Optional,
+		Required:      s.Required,
+		Default:       s.Default,
+		ConflictsWith: s.ConflictsWith,
+		InputDefault:  s.InputDefault,
+		Computed:      s.Computed,
+		Elem:          recurseSchema(s.Elem),
 	}
 }
 
