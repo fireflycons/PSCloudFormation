@@ -38,6 +38,7 @@
                 return null;
             }
 
+            // ReSharper disable once SwitchStatementHandlesSomeKnownEnumValuesWithDefault
             switch (dependency.DependencyType)
             {
                 case DependencyType.Resource:

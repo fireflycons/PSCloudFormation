@@ -1,0 +1,51 @@
+{
+    "version": 4,
+    "terraform_version": "1.0.9",
+    "serial": 1,
+    "lineage": "9b5b9a0e-a324-6f97-74a3-d5f717318c76",
+    "outputs": {},
+    "resources": [
+        {
+            "mode": "managed",
+            "type": "aws_api_gateway_usage_plan",
+            "name": "UsagePlan",
+            "provider": "provider[\"registry.terraform.io/hashicorp/aws\"]",
+            "instances": [
+                {
+                    "schema_version": 0,
+                    "attributes": {
+                        "api_stages": [
+                            {
+                                "api_id": "syo9ylljy1",
+                                "stage": "prod",
+                                "throttle": []
+                            }
+                        ],
+                        "arn": "arn:aws:apigateway:eu-west-1::/usageplans/vjd5ye",
+                        "description": "test-usage-plan",
+                        "id": "vjd5ye",
+                        "name": "xrefm-Usage-1KZ8MC4H44GLW",
+                        "product_code": "",
+                        "quota_settings": [
+                            {
+                                "limit": 1000,
+                                "offset": 0,
+                                "period": "WEEK"
+                            }
+                        ],
+                        "tags": {},
+                        "tags_all": {},
+                        "throttle_settings": [
+                            {
+                                "burst_limit": 20,
+                                "rate_limit": 20
+                            }
+                        ]
+                    },
+                    "sensitive_attributes": [],
+                    "private": "eyJzY2hlbWFfdmVyc2lvbiI6IjAifQ=="
+                }
+            ]
+        }
+    ]
+}

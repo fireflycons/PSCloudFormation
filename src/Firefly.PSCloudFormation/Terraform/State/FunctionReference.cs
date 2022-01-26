@@ -132,6 +132,7 @@
                 {
                     case JValue jv:
 
+                        // ReSharper disable once SwitchStatementHandlesSomeKnownEnumValuesWithDefault
                         switch (jv.Type)
                         {
                             case JTokenType.String:

@@ -36,3 +36,5 @@ Calls the AWS CloudFormation UpdateStack API operation.
 ### [New-PSCFNChangeset](New-PSCFNChangeset.md)
 Calls the AWS CloudFormation CreateChangeSet API operation.
 
+### [Export-PSCFNTerraform](Export-PSCFNTerraform.md)
+Export an existing CloudFormation stack to Terraform Configuration.

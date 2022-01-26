@@ -10,6 +10,7 @@
         /// </summary>
         /// <param name="objectAddress">The object address.</param>
         /// <param name="index">The index.</param>
+        // ReSharper disable once UnusedMember.Global - Used by reflection
         public ModuleReference(string objectAddress, int index)
             : base(objectAddress, index)
         {

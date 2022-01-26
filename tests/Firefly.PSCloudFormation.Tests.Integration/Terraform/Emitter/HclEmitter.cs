@@ -53,6 +53,7 @@
         [InlineData("aws_lb_listener.json")]
         [InlineData("aws_ecs_task_definition.json")]
         [InlineData("aws_ecs_service.json")]
+        [InlineData("aws_api_gateway_usage_plan.json")]
         public void ShouldSerializeResource(string stateFile)
         {
             this.output.WriteLine($"Serialize {stateFile}");

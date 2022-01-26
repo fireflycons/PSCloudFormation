@@ -1,0 +1,94 @@
+{
+    "ami": "ami-0aaada7cbb0d829fc",
+    "arn": "arn:aws:ec2:eu-west-1:123456789012:instance/i-05c2ec6ce1d453b0c",
+    "associate_public_ip_address": false,
+    "availability_zone": "eu-west-1a",
+    "capacity_reservation_specification": [
+        {
+            "capacity_reservation_preference": "open",
+            "capacity_reservation_target": []
+        }
+    ],
+    "cpu_core_count": 1,
+    "cpu_threads_per_core": 2,
+    "credit_specification": [
+        {
+            "cpu_credits": "unlimited"
+        }
+    ],
+    "disable_api_termination": false,
+    "ebs_block_device": [],
+    "ebs_optimized": false,
+    "enclave_options": [
+        {
+            "enabled": false
+        }
+    ],
+    "ephemeral_block_device": [],
+    "get_password_data": false,
+    "hibernation": false,
+    "host_id": null,
+    "iam_instance_profile": "torrent-instance-InstanceProfile-141H41H9KZ5VQ",
+    "id": "i-05c2ec6ce1d453b0c",
+    "instance_initiated_shutdown_behavior": "stop",
+    "instance_state": "stopped",
+    "instance_type": "t3.medium",
+    "ipv6_address_count": 0,
+    "ipv6_addresses": [],
+    "key_name": "kp-eu-west-1",
+    "launch_template": [],
+    "metadata_options": [
+        {
+            "http_endpoint": "enabled",
+            "http_put_response_hop_limit": 1,
+            "http_tokens": "optional"
+        }
+    ],
+    "monitoring": false,
+    "network_interface": [],
+    "outpost_arn": "",
+    "password_data": "",
+    "placement_group": "",
+    "placement_partition_number": null,
+    "primary_network_interface_id": "eni-0986ec5de5cdd445e",
+    "private_dns": "ip-10-96-0-24.eu-west-1.compute.internal",
+    "private_ip": "10.96.0.24",
+    "public_dns": "",
+    "public_ip": "",
+    "root_block_device": [
+        {
+            "delete_on_termination": true,
+            "device_name": "/dev/sda1",
+            "encrypted": false,
+            "iops": 450,
+            "kms_key_id": "",
+            "tags": {},
+            "throughput": 0,
+            "volume_id": "vol-0b2b0d6c1139c5527",
+            "volume_size": 150,
+            "volume_type": "gp2"
+        }
+    ],
+    "secondary_private_ips": [],
+    "security_groups": [],
+    "source_dest_check": true,
+    "subnet_id": "subnet-07fc084aea2e3dcee",
+    "tags": {
+        "Name": "uTorrent"
+    },
+    "tags_all": {
+        "Name": "uTorrent"
+    },
+    "tenancy": "default",
+    "timeouts": {
+        "create": null,
+        "delete": null,
+        "update": null
+    },
+    "user_data": null,
+    "user_data_base64": null,
+    "volume_tags": null,
+    "vpc_security_group_ids": [
+        "sg-067959104c87c364b"
+    ]
+}

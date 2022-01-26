@@ -42,6 +42,7 @@
 
             context.TargetAttributePath = property.Value.Path;
 
+            // ReSharper disable once SwitchStatementMissingSomeEnumCasesNoDefault
             switch (jv.Type)
             {
                 case JTokenType.String:

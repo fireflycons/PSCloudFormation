@@ -24,6 +24,7 @@
         /// <returns>The evaluated result.</returns>
         public static object Evaluate(this IIntrinsic self, IntrinsicInfo intrinsicInfo)
         {
+            // ReSharper disable once SwitchStatementHandlesSomeKnownEnumValuesWithDefault
             switch (self.Type)
             {
                 case IntrinsicType.Join:

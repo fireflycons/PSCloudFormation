@@ -3,6 +3,7 @@
     using System.Linq;
 
     using Firefly.PSCloudFormation.Terraform.HclSerializer.Events;
+    using Firefly.PSCloudFormation.Terraform.HclSerializer.Schema;
     using Firefly.PSCloudFormation.Terraform.State;
     using Firefly.PSCloudFormation.Utils.JsonTraversal;
 
@@ -67,7 +68,10 @@
 
                 if (requirePolicy && jsonDocument is JObject jo && !jo.ContainsKey("Statement"))
                 {
-                    throw new HclSerializerException(resourceName, resourceType, "Expected policy document and got JSON that is not a policy");
+                    throw new HclSerializerException(
+                        resourceName,
+                        resourceType,
+                        "Expected policy document and got JSON that is not a policy");
                 }
 
                 isJson = true;
@@ -103,12 +107,23 @@
         {
             foreach (var r in stateFile.FilteredResources(moduleName))
             {
-                this.emitter.Emit(new ResourceStart(r.Type, r.Name));
-                r.Instances.First().Attributes.Accept(
-                    new EmitterVistor(),
-                    new EmitterContext(this.emitter, r.Type, r.Name));
-                this.emitter.Emit(new ResourceEnd());
+                this.Serialize(r.Type, r.Name, r.Instances.First().Attributes);
             }
+        }
+
+        /// <summary>
+        /// Serializes an individual resource.
+        /// </summary>
+        /// <param name="resourceType">Terraform type of the resource.</param>
+        /// <param name="resourceName">Name of the resource</param>
+        /// <param name="resourceAttributes">Resource attributes from state file.</param>
+        public void Serialize(string resourceType, string resourceName, JObject resourceAttributes)
+        {
+            this.emitter.Emit(new ResourceStart(resourceType, resourceName));
+            resourceAttributes.Accept(
+                new EmitterVistor(),
+                new EmitterContext(this.emitter, resourceType, resourceName));
+            this.emitter.Emit(new ResourceEnd());
         }
 
         /// <summary>
@@ -120,22 +135,28 @@
             /// Initializes a new instance of the <see cref="EmitterContext"/> class.
             /// </summary>
             /// <param name="emitter">The emitter.</param>
-            /// <param name="currentResourceName">Name of the current resource.</param>
             /// <param name="currentResourceType">Type of the current resource.</param>
-            public EmitterContext(IHclEmitter emitter, string currentResourceName, string currentResourceType)
+            /// <param name="currentResourceName">Name of the current resource.</param>
+            public EmitterContext(IHclEmitter emitter, string currentResourceType, string currentResourceName)
             {
                 this.Emitter = emitter;
                 this.CurrentResourceName = currentResourceName;
                 this.CurrentResourceType = currentResourceType;
+                this.ResourceSchema = AwsSchema.GetResourceSchema(this.CurrentResourceType);
             }
 
             /// <summary>
-            /// Gets the emitter.
+            /// Gets a value indicating whether parsing embedded JSON.
+            /// </summary>
+            public bool IsJson { get; private set; }
+
+            /// <summary>
+            /// Gets the resource schema.
             /// </summary>
             /// <value>
-            /// The emitter.
+            /// The resource schema.
             /// </value>
-            public IHclEmitter Emitter { get; }
+            public ResourceSchema ResourceSchema { get; }
 
             /// <summary>
             /// Gets the name of the current resource.
@@ -152,6 +173,36 @@
             /// The type of the current resource.
             /// </value>
             public string CurrentResourceType { get; }
+
+            /// <summary>
+            /// Gets the emitter.
+            /// </summary>
+            /// <value>
+            /// The emitter.
+            /// </value>
+            private IHclEmitter Emitter { get; }
+
+            /// <summary>
+            /// Emits the specified event.
+            /// </summary>
+            /// <param name="event">The event.</param>
+            public void Emit(HclEvent @event)
+            {
+                switch (@event)
+                {
+                    case JsonStart _:
+
+                        this.IsJson = true;
+                        break;
+
+                    case JsonEnd _:
+
+                        this.IsJson = false;
+                        break;
+                }
+
+                this.Emitter.Emit(@event);
+            }
 
             /// <inheritdoc />
             public EmitterContext Next(int index)
@@ -174,35 +225,41 @@
             /// <inheritdoc />
             protected override void Visit(JArray json, EmitterContext context)
             {
-                context.Emitter.Emit(new SequenceStart());
+                context.Emit(new SequenceStart());
                 base.Visit(json, context);
-                context.Emitter.Emit(new SequenceEnd());
+                context.Emit(new SequenceEnd());
             }
 
             /// <inheritdoc />
             protected override void Visit(JObject json, EmitterContext context)
             {
-                context.Emitter.Emit(new MappingStart());
+                context.Emit(new MappingStart());
                 base.Visit(json, context);
-                context.Emitter.Emit(new MappingEnd());
+                context.Emit(new MappingEnd());
             }
 
             /// <inheritdoc />
             protected override void Visit(JConstructor json, EmitterContext context)
             {
-                context.Emitter.Emit(new ScalarValue(Reference.FromJConstructor(json)));
+                context.Emit(new ScalarValue(Reference.FromJConstructor(json)));
             }
 
             /// <inheritdoc />
             protected override void Visit(JProperty json, EmitterContext context)
             {
-                context.Emitter.Emit(new MappingKey(json.Name));
+                var path = new AttributePath(json.Path);
+                context.Emit(
+                    new MappingKey(
+                        json.Name,
+                        path,
+                        context.IsJson ? ValueSchema.JsonSchema : context.ResourceSchema.GetAttributeByPath(path)));
                 base.Visit(json, context);
             }
 
             /// <inheritdoc />
             protected override void Visit(JValue json, EmitterContext context)
             {
+                // ReSharper disable once SwitchStatementHandlesSomeKnownEnumValuesWithDefault
                 switch (json.Type)
                 {
                     case JTokenType.Property:
@@ -211,7 +268,10 @@
                     case JTokenType.Raw:
                     case JTokenType.Bytes:
 
-                        throw new HclSerializerException(context.CurrentResourceName, context.CurrentResourceType, $"Unexpected token {json.Type} in state file.");
+                        throw new HclSerializerException(
+                            context.CurrentResourceName,
+                            context.CurrentResourceType,
+                            $"Unexpected token {json.Type} in state file.");
 
                     default:
 
@@ -219,14 +279,16 @@
 
                         if (scalar.IsJsonDocument)
                         {
-                            var nestedJson = scalar.JsonDocumentType == JTokenType.Object ? (JContainer)JObject.Parse(scalar.Value) : JArray.Parse(scalar.Value);
-                            context.Emitter.Emit(new JsonStart());
+                            var nestedJson = scalar.JsonDocumentType == JTokenType.Object
+                                                 ? (JContainer)JObject.Parse(scalar.Value)
+                                                 : JArray.Parse(scalar.Value);
+                            context.Emit(new JsonStart());
                             nestedJson.Accept(this, context);
-                            context.Emitter.Emit(new JsonEnd());
+                            context.Emit(new JsonEnd());
                         }
                         else
                         {
-                            context.Emitter.Emit(scalar);
+                            context.Emit(scalar);
                         }
 
                         break;

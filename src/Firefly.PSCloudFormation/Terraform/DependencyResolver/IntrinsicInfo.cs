@@ -114,12 +114,7 @@
                     return IntrinsicTargetType.Module;
                 }
 
-                if (this.TargetResource != null)
-                {
-                    return IntrinsicTargetType.Resource;
-                }
-
-                return IntrinsicTargetType.Unknown;
+                return this.TargetResource != null ? IntrinsicTargetType.Resource : IntrinsicTargetType.Unknown;
             }
         }
     }

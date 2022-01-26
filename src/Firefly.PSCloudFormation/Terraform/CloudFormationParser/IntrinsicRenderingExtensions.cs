@@ -12,7 +12,7 @@
     using Firefly.CloudFormationParser.Intrinsics.Functions;
     using Firefly.PSCloudFormation.Terraform.DependencyResolver;
     using Firefly.PSCloudFormation.Terraform.Hcl;
-    using Firefly.PSCloudFormation.Terraform.HclSerializer.Traits;
+    using Firefly.PSCloudFormation.Terraform.HclSerializer.Schema;
     using Firefly.PSCloudFormation.Terraform.State;
     using Firefly.PSCloudFormation.Utils;
 
@@ -444,7 +444,7 @@
             }
             else
             {
-                var traits = ResourceTraitsCollection.Get(resource.TerraformType);
+                var traits = AwsSchema.GetResourceTraits(resource.TerraformType);
 
                 attributeName = traits.AttributeMap.ContainsKey(attributeName)
                                     ? traits.AttributeMap[attributeName]

@@ -1,6 +1,5 @@
 ﻿namespace Firefly.PSCloudFormation.Terraform.Importers.ApiGatewayV2
 {
-    using System;
     using System.Linq;
 
     /// <summary>
