@@ -130,25 +130,6 @@
             return obj.GetHashCode();
         }
 
-        public bool ShouldEmitAttribute(AttributeContent analysis)
-        {
-            if (this.Schema.Required)
-            {
-                return true;
-            }
-
-            if (this.Schema.Computed && !this.Schema.Optional)
-            {
-                return false;
-            }
-
-            return new[]
-                       {
-                           AttributeContent.BlockList, AttributeContent.BlockObject, AttributeContent.Sequence,
-                           AttributeContent.Mapping, AttributeContent.Value
-                       }.Contains(analysis);
-        }
-
         /// <summary>
         /// Converts to string.
         /// </summary>
@@ -158,15 +139,6 @@
         public override string ToString()
         {
             return $"{this.Path}, IsBlockKey = {this.IsBlockKey}";
-        }
-
-        public override string Repr()
-        {
-            var schema = this.Path.StartsWith("Statement.")
-                             ? "ValueSchema.JsonSchema"
-                             : $"IamRoleSchema.GetAttributeByPath(\"{this.Path}\")";
-            return
-                $"new {this.GetType().Name}(\"{this.Value}\", new {nameof(AttributePath)}(\"{this.Path}\"), {schema})";
         }
 
         /// <summary>

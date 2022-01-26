@@ -46,7 +46,7 @@
         /// <value>
         /// As collection.
         /// </value>
-        public IReadOnlyCollection<HclEvent> AsCollection => (IReadOnlyCollection<HclEvent>)this.queue;
+        public IReadOnlyCollection<HclEvent> AsCollection => this.queue;
 
         /// <summary>
         /// Gets the count of items in the queue.
@@ -178,17 +178,6 @@
         }
 
         /// <summary>
-        /// Consume items from, and including the front of the queue until a condition is met.
-        /// </summary>
-        /// <param name="untilFunc">The until function.</param>
-        /// <param name="consumeLastItem">If <c>true</c> consume the item that ends the iteration.</param>
-        /// <summary></summary>
-        public void ConsumeUntil(Func<HclEvent, bool> untilFunc, bool consumeLastItem)
-        {
-            this.ConsumeUntil(null, untilFunc, consumeLastItem);
-        }
-
-        /// <summary>
         /// Consume items from, and including starting node until a condition is met.
         /// </summary>
         /// <param name="startFrom">Node in the queue to begin consumption. If <c>null</c>, start at the front of the queue.</param>
@@ -224,17 +213,6 @@
             }
 
             throw new InvalidOperationException("Reached end of queue before condition was met.");
-        }
-
-        /// <summary>
-        /// Peek items starting at front of queue until a condition is met.
-        /// </summary>
-        /// <param name="untilFunc">The until function.</param>
-        /// <param name="emitLastItem">If <c>true</c> emit the item that ends the iteration.</param>
-        /// <returns>Enumerable of items peeked.</returns>
-        public IEnumerable<HclEvent> PeekUntil(Func<HclEvent, bool> untilFunc, bool emitLastItem)
-        {
-            return this.PeekUntil(null, untilFunc, emitLastItem);
         }
 
         /// <summary>
@@ -280,6 +258,7 @@
         /// Class for the debugger to use to display queue items.
         /// </summary>
         [DebuggerNonUserCode]
+        // ReSharper disable once UnusedType.Local
         private sealed class DebugView
         {
             /// <summary>
@@ -303,6 +282,7 @@
             /// The items.
             /// </value>
             [DebuggerBrowsable(DebuggerBrowsableState.RootHidden)]
+            // ReSharper disable once UnusedMember.Local
             public HclEvent[] Items
             {
                 get

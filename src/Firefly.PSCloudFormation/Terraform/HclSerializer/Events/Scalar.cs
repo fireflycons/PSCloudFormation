@@ -229,11 +229,5 @@
 
             return AttributeContent.Empty;
         }
-
-
-        public override string Repr()
-        {
-            return $"new {this.GetType().Name}(\"{this.Value}\", {this.IsQuoted.ToString().ToLowerInvariant()})";
-        }
     }
 }

@@ -49,6 +49,8 @@
         /// </summary>
         /// <param name="info">The <see cref="T:System.Runtime.Serialization.SerializationInfo"></see> that holds the serialized object data about the exception being thrown.</param>
         /// <param name="context">The <see cref="T:System.Runtime.Serialization.StreamingContext"></see> that contains contextual information about the source or destination.</param>
+        // ReSharper disable once StyleCop.SA1642
+        // ReSharper disable once StyleCop.SA1202
         protected TerraformRunnerException(SerializationInfo info, StreamingContext context)
             : base(info, context)
         {

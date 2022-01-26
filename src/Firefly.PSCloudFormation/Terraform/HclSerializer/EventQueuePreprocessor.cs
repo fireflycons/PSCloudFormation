@@ -223,7 +223,7 @@
             if (resourceKey == null)
             {
                 throw new InvalidOperationException(
-                    $"Expected ResourceStart but could not find it. Event queue is in invalid state.");
+                    "Expected ResourceStart but could not find it. Event queue is in invalid state.");
             }
 
             return ((ResourceStart)resourceKey).ResourceType;

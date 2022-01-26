@@ -37,20 +37,5 @@
 
         /// <inheritdoc />
         internal override EventType Type => EventType.ScalarValue;
-
-        public override string Repr()
-        {
-            if (this.Value is string s)
-            {
-                return $"new {this.GetType().Name}(\"{s}\")";
-            }
-
-            if (this.Value == null)
-            {
-                return $"new {this.GetType().Name}((string)null)";
-            }
-
-            return $"new {this.GetType().Name}({this.Value})";
-        }
     }
 }

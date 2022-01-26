@@ -93,12 +93,7 @@
                 return true;
             }
 
-            if (obj.GetType() != this.GetType())
-            {
-                return false;
-            }
-
-            return this.Equals((HclEvent)obj);
+            return obj.GetType() == this.GetType() && this.Equals((HclEvent)obj);
         }
 
         /// <summary>
@@ -122,11 +117,6 @@
         public override int GetHashCode()
         {
             return (int)this.Type;
-        }
-
-        public virtual string Repr()
-        {
-            return $"new {this.GetType().Name}()";
         }
 
         /// <summary>
