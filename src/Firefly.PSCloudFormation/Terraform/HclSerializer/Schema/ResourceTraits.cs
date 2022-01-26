@@ -24,7 +24,6 @@
         public Dictionary<string, string> AttributeMap { get; set; } = new Dictionary<string, string>();
 
         /// <inheritdoc />
-        /// <inheritdoc />
         public List<List<string>> ConflictingArguments { get; set; } = new List<List<string>>();
 
         /// <inheritdoc />
@@ -38,12 +37,6 @@
         public Scalar ApplyDefaultValue(string currentPath, Scalar scalar)
         {
             return scalar;
-        }
-
-        /// <inheritdoc />
-        public bool IsConflictingArgument(string currentPath)
-        {
-            return false;
         }
     }
 }

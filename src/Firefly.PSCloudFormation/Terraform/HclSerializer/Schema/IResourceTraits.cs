@@ -61,12 +61,5 @@
         /// <param name="scalar">The scalar to check</param>
         /// <returns>Original scalar if unchanged, else new scalar with default value set.</returns>
         Scalar ApplyDefaultValue(string currentPath, Scalar scalar);
-
-        /// <summary>
-        /// Determines if argument at current path would conflict with another resource argument, thus should not be emitted
-        /// </summary>
-        /// <param name="currentPath">The current path.</param>
-        /// <returns><c>true</c> if the argument is conflicting; else <c>false</c></returns>
-        bool IsConflictingArgument(string currentPath);
     }
 }

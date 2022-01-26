@@ -134,7 +134,7 @@
         /// </summary>
         internal void RemoveComputedAttributes()
         {
-            foreach (var key in this.queue.GetKeys().Where(k => k.Schema.IsComputedOnly).Distinct().ToList())
+            foreach (var key in this.queue.GetKeys().Where(k => k.Schema.IsComputedOnly).ToList())
             {
                 this.queue.ConsumeKey(key);
             }

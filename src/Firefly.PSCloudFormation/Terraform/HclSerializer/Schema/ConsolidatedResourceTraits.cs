@@ -69,18 +69,5 @@
 
             return scalar;
         }
-
-        /// <inheritdoc />
-        public bool IsConflictingArgument(string currentPath)
-        {
-            if (!this.ConflictingArguments.Any())
-            {
-                return false;
-            }
-
-            return this.ConflictingArguments.Any(
-                argumentGroup => argumentGroup.Any(currentPath.IsLike)
-                                 && !currentPath.IsLike(argumentGroup.First()));
-        }
     }
 }

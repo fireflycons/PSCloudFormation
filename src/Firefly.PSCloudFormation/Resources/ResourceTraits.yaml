@@ -66,9 +66,12 @@
   Resources:
     - Resource: aws_cognito_user_pool
       ConflictingArguments:
-        - - verification_message_template
-          - email_verification_message
-          - email_verification_subject
+        - - email_verification_message
+          - verification_message_template.0.email_message
+        - - email_verification_subject
+          - verification_message_template.0.email_subject
+        - - sms_verification_message
+          - verification_message_template.0.sms_message
 
 - Group: DynamoDB
   Resources:
