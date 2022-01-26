@@ -215,63 +215,6 @@
         }
 
         /// <summary>
-        /// Analyzes an attribute's value to see whether it has a value, is null or is an empty collection.
-        /// </summary>
-        /// <param name="event">The event.</param>
-        /// <returns>Result of analysis.</returns>
-        /// <exception cref="Firefly.PSCloudFormation.Terraform.HclSerializer.HclSerializerException">Expected MappingStart, SequenceStart or PolicyStart. Got {nextEvent.GetType().Name}</exception>
-        private AttributeContent AnalyzeAttribute(MappingKey @event)
-        {
-            var nextEvent = this.events.Peek();
-            var currentAnalysis = @event.InitialAnalysis;
-
-            switch (nextEvent)
-            {
-                case Scalar scalar:
-
-                    return scalar.Analyze(@event, this.resourceTraits);
-
-                case JsonStart _:
-
-                    return AttributeContent.Value;
-            }
-
-            if (this.isJson)
-            {
-                // When reading embedded JSON, emit it all
-                switch (nextEvent)
-                {
-                    case MappingStart _:
-
-                        return AttributeContent.Mapping;
-
-                    case SequenceStart _:
-
-                        return AttributeContent.Sequence;
-
-                    default:
-
-                        return AttributeContent.Value;
-                }
-            }
-
-            if (!(nextEvent is CollectionStart))
-            {
-                throw new HclSerializerException(
-                    this.currentResourceName,
-                    this.currentResourceType,
-                    $"Expected MappingStart, SequenceStart or JsonStart. Got {nextEvent.GetType().Name}");
-            }
-
-            // Read ahead the entire collection
-            var collection = this.events.PeekUntil(new CollectionPeeker().Done, true).ToList();
-
-            return collection.Any(e => e is ScalarValue sv && !sv.IsEmpty)
-                       ? currentAnalysis
-                       : AttributeContent.EmptyCollection;
-        }
-
-        /// <summary>
         /// Emits a policy end.
         /// </summary>
         /// <param name="event">The event.</param>
@@ -355,14 +298,6 @@
         private void EmitMappingKey(HclEvent @event)
         {
             var key = GetTypedEvent<MappingKey>(@event);
-            var lastKey = this.currentKey;
-            var analysis = this.AnalyzeAttribute(key);
-
-            if (analysis == AttributeContent.EmptyCollection)
-            {
-                this.events.ConsumeUntil(new CollectionPeeker().Done, true);
-                return;
-            }
 
             this.currentKey = key.Value;
 
@@ -371,13 +306,6 @@
             {
                 if (!this.isJson)
                 {
-                    if (!key.ShouldEmitAttribute(analysis) || this.resourceTraits.IsConflictingArgument(key.Path))
-                    {
-                        this.events.ConsumeUntil(new CollectionPeeker().Done, true);
-                        this.currentKey = lastKey;
-                        return;
-                    }
-
                     this.currentPath = key.Path;
                 }
 
@@ -386,7 +314,7 @@
             else
             {
                 // ReSharper disable once SwitchStatementHandlesSomeKnownEnumValuesWithDefault
-                switch (analysis)
+                switch (key.InitialAnalysis)
                 {
                     case AttributeContent.BlockList:
 
