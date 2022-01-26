@@ -1,5 +1,9 @@
 # Release Notes
 
+# v.Next
+
+* Enhancement - Employ the exported resource/attribute schema from `terraform-provider-aws` to correctly determine which attributes from the state file should be serialized to HCL.
+
 # 4.1.16.3
 
 * Enhancement - Terraform Export now pulls nested stacks as Terraform modules.
