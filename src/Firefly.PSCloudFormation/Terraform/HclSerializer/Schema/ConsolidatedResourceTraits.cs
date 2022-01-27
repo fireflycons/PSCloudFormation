@@ -20,7 +20,6 @@
         /// </summary>
         /// <param name="sharedTraits">The shared traits.</param>
         /// <param name="specificResourceTraits">The specific resource traits.</param>
-        // ReSharper disable once UnusedParameter.Local - It might be one day
         public ConsolidatedResourceTraits(IResourceTraits sharedTraits, IResourceTraits specificResourceTraits)
         {
             // No conflicting arguments defined for all resources
@@ -38,6 +37,9 @@
             this.ResourceType = specificResourceTraits.ResourceType;
 
             this.MissingFromSchema = specificResourceTraits.MissingFromSchema;
+
+            this.ComputedAttributes =
+                sharedTraits.ComputedAttributes.Concat(specificResourceTraits.ComputedAttributes).ToList();
         }
 
         /// <inheritdoc />
@@ -45,6 +47,9 @@
 
         /// <inheritdoc />
         public List<ConditionalAttribute> ConditionalAttributes { get; }
+
+        /// <inheritdoc />
+        public List<string> ComputedAttributes { get; set; }
 
         /// <inheritdoc />
         public List<string> MissingFromSchema { get; }

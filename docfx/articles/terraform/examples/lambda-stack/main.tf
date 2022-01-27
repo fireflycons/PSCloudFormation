@@ -103,9 +103,7 @@ resource "aws_lambda_permission" "LambdaFunctionSheduledEventPermission" {
 }
 
 resource "aws_s3_bucket" "S3Bucket" {
-  arn            = "arn:aws:s3:::test-lambda-s3bucket-tq166twr9fly"
-  bucket         = "test-lambda-s3bucket-tq166twr9fly"
-  hosted_zone_id = "Z1BKCTXD74EZPE"
-  request_payer  = "BucketOwner"
+  bucket        = "test-lambda-s3bucket-tq166twr9fly"
+  request_payer = "BucketOwner"
 }
 

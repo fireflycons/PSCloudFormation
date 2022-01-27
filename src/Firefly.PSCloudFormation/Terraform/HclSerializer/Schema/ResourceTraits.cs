@@ -18,6 +18,9 @@
         public List<ConditionalAttribute> ConditionalAttributes { get; set; } = new List<ConditionalAttribute>();
 
         /// <inheritdoc />
+        public List<string> ComputedAttributes { get; set; } = new List<string>();
+
+        /// <inheritdoc />
         public List<string> MissingFromSchema { get; set; } = new List<string>();
 
         /// <inheritdoc />

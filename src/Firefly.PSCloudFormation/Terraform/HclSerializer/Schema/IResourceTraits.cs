@@ -29,6 +29,16 @@
         List<ConditionalAttribute> ConditionalAttributes { get; }
 
         /// <summary>
+        /// Gets the computed attributes.
+        /// Attributes that should be treated as computed, even when the schema says otherwise
+        /// such as arn (everywhere) and aws_s3_bucket.hosted_zone_id
+        /// </summary>
+        /// <value>
+        /// The computed attributes.
+        /// </value>
+        List<string> ComputedAttributes { get; }
+
+        /// <summary>
         /// Gets the list of attributes missing from the provider schema.
         /// Some attributes show up in the state file which aren't defined in the resource schema.
         /// e.g. <c>aws_dynamodb_table - ttl.0.kms_key_arn</c>

@@ -44,7 +44,9 @@
       ConflictingArguments: []        # Where arguments confict. choose the first from this list.
       ConditionalAttributes: []
       AttributeMap: {}                # Where HCL and CF attributes are quire different
-      MissingFromSchema: []           # Attrinbutes found in state file that have no schema definition
+      MissingFromSchema: []           # Attributes found in state file that have no schema definition
+      ComputedAttributes:             # Attributes that should be treated as computed, even when the schema says otherwise
+        - arn
 
 - Group: Autoscaling
   Resources:
@@ -138,6 +140,8 @@
         force_destroy: false
       AttributeMap:
         BucketName: bucket
+      ComputedAttributes:
+        - hosted_zone_id
 
 - Group: VPC
   Resources:
