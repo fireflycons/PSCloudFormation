@@ -45,8 +45,9 @@
 
             if (this.withZipper)
             {
-                block.AppendLine("    zipper = {")
-                    .AppendLine("      source = \"ArthurHlt/zipper\"")
+                block.AppendLine("    archive = {")
+                    .AppendLine("      source = \"hashicorp/archive\"")
+                    .AppendLine("      version = \"2.2.0\"")
                     .AppendLine("    }");
             }
 

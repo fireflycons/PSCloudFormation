@@ -3,6 +3,7 @@
     using System.Collections.Generic;
     using System.IO;
     using System.Linq;
+    using System.Runtime.CompilerServices;
     using System.Text;
     using System.Threading.Tasks;
 
@@ -157,13 +158,17 @@
             // Create zipper resource
             var zipperResource = $"{cloudFormationResource.Name}_deployment_package";
 
-            var sb = new StringBuilder();
+            var archiveDataSource = new DataSourceInput(
+                "archive_file",
+                zipperResource,
+                new Dictionary<string, string>
+                    {
+                        { "type", "zip" },
+                        { "source_file", fileName.Replace("\\", "/") },
+                        { "output_path", zipName.Replace("\\", "/") }
+                    });
 
-            sb.AppendLine($"resource \"zipper_file\" \"{zipperResource}\" {{")
-                .AppendLine($"  source = \"{fileName.Replace("\\", "/")}\"")
-                .AppendLine($"  output_path = \"{zipName.Replace("\\", "/")}\"").AppendLine("}");
-
-            writer.WriteLine(sb.ToString());
+            inputs.Add(archiveDataSource);
 
             // Fix up state file.
             // Find handler function
@@ -187,7 +192,11 @@
                 attributes,
                 mapping,
                 inputs,
-                new IndirectReference($"zipper_file.{zipperResource}.output_path"));
+                new DataSourceReference(
+                    "archive_file",
+                    $"{cloudFormationResource.Name}_deployment_package",
+                    "output_path",
+                    false));
 
             UpdatePropertyValue(
                 "source_code_hash",
@@ -195,7 +204,11 @@
                 attributes,
                 mapping,
                 inputs,
-                new IndirectReference($"zipper_file.{zipperResource}.output_sha"));
+                new DataSourceReference(
+                    "archive_file",
+                    $"{cloudFormationResource.Name}_deployment_package",
+                    "output_base64sha256",
+                    false));
         }
 
         /// <summary>
