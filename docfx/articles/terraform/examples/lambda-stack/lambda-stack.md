@@ -27,7 +27,7 @@ This is the command to export `test-lambda` to Terraform in action...
 
 A few points to note here
 
-* An extra provider [ArthurHlt/Zipper](https://registry.terraform.io/providers/ArthurHlt/zipper/latest) is included to manage the extracted lambda code.
+* An extra provider [hashicorp/archive](https://registry.terraform.io/providers/hashicorp/archive) is included to manage the extracted lambda code.
 * There are five imported resources, when the CloudFormation only contains two resources. This is because the serverless lambda declaration implies creation of a role, an event resource and a lambda permission to permit Event Bridge to invoke the lambda.
 * When the function is imported (Resource 1/5) the inline python code is extracted and written to a file. Exported lambda code is written to directory `./lambda`, with a further subdirectory of the lambda's resource name and within there, an `index` file with file extension as implied by the function's `Runtime` property.
 * In the plan stage at the end, we see some changes

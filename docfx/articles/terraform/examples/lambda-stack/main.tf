@@ -3,8 +3,9 @@ terraform {
     aws = {
       source = "hashicorp/aws"
     }
-    zipper = {
-      source = "ArthurHlt/zipper"
+    archive = {
+      source  = "hashicorp/archive"
+      version = "2.2.0"
     }
   }
 }
@@ -13,19 +14,16 @@ provider "aws" {
   region = "eu-west-1"
 }
 
-data "aws_availability_zones" "available" {
-  state = "available"
-}
-
-resource "zipper_file" "LambdaFunction_deployment_package" {
-  source      = "lambda/LambdaFunction/index.py"
+data "archive_file" "LambdaFunction_deployment_package" {
+  type        = "zip"
+  source_file = "lambda/LambdaFunction/index.py"
   output_path = "lambda/LambdaFunction/LambdaFunction_deployment_package.zip"
 }
 
 resource "aws_cloudwatch_event_rule" "LambdaFunctionSheduledEvent" {
   event_bus_name      = "default"
   is_enabled          = true
-  name                = "test-lambda-LambdaFunctionSheduledEvent-QLL75RMPW5EC"
+  name                = "test-lambda-LambdaFunctionSheduledEvent-11NOUEASGZWQN"
   schedule_expression = "rate(1 hour)"
 }
 
@@ -44,6 +42,7 @@ resource "aws_iam_role" "LambdaFunctionRole" {
       ]
     }
   )
+
   inline_policy {
     name = "LambdaFunctionRolePolicy0"
     policy = jsonencode(
@@ -60,8 +59,11 @@ resource "aws_iam_role" "LambdaFunctionRole" {
       }
     )
   }
+  managed_policy_arns = [
+    "arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole",
+  ]
   max_session_duration = 3600
-  name                 = "test-lambda-LambdaFunctionRole-13BZVJKAQAW76"
+  name                 = "test-lambda-LambdaFunctionRole-15D7T84YDQ2OV"
   path                 = "/"
   tags = {
     "lambda:createdBy" = "SAM"
@@ -73,19 +75,20 @@ resource "aws_lambda_function" "LambdaFunction" {
     "x86_64",
   ]
   description                    = "Just prints to CloudWatch log"
-  filename                       = zipper_file.LambdaFunction_deployment_package.output_path
-  function_name                  = "test-lambda-LambdaFunction-sRfgz1lPwRH2"
+  filename                       = data.archive_file.LambdaFunction_deployment_package.output_path
+  function_name                  = "test-lambda-LambdaFunction-FyS9wmUPMO8m"
   handler                        = "index.handler"
   memory_size                    = 128
   package_type                   = "Zip"
   reserved_concurrent_executions = -1
   role                           = aws_iam_role.LambdaFunctionRole.arn
   runtime                        = "python3.7"
-  source_code_hash               = zipper_file.LambdaFunction_deployment_package.output_sha
+  source_code_hash               = data.archive_file.LambdaFunction_deployment_package.output_base64sha256
   tags = {
     "lambda:createdBy" = "SAM"
   }
   timeout = 3
+
   tracing_config {
     mode = "PassThrough"
   }
@@ -96,9 +99,13 @@ resource "aws_lambda_permission" "LambdaFunctionSheduledEventPermission" {
   function_name = aws_lambda_function.LambdaFunction.arn
   principal     = "events.amazonaws.com"
   source_arn    = aws_cloudwatch_event_rule.LambdaFunctionSheduledEvent.arn
+  statement_id  = "test-lambda-LambdaFunctionSheduledEventPermission-2FANL87ZUE68"
 }
 
 resource "aws_s3_bucket" "S3Bucket" {
-  bucket = "test-lambda-s3bucket-1qfp4kvowpamf"
+  arn            = "arn:aws:s3:::test-lambda-s3bucket-tq166twr9fly"
+  bucket         = "test-lambda-s3bucket-tq166twr9fly"
+  hosted_zone_id = "Z1BKCTXD74EZPE"
+  request_payer  = "BucketOwner"
 }
 
