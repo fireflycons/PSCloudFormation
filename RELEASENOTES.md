@@ -1,6 +1,6 @@
 # Release Notes
 
-# v.Next
+# 4.1.16.4
 
 * Enhancement - Employ the exported resource/attribute schema from `terraform-provider-aws` to correctly determine which attributes from the state file should be serialized to HCL.
 * Enhancement - Replace community zip provider with hashicorp/archive for creation of lambda zip files.
