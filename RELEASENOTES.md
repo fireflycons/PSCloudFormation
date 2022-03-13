@@ -1,5 +1,9 @@
 # Release Notes
 
+# 4.1.16.5
+
+* Enhancement - Terraform Export: Emit lifecycle meta-arguments on resource attributes that do not import correctly to prevent plan from suggesting resource replacement. Currently user_data, user_data_base64 on aws_instance and aws_launch_configuration.
+
 # 4.1.16.4
 
 * Enhancement - Employ the exported resource/attribute schema from `terraform-provider-aws` to correctly determine which attributes from the state file should be serialized to HCL.
