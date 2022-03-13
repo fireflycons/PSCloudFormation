@@ -686,7 +686,7 @@
             foreach (var templateResource in this.settings.Template.Resources.Where(
                 r => userDataTypes.Contains(r.Type) && r.Properties != null && r.Properties.ContainsKey("UserData")))
             {
-                this.warnings.Add($"Resource \"{GetQualifiedResourceName(templateResource)}\" contains user data which is not correctly imported.");
+                this.warnings.Add($"Resource \"{GetQualifiedResourceName(templateResource)}\" contains user data which is not correctly imported. A lifecycle meta-argument has been emitted to prevent resource replacement.");
             }
 
             // Scan for lambdas with embedded code (ZipFile) and warn about it

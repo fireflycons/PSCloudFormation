@@ -27,6 +27,16 @@
         }
 
         /// <summary>
+        /// Initializes a new instance of the <see cref="ScalarValue"/> class.
+        /// </summary>
+        /// <param name="value">The value.</param>
+        /// <param name="isQuoted"><c>true</c> if value should be quoted.</param>
+        public ScalarValue(object value, bool isQuoted)
+            : base(value, isQuoted)
+        {
+        }
+
+        /// <summary>
         /// Gets a value indicating whether this scalar contains an empty value (null, empty string or boolean false).
         /// </summary>
         /// <value>

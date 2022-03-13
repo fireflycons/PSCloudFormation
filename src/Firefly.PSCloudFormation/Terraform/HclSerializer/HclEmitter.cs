@@ -6,6 +6,8 @@
     using System.Linq;
     using System.Text.RegularExpressions;
 
+    using Amazon.S3.Transfer;
+
     using Firefly.PSCloudFormation.Terraform.HclSerializer.Events;
     using Firefly.PSCloudFormation.Terraform.HclSerializer.Schema;
 
@@ -27,6 +29,16 @@
         /// Matches tokens embedded in scalars that should not be treated as interpolations.
         /// </summary>
         private static readonly Regex NonInterpolatedTokenRegex = new Regex(@"(?<token>\$\{[^.\}]+\})");
+
+        /// <summary>
+        /// When these attributes are present, emit a lifecycle block to prevent it looking like these resources need replacing
+        /// since these attributes don't get correctly imported to state.
+        /// </summary>
+        private static readonly Dictionary<string, List<string>> EmitLifecycle = new Dictionary<string, List<string>>
+            {
+                { "aws_instance", new List<string> { "user_data", "user_data_base64" } },
+                { "aws_launch_configuration", new List<string> { "user_data", "user_data_base64" } },
+            };
 
         /// <summary>
         /// Stack of nested block keys
@@ -112,6 +124,11 @@
         /// Current state of the emitter.
         /// </summary>
         private EmitterState state;
+
+        /// <summary>
+        /// At end of resource, if this contains any items, emit a lifecycle block.
+        /// </summary>
+        private List<string> lifecycleKeys = new List<string>();
 
         /// <summary>
         /// Initializes a new instance of the <see cref="HclEmitter"/> class.
@@ -268,6 +285,54 @@
                 this.state = this.PopState();
             }
 
+            if (this.state == EmitterState.Resource && this.lifecycleKeys.Any())
+            {
+                /*
+                    Needs to go ahead of ResourceEnd which should be next
+
+                    BlockKey  (lifecycle)
+                    SequenceStart
+                    MappingStart 
+                    MappingKey (ignore_changes )
+                    SequenceStart
+                    Scalar (unquoted) 
+                    ...
+                    SequenceEnd
+                    MappingEnd
+                    SequenceEnd
+                    MappingEnd (end of resource)
+
+                 */
+                var resourceEnd = this.events.Dequeue();
+
+                this.events.Enqueue(
+                    new MappingKey(
+                        "lifecycle",
+                        new AttributePath("lifecycle"),
+                        new ValueSchema { Optional = true, ConfigMode = SchemaConfigMode.SchemaConfigModeBlock, Type = SchemaValueType.TypeList }));
+                this.events.Enqueue(new SequenceStart());
+                this.events.Enqueue(new MappingStart());
+                this.events.Enqueue(
+                    new MappingKey(
+                        "ignore_changes",
+                        new AttributePath("lifecycle.0.ignore_changes"),
+                        new ValueSchema { Optional = true, ConfigMode = SchemaConfigMode.SchemaConfigModeAuto }));
+                this.events.Enqueue(new SequenceStart());
+
+                foreach (var key in this.lifecycleKeys)
+                {
+                    this.events.Enqueue(new ScalarValue(key, false));
+                }
+
+                this.events.Enqueue(new SequenceEnd());
+                this.events.Enqueue(new MappingEnd());
+                this.events.Enqueue(new SequenceEnd());
+                this.events.Enqueue(new MappingEnd());
+                this.events.Enqueue(resourceEnd);
+                this.lifecycleKeys.Clear();
+                return;
+            }
+
             this.indent = this.indents.Pop();
 
             this.WriteIndent();
@@ -303,6 +368,12 @@
         private void EmitMappingKey(HclEvent @event)
         {
             var key = GetTypedEvent<MappingKey>(@event);
+
+            if (EmitLifecycle.ContainsKey(this.currentResourceType)
+                && EmitLifecycle[this.currentResourceType].Contains(key.Path))
+            {
+                this.lifecycleKeys.Add(key.Path);
+            }
 
             // Don't push path for repeating block key
             if (!key.IsBlockKey)
@@ -422,6 +493,8 @@
                 case EventType.ResourceEnd:
 
                     this.indents.Clear();
+                    this.lifecycleKeys.Clear();
+                    this.blockKeys.Clear();
                     this.column = 0;
                     this.indent = 0;
                     this.resourceTraits = AwsSchema.TraitsAll;
