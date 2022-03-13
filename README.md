@@ -35,9 +35,13 @@ Up until v3.x, there were two versions of this module published, one for Windows
 
 The last version to support monolithic AWSPowerShell is v2.2.2 which can still be pulled from PSGallery.
 
-### PowerShell (all platforms)
+### PowerShell (Windows/Mac/Linux)
 [![PowerShell Gallery](https://img.shields.io/powershellgallery/v/PSCloudFormation)](https://www.powershellgallery.com/packages/PSCloudFormation)
 
+**For non-Windows users**
+
+* Install PowerShell on [Linux](https://docs.microsoft.com/en-us/powershell/scripting/install/installing-powershell-on-linux?view=powershell-7.2) (For Amazon Linux 2, follow RHEL 7 instructions).
+* Install PowerShell on [Mac](https://docs.microsoft.com/en-us/powershell/scripting/install/installing-powershell-on-macos?view=powershell-7.2).
 
 ## Module Cmdlets
 
